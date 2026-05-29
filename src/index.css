@@ -1,0 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --br:#6366F1; --brd:#4F46E5; --brl:#EEF2FF;
+  --gr:#22C55E; --grb:#F0FDF4; --grt:#166534;
+  --rd:#EF4444; --rdb:#FEF2F2; --rdt:#991B1B;
+  --yw:#F59E0B; --ywb:#FFFBEB; --ywt:#92400E;
+  --or:#F97316; --orb:#FFF7ED; --ort:#9A3412;
+  --cy:#22D3EE; --cyb:#ECFEFF; --cyt:#0E7490;
+  --pu:#8B5CF6; --pub:#F5F3FF; --put:#5B21B6;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Poppins', system-ui, sans-serif; font-size: 13px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #475569; border-radius: 99px; }
+
+/* Dark theme */
+.dark { color-scheme: dark; }
+.dark body { background: #0F172A; color: #F1F5F9; }
+
+/* Animations */
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
+.fade-in { animation: fadeIn .2s ease; }
+
+@keyframes spin { to { transform: rotate(360deg) } }
+.spin { animation: spin 1s linear infinite; }
