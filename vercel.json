@@ -1,1 +1,5 @@
-{"buildCommand":"npm run build","outputDirectory":"dist","framework":"vite","rewrites":[{"source":"/(.*)","destination":"/index.html"}]} 
+{
+  "buildCommand": "node -e \"require('child_process').execSync(require('path').join('node_modules','.bin','vite')+' build',{stdio:'inherit'})\"",
+  "outputDirectory": "dist",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
