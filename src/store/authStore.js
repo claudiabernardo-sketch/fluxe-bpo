@@ -92,17 +92,23 @@ export const useAuthStore = create((set, get) => ({
     return { error }
   },
 
-  temPermissao: (acao) => {
-    const perfil = get().profile?.perfil || 'admin'
-    const map = {
-      ver_senhas:    ['admin', 'gestor'],
-      ver_todos:     ['admin', 'gestor', 'supervisor'],
-      aprov_pagar:   ['admin', 'gestor', 'supervisor'],
-      edit_config:   ['admin'],
-      ver_rent:      ['admin', 'gestor'],
-      delete_client: ['admin', 'gestor'],
+temPermissao: (acao) => {
+    try {
+      const raw = get().profile?.perfil
+      const perfil = raw ? String(raw) : 'admin'
+      const map = {
+        ver_senhas:    ['admin'],
+        ver_todos:     ['admin'],
+        aprov_pagar:   ['admin'],
+        edit_config:   ['admin'],
+        ver_rent:      ['admin'],
+        delete_client: ['admin'],
+      }
+      const lista = map[acao]
+      if (!Array.isArray(lista)) return false
+      return lista.includes(perfil)
+    } catch {
+      return false
     }
-   return Boolean((map[acao] || []).includes(String(perfil)))
   },
-}))
  
