@@ -1,3 +1,5 @@
+git add -f src\pages\TasksPage.jsx
+git status
 import { useState, useEffect } from 'react'
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask, useClients, useUsuarios } from '../hooks/useData'
 import { Card, Badge, Btn, Loader, EmptyState, PrioBadge, StatusBadge, fmt, isVencida } from '../components/ui'
