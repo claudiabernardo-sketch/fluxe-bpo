@@ -1,142 +1,311 @@
 import { useState } from 'react'
-import { Card, CardHeader, Btn, EmptyState } from '../components/ui'
+import { useClients, useCreateTask } from '../hooks/useData'
+import { Card, CardHeader, Btn, Loader } from '../components/ui'
+import { supabase } from '../lib/supabase'
+import { useQueryClient } from '@tanstack/react-query'
 
+// ── ESTEIRAS COM TAREFAS E CHECKLISTS COMPLETOS ────────────────
 const ESTEIRAS = [
-  { id:'comercial', name:'Jornada Comercial', icon:'🤝', color:'#8B5CF6', desc:'Do lead novo ao contrato assinado.',
+  { id:'comercial', name:'Jornada Comercial', icon:'🤝', color:'#8B5CF6',
     etapas:[
-      { titulo:'Prospecção & Diagnóstico', sla:5, tasks:['Identificar empresa-alvo e pesquisar porte e segmento','Verificar se já tem BPO financeiro ou contador CLT','Primeiro contato — WhatsApp ou LinkedIn','Qualificar: tem faturamento acima de R$30k/mês?','Agendar reunião de diagnóstico','Levantar processos financeiros atuais','Identificar dores: inadimplência, fluxo de caixa, NF atrasada','Definir escopo preliminar dos serviços'] },
-      { titulo:'Proposta & Fechamento', sla:5, tasks:['Calcular precificação','Elaborar proposta personalizada','Enviar proposta ao decisor','Follow-up 48h após envio','Tratar objeções: preço, prazo, confiança','Ajustar escopo conforme negociação','Assinar contrato de prestação de serviços','Agendar kick-off de onboarding'] },
+      { titulo:'Prospecção & Diagnóstico', tasks:[
+        { titulo:'Identificar empresa-alvo e pesquisar porte e segmento', categoria:'Relacionamento', checklist:['Verificar faturamento estimado','Identificar segmento de atuação','Pesquisar concorrentes que atendem'] },
+        { titulo:'Primeiro contato — WhatsApp ou LinkedIn', categoria:'Relacionamento', checklist:['Preparar mensagem de abordagem','Enviar mensagem','Registrar resposta'] },
+        { titulo:'Agendar reunião de diagnóstico', categoria:'Relacionamento', checklist:['Confirmar data e horário','Enviar convite','Preparar pauta da reunião'] },
+        { titulo:'Levantar processos financeiros atuais', categoria:'Estratégico', checklist:['Quem faz o financeiro hoje?','Qual sistema usa?','Quais dores principais?','Volume de NFs por mês','Volume de pagamentos por mês'] },
+      ]},
+      { titulo:'Proposta & Fechamento', tasks:[
+        { titulo:'Elaborar proposta personalizada', categoria:'Estratégico', checklist:['Definir escopo dos serviços','Calcular precificação','Preparar apresentação'] },
+        { titulo:'Enviar proposta ao decisor', categoria:'Relacionamento', checklist:['Enviar por WhatsApp','Enviar por e-mail','Agendar follow-up em 48h'] },
+        { titulo:'Follow-up da proposta', categoria:'Relacionamento', checklist:['Ligar para o decisor','Tratar objeções','Ajustar escopo se necessário'] },
+        { titulo:'Assinar contrato de prestação de serviços', categoria:'Relacionamento', checklist:['Enviar contrato para assinatura','Confirmar assinatura','Arquivar contrato assinado'] },
+      ]},
     ]
   },
-  { id:'pre_ob', name:'Pré-Onboarding', icon:'📋', color:'#F59E0B', desc:'Checklist completo antes do kick-off.',
+  { id:'pre_ob', name:'Pré-Onboarding', icon:'📋', color:'#F59E0B',
     etapas:[
-      { titulo:'Documentos necessários', sla:5, tasks:['Enviar e-mail de boas-vindas','Solicitar CNPJ, contrato social','Solicitar RG/CPF do sócio responsável','Coletar comprovante de endereço','Solicitar certificado digital (se tiver)','Solicitar senha e-CAC','Verificar regime tributário'] },
-      { titulo:'Acessos ao sistema financeiro', sla:3, tasks:['Solicitar acesso ao internet banking','Cadastrar credenciais bancárias no sistema','Solicitar acesso ao ERP ou sistema de gestão','Solicitar acesso à plataforma de emissão de NF','Verificar se há maquininha','Confirmar quem aprova pagamentos','Confirmar canal de envio de documentos'] },
-      { titulo:'Alinhamento de expectativas', sla:2, tasks:['Apresentar metodologia BPO','Alinhar SLA de retorno','Definir canal principal de comunicação','Confirmar dia e horário da reunião mensal','Confirmar formato do relatório mensal','Confirmar agenda de vencimentos fixos'] },
+      { titulo:'Documentos necessários', tasks:[
+        { titulo:'Enviar e-mail de boas-vindas com apresentação da equipe', categoria:'Relacionamento', checklist:['Preparar e-mail personalizado','Incluir foto da equipe','Apresentar metodologia resumida'] },
+        { titulo:'Solicitar documentação da empresa', categoria:'Relacionamento', checklist:['CNPJ e contrato social','RG/CPF do sócio responsável','Comprovante de endereço','Certificado digital (se tiver)','Senha e-CAC (Receita Federal)'] },
+        { titulo:'Verificar regime tributário', categoria:'Estratégico', checklist:['Simples Nacional?','Lucro Presumido?','Lucro Real?','Verificar pendências na Receita'] },
+      ]},
+      { titulo:'Acessos ao sistema financeiro', tasks:[
+        { titulo:'Solicitar acesso ao internet banking', categoria:'Relacionamento', checklist:['Definir nível de acesso (consulta ou operacional)','Cadastrar IP se necessário','Testar acesso'] },
+        { titulo:'Solicitar acesso ao ERP ou sistema de gestão', categoria:'Implantação', checklist:['Omie?','Conta Azul?','Meu Dinheiro Web?','Nibo?','Bom Controle?','Outro sistema?'] },
+        { titulo:'Solicitar acesso à plataforma de emissão de NF', categoria:'Implantação', checklist:['Prefeitura (NFS-e)?','Dentro do ERP?','Testar emissão'] },
+        { titulo:'Verificar maquininha e marketplaces', categoria:'Relacionamento', checklist:['Tem maquininha? Qual operadora?','Solicitar acesso ao painel','Tem marketplace? (Mercado Livre, etc)','Solicitar relatório de repasses'] },
+      ]},
+      { titulo:'Alinhamento de expectativas', tasks:[
+        { titulo:'Definir canal principal de comunicação', categoria:'Relacionamento', checklist:['WhatsApp comercial?','E-mail?','Definir horário de atendimento'] },
+        { titulo:'Confirmar agenda mensal', categoria:'Relacionamento', checklist:['Dia do fechamento','Dia da reunião mensal','Dia de emissão das NFs','Dia dos pagamentos'] },
+        { titulo:'Definir responsável do cliente por área', categoria:'Relacionamento', checklist:['Responsável por NFs','Responsável por aprovações de pagamento','Responsável por documentos'] },
+      ]},
     ]
   },
-  { id:'onboarding', name:'Onboarding', icon:'🚀', color:'#1A56DB', desc:'Kick-off e ativação financeira.',
+  { id:'onboarding', name:'Onboarding', icon:'🚀', color:'#1A56DB',
     etapas:[
-      { titulo:'Kick-off Meeting', sla:2, tasks:['Enviar convite com pauta','Apresentar equipe responsável','Apresentar metodologia BPO','Alinhar escopo exato','Confirmar sistema financeiro','Definir calendário mensal','Esclarecer dúvidas e registrar'] },
-      { titulo:'Diagnóstico financeiro inicial', sla:7, tasks:['Mapear todas as contas bancárias','Listar recebíveis fixos e variáveis','Listar despesas fixas mensais','Levantar dívidas ativas','Verificar inadimplentes em aberto','Identificar fornecedores recorrentes','Verificar NFs emitidas e pendentes','Entregar panorama financeiro inicial'] },
-      { titulo:'Configuração no sistema', sla:3, tasks:['Parametrizar plano de contas no ERP','Cadastrar contas bancárias','Cadastrar fornecedores recorrentes','Importar histórico (últimos 3 meses)','Configurar aprovação de pagamentos','Registrar todos os acessos no cadastro'] },
+      { titulo:'Kick-off Meeting', tasks:[
+        { titulo:'Realizar reunião de kick-off', categoria:'Relacionamento', checklist:['Enviar convite com pauta','Apresentar equipe responsável','Apresentar metodologia BPO','Alinhar escopo exato','Confirmar sistema financeiro','Definir calendário mensal','Registrar decisões da reunião'] },
+        { titulo:'Apresentar sistema financeiro ao cliente', categoria:'Implantação', checklist:['Mostrar como acessar','Mostrar onde ver relatórios','Mostrar como aprovar pagamentos','Tirar dúvidas'] },
+      ]},
+      { titulo:'Diagnóstico financeiro inicial', tasks:[
+        { titulo:'Mapear todas as contas bancárias', categoria:'Conciliação Bancária', checklist:['Listar todos os bancos','Confirmar agência e conta de cada um','Verificar saldo atual','Cadastrar no sistema'] },
+        { titulo:'Levantar recebíveis e despesas fixas', categoria:'Fluxo de Caixa', checklist:['Listar clientes que pagam mensalmente','Listar despesas fixas (aluguel, folha, etc)','Identificar vencimentos','Lançar no sistema'] },
+        { titulo:'Verificar inadimplentes em aberto', categoria:'Cobrança / Inadimplência', checklist:['Listar todos os devedores','Classificar por faixa de atraso','Definir estratégia de cobrança','Registrar no sistema'] },
+        { titulo:'Entregar panorama financeiro inicial ao cliente', categoria:'Estratégico', checklist:['Montar resumo da situação atual','Identificar os 3 principais problemas','Apresentar ao cliente'] },
+      ]},
+      { titulo:'Configuração no sistema', tasks:[
+        { titulo:'Configurar plano de contas no ERP', categoria:'Implantação', checklist:['Definir categorias de CP','Definir categorias de CR','Criar centros de custo se necessário','Validar com o cliente'] },
+        { titulo:'Cadastrar contas bancárias no sistema', categoria:'Implantação', checklist:['Cadastrar todas as contas','Conectar via OFX se possível','Lançar saldo inicial','Testar importação de extrato'] },
+        { titulo:'Registrar todos os acessos no cadastro do cliente', categoria:'Implantação', checklist:['Internet banking','ERP/sistema','Plataforma de NF','Maquininha','Outros acessos relevantes'] },
+      ]},
     ]
   },
-  { id:'implantacao', name:'Implantação', icon:'⚙️', color:'#F97316', desc:'Parametrização e go-live operacional.',
+  { id:'implantacao', name:'Implantação', icon:'⚙️', color:'#F97316',
     etapas:[
-      { titulo:'Configuração do software', sla:3, tasks:['Confirmar sistema financeiro escolhido','Verificar plano contratado','Criar credenciais de acesso para o BPO','— OMIE ERP —','Criar conta / acessar empresa no Omie','Configurar dados da empresa no Omie','Cadastrar contas bancárias com integração OFX','Configurar plano de contas gerencial','— CONTA AZUL —','Criar conta / acessar empresa no Conta Azul','Conectar contas bancárias via Open Finance','Configurar integrações (bancos, maquininha)','— MEU DINHEIRO WEB —','Configurar empresa e parâmetros iniciais','Cadastrar contas bancárias manualmente','— NIBO —','Cadastrar contas bancárias e conectar via OFX','Ativar módulo de relatórios e DRE','— BOM CONTROLE —','Cadastrar contas bancárias','Configurar contas a pagar e receber','— OUTRO SOFTWARE —','Acessar sistema indicado pelo cliente','Mapear funcionalidades equivalentes'] },
-      { titulo:'Parametrização financeira', sla:7, tasks:['Definir plano de contas definitivo','Cadastrar todos os centros de custo','Configurar categorias de CP','Configurar categorias de CR','Cadastrar fornecedores recorrentes','Configurar régua de cobrança automática','Configurar limite de aprovação de pagamentos','Definir modelo de relatório mensal'] },
-      { titulo:'Primeiros lançamentos', sla:5, tasks:['Lançar saldo inicial de todas as contas','Importar ou lançar CP do mês vigente','Importar ou lançar CR do mês vigente','Conciliar primeiros extratos bancários','Emitir primeiras NFs de serviço','Validar lançamentos com o cliente'] },
-      { titulo:'Go-live & Validação', sla:3, tasks:['Confirmar que todos os acessos estão funcionando','Testar fluxo completo: lançar → conciliar → DRE','Testar fluxo de aprovação de pagamento','Apresentar dashboard financeiro ao cliente','Aplicar pesquisa de satisfação pós-implantação'] },
+      { titulo:'Configuração do software', tasks:[
+        { titulo:'Configurar empresa no Omie ERP', categoria:'Implantação', checklist:['Criar conta / acessar empresa','Configurar CNPJ e regime tributário','Cadastrar contas bancárias com OFX','Configurar plano de contas','Cadastrar fornecedores recorrentes','Ativar módulo de NF-e / NFS-e','Testar emissão de primeira NF'] },
+        { titulo:'Configurar empresa no Conta Azul', categoria:'Implantação', checklist:['Criar conta / acessar empresa','Conectar via Open Finance','Configurar plano de contas','Cadastrar produtos/serviços','Configurar integrações (maquininha)','Testar boleto e NF'] },
+        { titulo:'Configurar empresa no Meu Dinheiro Web', categoria:'Implantação', checklist:['Acessar empresa','Cadastrar contas bancárias','Definir categorias','Lançar saldo inicial'] },
+        { titulo:'Configurar empresa no Nibo', categoria:'Implantação', checklist:['Acessar empresa','Conectar contas via OFX','Configurar plano de contas gerencial','Ativar módulo DRE','Testar importação de extrato'] },
+        { titulo:'Configurar empresa no Bom Controle', categoria:'Implantação', checklist:['Acessar empresa','Cadastrar contas bancárias','Definir categorias de CP e CR'] },
+      ]},
+      { titulo:'Primeiros lançamentos', tasks:[
+        { titulo:'Lançar saldo inicial de todas as contas bancárias', categoria:'Conciliação Bancária', checklist:['Confirmar saldo com extrato','Lançar no sistema','Validar com o cliente'] },
+        { titulo:'Importar ou lançar contas a pagar do mês', categoria:'Contas a Pagar', checklist:['Listar todos os compromissos do mês','Lançar com data de vencimento','Verificar se há duplicatas'] },
+        { titulo:'Importar ou lançar contas a receber do mês', categoria:'Contas a Receber', checklist:['Listar todos os recebimentos previstos','Lançar com data prevista','Verificar inadimplentes'] },
+        { titulo:'Conciliar primeiros extratos bancários', categoria:'Conciliação Bancária', checklist:['Baixar extrato do banco','Importar no sistema','Conciliar lançamento por lançamento','Verificar diferenças'] },
+        { titulo:'Validar todos os lançamentos com o cliente', categoria:'Estratégico', checklist:['Agendar call de validação','Apresentar o que foi lançado','Ajustar conforme feedback'] },
+      ]},
+      { titulo:'Go-live & Validação', tasks:[
+        { titulo:'Testar fluxo completo de operação', categoria:'Implantação', checklist:['Lançar → conciliar → gerar DRE','Testar aprovação de pagamento','Testar emissão de NF','Confirmar que todos os acessos funcionam'] },
+        { titulo:'Aplicar pesquisa de satisfação pós-implantação', categoria:'Relacionamento', checklist:['Enviar formulário de satisfação','Registrar nota recebida','Registrar feedback e melhorias'] },
+      ]},
     ]
   },
-  { id:'operacional', name:'Rotina Operacional', icon:'🔄', color:'#22C55E', desc:'Diária, semanal e fechamento mensal.',
+  { id:'operacional', name:'Rotina Operacional', icon:'🔄', color:'#22C55E',
     etapas:[
-      { titulo:'Rotina Diária', sla:1, tasks:['Verificar contas a pagar com vencimento hoje','Verificar recebimentos previstos para hoje','Conferência bancária matinal','Registrar pagamentos realizados e comprovantes','Registrar recebimentos confirmados','Atualizar fluxo de caixa do dia','Checar NFs a emitir hoje','Registrar pendências ao cliente'] },
-      { titulo:'Rotina Semanal', sla:1, tasks:['Conciliação de plataformas — cartão, boleto e PIX','Verificar boletos recebidos e baixar no sistema','Agendamento bancário da semana','Verificar aprovações de pagamento pendentes','Emissão de NFs de serviço recorrentes','Conferir inadimplência','Organizar e arquivar documentos recebidos','Atualizar status de pendências do cliente'] },
-      { titulo:'Fechamento Mensal', sla:5, tasks:['— COBRANÇAS AO CLIENTE —','Cobrar extrato bancário de todas as contas','Cobrar faturas de cartão','Cobrar comprovantes de despesas não lançadas','Cobrar NFs de compras e serviços em falta','— CONCILIAÇÃO —','Conciliar extrato bancário conta a conta','Conciliar fatura de cartão corporativo','Conciliar plataformas digitais','Verificar lançamentos duplicados','— ENCERRAMENTO —','Fechar período no ERP','Gerar DRE gerencial do mês','Gerar Fluxo de Caixa projetado','Calcular indicadores financeiros','Preparar relatório executivo','Enviar relatório ao cliente antes da reunião','Realizar reunião mensal de resultados','Registrar ações acordadas na reunião'] },
+      { titulo:'Rotina Diária', tasks:[
+        { titulo:'Verificar contas a pagar com vencimento hoje', categoria:'Contas a Pagar', checklist:['Acessar lista de CP do dia','Verificar se há saldo para pagamento','Comunicar cliente se necessário'] },
+        { titulo:'Verificar recebimentos previstos para hoje', categoria:'Contas a Receber', checklist:['Verificar pagamentos confirmados','Baixar no sistema','Comunicar cliente sobre recebidos'] },
+        { titulo:'Conferência bancária matinal', categoria:'Conciliação Bancária', checklist:['Verificar saldo atual','Conferir lançamentos do dia anterior','Identificar movimentações não reconhecidas'] },
+        { titulo:'Registrar pagamentos realizados e comprovantes', categoria:'Contas a Pagar', checklist:['Confirmar pagamentos no banco','Anexar comprovantes no sistema','Baixar os títulos pagos'] },
+        { titulo:'Checar NFs a emitir hoje', categoria:'Emissão de NF', checklist:['Verificar contratos com recorrência','Emitir NFs pendentes','Enviar para os clientes'] },
+      ]},
+      { titulo:'Rotina Semanal', tasks:[
+        { titulo:'Conciliação de plataformas — cartão, boleto e PIX', categoria:'Conciliação Bancária', checklist:['Baixar relatório da maquininha','Baixar relatório de boletos','Conciliar com lançamentos no sistema','Verificar divergências'] },
+        { titulo:'Agendamento bancário da semana', categoria:'Pagamentos', checklist:['Listar pagamentos a vencer nos próximos 7 dias','Separar por banco','Agendar no internet banking','Confirmar com o cliente os que precisam de aprovação'] },
+        { titulo:'Verificar aprovações de pagamento pendentes', categoria:'Pagamentos', checklist:['Listar pagamentos aguardando aprovação','Enviar lembrete ao cliente','Registrar aprovações recebidas'] },
+        { titulo:'Emissão de NFs de serviço recorrentes', categoria:'Emissão de NF', checklist:['Verificar contratos com emissão semanal','Emitir NFs','Enviar para destinatários'] },
+        { titulo:'Conferir inadimplência da semana', categoria:'Cobrança / Inadimplência', checklist:['Listar títulos vencidos','Classificar por faixa de atraso','Enviar cobranças conforme régua'] },
+      ]},
+      { titulo:'Fechamento Mensal', tasks:[
+        { titulo:'Cobrar extrato bancário e documentos do cliente', categoria:'Conciliação Bancária', checklist:['Solicitar extrato de todas as contas','Solicitar faturas de cartão','Solicitar comprovantes de despesas','Solicitar NFs de compras em falta'] },
+        { titulo:'Conciliar extrato bancário conta a conta', categoria:'Conciliação Bancária', checklist:['Conciliar conta corrente principal','Conciliar demais contas','Conciliar cartão corporativo','Verificar lançamentos duplicados'] },
+        { titulo:'Conciliar plataformas digitais', categoria:'Conciliação Bancária', checklist:['Conciliar boletos emitidos','Conciliar PIX recebidos','Conciliar maquininha','Conciliar marketplaces'] },
+        { titulo:'Fechar período no ERP', categoria:'DRE / Relatórios', checklist:['Verificar se todos os lançamentos estão corretos','Fechar mês no sistema','Gerar backup dos dados'] },
+        { titulo:'Gerar DRE Gerencial do mês', categoria:'DRE / Relatórios', checklist:['Gerar DRE no sistema','Revisar valores','Calcular margens','Comparar com mês anterior'] },
+        { titulo:'Gerar Fluxo de Caixa projetado para o próximo mês', categoria:'Fluxo de Caixa', checklist:['Projetar receitas do próximo mês','Projetar despesas fixas','Identificar gap de caixa','Apresentar ao cliente'] },
+        { titulo:'Preparar e enviar relatório executivo ao cliente', categoria:'DRE / Relatórios', checklist:['Montar resumo executivo','Incluir DRE','Incluir fluxo de caixa','Incluir indicadores principais','Enviar ao cliente 24h antes da reunião'] },
+        { titulo:'Realizar reunião mensal de resultados', categoria:'Estratégico', checklist:['Abrir com resultado do mês','Apresentar top 3 vazamentos','Apresentar posição de caixa','Definir top 3 prioridades do próximo mês','Registrar ata da reunião'] },
+      ]},
     ]
   },
-  { id:'estrategico', name:'BPO Estratégico', icon:'📈', color:'#06B6D4', desc:'DRE, indicadores e reunião de decisão.',
+  { id:'estrategico', name:'BPO Estratégico', icon:'📈', color:'#06B6D4',
     etapas:[
-      { titulo:'Análise & Indicadores', sla:5, tasks:['Gerar DRE gerencial do período','Calcular Margem Bruta','Calcular Margem Líquida','Calcular Ponto de Equilíbrio','Analisar top 10 despesas do mês','Identificar despesas acima do orçado','Calcular ticket médio','Analisar inadimplência','Comparar resultado com meta mensal','Identificar os 3 maiores vazamentos de caixa','Preparar interpretação executiva'] },
-      { titulo:'Reunião de Decisão', sla:2, tasks:['Enviar relatório ao cliente 24h antes','Abrir com resultado do mês em 2 minutos','Apresentar top 3 vazamentos identificados','Apresentar posição de caixa','Apresentar projeção dos próximos 30 dias','Definir top 3 prioridades do próximo período','Definir plano de ação com responsável e prazo','Registrar decisões no sistema','Enviar ata da reunião ao cliente em até 24h'] },
+      { titulo:'Análise & Indicadores', tasks:[
+        { titulo:'Calcular indicadores financeiros do mês', categoria:'DRE / Relatórios', checklist:['Margem Bruta','Margem Líquida','Ponto de Equilíbrio','Ticket médio','Taxa de inadimplência','Comparar com mês anterior e meta'] },
+        { titulo:'Identificar os 3 maiores vazamentos de caixa', categoria:'Estratégico', checklist:['Analisar top 10 despesas','Comparar com mês anterior','Identificar oportunidades de corte','Preparar recomendações'] },
+      ]},
+      { titulo:'Reunião de Decisão', tasks:[
+        { titulo:'Enviar relatório ao cliente 24h antes da reunião', categoria:'Estratégico', checklist:['DRE do mês','Fluxo de caixa projetado','Indicadores','Análise dos vazamentos'] },
+        { titulo:'Conduzir reunião estratégica mensal', categoria:'Estratégico', checklist:['Resultado do mês em 2 minutos','Top 3 vazamentos identificados','Posição de caixa atual','Projeção próximos 30 dias','Definir top 3 prioridades','Registrar plano de ação'] },
+        { titulo:'Enviar ata da reunião ao cliente', categoria:'Estratégico', checklist:['Registrar decisões tomadas','Definir responsáveis e prazos','Enviar em até 24h após a reunião'] },
+      ]},
     ]
   },
-  { id:'cobranca', name:'Cobrança & Inadimplência', icon:'💰', color:'#EF4444', desc:'Régua completa de cobrança.',
+  { id:'cobranca', name:'Cobrança & Inadimplência', icon:'💰', color:'#EF4444',
     etapas:[
-      { titulo:'Identificação & Triagem', sla:1, tasks:['Listar todos os títulos vencidos','Classificar por faixa: 1–7, 8–30, 31–60, +60 dias','Verificar histórico de pagamento','Verificar se há acordo anterior','Priorizar por valor','Registrar lista de cobrança do dia'] },
-      { titulo:'Régua de Comunicação', sla:5, tasks:['D+1: Lembrete amigável via WhatsApp','D+3: Reenvio do boleto por e-mail','D+5: Cobrança formal por WhatsApp','D+7: Tentativa de ligação ao decisor','D+10: E-mail formal com aviso','D+15: Segunda ligação — oferecer acordo','D+20: Notificação escrita','Registrar cada tentativa no sistema'] },
-      { titulo:'Negociação & Baixa', sla:5, tasks:['Apresentar proposta de parcelamento','Registrar acordo no sistema','Emitir novo boleto com valor negociado','Confirmar recebimento do pagamento','Dar baixa no título após confirmação bancária','Arquivar comprovante no histórico','Comunicar resultado da cobrança ao cliente'] },
+      { titulo:'Identificação & Triagem', tasks:[
+        { titulo:'Listar e classificar todos os títulos vencidos', categoria:'Cobrança / Inadimplência', checklist:['1 a 7 dias de atraso','8 a 30 dias de atraso','31 a 60 dias de atraso','Acima de 60 dias','Ordenar por valor (maiores primeiro)'] },
+      ]},
+      { titulo:'Régua de Comunicação', tasks:[
+        { titulo:'D+1: Lembrete amigável via WhatsApp', categoria:'Cobrança / Inadimplência', checklist:['Enviar mensagem amigável','Reenviar boleto','Registrar tentativa no sistema'] },
+        { titulo:'D+5: Cobrança formal', categoria:'Cobrança / Inadimplência', checklist:['Enviar mensagem formal por WhatsApp','Enviar e-mail com boleto','Registrar no sistema'] },
+        { titulo:'D+10: Tentativa de ligação ao decisor', categoria:'Cobrança / Inadimplência', checklist:['Ligar para o financeiro','Ligar para o sócio se necessário','Oferecer parcelamento','Registrar resultado'] },
+        { titulo:'D+15: Oferecer acordo de parcelamento', categoria:'Cobrança / Inadimplência', checklist:['Propor parcelamento','Definir número de parcelas','Emitir novo boleto','Registrar acordo no sistema'] },
+      ]},
+      { titulo:'Negociação & Baixa', tasks:[
+        { titulo:'Registrar acordo e emitir novo boleto', categoria:'Cobrança / Inadimplência', checklist:['Registrar condições do acordo','Emitir boleto com novo vencimento','Enviar ao cliente'] },
+        { titulo:'Confirmar recebimento e dar baixa', categoria:'Cobrança / Inadimplência', checklist:['Confirmar no banco','Dar baixa no título','Arquivar comprovante','Comunicar ao cliente do BPO'] },
+      ]},
     ]
   },
 ]
 
 export default function EsteirasPage() {
+  const { data: clients = [] } = useClients()
+  const createTask = useCreateTask()
+  const qc = useQueryClient()
   const [selected, setSelected] = useState(null)
   const [checked, setChecked] = useState({})
+  const [applyModal, setApplyModal] = useState(null) // { esteira, etapa } or { esteira, all }
+  const [applyClient, setApplyClient] = useState('')
+  const [applying, setApplying] = useState(false)
+  const [applied, setApplied] = useState(false)
 
   const est = ESTEIRAS.find(e => e.id === selected)
 
-  function toggleCheck(etIdx, tIdx) {
-    const key = `${selected}-${etIdx}-${tIdx}`
+  function toggleCheck(etIdx, tIdx, ckIdx) {
+    const key = `${selected}-${etIdx}-${tIdx}-${ckIdx}`
     setChecked(p => ({ ...p, [key]: !p[key] }))
   }
 
-  function getProgress(etIdx, tasks) {
-    const done = tasks.filter((_, i) => checked[`${selected}-${etIdx}-${i}`]).length
-    return { done, total: tasks.length, pct: Math.round(done/tasks.length*100) }
+  function getTaskProgress(etIdx, tIdx, checklist) {
+    const done = checklist.filter((_, i) => checked[`${selected}-${etIdx}-${tIdx}-${i}`]).length
+    return { done, total: checklist.length }
   }
 
-  if (selected && est) return (
-    <div>
-      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20 }}>
-        <button onClick={() => setSelected(null)} style={{ border:'1px solid #E2E8F0', background:'#fff', borderRadius:8, padding:'6px 12px', cursor:'pointer', fontSize:12 }}>← Voltar</button>
-        <span style={{ fontSize:16, fontWeight:700, color:'#0F172A' }}>{est.icon} {est.name}</span>
-      </div>
-      {est.etapas.map((et, etIdx) => {
-        const prog = getProgress(etIdx, et.tasks)
-        return (
+  async function aplicarTarefas(clienteId, tasks) {
+    setApplying(true)
+    for (const task of tasks) {
+      const created = await createTask.mutateAsync({
+        titulo: task.titulo,
+        categoria: task.categoria,
+        prioridade: 'media',
+        status: 'aberta',
+        cliente_id: clienteId,
+      })
+      if (task.checklist?.length && created?.id) {
+        const items = task.checklist.map((texto, ordem) => ({ tarefa_id: created.id, texto, ordem }))
+        await supabase.from('tarefa_checklists').insert(items)
+      }
+    }
+    setApplying(false)
+    setApplied(true)
+    setApplyModal(null)
+    qc.invalidateQueries({ queryKey: ['tasks'] })
+    setTimeout(() => setApplied(false), 3000)
+  }
+
+  if (selected && est) {
+    const totalTasks = est.etapas.reduce((a, e) => a + e.tasks.length, 0)
+    return (
+      <div>
+        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
+          <button onClick={() => setSelected(null)} style={{ border:'1px solid #E2E8F0', background:'#fff', borderRadius:8, padding:'6px 12px', cursor:'pointer', fontSize:12 }}>← Voltar</button>
+          <span style={{ fontSize:16, fontWeight:700, color:'#0F172A', flex:1 }}>{est.icon} {est.name}</span>
+          <Btn variant="primary" onClick={() => setApplyModal({ esteira: est, all: true })}>
+            ⚡ Aplicar todas ao cliente ({totalTasks} tarefas)
+          </Btn>
+        </div>
+
+        {applied && (
+          <div style={{ background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:10, padding:'10px 16px', marginBottom:14, color:'#15803D', fontWeight:600, fontSize:13 }}>
+            ✓ Tarefas criadas com sucesso! Veja na página de Tarefas.
+          </div>
+        )}
+
+        {est.etapas.map((et, etIdx) => (
           <Card key={etIdx} style={{ marginBottom:14 }}>
             <CardHeader title={et.titulo} right={
-              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                <div style={{ fontSize:11, color:'#64748B' }}>{prog.done}/{prog.total}</div>
-                <div style={{ width:80, height:6, background:'#F1F5F9', borderRadius:99, overflow:'hidden' }}>
-                  <div style={{ height:'100%', background: prog.pct===100?'#22C55E':'#6366F1', borderRadius:99, width:`${prog.pct}%`, transition:'width .3s' }} />
-                </div>
-                <span style={{ fontSize:10, fontWeight:700, color: prog.pct===100?'#15803D':'#6366F1' }}>{prog.pct}%</span>
-              </div>
+              <Btn small variant="primary" onClick={() => setApplyModal({ esteira: est, etapa: et, etIdx })}>
+                + Aplicar ao cliente ({et.tasks.length} tarefas)
+              </Btn>
             } />
             <div style={{ padding:'8px 0' }}>
-              {et.tasks.map((task, tIdx) => {
-                const key = `${selected}-${etIdx}-${tIdx}`
-                const isDone = checked[key]
-                const isHeader = task.startsWith('—')
-                if (isHeader) return (
-                  <div key={tIdx} style={{ padding:'6px 16px 2px', fontSize:10, fontWeight:700, color:'#F97316', textTransform:'uppercase', letterSpacing:'.05em' }}>{task}</div>
-                )
-                return (
-                  <div key={tIdx} onClick={() => toggleCheck(etIdx, tIdx)}
-                    style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 16px', cursor:'pointer', background: isDone?'#F0FDF4':'' }}
-                    onMouseEnter={e => { if(!isDone) e.currentTarget.style.background='#F8FAFC' }}
-                    onMouseLeave={e => { if(!isDone) e.currentTarget.style.background='' }}>
-                    <div style={{ width:18, height:18, borderRadius:4, border:`2px solid ${isDone?'#22C55E':'#CBD5E1'}`, background: isDone?'#22C55E':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all .15s' }}>
-                      {isDone && <span style={{ color:'#fff', fontSize:10, lineHeight:1 }}>✓</span>}
+              {et.tasks.map((task, tIdx) => (
+                <div key={tIdx} style={{ borderBottom:'1px solid #F8FAFC' }}>
+                  {/* Task header */}
+                  <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 16px', background:'#FAFAFA' }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:12, fontWeight:600, color:'#0F172A' }}>{task.titulo}</div>
+                      <div style={{ fontSize:10, color:'#94A3B8', marginTop:2 }}>📂 {task.categoria} · {task.checklist.length} itens de checklist</div>
                     </div>
-                    <span style={{ fontSize:12, color: isDone?'#94A3B8':'#334155', textDecoration: isDone?'line-through':'none' }}>{task}</span>
+                    <div style={{ fontSize:10, color:'#64748B' }}>
+                      {getTaskProgress(etIdx, tIdx, task.checklist).done}/{task.checklist.length}
+                    </div>
                   </div>
-                )
-              })}
+                  {/* Checklist preview */}
+                  <div style={{ padding:'4px 16px 8px 32px' }}>
+                    {task.checklist.map((ck, ckIdx) => (
+                      <div key={ckIdx} onClick={() => toggleCheck(etIdx, tIdx, ckIdx)}
+                        style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 0', cursor:'pointer' }}>
+                        <div style={{ width:14, height:14, borderRadius:3, border:`2px solid ${checked[`${selected}-${etIdx}-${tIdx}-${ckIdx}`]?'#22C55E':'#CBD5E1'}`, background: checked[`${selected}-${etIdx}-${tIdx}-${ckIdx}`]?'#22C55E':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                          {checked[`${selected}-${etIdx}-${tIdx}-${ckIdx}`] && <span style={{ color:'#fff', fontSize:8 }}>✓</span>}
+                        </div>
+                        <span style={{ fontSize:11, color: checked[`${selected}-${etIdx}-${tIdx}-${ckIdx}`]?'#94A3B8':'#475569', textDecoration: checked[`${selected}-${etIdx}-${tIdx}-${ckIdx}`]?'line-through':'none' }}>{ck}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </Card>
-        )
-      })}
-    </div>
-  )
+        ))}
+
+        {/* Modal aplicar */}
+        {applyModal && (
+          <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }}>
+            <div style={{ background:'#fff', borderRadius:16, padding:24, width:400 }}>
+              <div style={{ fontWeight:700, fontSize:15, marginBottom:8 }}>
+                {applyModal.all ? `Aplicar toda a esteira "${est.name}"` : `Aplicar etapa "${applyModal.etapa.titulo}"`}
+              </div>
+              <div style={{ fontSize:12, color:'#64748B', marginBottom:16 }}>
+                {applyModal.all ? totalTasks : applyModal.etapa.tasks.length} tarefas serão criadas com checklists completos, vinculadas ao cliente selecionado.
+              </div>
+              <div style={{ marginBottom:16 }}>
+                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'.07em' }}>Selecionar cliente *</label>
+                <select value={applyClient} onChange={e=>setApplyClient(e.target.value)}
+                  style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, background:'#fff' }}>
+                  <option value="">— Selecione o cliente —</option>
+                  {clients.map(c=><option key={c.id} value={c.id}>{c.razao_social}</option>)}
+                </select>
+              </div>
+              <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+                <Btn onClick={() => { setApplyModal(null); setApplyClient('') }}>Cancelar</Btn>
+                <Btn variant="primary" disabled={!applyClient || applying} onClick={() => {
+                  const tasks = applyModal.all
+                    ? est.etapas.flatMap(e => e.tasks)
+                    : applyModal.etapa.tasks
+                  aplicarTarefas(applyClient, tasks)
+                }}>
+                  {applying ? 'Criando tarefas...' : '⚡ Criar tarefas'}
+                </Btn>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div>
-      <div style={{ fontSize:13, color:'#64748B', marginBottom:16 }}>Selecione uma esteira para ver o checklist completo</div>
+      <div style={{ fontSize:13, color:'#64748B', marginBottom:16 }}>
+        Selecione uma esteira para ver as tarefas e checklists. Use <strong>"Aplicar ao cliente"</strong> para criar todas as tarefas automaticamente.
+      </div>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:14 }}>
         {ESTEIRAS.map(est => {
-          const totalTasks = est.etapas.reduce((a,e) => a + e.tasks.filter(t=>!t.startsWith('—')).length, 0)
-          const doneTasks = est.etapas.reduce((a,e,etIdx) => a + e.tasks.filter((t,tIdx) => !t.startsWith('—') && checked[`${est.id}-${etIdx}-${tIdx}`]).length, 0)
-          const pct = totalTasks > 0 ? Math.round(doneTasks/totalTasks*100) : 0
+          const totalTasks = est.etapas.reduce((a,e) => a + e.tasks.length, 0)
+          const totalChecks = est.etapas.reduce((a,e) => a + e.tasks.reduce((b,t) => b + t.checklist.length, 0), 0)
           return (
             <div key={est.id} onClick={() => setSelected(est.id)}
               style={{ background:'#fff', border:'1px solid #E2E8F0', borderRadius:12, padding:16, cursor:'pointer', transition:'all .15s', borderLeft:`4px solid ${est.color}` }}
-              onMouseEnter={e => { e.currentTarget.style.boxShadow='0 4px 20px rgba(0,0,0,.08)'; e.currentTarget.style.transform='translateY(-1px)' }}
-              onMouseLeave={e => { e.currentTarget.style.boxShadow=''; e.currentTarget.style.transform='' }}>
-              <div style={{ fontSize:22, marginBottom:8 }}>{est.icon}</div>
+              onMouseEnter={e=>{ e.currentTarget.style.boxShadow='0 4px 20px rgba(0,0,0,.08)'; e.currentTarget.style.transform='translateY(-2px)' }}
+              onMouseLeave={e=>{ e.currentTarget.style.boxShadow=''; e.currentTarget.style.transform='' }}>
+              <div style={{ fontSize:24, marginBottom:8 }}>{est.icon}</div>
               <div style={{ fontSize:14, fontWeight:700, color:'#0F172A', marginBottom:4 }}>{est.name}</div>
-              <div style={{ fontSize:11, color:'#64748B', marginBottom:12 }}>{est.desc}</div>
-              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-                <div style={{ flex:1, height:6, background:'#F1F5F9', borderRadius:99, overflow:'hidden' }}>
-                  <div style={{ height:'100%', background:est.color, borderRadius:99, width:`${pct}%` }} />
-                </div>
-                <span style={{ fontSize:10, fontWeight:700, color:'#64748B' }}>{pct}%</span>
+              <div style={{ fontSize:11, color:'#64748B', marginBottom:12 }}>{est.etapas.length} etapas</div>
+              <div style={{ display:'flex', gap:10, fontSize:11, color:'#94A3B8' }}>
+                <span>✓ {totalTasks} tarefas</span>
+                <span>📋 {totalChecks} itens</span>
               </div>
-              <div style={{ fontSize:10, color:'#94A3B8' }}>{est.etapas.length} etapas · {totalTasks} tarefas</div>
+              <div style={{ marginTop:10 }}>
+                <span style={{ fontSize:10, background:'#EEF2FF', color:'#4338CA', padding:'3px 8px', borderRadius:99, fontWeight:600 }}>
+                  Clique para ver e aplicar
+                </span>
+              </div>
             </div>
           )
         })}
