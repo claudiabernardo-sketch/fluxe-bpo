@@ -26,10 +26,12 @@ export function useCreateClient() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (client) => {
+      // Remove joined/computed fields
+      const { usuarios, empresas, id, criado_em, atualizado_em, ...clean } = client
       const { data, error } = await supabase
-        .from('clientes').insert(client).select().single()
+        .from('clientes').insert(clean).select().single()
       if (error) throw error
-      await logAudit('CREATE', 'clientes', data.id, { razao: client.razao_social })
+      await logAudit('CREATE', 'clientes', data.id, { razao: clean.razao_social })
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
@@ -40,10 +42,12 @@ export function useUpdateClient() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, ...updates }) => {
+      // Remove joined/computed fields that don't exist as columns
+      const { usuarios, empresas, ...clean } = updates
       const { data, error } = await supabase
-        .from('clientes').update(updates).eq('id', id).select().single()
+        .from('clientes').update(clean).eq('id', id).select().single()
       if (error) throw error
-      await logAudit('UPDATE', 'clientes', id, updates)
+      await logAudit('UPDATE', 'clientes', id, { id })
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
