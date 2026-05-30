@@ -97,10 +97,11 @@ export default function CofrePage() {
   function openNew() { setForm({ categoria:'outro' }); setModal({ mode:'new' }) }
   function openEdit(a) { setForm({...a}); setModal({ mode:'edit', id:a.id }) }
 
-  async function save() {
+ async function save() {
     if (!form.sistema?.trim()) return alert('Nome do sistema obrigatório')
     if (!form.cliente_id) return alert('Selecione um cliente')
-    await saveAcesso.mutateAsync(modal.mode==='edit' ? { id:modal.id, ...form } : form)
+    const payload = { ...form, empresa_id: profile?.empresa_id }
+    await saveAcesso.mutateAsync(modal.mode==='edit' ? { id:modal.id, ...payload } : payload)
   }
 
   const fi = { width:'100%', padding:'8px 12px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'inherit', background:'#fff', color:'#0F172A', outline:'none' }
