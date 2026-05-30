@@ -9,10 +9,15 @@ export const useAuthStore = create((set, get) => ({
   error: null,
 
   init: async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session?.user) {
-      await get().loadProfile(session.user)
-    } else {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        await get().loadProfile(session.user)
+      } else {
+        set({ loading: false })
+      }
+    } catch (e) {
+      console.error('Auth init error:', e)
       set({ loading: false })
     }
 
@@ -41,6 +46,7 @@ export const useAuthStore = create((set, get) => ({
         error: null,
       })
     } catch {
+      // Profile not found — still allow access, just without profile
       set({ user, profile: null, empresa: null, loading: false })
     }
   },
@@ -57,21 +63,17 @@ export const useAuthStore = create((set, get) => ({
     const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) { set({ error: error.message }); return { error } }
 
-    // Create empresa + usuario after signup
     if (data.user) {
       const { data: empresa } = await supabase
         .from('empresas')
         .insert({ nome: nomeEmpresa, email, plano: 'pro' })
-        .select()
-        .single()
+        .select().single()
 
       if (empresa) {
         await supabase.from('usuarios').insert({
           id: data.user.id,
           empresa_id: empresa.id,
-          nome,
-          email,
-          perfil: 'admin',
+          nome, email, perfil: 'admin',
         })
       }
     }
@@ -85,13 +87,13 @@ export const useAuthStore = create((set, get) => ({
 
   resetPassword: async (email) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${window.location.origin}/`,
     })
     return { error }
   },
 
   temPermissao: (acao) => {
-    const perfil = get().profile?.perfil
+    const perfil = get().profile?.perfil || 'admin'
     const map = {
       ver_senhas:    ['admin', 'gestor'],
       ver_todos:     ['admin', 'gestor', 'supervisor'],
