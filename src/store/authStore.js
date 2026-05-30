@@ -111,4 +111,7 @@ temPermissao: (acao) => {
       return false
     }
   },
- 
+  isAdmin: () => String(get().profile?.perfil || '') === 'admin',
+  isOperador: () => String(get().profile?.perfil || '') === 'operador',
+  getPerfil: () => String(get().profile?.perfil || 'admin'),
+}))
