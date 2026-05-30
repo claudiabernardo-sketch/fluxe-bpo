@@ -73,7 +73,7 @@ export function useTasks(filters = {}) {
     queryFn: async () => {
       let q = supabase
         .from('tarefas')
-        .select('*, clientes(razao_social, fantasia), usuarios(nome)')
+        .select('*, clientes(razao_social, fantasia), usuarios!tarefas_responsavel_id_fkey(nome)')
         .order('prazo', { ascending: true })
 
       if (filters.clientId) q = q.eq('cliente_id', filters.clientId)
