@@ -100,7 +100,7 @@ export default function CofrePage() {
  async function save() {
     if (!form.sistema?.trim()) return alert('Nome do sistema obrigatório')
     if (!form.cliente_id) return alert('Selecione um cliente')
-    const payload = { ...form, empresa_id: profile?.empresa_id }
+    const payload = { ...form, empresa_id: profile?.empresa_id || profile?.empresas?.id}
     await saveAcesso.mutateAsync(modal.mode==='edit' ? { id:modal.id, ...payload } : payload)
   }
 
