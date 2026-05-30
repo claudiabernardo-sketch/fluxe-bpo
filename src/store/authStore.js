@@ -102,7 +102,7 @@ export const useAuthStore = create((set, get) => ({
       ver_rent:      ['admin', 'gestor'],
       delete_client: ['admin', 'gestor'],
     }
-    return (map[acao] || []).includes(perfil)
+   return Boolean((map[acao] || []).includes(String(perfil)))
   },
 }))
  
