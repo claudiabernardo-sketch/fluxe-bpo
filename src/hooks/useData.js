@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+simimport { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
 // ── AUDIT LOG ────────────────────────────────────────
@@ -81,8 +81,9 @@ export function useTasks(filters = {}) {
       if (filters.resp)     q = q.eq('responsavel_id', filters.resp)
 
       const { data, error } = await q
-      if (error) throw error
-      return data
+      if (error) { console.error('useTasks error:', error); throw error }
+      console.log('useTasks result:', data)
+      return data ?? []
     },
     staleTime: 15_000,
   })
