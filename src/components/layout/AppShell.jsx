@@ -125,7 +125,7 @@ export default function AppShell() {
         <TimerBar />
 
         {/* Pages */}
-        <div className="pgs fade-in" style={{ flex:1, overflow:'auto', padding:'16px' }}>
+  <div className="pgs fade-in" style={{ flex:1, overflow:'auto', padding:'16px', width:'100%', boxSizing:'border-box' }}>
           <Routes>
             <Route path="/"           element={<DashPage />} />
             <Route path="/exec"       element={<ExecPage />} />
