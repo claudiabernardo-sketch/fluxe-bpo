@@ -1,4 +1,4 @@
-simimport { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
 // ── AUDIT LOG ────────────────────────────────────────
