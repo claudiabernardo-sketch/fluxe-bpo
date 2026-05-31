@@ -54,14 +54,14 @@ export const useAuthStore = create((set, get) => ({
   signIn: async (email, password) => {
     set({ error: null })
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) { set({ error: error.message }); return { error } }
+    if (error) { set({ error: error.message }); return { error: error.message } }
     return { data }
   },
 
   signUp: async (email, password, nome, nomeEmpresa) => {
     set({ error: null })
     const { data, error } = await supabase.auth.signUp({ email, password })
-    if (error) { set({ error: error.message }); return { error } }
+    if (error) { set({ error: error.message }); return { error: error.message } }
 
     if (data.user) {
       const { data: empresa } = await supabase
@@ -115,3 +115,4 @@ temPermissao: (acao) => {
   isOperador: () => String(get().profile?.perfil || '') === 'operador',
   getPerfil: () => String(get().profile?.perfil || 'admin'),
 }))
+
