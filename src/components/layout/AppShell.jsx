@@ -109,7 +109,8 @@ export default function AppShell() {
         </div>
       </aside>
 
-      {/* ── MAIN ───style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0 }}>
+      {/* ── MAIN ─── */}
+   <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0, width:'100%' }}>
         {/* Topbar */}
         <div className="topbar">
           <div style={{ fontWeight:600, fontSize:14, color:'var(--tx)', flex:1 }}>{title}</div>
