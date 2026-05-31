@@ -15,7 +15,7 @@ import AprovPage from '../../pages/AprovPage'
 import CapPage from '../../pages/CapPage'
 import AgendaPage from '../../pages/AgendaPage'
 import RelatoriosPage from '../../pages/RelatoriosPage'
-import PrecPage from '../../pages/PrecPage'
+import PrecificacaoPage from '../../pages/PrecificacaoPage'
 import ConfigPage from '../../pages/ConfigPage'
 import TimerBar from './TimerBar'
 
@@ -140,7 +140,7 @@ export default function AppShell() {
             <Route path="/aprov"      element={<AprovPage />} />
             <Route path="/cofre"      element={<CofrePage />} />
             <Route path="/crm"        element={<CRMPage />} />
-            <Route path="/prec"       element={<PrecPage />} />
+            <Route path="/prec"       element={<PrecificacaoPage />} />
             <Route path="/relatorios" element={<RelatoriosPage />} />
             <Route path="/config"     element={<ConfigPage />} />
           </Routes>
@@ -149,3 +149,5 @@ export default function AppShell() {
     </div>
   )
 }
+
+
