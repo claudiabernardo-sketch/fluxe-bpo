@@ -60,7 +60,7 @@ export default function AppShell() {
   const title = TITLES[loc.pathname] || 'Fluxe BPO'
 
   return (
-    <div style={{ display:'flex', height:'100vh', width:'100vw', background:'var(--bg)' }}>
+    <div style={{ display:'flex', height:'100vh', overflow:'hidden', background:'var(--bg)' }}>
       {/* ── SIDEBAR ─── */}
       <aside className="sb">
         {/* Logo */}
@@ -110,7 +110,7 @@ export default function AppShell() {
       </aside>
 
       {/* ── MAIN ─── */}
-   <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0, width:'100%' }}>
+      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
         {/* Topbar */}
         <div className="topbar">
           <div style={{ fontWeight:600, fontSize:14, color:'var(--tx)', flex:1 }}>{title}</div>
@@ -125,7 +125,7 @@ export default function AppShell() {
         <TimerBar />
 
         {/* Pages */}
-  <div className="pgs fade-in" style={{ flex:1, overflow:'auto', padding:'16px', width:'100%', boxSizing:'border-box' }}>
+        <div className="pgs fade-in" style={{ flex:1, overflow:'auto', padding:'16px' }}>
           <Routes>
             <Route path="/"           element={<DashPage />} />
             <Route path="/exec"       element={<ExecPage />} />
