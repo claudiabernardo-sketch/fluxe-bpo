@@ -60,7 +60,7 @@ export default function AppShell() {
   const title = TITLES[loc.pathname] || 'Fluxe BPO'
 
   return (
-    <div style={{ display:'flex', height:'100vh', overflow:'hidden', background:'var(--bg)' }}>
+    <div style={{ display:'flex', height:'100vh', width:'100vw', background:'var(--bg)' }}>
       {/* ── SIDEBAR ─── */}
       <aside className="sb">
         {/* Logo */}
