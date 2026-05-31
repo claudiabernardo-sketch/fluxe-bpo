@@ -40,7 +40,7 @@ export default function LoginPage() {
     setLoading(false)
   }
 
-  const isSuccess = (typeof msg === 'string' ? msg : '').includes('criada') || (typeof msg === 'string' ? msg : '').includes('enviado')
+  const isSuccess = (typeof msg === String(msg) ? msg : String(msg || '')).includes('criada') || (typeof msg === String(msg) ? msg : String(msg || '')).includes('enviado')
 
   return (
     <div style={{
@@ -244,5 +244,6 @@ function Field({ label, value, onChange, type = 'text', placeholder }) {
     </div>
   )
 }
+
 
 
