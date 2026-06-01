@@ -54,7 +54,7 @@ export default function LoginPage() {
 
   return (
     <div style={{
-      minHeight:'100vh', display:'flex',
+      minHeight:'100vh', width:'100vw', display:'flex',
       fontFamily:"'Inter','Poppins',sans-serif",
     }}>
       {/* LADO ESQUERDO: Formulário */}
