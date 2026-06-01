@@ -11,7 +11,9 @@ export const useAuthStore = create((set, get) => ({
   init: async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) { get().loadProfile(session.user) } else {
+      if (session?.user) {
+        await get().loadProfile(session.user)
+      } else {
         set({ loading: false })
       }
     } catch (e) {
@@ -20,7 +22,9 @@ export const useAuthStore = create((set, get) => ({
     }
 
     supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) { get().loadProfile(session.user) } else {
+      if (session?.user) {
+        await get().loadProfile(session.user)
+      } else {
         set({ user: null, profile: null, empresa: null, loading: false })
       }
     })
@@ -50,14 +54,14 @@ export const useAuthStore = create((set, get) => ({
   signIn: async (email, password) => {
     set({ error: null })
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) { set({ error: error.message }); return { error: error.message } }
+    if (error) { set({ error: error.message }); return { error } }
     return { data }
   },
 
   signUp: async (email, password, nome, nomeEmpresa) => {
     set({ error: null })
     const { data, error } = await supabase.auth.signUp({ email, password })
-    if (error) { set({ error: error.message }); return { error: error.message } }
+    if (error) { set({ error: error.message }); return { error } }
 
     if (data.user) {
       const { data: empresa } = await supabase
@@ -88,28 +92,16 @@ export const useAuthStore = create((set, get) => ({
     return { error }
   },
 
-temPermissao: (acao) => {
-    try {
-      const raw = get().profile?.perfil
-      const perfil = raw ? String(raw) : 'admin'
-      const map = {
-        ver_senhas:    ['admin'],
-        ver_todos:     ['admin'],
-        aprov_pagar:   ['admin'],
-        edit_config:   ['admin'],
-        ver_rent:      ['admin'],
-        delete_client: ['admin'],
-      }
-      const lista = map[acao]
-      if (!Array.isArray(lista)) return false
-      return lista.includes(perfil)
-    } catch {
-      return false
+  temPermissao: (acao) => {
+    const perfil = get().profile?.perfil || 'admin'
+    const map = {
+      ver_senhas:    ['admin', 'gestor'],
+      ver_todos:     ['admin', 'gestor', 'supervisor'],
+      aprov_pagar:   ['admin', 'gestor', 'supervisor'],
+      edit_config:   ['admin'],
+      ver_rent:      ['admin', 'gestor'],
+      delete_client: ['admin', 'gestor'],
     }
+    return (map[acao] || []).includes(perfil)
   },
-  isAdmin: () => String(get().profile?.perfil || '') === 'admin',
-  isOperador: () => String(get().profile?.perfil || '') === 'operador',
-  getPerfil: () => String(get().profile?.perfil || 'admin'),
 }))
-
-
