@@ -222,14 +222,13 @@ function calcularMetodologia(d) {
       `+30% por CNPJ adicional (${d.cnpjs - 1} adicional${d.cnpjs > 2 ? 'is' : ''})`)
   }
 
-  let fatorFat = 1.0
+  const SISTEMAS = { erp_avancado:{fator:0.70,label:'ERP avançado com API',desc:'Integração automatiza etapas'}, omie_totvs:{fator:0.80,label:'Omie / Totvs / Bling',desc:'Sistema organiza bem'}, intermediario:{fator:1.00,label:'Conta Azul / Nibo',desc:'Base padrão'}, basico:{fator:1.20,label:'Sistema básico',desc:'Mais trabalho manual'}, excel:{fator:1.40,label:'Excel / planilha',desc:'Tudo manual — mais horas'}, nenhum:{fator:1.55,label:'Sem sistema',desc:'Máximo esforço'} }; const sistemaInfo = SISTEMAS[d.sistema]||SISTEMAS.intermediario; const fatorSistema = sistemaInfo.fator; const fatorOrg = d.organizacao==='otima'?0.90:d.organizacao==='ruim'?1.15:d.organizacao==='caotica'?1.30:1.00; const fatorExc = d.excecoes==='muitos'?1.20:d.excecoes==='moderado'?1.10:1.00; let fatorFat = 1.0
   if (d.fat > 1000000) fatorFat = 1.40
   else if (d.fat > 500000) fatorFat = 1.25
   else if (d.fat > 200000) fatorFat = 1.15
   else if (d.fat > 80000) fatorFat = 1.08
 
-  const totalBase = items.reduce((s, i) => s + i.horas, 0)
-  const totalHoras = Math.round(totalBase * fatorFat * 10) / 10
+  const totalBase = items.reduce((s, i) => s + i.horas, 0); const totalHoras = Math.round(totalBase * fatorFat * fatorSistema * fatorOrg * fatorExc * 10) / 10
 
   if (fatorFat > 1.0) {
     items.push({
@@ -875,4 +874,6 @@ export default function PrecificacaoPage() {
     </>
   )
 }
+
+
 
