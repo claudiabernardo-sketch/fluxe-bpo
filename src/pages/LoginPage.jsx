@@ -115,7 +115,7 @@ export default function LoginPage() {
               </div>
             )}
 
-            {(msg || error) && (
+            {(toStr(msg)) && (
               <div style={{ fontSize:12, padding:'10px 12px', borderRadius:8, marginBottom:16,
                 background: isSuccess ? '#F0FDF4' : '#FEF2F2',
                 color: isSuccess ? '#15803D' : '#991B1B',
@@ -244,6 +244,7 @@ function Field({ label, value, onChange, type = 'text', placeholder }) {
     </div>
   )
 }
+
 
 
 
