@@ -18,7 +18,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [showPass, setShowPass] = useState(false)
 
-  const { signIn, signUp, resetPassword, error } = useAuthStore()
+  const { signIn, signUp, resetPassword } = useAuthStore(); const toStr = (v) => { if (!v) return ''; if (typeof v === 'string') return v; if (v.message) return v.message; return 'Erro desconhecido' }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -26,21 +26,21 @@ export default function LoginPage() {
     setMsg('')
     if (mode === 'login') {
       const { error } = await signIn(email, password)
-      if (error) setMsg(error)
+      if (error) setMsg(toStr(error))
     } else if (mode === 'signup') {
       if (!nome || !nomeEmpresa) { setMsg('Preencha todos os campos'); setLoading(false); return }
       const { error } = await signUp(email, password, nome, nomeEmpresa)
-      if (error) setMsg(error)
+      if (error) setMsg(toStr(error))
       else setMsg('Conta criada! Verifique seu e-mail para confirmar.')
     } else {
       const { error } = await resetPassword(email)
-      if (error) setMsg(error)
+      if (error) setMsg(toStr(error))
       else setMsg('E-mail de recuperação enviado!')
     }
     setLoading(false)
   }
 
-  const isSuccess = msg.includes('criada') || msg.includes('enviado')
+  const isSuccess = toStr(msg).includes('criada') || toStr(msg).includes('enviado')
 
   return (
     <div style={{
@@ -122,7 +122,7 @@ export default function LoginPage() {
                 border: `1px solid ${isSuccess ? '#BBF7D0' : '#FECDD3'}`,
                 fontWeight:500
               }}>
-                {isSuccess ? '✅ ' : '⚠️ '}{msg || error}
+                {isSuccess ? '✅ ' : '⚠️ '}{toStr(msg)}
               </div>
             )}
 
@@ -244,3 +244,6 @@ function Field({ label, value, onChange, type = 'text', placeholder }) {
     </div>
   )
 }
+
+
+
