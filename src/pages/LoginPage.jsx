@@ -40,7 +40,8 @@ export default function LoginPage() {
     setLoading(false)
   }
 
-  const isSuccess = String(msg || '').includes('criada') || String(msg || '').includes('enviado')
+  const isSuccess = msg.includes('criada') || msg.includes('enviado')
+
   return (
     <div style={{
       minHeight:'100vh', display:'flex',
@@ -121,7 +122,7 @@ export default function LoginPage() {
                 border: `1px solid ${isSuccess ? '#BBF7D0' : '#FECDD3'}`,
                 fontWeight:500
               }}>
-                {isSuccess ? '? ' : '?? '}{typeof msg === 'string' ? msg : (msg?.message || '')}
+                {isSuccess ? '✅ ' : '⚠️ '}{msg || error}
               </div>
             )}
 
@@ -243,7 +244,3 @@ function Field({ label, value, onChange, type = 'text', placeholder }) {
     </div>
   )
 }
-
-
-
-
