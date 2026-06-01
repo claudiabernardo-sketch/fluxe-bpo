@@ -1,10 +1,11 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 
 const FEATURES = [
   { icon:'✅', title:'Gestão de tarefas', desc:'Organize toda a operação do BPO com tarefas recorrentes, checklists e histórico completo.' },
   { icon:'📅', title:'Controle de prazos', desc:'Agenda visual com visão mensal, semanal e diária. Nunca mais perca um vencimento.' },
-  { icon:'🏢', title:'Jornada do cliente', desc:'Acompanhe cada cliente desde o onboarding até a operação mensal em uma única tela.' },
+  { icon:'🏗', title:'Jornada do cliente', desc:'Acompanhe cada cliente desde o onboarding até a operação mensal em uma única tela.' },
   { icon:'🔒', title:'Cofre de acessos', desc:'Gerencie senhas e credenciais dos clientes com segurança e controle de quem acessa.' },
 ]
 
@@ -18,7 +19,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [showPass, setShowPass] = useState(false)
 
-  const { signIn, signUp, resetPassword } = useAuthStore(); const toStr = (v) => { if (!v) return ''; if (typeof v === 'string') return v; if (v.message) return v.message; return 'Erro desconhecido' }
+  const { signIn, signUp, resetPassword } = useAuthStore()
+  const navigate = useNavigate()
+
+  const toStr = (v) => { if (!v) return ''; if (typeof v === 'string') return v; if (v.message) return v.message; return 'Erro desconhecido' }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -26,18 +30,24 @@ export default function LoginPage() {
     setMsg('')
     if (mode === 'login') {
       const { error } = await signIn(email, password)
-      if (error) setMsg(toStr(error))
+      if (error) {
+        setMsg(toStr(error))
+        setLoading(false)
+      } else {
+        navigate('/dashboard')
+      }
     } else if (mode === 'signup') {
       if (!nome || !nomeEmpresa) { setMsg('Preencha todos os campos'); setLoading(false); return }
       const { error } = await signUp(email, password, nome, nomeEmpresa)
       if (error) setMsg(toStr(error))
       else setMsg('Conta criada! Verifique seu e-mail para confirmar.')
+      setLoading(false)
     } else {
       const { error } = await resetPassword(email)
       if (error) setMsg(toStr(error))
       else setMsg('E-mail de recuperação enviado!')
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const isSuccess = toStr(msg).includes('criada') || toStr(msg).includes('enviado')
@@ -47,7 +57,7 @@ export default function LoginPage() {
       minHeight:'100vh', display:'flex',
       fontFamily:"'Inter','Poppins',sans-serif",
     }}>
-      {/* ── LADO ESQUERDO: Formulário ── */}
+      {/* LADO ESQUERDO: Formulário */}
       <div style={{
         width:'100%', maxWidth:480, display:'flex', flexDirection:'column',
         alignItems:'center', justifyContent:'center', padding:'40px 48px',
@@ -165,19 +175,16 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ── LADO DIREITO: Benefícios ── */}
+      {/* LADO DIREITO: Benefícios */}
       <div style={{
         flex:1, background:'linear-gradient(135deg,#0F0C29,#302B63,#24243E)',
         display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
         padding:'60px 48px', position:'relative', overflow:'hidden',
       }}>
-        {/* Orbs decorativos */}
         <div style={{ position:'absolute', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle,rgba(99,102,241,.25) 0%,transparent 70%)', top:-150, right:-150, pointerEvents:'none' }} />
         <div style={{ position:'absolute', width:400, height:400, borderRadius:'50%', background:'radial-gradient(circle,rgba(139,92,246,.2) 0%,transparent 70%)', bottom:-100, left:-100, pointerEvents:'none' }} />
-        <div style={{ position:'absolute', width:200, height:200, borderRadius:'50%', background:'radial-gradient(circle,rgba(34,211,238,.15) 0%,transparent 70%)', top:'40%', right:'10%', pointerEvents:'none' }} />
 
         <div style={{ position:'relative', zIndex:1, maxWidth:480, width:'100%' }}>
-          {/* Headline */}
           <div style={{ marginBottom:48 }}>
             <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.15em', color:'#8B5CF6', textTransform:'uppercase', marginBottom:12 }}>
               Fluxe BPO Platform
@@ -193,7 +200,6 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Features */}
           <div style={{ display:'flex', flexDirection:'column', gap:16, marginBottom:48 }}>
             {FEATURES.map((f, i) => (
               <div key={i} style={{ display:'flex', gap:14, alignItems:'flex-start',
@@ -211,7 +217,6 @@ export default function LoginPage() {
             ))}
           </div>
 
-          {/* Stats */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
             {[
               { v:'100%', l:'Dados isolados' },
@@ -244,7 +249,3 @@ function Field({ label, value, onChange, type = 'text', placeholder }) {
     </div>
   )
 }
-
-
-
-
