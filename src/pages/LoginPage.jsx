@@ -40,8 +40,7 @@ export default function LoginPage() {
     setLoading(false)
   }
 
-  const isSuccess = (typeof msg === String(msg) ? msg : String(msg || '')).includes('criada') || (typeof msg === String(msg) ? msg : String(msg || '')).includes('enviado')
-
+  const isSuccess = String(msg || '').includes('criada') || String(msg || '').includes('enviado')
   return (
     <div style={{
       minHeight:'100vh', display:'flex',
@@ -244,6 +243,7 @@ function Field({ label, value, onChange, type = 'text', placeholder }) {
     </div>
   )
 }
+
 
 
 
