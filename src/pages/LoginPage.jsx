@@ -34,7 +34,7 @@ export default function LoginPage() {
         setMsg(toStr(error))
         setLoading(false)
       } else {
-        navigate('/dashboard')
+        navigate('/')
       }
     } else if (mode === 'signup') {
       if (!nome || !nomeEmpresa) { setMsg('Preencha todos os campos'); setLoading(false); return }
