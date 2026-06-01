@@ -113,7 +113,7 @@ export default function DashPage() {
   if (clLoad || tLoad) return <Loader />
 
   return (
-  <div style={{ display:'flex', flexDirection:'column', gap:16, width:'100%' }}>
+  <div style={{ display:'flex', flexDirection:'column', gap:16, width:'100%', maxWidth:'100%' }}>
 
       {/* Saudação */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
