@@ -11,9 +11,7 @@ export const useAuthStore = create((set, get) => ({
   init: async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        await get().loadProfile(session.user)
-      } else {
+      if (session?.user) { get().loadProfile(session.user) } else {
         set({ loading: false })
       }
     } catch (e) {
@@ -22,9 +20,7 @@ export const useAuthStore = create((set, get) => ({
     }
 
     supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        await get().loadProfile(session.user)
-      } else {
+      if (session?.user) { get().loadProfile(session.user) } else {
         set({ user: null, profile: null, empresa: null, loading: false })
       }
     })
@@ -115,4 +111,5 @@ temPermissao: (acao) => {
   isOperador: () => String(get().profile?.perfil || '') === 'operador',
   getPerfil: () => String(get().profile?.perfil || 'admin'),
 }))
+
 
