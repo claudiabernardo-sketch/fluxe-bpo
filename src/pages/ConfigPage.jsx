@@ -31,7 +31,7 @@ export default function ConfigPage() {
   const addUser = useMutation({
     mutationFn: async (u) => {
       // Cria usuário via auth
-      const { data: authData, error } = await supabase.auth.admin?.createUser?.({
+      const { data: authData, error } = await supabase.functions.invoke('swift-api', {
         email: u.email, password: 'FluxeBPO@2026', email_confirm: true
       })
       // Insere na tabela usuarios
