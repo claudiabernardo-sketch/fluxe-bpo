@@ -32,7 +32,7 @@ export default function ConfigPage() {
     mutationFn: async (u) => {
       // Cria usuário via auth
       const { data: authData, error } = await supabase.functions.invoke('swift-api', {
-        email: u.email, password: 'FluxeBPO@2026', email_confirm: true
+        body: { nome: u.nome, email: u.email, perfil: u.perfil, custo_hora: u.custo_hora, empresa_id: empresa?.id }
       })
       // Insere na tabela usuarios
       await supabase.from('usuarios').insert({
