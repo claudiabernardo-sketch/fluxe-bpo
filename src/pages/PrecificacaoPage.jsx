@@ -887,7 +887,7 @@ export default function PrecificacaoPage() {
           const fmt2 = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 })
           const servicos = calc.items.filter(it => !it.nome.includes('Ajuste de porte'))
           return (
-            <div>
+            <div className="print-only">
               <style>{`
                 @media print { .prec-btn-row, .prec-progress { display:none!important; } }
                 .ctr { background:#fff; max-width:760px; margin:0 auto; padding:40px; border:1px solid #E8E5DE; border-radius:12px; font-size:13px; line-height:1.7; color:#1a1a1a; }

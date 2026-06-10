@@ -463,6 +463,10 @@ body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:13px;d
 .pgs { width: 100% !important; }
 .pgs > div { width: 100% !important; max-width: 100% !important; }
 @media print {
+  body > * { display:none!important; }
+  .print-only { display:block!important; }
+  #root > * { display:none!important; }
+  #root .print-only { display:block!important; }
   nav, aside, [class*="sidebar"], [class*="AppShell"], [class*="shell"], [class*="layout"], [class*="menu"], [class*="nav"], header { display:none!important; }
   main, [class*="main"], [class*="content"], [class*="page"] { margin:0!important; padding:0!important; width:100%!important; }
   body { background:#fff!important; }
