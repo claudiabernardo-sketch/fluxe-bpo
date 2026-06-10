@@ -28,7 +28,7 @@ const NAV = [
   { path:'/avulsas',    icon:'fa-solid fa-bolt',                 label:'Livres'      },
   { sep:true },
   { path:'/crm',        icon:'fa-solid fa-chart-line',           label:'CRM'         },
-  { path:'/prec',       icon:'fa-solid fa-tag',                  label:'Preço'       },
+  { path:'/prec',       icon:'fa-solid fa-tag',                  label:'Precif.'       },
   { sep:true },
   { path:'/clientes',   icon:'fa-solid fa-building',             label:'Clientes'    },
   { path:'/esteiras',   icon:'fa-solid fa-layer-group',          label:'Esteiras'    },
