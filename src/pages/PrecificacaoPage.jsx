@@ -816,7 +816,7 @@ export default function PrecificacaoPage() {
             </div>
 
             {/* PROPOSTA */}
-            <div className="prec-card">
+            <div id="proposta-print" className="prec-card">
               <div className="prec-card-num">Proposta comercial</div>
               <div className="prec-card-title" style={{ fontSize: 16 }}>
                 Proposta · {calc.d.nome || 'Cliente'} · {hoje}
@@ -867,7 +867,13 @@ export default function PrecificacaoPage() {
 
                         <div className="prec-btn-row">
               <button className="prec-btn prec-btn-ghost" onClick={() => irPara(4)}>← Ajustar valor</button>
-              <button className="prec-btn prec-btn-ghost" onClick={() => window.print()}>🖨 Imprimir proposta</button>
+              <button className="prec-btn prec-btn-ghost" onClick={() => {
+                const w = window.open('', '_blank', 'width=900,height=700')
+                const el = document.getElementById('proposta-print')
+                w.document.write('<html><head><title>Proposta</title><style>body{font-family:DM Sans,sans-serif;margin:0;padding:32px;color:#1a1a1a;font-size:13px;line-height:1.7}@page{margin:1.5cm}*{box-sizing:border-box}.prec-scope-block{background:#F9F8F5;border:1px solid #E8E5DE;border-radius:8px;padding:16px;margin-bottom:12px}.prec-scope-title{font-size:11px;font-weight:600;color:#6A6760;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;gap:6px}.prec-scope-item{font-size:12px;color:#6A6760;padding:4px 0;display:flex;gap:6px}.prec-scope-item::before{content:"→";color:#1A4D3A;flex-shrink:0}</style></head><body>' + el.innerHTML + '</body></html>')
+                w.document.close()
+                setTimeout(() => { w.print() }, 500)
+              }}>🖨 Imprimir proposta</button>
               <button className="prec-btn prec-btn-primary" onClick={() => irPara(6)}>Gerar contrato →</button>
             </div>
           </div>
