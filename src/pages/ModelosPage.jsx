@@ -1,7 +1,5 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useTarefaModelos, useCreateModelo, useUpdateModelo, useDeleteModelo, useClients } from '../hooks/useData'
-import { supabase } from '../lib/supabase'
-import { useAuthStore } from '../store/authStore'
 import { Card, CardHeader, Btn, Loader } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 
@@ -44,152 +42,6 @@ export default function ModelosPage() {
   const createModelo = useCreateModelo()
   const updateModelo = useUpdateModelo()
   const deleteModelo = useDeleteModelo()
-  const { empresa } = useAuthStore()
-  const [gerando, setGerando] = useState(false)
-  const [geracaoModal, setGeracaoModal] = useState(false)
-  const [mesGeracao, setMesGeracao] = useState(() => {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
-  })
-  const [geracaoLog, setGeracaoLog] = useState([])
-
-  async function gerarMes() {
-    if (!mesGeracao) return alert('Selecione o mês')
-    setGerando(true)
-    setGeracaoLog([])
-    const log = []
-
-    try {
-      // Buscar todos os modelos ativos
-      const { data: modelosAtivos } = await supabase
-        .from('tarefa_modelos')
-        .select('*')
-        .eq('ativo', true)
-        .eq('empresa_id', empresa?.id)
-
-      // Buscar todos os clientes ativos
-      const { data: clientesAtivos } = await supabase
-        .from('clientes')
-        .select('*')
-        .eq('empresa_id', empresa?.id)
-
-      if (!modelosAtivos?.length) {
-        setGeracaoLog(['Nenhum modelo ativo encontrado.'])
-        setGerando(false)
-        return
-      }
-
-      let totalGeradas = 0
-
-      for (const modelo of modelosAtivos) {
-        // Determinar quais clientes esse modelo se aplica
-        const clientes = modelo.cliente_id
-          ? clientesAtivos.filter(c => c.id === modelo.cliente_id)
-          : clientesAtivos
-
-        for (const cliente of clientes) {
-          // Verificar se já foi gerado para esse mês
-          const { data: jaGerado } = await supabase
-            .from('tarefa_geracoes')
-            .select('id')
-            .eq('modelo_id', modelo.id)
-            .eq('cliente_id', cliente.id)
-            .eq('mes_ano', mesGeracao)
-            .maybeSingle()
-
-          if (jaGerado) {
-            log.push(`⏭ ${modelo.titulo} → ${cliente.fantasia||cliente.razao_social} (já gerado)`)
-            continue
-          }
-
-          // Calcular data de execução baseada no dia_mes e mês selecionado
-          const [ano, mes] = mesGeracao.split('-').map(Number)
-          const diaExec = modelo.dia_mes || 5
-          const dataExec = `${mesGeracao}-${String(diaExec).padStart(2,'0')}`
-
-          // Para conciliação bancária — gerar uma tarefa por banco
-          const ehConciliacao = modelo.categoria === 'Conciliação Bancária'
-          const bancos = cliente.bancos || []
-
-          if (ehConciliacao && bancos.length > 0) {
-            for (const banco of bancos) {
-              const { data: tarefa } = await supabase
-                .from('tarefas')
-                .insert({
-                  titulo: `${modelo.titulo} — ${banco}`,
-                  categoria: modelo.categoria,
-                  prioridade: modelo.prioridade || 'media',
-                  status: 'aberta',
-                  cliente_id: cliente.id,
-                  empresa_id: empresa?.id,
-                  modelo_id: modelo.id,
-                  data_execucao: dataExec,
-                  prazo: dataExec,
-                })
-                .select().single()
-
-              if (tarefa?.id && modelo.checklist_items?.length) {
-                await supabase.from('tarefa_checklists').insert(
-                  modelo.checklist_items.map((texto, ordem) => ({
-                    tarefa_id: tarefa.id,
-                    empresa_id: empresa?.id,
-                    texto, ordem
-                  }))
-                )
-              }
-              totalGeradas++
-            }
-          } else {
-            // Tarefa normal
-            const { data: tarefa } = await supabase
-              .from('tarefas')
-              .insert({
-                titulo: modelo.titulo,
-                categoria: modelo.categoria,
-                prioridade: modelo.prioridade || 'media',
-                status: 'aberta',
-                cliente_id: cliente.id,
-                empresa_id: empresa?.id,
-                modelo_id: modelo.id,
-                data_execucao: dataExec,
-                prazo: dataExec,
-              })
-              .select().single()
-
-            if (tarefa?.id && modelo.checklist_items?.length) {
-              await supabase.from('tarefa_checklists').insert(
-                modelo.checklist_items.map((texto, ordem) => ({
-                  tarefa_id: tarefa.id,
-                  empresa_id: empresa?.id,
-                  texto, ordem
-                }))
-              )
-            }
-            totalGeradas++
-          }
-
-          // Registrar geração para evitar duplicatas
-          await supabase.from('tarefa_geracoes').insert({
-            modelo_id: modelo.id,
-            cliente_id: cliente.id,
-            empresa_id: empresa?.id,
-            mes_ano: mesGeracao,
-            tarefas_geradas: ehConciliacao && bancos.length > 0 ? bancos.length : 1
-          })
-
-          log.push(`✅ ${modelo.titulo} → ${cliente.fantasia||cliente.razao_social}`)
-        }
-      }
-
-      log.push(`\n🎉 Total: ${totalGeradas} tarefas geradas para ${mesGeracao}`)
-      setGeracaoLog(log)
-    } catch (err) {
-      log.push(`❌ Erro: ${err.message}`)
-      setGeracaoLog(log)
-    }
-
-    setGerando(false)
-  }
 
   const [modal, setModal]   = useState(null) // null | 'new' | 'edit'
   const [form, setForm]     = useState(EMPTY_FORM)
@@ -278,51 +130,7 @@ export default function ModelosPage() {
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      {/* MODAL GERAÇÃO */}
-      {geracaoModal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-          <div style={{ background:'#fff', borderRadius:14, width:'100%', maxWidth:520, padding:28 }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-              <div style={{ fontSize:17, fontWeight:700, color:'#0F172A' }}>Gerar tarefas do mes</div>
-              <button onClick={() => { setGeracaoModal(false); setGeracaoLog([]) }} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:'#64748B' }}>x</button>
-            </div>
-            <div style={{ background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:8, padding:'10px 14px', marginBottom:16, fontSize:12, color:'#15803D' }}>
-              O sistema gera uma tarefa por modelo para cada cliente. Para Conciliacao Bancaria, gera uma tarefa por banco cadastrado no cliente.
-            </div>
-            <div style={{ marginBottom:16 }}>
-              <label style={{ fontSize:11, fontWeight:700, color:'#64748B', display:'block', marginBottom:6, textTransform:'uppercase' }}>Mes de geracao</label>
-              <input type="month" value={mesGeracao} onChange={e => setMesGeracao(e.target.value)}
-                style={{ width:'100%', padding:'9px 12px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:14, fontFamily:'inherit' }} />
-            </div>
-            {geracaoLog.length > 0 && (
-              <div style={{ background:'#F8FAFC', border:'1px solid #E2E8F0', borderRadius:8, padding:14, marginBottom:16, maxHeight:200, overflowY:'auto' }}>
-                {geracaoLog.map((l, i) => (
-                  <div key={i} style={{ fontSize:11, padding:'2px 0', fontWeight: l.startsWith('Total') ? 700 : 400, color: l.startsWith('Erro') ? '#991B1B' : l.startsWith('ja gerado') ? '#92400E' : '#334155' }}>{l}</div>
-                ))}
-              </div>
-            )}
-            <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-              <button onClick={() => { setGeracaoModal(false); setGeracaoLog([]) }}
-                style={{ padding:'9px 20px', borderRadius:8, border:'1px solid #E2E8F0', background:'#fff', cursor:'pointer', fontSize:13, fontWeight:500 }}>Fechar</button>
-              <button onClick={gerarMes} disabled={gerando}
-                style={{ padding:'9px 20px', borderRadius:8, border:'none', background: gerando ? '#94A3B8' : '#6366F1', color:'#fff', cursor: gerando ? 'not-allowed' : 'pointer', fontSize:13, fontWeight:600 }}>
-                {gerando ? 'Gerando...' : 'Gerar tarefas'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-        <div>
-          <h2 style={{ fontSize:18, fontWeight:700, color:'#0F172A', margin:0 }}>Rotinas</h2>
-          <p style={{ fontSize:12, color:'#64748B', margin:'4px 0 0' }}>Configure tarefas recorrentes por cliente — o sistema gera automaticamente conforme a recorrência.</p>
-        </div>
-        <button onClick={() => setGeracaoModal(true)}
-          style={{ padding:'10px 20px', borderRadius:8, border:'none', background:'#6366F1', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', gap:6 }}>
-          🗓 Gerar mês
-        </button>
-      </div>
-    <ContextTooltip
+      <ContextTooltip
         pageKey="modelos"
         icon="🔁"
         title="Como usar os Modelos de Tarefas"
@@ -523,4 +331,47 @@ export default function ModelosPage() {
                 <div key={i} style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4 }}>
                   <span style={{ flex:1, fontSize:12, color:'#475569', padding:'4px 8px', background:'#F8FAFC', borderRadius:6 }}>{item}</span>
                   <button type="button" onClick={() => set('checklist_items', form.checklist_items.filter((_, j) => j !== i))}
-                    style={{ background:'none', border:'none', color:'#94A3B8', cursor:'poin
+                    style={{ background:'none', border:'none', color:'#94A3B8', cursor:'pointer', fontSize:14 }}>×</button>
+                </div>
+              ))}
+              <div style={{ display:'flex', gap:6 }}>
+                <input style={{ ...fi, flex:1 }} placeholder="Adicionar item..." value={newCk}
+                  onChange={e => setNewCk(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addChecklist())} />
+                <button type="button" onClick={addChecklist}
+                  style={{ padding:'8px 14px', borderRadius:8, background:'#6366F1', color:'#fff', border:'none', cursor:'pointer', fontSize:13 }}>+</button>
+              </div>
+            </div>
+
+            {/* Ativo */}
+            <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, color:'#475569', marginBottom:20, cursor:'pointer' }}>
+              <input type="checkbox" checked={form.ativo} onChange={e => set('ativo', e.target.checked)} />
+              Modelo ativo (gera tarefas automaticamente)
+            </label>
+
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
+              <Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn>
+              <Btn variant="primary" onClick={salvar} disabled={createModelo.isPending || updateModelo.isPending}>
+                {createModelo.isPending || updateModelo.isPending ? 'Salvando...' : 'Salvar modelo'}
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM DELETE */}
+      {confirmDel && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+          <div style={{ background:'#fff', borderRadius:12, padding:24, maxWidth:360, width:'100%', textAlign:'center' }}>
+            <div style={{ fontSize:15, fontWeight:700, marginBottom:8 }}>Excluir modelo?</div>
+            <div style={{ fontSize:13, color:'#64748B', marginBottom:20 }}>As tarefas já geradas <strong>não serão excluídas</strong>. Apenas novos dias não serão gerados.</div>
+            <div style={{ display:'flex', gap:8, justifyContent:'center' }}>
+              <Btn variant="ghost" onClick={() => setConfirmDel(null)}>Cancelar</Btn>
+              <Btn variant="danger" onClick={confirmarDelete} disabled={deleteModelo.isPending}>Excluir</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

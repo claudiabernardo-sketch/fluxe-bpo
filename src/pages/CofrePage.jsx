@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Loader } from '../components/ui'
 import { useAuthStore } from '../store/authStore'
+import ContextTooltip from '../components/ui/ContextTooltip'
 
 const CATEGORIAS = [
   { id:'banco',    icon:'🏦', label:'Banco',       color:'#1D4ED8', bg:'#EFF6FF' },
@@ -38,6 +39,7 @@ export default function CofrePage() {
   const [search, setSearch] = useState('')
   const [filterCl, setFilterCl] = useState('')
   const [filterCat, setFilterCat] = useState('')
+  // revealed: { [acesso_id]: string (senha descriptografada) | 'loading' }
   const [revealed, setRevealed] = useState({})
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState({})
@@ -53,20 +55,62 @@ export default function CofrePage() {
     },
   })
 
+  // ── Revelar senha via RPC (descriptografa no banco) ──────────────────────
+  async function toggleReveal(ac) {
+    const id = ac.id
+    if (revealed[id]) {
+      // Ocultar
+      setRevealed(p => { const n = {...p}; delete n[id]; return n })
+      return
+    }
+    if (!ac.senha_enc) return
+    setRevealed(p => ({...p, [id]: 'loading'}))
+    try {
+      const { data, error } = await supabase.rpc('cofre_decrypt', { acesso_id: id })
+      if (error) throw error
+      setRevealed(p => ({...p, [id]: data || ''}))
+    } catch (err) {
+      console.error('Erro ao descriptografar:', err)
+      // Fallback: se o banco ainda não tem a função, mostra direto (período de transição)
+      setRevealed(p => ({...p, [id]: ac.senha_enc}))
+    }
+  }
+
+  // ── Salvar: criptografa antes de persistir ───────────────────────────────
   const saveAcesso = useMutation({
     mutationFn: async (dados) => {
-      if (dados.id) {
-        const { id, ...rest } = dados
+      let payload = { ...dados }
+
+      // Se tem senha nova, criptografar via RPC antes de salvar
+      if (payload._novaSenha) {
+        const { data: enc, error: encErr } = await supabase.rpc('cofre_encrypt', { plaintext: payload._novaSenha })
+        if (encErr) throw encErr
+        payload.senha_enc = enc
+      }
+      // Remover campo auxiliar
+      delete payload._novaSenha
+
+      if (payload.id) {
+        const { id, ...rest } = payload
+        // Se não mudou a senha (campo vazio no form de edição), não atualizar senha_enc
+        if ('senha_enc' in rest && rest.senha_enc === undefined) {
+          delete rest.senha_enc
+        }
         const { data, error } = await supabase.from('acessos').update(rest).eq('id', id).select().single()
         if (error) throw error
         return data
       } else {
-        const { data, error } = await supabase.from('acessos').insert(dados).select().single()
+        const { data, error } = await supabase.from('acessos').insert(payload).select().single()
         if (error) throw error
         return data
       }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['acessos_cofre'] }); setModal(null); setForm({}) }
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['acessos_cofre'] })
+      setModal(null)
+      setForm({})
+      setRevealed({}) // limpar senhas reveladas após edição
+    }
   })
 
   const deleteAcesso = useMutation({
@@ -95,13 +139,37 @@ export default function CofrePage() {
   })
 
   function openNew() { setForm({ categoria:'outro' }); setModal({ mode:'new' }) }
-  function openEdit(a) { setForm({...a}); setModal({ mode:'edit', id:a.id }) }
+  function openEdit(a) {
+    // Não preencher senha no form de edição — usuário deve digitar nova senha se quiser alterar
+    const { senha_enc, ...rest } = a
+    setForm({ ...rest, _temSenha: !!senha_enc })
+    setModal({ mode:'edit', id:a.id })
+  }
 
- async function save() {
+  async function save() {
     if (!form.sistema?.trim()) return alert('Nome do sistema obrigatório')
     if (!form.cliente_id) return alert('Selecione um cliente')
-    const payload = { ...form, empresa_id: profile?.empresa_id || profile?.empresas?.id}
-    await saveAcesso.mutateAsync(modal.mode==='edit' ? { id:modal.id, ...payload } : payload)
+
+    const { _temSenha, ...dados } = form
+    const payload = { ...dados, empresa_id: profile?.empresa_id || profile?.empresas?.id }
+
+    if (modal.mode === 'edit') {
+      // Se o campo senha foi preenchido no form, é nova senha → criptografar
+      if (form._novaSenha?.trim()) {
+        payload._novaSenha = form._novaSenha
+      } else {
+        // Sem nova senha: não tocar no campo senha_enc
+        delete payload.senha_enc
+      }
+      await saveAcesso.mutateAsync({ id: modal.id, ...payload })
+    } else {
+      // Novo acesso: se tem senha, criptografar
+      if (form._novaSenha?.trim()) {
+        payload._novaSenha = form._novaSenha
+      }
+      delete payload.senha_enc
+      await saveAcesso.mutateAsync(payload)
+    }
   }
 
   const fi = { width:'100%', padding:'8px 12px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'inherit', background:'#fff', color:'#0F172A', outline:'none' }
@@ -110,6 +178,18 @@ export default function CofrePage() {
 
   return (
     <div>
+      <ContextTooltip
+        pageKey="cofre"
+        icon="🔒"
+        title="Como usar o Cofre de Senhas"
+        color="#8B5CF6"
+        tips={[
+          'Armazene aqui os logins e senhas dos sistemas de cada cliente — bancos, ERPs, portais.',
+          'As senhas são criptografadas e só acessíveis por usuários da sua empresa.',
+          'Quando um analista sai, os dados permanecem seguros e acessíveis.',
+          'Use a busca para encontrar rapidamente um sistema ou cliente.',
+        ]}
+      />
       {/* Header */}
       <div style={{ display:'flex', gap:8, marginBottom:16, alignItems:'center', flexWrap:'wrap' }}>
         <div style={{ position:'relative', flex:1, minWidth:180 }}>
@@ -170,7 +250,10 @@ export default function CofrePage() {
             {/* Itens */}
             {grp.items.map(ac => {
               const cat = getCat(ac.categoria)
-              const isRev = revealed[ac.id]
+              const revState = revealed[ac.id]
+              const isLoading_ = revState === 'loading'
+              const isRev = revState && revState !== 'loading'
+              const decryptedSenha = isRev ? revState : null
               return (
                 <div key={ac.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', borderBottom:'1px solid #F8FAFC' }}>
                   {/* Ícone categoria */}
@@ -211,14 +294,16 @@ export default function CofrePage() {
                     {canSee && ac.senha_enc ? (
                       <div>
                         <div style={{ fontFamily:'monospace', fontSize:12, color:'#0F172A', marginBottom:4, minWidth:120, textAlign:'right' }}>
-                          {isRev ? ac.senha_enc : '••••••••'}
+                          {isLoading_ ? '⏳' : isRev ? decryptedSenha : '••••••••'}
                         </div>
                         <div style={{ display:'flex', gap:4, justifyContent:'flex-end' }}>
-                          <button onClick={()=>setRevealed(p=>({...p,[ac.id]:!p[ac.id]}))}
+                          <button
+                            onClick={()=>toggleReveal(ac)}
+                            disabled={isLoading_}
                             style={{ padding:'3px 8px', borderRadius:6, border:'1px solid #E2E8F0', background:'#F8FAFC', color:'#475569', cursor:'pointer', fontSize:10, fontWeight:600 }}>
-                            {isRev ? '🙈 Ocultar' : '👁 Revelar'}
+                            {isLoading_ ? '...' : isRev ? '🙈 Ocultar' : '👁 Revelar'}
                           </button>
-                          {isRev && <CopyBtn text={ac.senha_enc} label="senha" />}
+                          {isRev && decryptedSenha && <CopyBtn text={decryptedSenha} label="senha" />}
                         </div>
                       </div>
                     ) : !canSee && ac.senha_enc ? (
@@ -275,8 +360,19 @@ export default function CofrePage() {
                   <input value={form.login||''} onChange={e=>setForm(f=>({...f,login:e.target.value}))} style={fi} placeholder="usuario@email.com ou CPF/CNPJ" />
                 </div>
                 <div>
-                  <label style={{ display:'block', fontSize:10, fontWeight:700, color:'#6366F1', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>🔑 Senha</label>
-                  <input type="text" value={form.senha_enc||''} onChange={e=>setForm(f=>({...f,senha_enc:e.target.value}))} style={fi} placeholder="Senha ou token de acesso" />
+                  <label style={{ display:'block', fontSize:10, fontWeight:700, color:'#6366F1', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>
+                    🔑 {modal.mode==='edit' ? 'Nova senha (deixe em branco para manter)' : 'Senha'}
+                  </label>
+                  <input
+                    type="text"
+                    value={form._novaSenha||''}
+                    onChange={e=>setForm(f=>({...f,_novaSenha:e.target.value}))}
+                    style={fi}
+                    placeholder={modal.mode==='edit' && form._temSenha ? '(senha mantida)' : 'Senha ou token de acesso'}
+                  />
+                  {modal.mode==='edit' && form._temSenha && (
+                    <div style={{ fontSize:9, color:'#94A3B8', marginTop:3 }}>🔒 Senha criptografada armazenada. Digite para substituir.</div>
+                  )}
                 </div>
                 <div style={{ gridColumn:'1/-1' }}>
                   <label style={{ display:'block', fontSize:10, fontWeight:700, color:'#94A3B8', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>URL / Endereço</label>

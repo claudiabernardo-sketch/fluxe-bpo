@@ -9,6 +9,7 @@ export const useAuthStore = create((set, get) => ({
   error: null,
 
   init: async () => {
+    // 1. Carrega sessão atual imediatamente (confiável, sem depender de eventos)
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
@@ -16,12 +17,14 @@ export const useAuthStore = create((set, get) => ({
       } else {
         set({ loading: false })
       }
-    } catch (e) {
-      console.error('Auth init error:', e)
+    } catch {
       set({ loading: false })
     }
 
-    supabase.auth.onAuthStateChange(async (_event, session) => {
+    // 2. Escuta mudanças futuras (login, logout, refresh de token)
+    //    Ignora INITIAL_SESSION — já foi tratado acima
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'INITIAL_SESSION' && !session?.user) return
       if (session?.user) {
         await get().loadProfile(session.user)
       } else {
@@ -60,40 +63,43 @@ export const useAuthStore = create((set, get) => ({
 
   signUp: async (email, password, nome, nomeEmpresa) => {
     set({ error: null })
-    const { data, error } = await supabase.auth.signUp({ email, password })
-    if (error) { set({ error: error.message }); return { error } }
 
-    if (data.user) {
-      const { data: empresa } = await supabase
-        .from('empresas')
-        .insert({ nome: nomeEmpresa, email, plano: 'pro' })
-        .select().single()
-
-      if (empresa) {
-        await supabase.from('usuarios').insert({
-          id: data.user.id,
-          empresa_id: empresa.id,
-          nome, email, perfil: 'admin',
-        })
-      }
+    // Validação mínima de senha no cliente
+    if (password.length < 6) {
+      const err = { message: 'A senha deve ter pelo menos 6 caracteres.' }
+      set({ error: err.message }); return { error: err }
     }
+
+    // nome e nomeEmpresa são passados como metadata →
+    // o trigger handle_new_user() no banco cria empresa + usuario
+    // com SECURITY DEFINER (sem depender de sessão/RLS)
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`,
+        data: { nome, nomeEmpresa },
+      },
+    })
+    if (error) { set({ error: error.message }); return { error } }
     return { data }
   },
 
   signOut: async () => {
-    await supabase.auth.signOut()
-    set({ user: null, profile: null, empresa: null })
+    set({ user: null, profile: null, empresa: null, loading: false })
+    try { await supabase.auth.signOut({ scope: 'local' }) } catch {}
+    window.location.href = '/login'
   },
 
   resetPassword: async (email) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/`,
+      redirectTo: `${window.location.origin}/reset-password`,
     })
     return { error }
   },
 
   temPermissao: (acao) => {
-    const perfil = get().profile?.perfil || 'admin'
+    const perfil = get().profile?.perfil || 'sem_perfil'
     const map = {
       ver_senhas:    ['admin', 'gestor'],
       ver_todos:     ['admin', 'gestor', 'supervisor'],

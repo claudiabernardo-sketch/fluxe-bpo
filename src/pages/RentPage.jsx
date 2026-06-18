@@ -1,13 +1,20 @@
-import { useClients } from '../hooks/useData'
-import { useApontamentos } from '../hooks/useData'
+import { useClients, useApontamentos, useUsuarios } from '../hooks/useData'
 import { KpiCard, Card, CardHeader, Loader, fmtR } from '../components/ui'
+import ContextTooltip from '../components/ui/ContextTooltip'
 
-const CUSTO_HORA = 35
+const CUSTO_HORA_PADRAO = 65 // R$65/h — referência realista para analista BPO financeiro
 
 export default function RentPage() {
   const { data: clients = [], isLoading } = useClients()
   const { data: aponts = [] } = useApontamentos()
+  const { data: usuarios = [] } = useUsuarios()
   if (isLoading) return <Loader />
+
+  // Custo/hora médio real da equipe (configurado em Capacidade), ou fallback R$35
+  const usuariosComCusto = usuarios.filter(u => u.custo_hora)
+  const CUSTO_HORA = usuariosComCusto.length
+    ? Math.round(usuariosComCusto.reduce((a, u) => a + u.custo_hora, 0) / usuariosComCusto.length)
+    : CUSTO_HORA_PADRAO
 
   const ativos = clients.filter(c=>c.status==='ativo')
   const mrr = ativos.reduce((a,c)=>a+(c.valor_mrr||0),0)
@@ -28,6 +35,18 @@ export default function RentPage() {
 
   return (
     <div>
+      <ContextTooltip
+        pageKey="rentabilidade"
+        icon="📊"
+        title="Como funciona a Rentabilidade"
+        color="#22C55E"
+        tips={[
+          'Compara o MRR do cliente com o custo real de atendimento (horas × custo/hora).',
+          'Margem negativa significa que você está perdendo dinheiro nesse cliente.',
+          'Para o cálculo ser preciso, registre horas via timer nas tarefas.',
+          'Configure o custo/hora de cada analista em Capacidade.',
+        ]}
+      />
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:12, marginBottom:18 }}>
         <KpiCard label="MRR" value={`R$ ${(mrr/1000).toFixed(1)}k`} color="blue" />
         <KpiCard label="ARR" value={`R$ ${(arr/1000).toFixed(0)}k`} color="green" />

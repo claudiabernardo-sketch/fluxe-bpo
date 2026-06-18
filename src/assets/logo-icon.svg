@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 68 84" width="68" height="84">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#7C3AED"/>
+      <stop offset="50%"  stop-color="#818CF8"/>
+      <stop offset="100%" stop-color="#0EA5E9"/>
+    </linearGradient>
+  </defs>
+  <!-- Upper ribbon — top portion of the F -->
+  <ellipse cx="32" cy="24" rx="30" ry="15" transform="rotate(-8 32 24)" fill="url(#g)"/>
+  <!-- Lower ribbon — stem of the F -->
+  <ellipse cx="32" cy="65" rx="27" ry="13" transform="rotate(-8 32 65)" fill="url(#g)"/>
+</svg>

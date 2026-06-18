@@ -3,10 +3,19 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useAuthStore } from './store/authStore'
 import LoginPage from './pages/LoginPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
+import PrivacidadePage from './pages/PrivacidadePage'
+import TermosPage from './pages/TermosPage'
 import AppShell from './components/layout/AppShell'
 
 const qc = new QueryClient({
-  defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 3 * 60 * 1000,  // 3 min — não refaz query ao trocar de aba
+      gcTime:    10 * 60 * 1000, // 10 min — mantém cache em memória
+    },
+  },
 })
 
 function AuthGuard({ children }) {
@@ -35,6 +44,9 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/privacidade" element={<PrivacidadePage />} />
+          <Route path="/termos" element={<TermosPage />} />
           <Route path="/*" element={
             <AuthGuard>
               <AppShell />

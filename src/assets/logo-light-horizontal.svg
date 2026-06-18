@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 228 84" width="228" height="84">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#7C3AED"/>
+      <stop offset="50%"  stop-color="#818CF8"/>
+      <stop offset="100%" stop-color="#0EA5E9"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Symbol: F (identical gradient, works on any bg) -->
+  <ellipse cx="32" cy="24" rx="30" ry="15" transform="rotate(-8 32 24)" fill="url(#g)"/>
+  <ellipse cx="32" cy="65" rx="27" ry="13" transform="rotate(-8 32 65)" fill="url(#g)"/>
+
+  <!-- Wordmark: "Fluxe" dark for light backgrounds -->
+  <text
+    x="78" y="43"
+    font-family="'Poppins','Inter','Helvetica Neue',Arial,sans-serif"
+    font-size="36"
+    font-weight="700"
+    fill="#0F172A"
+    letter-spacing="-0.5"
+    dominant-baseline="auto">Fluxe</text>
+
+  <!-- Wordmark: "BPO" in brand purple -->
+  <text
+    x="80" y="66"
+    font-family="'Poppins','Inter','Helvetica Neue',Arial,sans-serif"
+    font-size="19"
+    font-weight="600"
+    fill="#7C3AED"
+    letter-spacing="5">BPO</text>
+</svg>

@@ -34,7 +34,7 @@ export default function AprovPage() {
       <Card>
         <CardHeader title="Aprovações de pagamento" icon="💸" />
         {aprov.length === 0
-          ? <EmptyState icon="💰" title="Nenhuma aprovação" sub="Crie aprovações para controlar pagamentos" />
+          ? <EmptyState icon="💰" title="Nenhuma aprovação pendente" sub="Aprovações aparecem aqui quando uma tarefa de Contas a Pagar é enviada para aprovação" />
           : aprov.map(a => (
             <div key={a.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', borderBottom:'1px solid #F8FAFC' }}>
               <div style={{ flex:1, minWidth:0 }}>

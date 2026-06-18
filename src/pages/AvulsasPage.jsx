@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useClients } from '../hooks/useData'
+import { useAuthStore } from '../store/authStore'
 import { Card, Btn, Badge, Loader, EmptyState, fmt } from '../components/ui'
 import { useTimerStore } from '../components/layout/TimerBar'
 import { supabase } from '../lib/supabase'
@@ -7,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 export default function AvulsasPage() {
   const { data: clients = [] } = useClients()
+  const { empresa } = useAuthStore()
   const qc = useQueryClient()
   const startTimer = useTimerStore(s => s.start)
   const [modal, setModal] = useState(false)
@@ -14,17 +16,22 @@ export default function AvulsasPage() {
   const [isAgend, setIsAgend] = useState(false)
 
   const { data: avulsas = [], isLoading } = useQuery({
-    queryKey: ['avulsas'],
+    queryKey: ['avulsas', empresa?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('tarefas_avulsas').select('*, clientes(razao_social,fantasia)').order('criado_em', { ascending:false })
+      const { data, error } = await supabase.from('tarefas_avulsas')
+        .select('*, clientes(razao_social,fantasia)')
+        .eq('empresa_id', empresa?.id)
+        .order('criado_em', { ascending:false })
       if (error) throw error
       return data
-    }
+    },
+    enabled: !!empresa?.id,
   })
 
   const create = useMutation({
     mutationFn: async (av) => {
-      const { data, error } = await supabase.from('tarefas_avulsas').insert(av).select().single()
+      const { data, error } = await supabase.from('tarefas_avulsas')
+        .insert({ ...av, empresa_id: empresa?.id }).select().single()
       if (error) throw error
       return data
     },

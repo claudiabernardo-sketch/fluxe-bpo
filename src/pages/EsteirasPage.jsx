@@ -88,11 +88,12 @@ const ESTEIRAS = [
   { id:'operacional', name:'Rotina Operacional', icon:'🔄', color:'#22C55E',
     etapas:[
       { titulo:'Rotina Diária', tasks:[
-        { titulo:'Verificar contas a pagar com vencimento hoje', categoria:'Contas a Pagar', checklist:['Acessar lista de CP do dia','Verificar se há saldo para pagamento','Comunicar cliente se necessário'] },
-        { titulo:'Verificar recebimentos previstos para hoje', categoria:'Contas a Receber', checklist:['Verificar pagamentos confirmados','Baixar no sistema','Comunicar cliente sobre recebidos'] },
-        { titulo:'Conferência bancária matinal', categoria:'Conciliação Bancária', checklist:['Verificar saldo atual','Conferir lançamentos do dia anterior','Identificar movimentações não reconhecidas'] },
-        { titulo:'Registrar pagamentos realizados e comprovantes', categoria:'Contas a Pagar', checklist:['Confirmar pagamentos no banco','Anexar comprovantes no sistema','Baixar os títulos pagos'] },
-        { titulo:'Checar NFs a emitir hoje', categoria:'Emissão de NF', checklist:['Verificar contratos com recorrência','Emitir NFs pendentes','Enviar para os clientes'] },
+        { titulo:'Conferência bancária matinal', categoria:'Conciliação Bancária', checklist:['Acessar internet banking de cada cliente','Verificar saldo atual de todas as contas','Identificar movimentações não reconhecidas','Confirmar recebimentos do dia anterior'] },
+        { titulo:'Verificar contas a pagar com vencimento hoje', categoria:'Contas a Pagar', checklist:['Acessar lista de CP do dia','Verificar se há saldo disponível','Obter autorização do cliente para pagamentos acima do limite','Efetuar pagamentos autorizados','Salvar comprovantes','Baixar os títulos no sistema'] },
+        { titulo:'Agendar pagamentos do próximo dia útil', categoria:'Pagamentos', checklist:['Verificar vencimentos de amanhã','Confirmar disponibilidade de saldo','Agendar no internet banking','Comunicar cliente sobre agendamentos realizados'] },
+        { titulo:'Verificar recebimentos previstos para hoje', categoria:'Contas a Receber', checklist:['Verificar pagamentos confirmados no banco','Baixar os títulos recebidos no sistema','Comunicar cliente sobre recebimentos do dia','Cobrar os não recebidos'] },
+        { titulo:'Checar NFs a emitir hoje', categoria:'Emissão de NF', checklist:['Verificar contratos com recorrência','Confirmar dados com o cliente se necessário','Emitir NFs pendentes no portal','Enviar XML e PDF para os clientes','Registrar número da NF no controle'] },
+        { titulo:'Responder mensagens e pendências do dia', categoria:'Relacionamento', checklist:['Verificar WhatsApp e e-mail','Responder dúvidas dos clientes','Registrar pendências que não foram resolvidas','Atualizar status das tarefas afetadas'] },
       ]},
       { titulo:'Rotina Semanal', tasks:[
         { titulo:'Conciliação de plataformas — cartão, boleto e PIX', categoria:'Conciliação Bancária', checklist:['Baixar relatório da maquininha','Baixar relatório de boletos','Conciliar com lançamentos no sistema','Verificar divergências'] },
@@ -102,14 +103,17 @@ const ESTEIRAS = [
         { titulo:'Conferir inadimplência da semana', categoria:'Cobrança / Inadimplência', checklist:['Listar títulos vencidos','Classificar por faixa de atraso','Enviar cobranças conforme régua'] },
       ]},
       { titulo:'Fechamento Mensal', tasks:[
-        { titulo:'Cobrar extrato bancário e documentos do cliente', categoria:'Conciliação Bancária', checklist:['Solicitar extrato de todas as contas','Solicitar faturas de cartão','Solicitar comprovantes de despesas','Solicitar NFs de compras em falta'] },
-        { titulo:'Conciliar extrato bancário conta a conta', categoria:'Conciliação Bancária', checklist:['Conciliar conta corrente principal','Conciliar demais contas','Conciliar cartão corporativo','Verificar lançamentos duplicados'] },
-        { titulo:'Conciliar plataformas digitais', categoria:'Conciliação Bancária', checklist:['Conciliar boletos emitidos','Conciliar PIX recebidos','Conciliar maquininha','Conciliar marketplaces'] },
-        { titulo:'Fechar período no ERP', categoria:'DRE / Relatórios', checklist:['Verificar se todos os lançamentos estão corretos','Fechar mês no sistema','Gerar backup dos dados'] },
-        { titulo:'Gerar DRE Gerencial do mês', categoria:'DRE / Relatórios', checklist:['Gerar DRE no sistema','Revisar valores','Calcular margens','Comparar com mês anterior'] },
-        { titulo:'Gerar Fluxo de Caixa projetado para o próximo mês', categoria:'Fluxo de Caixa', checklist:['Projetar receitas do próximo mês','Projetar despesas fixas','Identificar gap de caixa','Apresentar ao cliente'] },
-        { titulo:'Preparar e enviar relatório executivo ao cliente', categoria:'DRE / Relatórios', checklist:['Montar resumo executivo','Incluir DRE','Incluir fluxo de caixa','Incluir indicadores principais','Enviar ao cliente 24h antes da reunião'] },
-        { titulo:'Realizar reunião mensal de resultados', categoria:'Estratégico', checklist:['Abrir com resultado do mês','Apresentar top 3 vazamentos','Apresentar posição de caixa','Definir top 3 prioridades do próximo mês','Registrar ata da reunião'] },
+        { titulo:'Cobrar extrato bancário e documentos do cliente', categoria:'Conciliação Bancária', checklist:['Solicitar extrato de todas as contas','Solicitar faturas de cartão','Solicitar comprovantes de despesas físicas','Solicitar NFs de compras em falta','Definir prazo para entrega (máximo dia 5 do mês seguinte)'] },
+        { titulo:'Emitir NFs dos contratos de serviço BPO do mês', categoria:'Emissão de NF', checklist:['Verificar lista de contratos recorrentes','Confirmar valores com o contrato','Emitir NFS-e no portal da prefeitura','Enviar para os clientes por e-mail','Registrar número das NFs emitidas'] },
+        { titulo:'Verificar e cobrar guias de tributos do mês', categoria:'Contas a Pagar', checklist:['DAS (Simples Nacional) — verificar vencimento e valor','GPS (INSS) — se Lucro Presumido','DARF (IRPJ/CSLL/PIS/COFINS) — se Lucro Presumido','ISS municipal — verificar guia','Confirmar recolhimento com o contador/cliente','Arquivar comprovantes de pagamento'] },
+        { titulo:'Conciliar extrato bancário conta a conta', categoria:'Conciliação Bancária', checklist:['Conciliar conta corrente principal','Conciliar demais contas','Conciliar cartão corporativo','Verificar lançamentos duplicados','Verificar lançamentos não identificados'] },
+        { titulo:'Conciliar plataformas digitais', categoria:'Conciliação Bancária', checklist:['Conciliar boletos emitidos x recebidos','Conciliar PIX recebidos','Conciliar maquininha (crédito e débito)','Conciliar marketplaces (ML, Shopee, etc)','Verificar taxas descontadas pelas plataformas'] },
+        { titulo:'Enviar comprovantes de pagamentos do mês ao cliente', categoria:'Contas a Pagar', checklist:['Organizar comprovantes por data','Criar pasta por cliente e mês','Enviar por e-mail ou pasta compartilhada','Confirmar recebimento pelo cliente'] },
+        { titulo:'Fechar período no ERP', categoria:'DRE / Relatórios', checklist:['Verificar se todos os lançamentos estão corretos','Revisar categorias dos lançamentos','Fechar mês no sistema','Gerar backup dos dados'] },
+        { titulo:'Gerar relatório gerencial do mês', categoria:'DRE / Relatórios', checklist:['Gerar relatório de receitas e despesas no sistema','Calcular margens do período','Comparar com mês anterior','Revisar valores antes de enviar'] },
+        { titulo:'Gerar Fluxo de Caixa projetado para o próximo mês', categoria:'Fluxo de Caixa', checklist:['Projetar receitas do próximo mês','Projetar despesas fixas e variáveis','Incluir tributos a vencer','Identificar gap de caixa','Alertar cliente se houver risco de saldo negativo'] },
+        { titulo:'Preparar e enviar relatório executivo ao cliente', categoria:'DRE / Relatórios', checklist:['Montar resumo executivo (1 página)','Incluir resultado do mês','Incluir fluxo de caixa projetado','Incluir indicadores (margem, inadimplência, ticket médio)','Enviar ao cliente 24h antes da reunião'] },
+        { titulo:'Realizar reunião mensal de resultados', categoria:'Estratégico', checklist:['Abrir com resultado do mês em 2 minutos','Apresentar top 3 pontos de atenção','Apresentar posição de caixa atual','Apresentar projeção do próximo mês','Definir top 3 prioridades do próximo mês','Registrar ata e enviar em até 24h'] },
       ]},
     ]
   },
@@ -126,16 +130,53 @@ const ESTEIRAS = [
       ]},
     ]
   },
+  { id:'acompanhamento', name:'Acompanhamento & Retenção', icon:'🤝', color:'#0EA5E9',
+    etapas:[
+      { titulo:'Saúde do Cliente', tasks:[
+        { titulo:'Avaliar saúde financeira do cliente mensalmente', categoria:'Estratégico', checklist:['Verificar se inadimplência está controlada','Verificar se o caixa está positivo','Verificar se as tarefas estão em dia','Calcular health score do mês','Registrar no cadastro do cliente'] },
+        { titulo:'Identificar sinais de risco de churn', categoria:'Estratégico', checklist:['Cliente reclamou de alguma entrega?','Houve atraso recorrente em tarefas?','O cliente está respondendo normalmente?','O MRR está ameaçado?','Acionar plano de retenção se necessário'] },
+        { titulo:'Monitorar satisfação com as entregas do mês', categoria:'Relacionamento', checklist:['Houve alguma entrega atrasada?','O cliente ficou satisfeito com o relatório?','Alguma reclamação foi registrada?','Registrar feedback no sistema'] },
+      ]},
+      { titulo:'NPS & Renovação', tasks:[
+        { titulo:'Aplicar NPS trimestral ao cliente', categoria:'Relacionamento', checklist:['Enviar formulário de NPS (0-10)','Registrar nota e comentários','Analisar resultado (promotor, neutro, detrator)','Criar plano de ação para notas abaixo de 7','Registrar no cadastro do cliente'] },
+        { titulo:'Renovação contratual anual', categoria:'Estratégico', checklist:['Verificar vencimento do contrato (30 dias antes)','Preparar proposta de renovação com reajuste','Enviar ao decisor','Negociar e ajustar escopo se necessário','Assinar aditivo ou novo contrato','Arquivar contrato renovado'] },
+      ]},
+      { titulo:'Upsell & Expansão de Escopo', tasks:[
+        { titulo:'Identificar oportunidades de expansão de serviços', categoria:'Estratégico', checklist:['Tem demanda por emissão de NF que ainda não fazemos?','Tem pagamentos que o cliente ainda faz manualmente?','Tem necessidade de relatórios gerenciais extras?','Há oportunidade de gerir mais contas bancárias?','Documentar oportunidade e apresentar proposta'] },
+        { titulo:'Apresentar proposta de expansão de escopo', categoria:'Relacionamento', checklist:['Preparar proposta com novo escopo e preço','Apresentar os benefícios ao cliente','Negociar e ajustar','Assinar aditivo contratual','Comunicar equipe operacional sobre a expansão'] },
+      ]},
+    ]
+  },
+  { id:'encerramento', name:'Encerramento de Contrato', icon:'🔚', color:'#64748B',
+    etapas:[
+      { titulo:'Aviso Prévio & Planejamento', tasks:[
+        { titulo:'Receber e registrar aviso de cancelamento', categoria:'Relacionamento', checklist:['Registrar data do aviso','Verificar cláusula de aviso prévio no contrato (geralmente 30 dias)','Calcular data de encerramento dos serviços','Comunicar o gestor responsável','Iniciar protocolo de encerramento'] },
+        { titulo:'Alinhar o processo de encerramento com o cliente', categoria:'Relacionamento', checklist:['Confirmar data final dos serviços','Definir o que será entregue (histórico, relatórios, senhas)','Definir responsável do cliente para receber os materiais','Agendar reunião de passagem'] },
+      ]},
+      { titulo:'Entrega do Histórico', tasks:[
+        { titulo:'Organizar e entregar histórico financeiro do cliente', categoria:'Estratégico', checklist:['Exportar todos os extratos do período','Exportar lançamentos do ERP (CSV ou Excel)','Exportar relatórios gerenciais do período','Organizar por mês em pasta compartilhada','Enviar link de acesso ao cliente'] },
+        { titulo:'Realizar reunião de passagem de informações', categoria:'Relacionamento', checklist:['Apresentar onde está cada arquivo','Explicar metodologia utilizada','Responder dúvidas do cliente','Apresentar pendências em aberto (se houver)','Registrar ata da reunião'] },
+        { titulo:'Entregar senhas e acessos ao cliente', categoria:'Implantação', checklist:['Identificar todas as senhas e acessos gerenciados','Entregar de forma segura (não por e-mail aberto)','Confirmar que o cliente conseguiu acessar','Remover usuários da Fluxe do ERP e bancos'] },
+      ]},
+      { titulo:'Financeiro & Encerramento Formal', tasks:[
+        { titulo:'Emitir NF final e cobrar saldo devedor', categoria:'Emissão de NF', checklist:['Verificar se há mensalidades em aberto','Emitir NF referente ao mês proporcional (se aplicável)','Cobrar saldo devedor','Confirmar recebimento antes de encerrar os acessos'] },
+        { titulo:'Revogar acessos da equipe Fluxe', categoria:'Implantação', checklist:['Revogar acesso ao internet banking','Revogar acesso ao ERP do cliente','Revogar acesso ao portal de NF','Revogar acesso a plataformas (maquininha, marketplace)','Confirmar revogação de todos os acessos','Registrar no sistema'] },
+        { titulo:'Encerrar cadastro do cliente no sistema', categoria:'Implantação', checklist:['Alterar status do cliente para "inativo"','Registrar data de encerramento','Registrar motivo do cancelamento','Arquivar contrato e documentação','Enviar e-mail de despedida e agradecimento'] },
+      ]},
+    ]
+  },
   { id:'cobranca', name:'Cobrança & Inadimplência', icon:'💰', color:'#EF4444',
     etapas:[
       { titulo:'Identificação & Triagem', tasks:[
         { titulo:'Listar e classificar todos os títulos vencidos', categoria:'Cobrança / Inadimplência', checklist:['1 a 7 dias de atraso','8 a 30 dias de atraso','31 a 60 dias de atraso','Acima de 60 dias','Ordenar por valor (maiores primeiro)'] },
       ]},
       { titulo:'Régua de Comunicação', tasks:[
-        { titulo:'D+1: Lembrete amigável via WhatsApp', categoria:'Cobrança / Inadimplência', checklist:['Enviar mensagem amigável','Reenviar boleto','Registrar tentativa no sistema'] },
-        { titulo:'D+5: Cobrança formal', categoria:'Cobrança / Inadimplência', checklist:['Enviar mensagem formal por WhatsApp','Enviar e-mail com boleto','Registrar no sistema'] },
-        { titulo:'D+10: Tentativa de ligação ao decisor', categoria:'Cobrança / Inadimplência', checklist:['Ligar para o financeiro','Ligar para o sócio se necessário','Oferecer parcelamento','Registrar resultado'] },
-        { titulo:'D+15: Oferecer acordo de parcelamento', categoria:'Cobrança / Inadimplência', checklist:['Propor parcelamento','Definir número de parcelas','Emitir novo boleto','Registrar acordo no sistema'] },
+        { titulo:'D+1: Lembrete amigável via WhatsApp', categoria:'Cobrança / Inadimplência', checklist:['Enviar mensagem amigável com o boleto em anexo','Confirmar que a mensagem foi entregue','Registrar tentativa no sistema'] },
+        { titulo:'D+5: Cobrança formal por escrito', categoria:'Cobrança / Inadimplência', checklist:['Enviar mensagem formal por WhatsApp','Enviar e-mail com boleto atualizado (juros e multa)','Mencionar que o débito pode ser negativado','Registrar no sistema'] },
+        { titulo:'D+10: Ligação telefônica ao responsável financeiro', categoria:'Cobrança / Inadimplência', checklist:['Ligar para o responsável financeiro','Ligar para o sócio se o financeiro não responder','Entender o motivo do atraso','Oferecer parcelamento se necessário','Registrar resultado da ligação'] },
+        { titulo:'D+15: Oferecer acordo de parcelamento formal', categoria:'Cobrança / Inadimplência', checklist:['Propor parcelamento com entrada','Definir número de parcelas e datas','Emitir novos boletos com vencimentos acordados','Formalizar o acordo por e-mail','Registrar acordo no sistema'] },
+        { titulo:'D+30: Escalar para o sócio proprietário', categoria:'Cobrança / Inadimplência', checklist:['Enviar notificação extrajudicial por e-mail','Contatar o sócio diretamente','Informar que os serviços podem ser suspensos','Dar prazo de 5 dias úteis para quitação','Registrar comunicação e resposta'] },
+        { titulo:'D+60+: Avaliar negativação ou encaminhamento jurídico', categoria:'Cobrança / Inadimplência', checklist:['Avaliar valor da dívida vs custo do processo','Consultar o cliente (BPO) sobre a decisão','Negativar no SPC/Serasa se aprovado','Encaminhar para advogado se valor justificar','Registrar decisão no sistema','Encerrar prestação de serviços se aplicável'] },
       ]},
       { titulo:'Negociação & Baixa', tasks:[
         { titulo:'Registrar acordo e emitir novo boleto', categoria:'Cobrança / Inadimplência', checklist:['Registrar condições do acordo','Emitir boleto com novo vencimento','Enviar ao cliente'] },
@@ -233,7 +274,6 @@ export default function EsteirasPage() {
             <div style={{ padding:'8px 0' }}>
               {et.tasks.map((task, tIdx) => (
                 <div key={tIdx} style={{ borderBottom:'1px solid #F8FAFC' }}>
-                  {/* Task header */}
                   <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 16px', background:'#FAFAFA' }}>
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:12, fontWeight:600, color:'#0F172A' }}>{task.titulo}</div>
@@ -243,7 +283,6 @@ export default function EsteirasPage() {
                       {getTaskProgress(etIdx, tIdx, task.checklist).done}/{task.checklist.length}
                     </div>
                   </div>
-                  {/* Checklist preview */}
                   <div style={{ padding:'4px 16px 8px 32px' }}>
                     {task.checklist.map((ck, ckIdx) => (
                       <div key={ckIdx} onClick={() => toggleCheck(etIdx, tIdx, ckIdx)}
@@ -261,7 +300,6 @@ export default function EsteirasPage() {
           </Card>
         ))}
 
-        {/* Modal aplicar */}
         {applyModal && (
           <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }}>
             <div style={{ background:'#fff', borderRadius:16, padding:24, width:400 }}>
@@ -308,20 +346,19 @@ export default function EsteirasPage() {
           const totalChecks = est.etapas.reduce((a,e) => a + e.tasks.reduce((b,t) => b + t.checklist.length, 0), 0)
           return (
             <div key={est.id} onClick={() => setSelected(est.id)}
-              style={{ background:'#fff', border:'1px solid #E2E8F0', borderRadius:12, padding:16, cursor:'pointer', transition:'all .15s', borderLeft:`4px solid ${est.color}` }}
-              onMouseEnter={e=>{ e.currentTarget.style.boxShadow='0 4px 20px rgba(0,0,0,.08)'; e.currentTarget.style.transform='translateY(-2px)' }}
-              onMouseLeave={e=>{ e.currentTarget.style.boxShadow=''; e.currentTarget.style.transform='' }}>
-              <div style={{ fontSize:24, marginBottom:8 }}>{est.icon}</div>
+              style={{ background:'#fff', border:'1px solid #E2E8F0', borderRadius:12, padding:16, cursor:'pointer', transition:'all .15s', borderTop:`3px solid ${est.color}` }}>
+              <div style={{ fontSize:22, marginBottom:6 }}>{est.icon}</div>
               <div style={{ fontSize:14, fontWeight:700, color:'#0F172A', marginBottom:4 }}>{est.name}</div>
               <div style={{ fontSize:11, color:'#64748B', marginBottom:12 }}>{est.etapas.length} etapas</div>
-              <div style={{ display:'flex', gap:10, fontSize:11, color:'#94A3B8' }}>
-                <span>✓ {totalTasks} tarefas</span>
-                <span>📋 {totalChecks} itens</span>
-              </div>
-              <div style={{ marginTop:10 }}>
-                <span style={{ fontSize:10, background:'#EEF2FF', color:'#4338CA', padding:'3px 8px', borderRadius:99, fontWeight:600 }}>
-                  Clique para ver e aplicar
-                </span>
+              <div style={{ display:'flex', gap:16 }}>
+                <div style={{ textAlign:'center' }}>
+                  <div style={{ fontSize:18, fontWeight:700, color:est.color }}>{totalTasks}</div>
+                  <div style={{ fontSize:9, color:'#94A3B8', textTransform:'uppercase', letterSpacing:'.04em' }}>tarefas</div>
+                </div>
+                <div style={{ textAlign:'center' }}>
+                  <div style={{ fontSize:18, fontWeight:700, color:est.color }}>{totalChecks}</div>
+                  <div style={{ fontSize:9, color:'#94A3B8', textTransform:'uppercase', letterSpacing:'.04em' }}>checklists</div>
+                </div>
               </div>
             </div>
           )

@@ -1,5 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
+import { supabase } from '../lib/supabase'
+import { gerarContratoDocx, downloadContratoDocx } from '../utils/contratoDocx'
 
 // ─── ESTILOS ────────────────────────────────────────────────
 const CSS = `
@@ -147,15 +149,58 @@ const CSS = `
 .prec-btn-row { display:flex; gap:10px; justify-content:flex-end; margin-top:22px; }
 .prec-btn { padding:10px 22px; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; border:none; transition:all .15s; }
 .prec-btn-ghost { background:transparent; border:1.5px solid var(--pborder); color:var(--ptext2); }
-.prec-btn-ghost:hover { border-color:#CECA BE; color:#181714; }
+.prec-btn-ghost:hover { border-color:#CECABE; color:#181714; }
 .prec-btn-primary { background:var(--pg); color:#fff; }
 .prec-btn-primary:hover { background:#15402F; }
 .prec-atalho { padding:8px 14px; border-radius:8px; font-size:12px; font-weight:500; cursor:pointer; font-family:'DM Sans',sans-serif; border:1.5px solid; transition:all .15s; }
 
 @media (max-width:600px) {
+  /* Container raiz */
+  .prec-root { padding:0 4px; }
+
+  /* Título da página */
+  .prec-root > div:first-child h1 { font-size:19px !important; }
+
+  /* Grids viram coluna única */
   .prec-fgrid, .prec-fgrid3, .prec-trio, .prec-stats, .prec-academia { grid-template-columns:1fr !important; }
+
+  /* Progress dots menores */
   .prec-pdot { width:28px; height:28px; font-size:9px; }
   .prec-plabel { display:none; }
+
+  /* Cartão principal sem padding lateral excessivo */
+  .prec-card { padding:16px 14px !important; }
+
+  /* Botões empilham e ocupam 100% */
+  .prec-btn-row { flex-direction:column-reverse; gap:8px; }
+  .prec-btn-row .prec-btn { width:100%; text-align:center; padding:12px; }
+
+  /* Tabela de breakdown scrollável */
+  .prec-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .prec-table { min-width:420px; }
+
+  /* Input valor proposta menor */
+  .prec-proposta-input { font-size:22px; padding:12px 14px; }
+
+  /* Valores trio — tamanho menor */
+  .prec-res-value { font-size:18px; }
+
+  /* Stats: 2 colunas em vez de 4 */
+  .prec-stats { grid-template-columns:1fr 1fr !important; }
+
+  /* reasoning: label sem min-width */
+  .prec-ri { flex-wrap:wrap; }
+  .prec-ri-label { min-width:unset; width:100%; }
+  .prec-ri-val { margin-left:0; }
+
+  /* Contrato: esconde header completo, simplifica */
+  .ctr { padding:16px 12px !important; font-size:12px !important; }
+  .ctr-header { flex-direction:column; gap:6px; }
+  .ctr-assin { grid-template-columns:1fr !important; gap:24px; }
+  .ctr-tb { font-size:11px; }
+  .ctr-tb th, .ctr-tb td { padding:6px 7px; }
+  .ctr-val-num { font-size:22px !important; }
+  .ctr-titulo { font-size:13px !important; }
 }
 `
 
@@ -275,7 +320,7 @@ const ACADEMIA = [
     body: <><h4>Fórmula do custo-hora real</h4><ul><li>Salário / pró-labore desejado: ex. R$ 5.000</li><li>Encargos e benefícios (30%): + R$ 1.500</li><li>Overhead (ferramentas, internet): + R$ 800</li><li>Total mensal: R$ 7.300</li><li>Horas produtivas (160h × 70%): 112h</li><li><strong>Custo-hora: R$ 7.300 ÷ 112 = R$ 65/h</strong></li></ul><br/><strong>Importante:</strong> Reserve 20–30% das horas para gestão, vendas e imprevistos.</>
   },
   {
-    icon: '📈', titulo: 'A relação com o faturamento do cliente', desc: 'Benchmarks de mercado para BPO financeiro',
+    icon: '📈', titulo: 'A relação com o faturamento do cliente', desc: 'Benchmarks de mercado para BPO',
     body: <><h4>Benchmarks de mercado</h4><ul><li><strong>1% a 2%</strong> — faixa saudável. Fácil aprovação.</li><li><strong>2% a 3%</strong> — ainda aceitável. Justifique com entregáveis claros.</li><li><strong>Acima de 3%</strong> — prepare argumentação de ROI sólida.</li><li><strong>Abaixo de 1%</strong> — verifique se o escopo é sustentável.</li></ul><br/><strong>Argumento:</strong> Um BPO bem feito evita multas e perdas por inadimplência. O custo do descontrole é sempre maior.</>
   },
   {
@@ -333,6 +378,7 @@ export default function PrecificacaoPage() {
   const [valorProposta, setValorProposta] = useState('')
   const [acadAberto, setAcadAberto] = useState(null)
   const [contratoGerado, setContratoGerado] = useState(false)
+  const [baixandoDocx, setBaixandoDocx] = useState(false)
   const [contratoForm, setContratoForm] = useState({
     indiceReajuste: 'IGPM/FGV',
     diaVencimento: '05',
@@ -340,7 +386,7 @@ export default function PrecificacaoPage() {
     vigencia: '12',
     dataInicio: new Date().toISOString().split('T')[0],
   })
-  const { empresa } = useAuthStore()
+  const { empresa, profile } = useAuthStore()
 
   // FORM STATE
   const [d, setD] = useState({
@@ -350,6 +396,25 @@ export default function PrecificacaoPage() {
     contab: 0, relat: 0, reuniao: 0, consult: 0, lembrete: 0,
     custoHora: 50, margem: 35, overhead: 600, regime: 6,
   })
+  const [custoHoraFonte, setCustoHoraFonte] = useState(null) // null | 'equipe' | 'propria'
+
+  // Carrega custo-hora automaticamente da calculadora (Config)
+  useEffect(() => {
+    if (!profile?.empresa_id) return
+    supabase
+      .from('usuarios')
+      .select('custo_hora, nome')
+      .eq('empresa_id', profile.empresa_id)
+      .not('custo_hora', 'is', null)
+      .then(({ data }) => {
+        if (!data || data.length === 0) return
+        const media = Math.round(data.reduce((s, u) => s + (u.custo_hora || 0), 0) / data.length)
+        if (media > 0) {
+          setD(prev => ({ ...prev, custoHora: media }))
+          setCustoHoraFonte(data.length === 1 ? 'propria' : 'equipe')
+        }
+      })
+  }, [profile?.empresa_id])
 
   const set = (k, v) => setD(prev => ({ ...prev, [k]: v }))
   const num = (k) => (e) => set(k, parseFloat(e.target.value) || 0)
@@ -542,8 +607,15 @@ export default function PrecificacaoPage() {
                 <span>Esses valores são seus dados operacionais. Configure uma vez — o sistema usa em todos os cálculos.</span>
               </div>
               <div className="prec-fgrid">
-                <Campo label="Seu custo-hora (R$)" hint="Salário mínimo 2024 = R$ 1.412 → ~R$ 9/h. BPO sênior: R$ 40–80/h.">
-                  <input className="prec-input" type="number" value={d.custoHora} onChange={num('custoHora')} step="5" />
+                <Campo label="Seu custo-hora (R$)" hint={custoHoraFonte ? null : "Configure na aba Config → Calculadora de Custo Real para preencher automaticamente."}>
+                  {custoHoraFonte && (
+                    <div style={{ fontSize:10, color:'#6366F1', fontWeight:700, marginBottom:5, display:'flex', alignItems:'center', gap:4 }}>
+                      ✓ {custoHoraFonte === 'equipe' ? 'Média da equipe (Config)' : 'Sua hora calculada (Config)'}
+                      <span style={{ fontWeight:400, color:'#94A3B8' }}>— você pode ajustar</span>
+                    </div>
+                  )}
+                  <input className="prec-input" type="number" value={d.custoHora}
+                    onChange={e => { num('custoHora')(e); setCustoHoraFonte(null) }} step="5" />
                 </Campo>
                 <Campo label="Margem de lucro desejada" hint="BPOs sustentáveis: 30–45% de margem sobre custo.">
                   <div className="prec-range-wrap">
@@ -598,6 +670,7 @@ export default function PrecificacaoPage() {
               </div>
 
               <div className="prec-sec">Detalhamento de horas estimadas</div>
+              <div className="prec-table-wrap">
               <table className="prec-table">
                 <thead><tr><th style={{ width: '55%' }}>Serviço</th><th>h/mês</th><th>Peso</th></tr></thead>
                 <tbody>
@@ -611,6 +684,7 @@ export default function PrecificacaoPage() {
                   <tr className="prec-total"><td>Total mensal</td><td>{calc.totalHoras}h</td><td></td></tr>
                 </tbody>
               </table>
+              </div>
             </div>
 
             <div className="prec-reasoning">
@@ -750,7 +824,7 @@ export default function PrecificacaoPage() {
             <div className="prec-card">
               <div className="prec-card-num">Academia de Precificação Fluxe</div>
               <div className="prec-card-title" style={{ fontSize: 16 }}>Aprenda enquanto decide</div>
-              <div className="prec-card-desc">Conceitos que todo profissional de BPO financeiro precisa dominar para precificar com confiança.</div>
+              <div className="prec-card-desc">Conceitos que todo profissional de BPO precisa dominar para precificar com confiança.</div>
               <div style={{ height: 14 }} />
               <div className="prec-academia">
                 {ACADEMIA.map((a, i) => (
@@ -890,12 +964,18 @@ export default function PrecificacaoPage() {
         {/* ETAPA 6: CONTRATO */}
         {etapa === 6 && calc && (() => {
           const emp = empresa || {}
+          const prop = emp.config?.proposta || {}
           const nomeEmp = emp.nome || 'SUA EMPRESA'
           const cnpjEmp = emp.cnpj || '00.000.000/0001-00'
           const emailEmp = emp.email || 'contato@suaempresa.com.br'
-          const repEmp = emp.representante || emp.nome || 'Representante Legal'
-          const cidadeEmp = emp.cidade || 'Sua Cidade/UF'
-          const foro = emp.foro || cidadeEmp
+          const telEmp = emp.telefone || ''
+          const repEmp = prop.representante || emp.representante || 'Representante Legal'
+          const cargoRep = prop.cargo || 'Sócio(a) Administrador(a)'
+          const cpfRep = prop.cpf_rep || '___.___.___-__'
+          const enderecoEmp = prop.endereco || ''
+          const cidadeEmp = prop.cidade || emp.cidade || 'Sua Cidade/UF'
+          const foro = prop.foro || emp.foro || cidadeEmp
+          const dadosIncompletos = !prop.representante || !emp.cnpj || !prop.cidade
           const dataHoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
           const val = parseFloat(valorProposta)
           const fmt2 = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 })
@@ -929,6 +1009,7 @@ export default function PrecificacaoPage() {
                         <option>IGPM/FGV</option>
                         <option>IPCA</option>
                         <option>INPC</option>
+                        <option>Salário Mínimo Federal</option>
                         <option>Fixo (sem reajuste)</option>
                         <option>A combinar</option>
                       </select>
@@ -957,9 +1038,22 @@ export default function PrecificacaoPage() {
                     </Campo>
                   </div>
 
-                  <div className="prec-alert prec-alert-info" style={{ marginTop: 4 }}>
-                    <span>💡</span>
-                    <span>Os dados da CONTRATADA (<strong>{nomeEmp}</strong>) vêm das Configurações da conta. Verifique se estão corretos antes de imprimir.</span>
+                  <div className={`prec-alert ${dadosIncompletos ? 'prec-alert-tip' : 'prec-alert-info'}`} style={{ marginTop: 4 }}>
+                    <span>{dadosIncompletos ? '⚠️' : '🏢'}</span>
+                    <div>
+                      <strong style={{ display: 'block', marginBottom: 4 }}>Dados da CONTRATADA (das Configurações)</strong>
+                      <div style={{ fontSize: 12, lineHeight: 1.6 }}>
+                        <span><strong>{nomeEmp}</strong> · CNPJ: {cnpjEmp}</span><br />
+                        {enderecoEmp && <><span>{enderecoEmp}</span><br /></>}
+                        <span>{emailEmp}{telEmp ? ` · ${telEmp}` : ''}</span><br />
+                        <span>Rep.: <strong>{repEmp}</strong> · {cargoRep} · CPF: {cpfRep}</span>
+                      </div>
+                      {dadosIncompletos && (
+                        <div style={{ marginTop: 6, fontWeight: 600, fontSize: 11 }}>
+                          Dados incompletos — complete em Configurações → abas Empresa e Proposta antes de imprimir.
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -993,12 +1087,22 @@ export default function PrecificacaoPage() {
                 .ctr-val-num { font-size:32px; font-weight:700; color:#1A4D3A; font-family:'DM Mono',monospace; }
                 .ctr-assin { display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:40px; }
                 .ctr-assin-bl { text-align:center; border-top:1px solid #1a1a1a; padding-top:8px; }
+                .ctr-tb-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; margin:12px 0; }
+                .ctr-tb-wrap .ctr-tb { min-width:360px; margin:0; }
+                @media (max-width:600px) {
+                  .ctr { padding:14px 10px; }
+                  .ctr-header { flex-direction:column; gap:6px; }
+                  .ctr-titulo { font-size:13px; }
+                  .ctr-val-num { font-size:22px; }
+                  .ctr-assin { grid-template-columns:1fr; gap:28px; }
+                  .ctr-p { text-align:left; }
+                }
               `}</style>
               <div className="ctr">
                 <div className="ctr-header">
                   <div>
                     <div className="ctr-emp">{nomeEmp}</div>
-                    <div style={{fontSize:11,color:'#6A6760'}}>CNPJ: {cnpjEmp} | {emailEmp}</div>
+                    <div style={{fontSize:11,color:'#6A6760'}}>CNPJ: {cnpjEmp} | {emailEmp}{telEmp ? ` | ${telEmp}` : ''}</div>
                   </div>
                   <div style={{textAlign:'right',fontSize:11,color:'#6A6760'}}><div>{dataHoje}</div></div>
                 </div>
@@ -1013,16 +1117,20 @@ export default function PrecificacaoPage() {
                 <p className="ctr-p">Representado(a) por: ___________________________________ CPF: _______________</p>
                 <p className="ctr-p" style={{marginTop:12}}><strong>CONTRATADA:</strong></p>
                 <p className="ctr-p">Razão Social: <strong>{nomeEmp}</strong> | CNPJ: {cnpjEmp}</p>
-                <p className="ctr-p">E-mail: {emailEmp} | Representada por: <strong>{repEmp}</strong></p>
+                {enderecoEmp && <p className="ctr-p">Endereço: {enderecoEmp}</p>}
+                <p className="ctr-p">E-mail: {emailEmp}{telEmp ? ` | WhatsApp/Tel.: ${telEmp}` : ''}</p>
+                <p className="ctr-p">Representada por: <strong>{repEmp}</strong> | Cargo: {cargoRep} | CPF: {cpfRep}</p>
 
                 <div className="ctr-sec">II — Do Objeto</div>
                 <p className="ctr-cl">CLÁUSULA 1ª — Do Objeto</p>
                 <p className="ctr-p">O presente contrato tem por objeto a prestação de serviços especializados de apoio administrativo financeiro, compreendendo:</p>
+                <div className="ctr-tb-wrap">
                 <table className="ctr-tb">
-                  <thead><tr><th>Serviço</th><th>Descrição</th></tr></thead>
+                  <thead><tr><th>Serviço</th><th>Descrição / Escopo</th></tr></thead>
                   <tbody>{servicos.map((it,i)=><tr key={i}><td><strong>{it.nome}</strong></td><td style={{fontSize:11,color:'#6A6760'}}>{it.motivo}</td></tr>)}</tbody>
                 </table>
-                <p className="ctr-p"><strong>Parágrafo Único:</strong> A disponibilização de funcionalidades específicas está condicionada ao plano do sistema de gestão financeira contratado pela CONTRATANTE.</p>
+                </div>
+                <p className="ctr-p"><strong>Parágrafo Único:</strong> A disponibilização de funcionalidades específicas está condicionada ao plano do sistema de gestão operacional contratado pela CONTRATANTE.</p>
 
                 <div className="ctr-sec">III — Das Condições de Execução</div>
                 <p className="ctr-cl">CLÁUSULA 2ª — Do Horário e Entregas</p>
@@ -1045,6 +1153,7 @@ export default function PrecificacaoPage() {
                 </div>
                 <p className="ctr-p">O primeiro honorário será pago no ato da assinatura. Os demais serão pagos até o dia {contratoForm.diaVencimento} de cada mês via {contratoForm.formaPagamento}.</p>
                 <p className="ctr-cl">CLÁUSULA 6ª — Do Volume de Serviços</p>
+                <div className="ctr-tb-wrap">
                 <table className="ctr-tb">
                   <thead><tr><th>Serviço</th><th>Limite Mensal</th></tr></thead>
                   <tbody>
@@ -1055,8 +1164,10 @@ export default function PrecificacaoPage() {
                     {calc.d.reuniao > 0 && <tr><td>Reunião estratégica</td><td>1 reunião/mês</td></tr>}
                   </tbody>
                 </table>
+                </div>
                 <p className="ctr-cl">CLÁUSULA 7ª — Da Mora e Reajuste</p>
-                <p className="ctr-p">Pagamento em atraso: multa de 2% + juros de 0,08% ao dia + correção pelo {contratoForm.indiceReajuste}. Atraso superior a 15 dias faculta à CONTRATADA suspender os serviços. Reajuste anual pelo {contratoForm.indiceReajuste}, piso 5% e teto 15%.</p>
+                <p className="ctr-p">Pagamento em atraso: multa de 2% + juros de 1% ao mês + correção pelo IPCA. Atraso superior a 30 dias faculta à CONTRATADA suspender os serviços.</p>
+                <p className="ctr-p">Reajuste anual a partir do 13º mês de vigência, com base na variação acumulada {contratoForm.indiceReajuste === 'Salário Mínimo Federal' ? 'do Salário Mínimo Federal' : contratoForm.indiceReajuste === 'Fixo (sem reajuste)' ? '— sem reajuste automático' : `do índice ${contratoForm.indiceReajuste}`} no período.</p>
 
                 <div className="ctr-sec">V — Da Vigência e Rescisão</div>
                 <p className="ctr-cl">CLÁUSULA 8ª — Da Vigência</p>
@@ -1073,29 +1184,34 @@ export default function PrecificacaoPage() {
                 <p style={{textAlign:'center',marginTop:32,marginBottom:24,fontSize:12,color:'#6A6760'}}>{cidadeEmp}, {dataHoje}.</p>
                 <div className="ctr-assin">
                   <div className="ctr-assin-bl">
-                    <div style={{fontWeight:600,fontSize:12}}>{nomeEmp}</div>
-                    <div style={{fontSize:11,color:'#6A6760'}}>{repEmp} — CONTRATADA</div>
+                    <div style={{fontWeight:600,fontSize:12}}>{repEmp}</div>
+                    <div style={{fontSize:11,color:'#6A6760'}}>{cargoRep} — CPF: {cpfRep}</div>
+                    <div style={{fontSize:11,color:'#6A6760'}}>{nomeEmp} — CONTRATADA</div>
                   </div>
                   <div className="ctr-assin-bl">
                     <div style={{fontWeight:600,fontSize:12}}>{calc.d.nome || '___________________________'}</div>
                     <div style={{fontSize:11,color:'#6A6760'}}>Nome / CPF: _______________________ — CONTRATANTE</div>
                   </div>
                 </div>
-                <div style={{marginTop:32,paddingTop:16,borderTop:'1px solid #E8E5DE'}}>
-                  <p style={{fontSize:11,color:'#6A6760',fontWeight:600,marginBottom:8}}>TESTEMUNHAS:</p>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:40}}>
-                    <div style={{borderTop:'1px solid #ccc',paddingTop:6,fontSize:11,color:'#6A6760'}}>
-                      <div>1ª Testemunha</div><div>Nome: ____________________________</div><div>CPF: _____________________________</div>
-                    </div>
-                    <div style={{borderTop:'1px solid #ccc',paddingTop:6,fontSize:11,color:'#6A6760'}}>
-                      <div>2ª Testemunha</div><div>Nome: ____________________________</div><div>CPF: _____________________________</div>
-                    </div>
-                  </div>
-                </div>
               </div>
               <div className="prec-btn-row" style={{marginTop:16}}>
                 <button className="prec-btn prec-btn-ghost" onClick={() => setContratoGerado(false)}>← Editar condições</button>
                 <button className="prec-btn prec-btn-ghost" onClick={() => { irPara(1); setCalc(null); setValorProposta('') }}>Novo cliente</button>
+                <button
+                  className="prec-btn prec-btn-ghost"
+                  disabled={baixandoDocx}
+                  onClick={async () => {
+                    setBaixandoDocx(true)
+                    try {
+                      const blob = await gerarContratoDocx({ calc, contratoForm, empresa, valorProposta })
+                      downloadContratoDocx(blob, calc?.d?.nome)
+                    } catch (e) {
+                      alert('Erro ao gerar Word: ' + e.message)
+                    } finally {
+                      setBaixandoDocx(false)
+                    }
+                  }}
+                >{baixandoDocx ? '⏳ Gerando...' : '⬇ Baixar Word'}</button>
                 <button className="prec-btn prec-btn-primary" onClick={() => window.print()}>🖨 Imprimir / PDF</button>
               </div>
             </div>

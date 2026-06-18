@@ -38,7 +38,7 @@ export const useTimerStore = create((set, get) => ({
         fim:         new Date().toISOString(),
         segundos:    elapsed,
       })
-      useQueryClient.getQueryData && window.__qc?.invalidateQueries({ queryKey: ['apontamentos'] })
+      // cache invalidation handled by TimerBar component
     }
     set({ active: null, elapsed: 0 })
   },
@@ -61,6 +61,12 @@ export default function TimerBar() {
   const { active, elapsed, pause, resume, stop } = useTimerStore()
   const tick = useTimerStore(s => s.tick)
   const intRef = useRef(null)
+  const qc = useQueryClient()
+
+  const handleStop = async () => {
+    await stop(true)
+    qc.invalidateQueries({ queryKey: ['apontamentos'] })
+  }
 
   useEffect(() => {
     if (active && !active.paused) {
@@ -107,7 +113,7 @@ export default function TimerBar() {
             ⏸ Pausar
           </button>
         )}
-        <button onClick={() => stop(true)} style={{ padding:'4px 12px', borderRadius:8, border:'1px solid #FECDD3', cursor:'pointer', background:'#FEF2F2', color:'#991B1B', fontSize:11, fontWeight:600 }}>
+        <button onClick={handleStop} style={{ padding:'4px 12px', borderRadius:8, border:'1px solid #FECDD3', cursor:'pointer', background:'#FEF2F2', color:'#991B1B', fontSize:11, fontWeight:600 }}>
           ⏹ Parar
         </button>
       </div>

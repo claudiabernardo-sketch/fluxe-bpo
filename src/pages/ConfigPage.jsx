@@ -1,71 +1,402 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import { Card, CardHeader, Btn } from '../components/ui'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
+// ── Calculadora de Custo Real da Hora ─────────────────────────────────────
+function CalculadoraCustoHora({ usuarios = [], editarUser }) {
+  const fi = { width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:13, fontFamily:'inherit', background:'#fff' }
+  const labelStyle = { fontSize:11, fontWeight:700, color:'#64748B', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.06em' }
+
+  const [regime, setRegime] = useState('clt')
+  const [salario, setSalario] = useState(3000)
+  const [horasMes, setHorasMes] = useState(160)
+  const [vr, setVr] = useState(600)
+  const [vt, setVt] = useState(200)
+  const [saude, setSaude] = useState(0)
+  const [outros, setOutros] = useState(0)
+  const [margem, setMargem] = useState(30)
+  const [usuarioAlvo, setUsuarioAlvo] = useState('')
+  const [aplicado, setAplicado] = useState(false)
+
+  const ENCARGOS = {
+    clt: {
+      label: 'CLT (regime normal)',
+      items: [
+        { nome: 'INSS Patronal',         pct: 20.0 },
+        { nome: 'FGTS',                  pct: 8.0  },
+        { nome: '13° Salário',           pct: 8.33 },
+        { nome: 'Férias + 1/3',          pct: 11.11},
+        { nome: 'Aviso Prévio (prov.)',   pct: 4.17 },
+        { nome: 'SAT/RAT (acidentes)',    pct: 2.0  },
+        { nome: 'Sistema S (SENAI etc.)', pct: 5.8  },
+      ]
+    },
+    simples: {
+      label: 'CLT via Simples Nacional',
+      items: [
+        { nome: 'INSS Patronal (reduzido)', pct: 8.0  },
+        { nome: 'FGTS',                     pct: 8.0  },
+        { nome: '13° Salário',              pct: 8.33 },
+        { nome: 'Férias + 1/3',             pct: 11.11},
+        { nome: 'Aviso Prévio (prov.)',      pct: 4.17 },
+        { nome: 'SAT/RAT',                  pct: 1.0  },
+      ]
+    },
+    pj: {
+      label: 'PJ / Pessoa Jurídica',
+      items: [
+        { nome: 'ISS / Simples PJ (estimado)', pct: 6.0 },
+        { nome: 'Rescisão contratual (prov.)',  pct: 5.0 },
+      ]
+    }
+  }
+
+  const resultado = useMemo(() => {
+    const enc = ENCARGOS[regime]
+    const totalPct = enc.items.reduce((a, i) => a + i.pct, 0)
+    const encargosValor = salario * (totalPct / 100)
+    const beneficiosValor = Number(vr) + Number(vt) + Number(saude) + Number(outros)
+    const custoMensal = salario + encargosValor + beneficiosValor
+    const custoHora = horasMes > 0 ? custoMensal / horasMes : 0
+    const precoVenda = custoHora * (1 + margem / 100)
+    return { totalPct, encargosValor, beneficiosValor, custoMensal, custoHora, precoVenda, items: enc.items }
+  }, [regime, salario, horasMes, vr, vt, saude, outros, margem])
+
+  function fmt(v) { return v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' }) }
+  function fmtH(v) { return v.toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 }) }
+
+  async function aplicarFuncionario() {
+    const u = usuarios.find(u => u.id === usuarioAlvo)
+    if (!u) return
+    await editarUser.mutateAsync({ ...u, custo_hora: parseFloat(resultado.custoHora.toFixed(2)) })
+    setAplicado(true)
+    setTimeout(() => setAplicado(false), 3000)
+  }
+
+  return (
+    <div>
+      <Card style={{ marginBottom:16 }}>
+        <CardHeader title="Calculadora de Custo Real da Hora" icon="💰" />
+        <div style={{ padding:20 }}>
+          <div style={{ marginBottom:18 }}>
+            <label style={labelStyle}>Regime de contratação</label>
+            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+              {Object.entries(ENCARGOS).map(([k, v]) => (
+                <button key={k} onClick={() => setRegime(k)} style={{
+                  padding:'7px 16px', borderRadius:20, border:`2px solid ${regime===k?'#6366F1':'#E2E8F0'}`,
+                  background: regime===k?'#EEF2FF':'#fff', color: regime===k?'#4338CA':'#64748B',
+                  cursor:'pointer', fontSize:12, fontWeight:600
+                }}>{v.label}</button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+            <div>
+              <div style={{ fontWeight:700, fontSize:12, color:'#0F172A', marginBottom:14, paddingBottom:8, borderBottom:'1px solid #F1F5F9' }}>📥 Dados do funcionário</div>
+              <div style={{ marginBottom:12 }}>
+                <label style={labelStyle}>Salário bruto mensal</label>
+                <div style={{ position:'relative' }}>
+                  <span style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', fontSize:12, color:'#94A3B8', fontWeight:600 }}>R$</span>
+                  <input type="number" value={salario} onChange={e => setSalario(Number(e.target.value))} style={{ ...fi, paddingLeft:30 }} min={0} />
+                </div>
+              </div>
+              <div style={{ marginBottom:12 }}>
+                <label style={labelStyle}>Horas trabalhadas por mês</label>
+                <input type="number" value={horasMes} onChange={e => setHorasMes(Number(e.target.value))} style={fi} min={1} max={240} />
+                <div style={{ fontSize:10, color:'#94A3B8', marginTop:3 }}>Padrão CLT = 220h · Meio período = 110h · Remoto custom = 160h</div>
+              </div>
+              <div style={{ fontWeight:700, fontSize:12, color:'#0F172A', margin:'16px 0 12px', paddingBottom:8, borderBottom:'1px solid #F1F5F9' }}>🎁 Benefícios mensais</div>
+              {[
+                { label:'Vale-Refeição / Alimentação', val:vr, set:setVr },
+                { label:'Vale-Transporte',             val:vt, set:setVt },
+                { label:'Plano de Saúde',              val:saude, set:setSaude },
+                { label:'Outros benefícios',           val:outros, set:setOutros },
+              ].map(({ label, val, set }) => (
+                <div key={label} style={{ marginBottom:10 }}>
+                  <label style={labelStyle}>{label}</label>
+                  <div style={{ position:'relative' }}>
+                    <span style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', fontSize:12, color:'#94A3B8', fontWeight:600 }}>R$</span>
+                    <input type="number" value={val} onChange={e => set(Number(e.target.value))} style={{ ...fi, paddingLeft:30 }} min={0} />
+                  </div>
+                </div>
+              ))}
+              <div style={{ marginTop:16, paddingTop:12, borderTop:'1px solid #F1F5F9' }}>
+                <label style={labelStyle}>Margem de overhead / lucro desejado</label>
+                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <input type="range" value={margem} onChange={e => setMargem(Number(e.target.value))} min={0} max={100} style={{ flex:1 }} />
+                  <span style={{ fontSize:13, fontWeight:700, color:'#6366F1', minWidth:36 }}>{margem}%</span>
+                </div>
+                <div style={{ fontSize:10, color:'#94A3B8', marginTop:2 }}>Percentual adicionado ao custo para cobrir impostos da empresa, estrutura e lucro</div>
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontWeight:700, fontSize:12, color:'#0F172A', marginBottom:14, paddingBottom:8, borderBottom:'1px solid #F1F5F9' }}>📊 Composição do custo</div>
+              <div style={{ background:'#F8FAFC', borderRadius:10, padding:14, marginBottom:14 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:'#475569', marginBottom:10 }}>
+                  Encargos trabalhistas ({fmtH(resultado.totalPct)}% sobre o salário)
+                </div>
+                {resultado.items.map(item => (
+                  <div key={item.nome} style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'#64748B', marginBottom:5 }}>
+                    <span>{item.nome} ({item.pct}%)</span>
+                    <span style={{ fontWeight:600 }}>{fmt(salario * item.pct / 100)}</span>
+                  </div>
+                ))}
+                <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, fontWeight:700, color:'#1D4ED8', borderTop:'1px solid #E2E8F0', marginTop:8, paddingTop:8 }}>
+                  <span>Total encargos</span>
+                  <span>{fmt(resultado.encargosValor)}</span>
+                </div>
+              </div>
+              {[
+                { label: 'Salário bruto',      val: salario,                   color:'#475569' },
+                { label: 'Encargos',           val: resultado.encargosValor,   color:'#DC2626' },
+                { label: 'Benefícios',         val: resultado.beneficiosValor, color:'#D97706' },
+                { label: 'Custo mensal total', val: resultado.custoMensal,     color:'#0F172A', bold: true },
+              ].map(({ label, val, color, bold }) => (
+                <div key={label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0', borderBottom:'1px solid #F1F5F9' }}>
+                  <span style={{ fontSize:12, color:'#475569', fontWeight: bold ? 700 : 400 }}>{label}</span>
+                  <span style={{ fontSize:13, fontWeight: bold ? 800 : 600, color }}>{fmt(val)}</span>
+                </div>
+              ))}
+              <div style={{ background:'linear-gradient(135deg,#6366F1,#8B5CF6)', borderRadius:12, padding:18, marginTop:14, textAlign:'center', color:'#fff' }}>
+                <div style={{ fontSize:11, opacity:.85, marginBottom:4 }}>💡 Custo real da hora</div>
+                <div style={{ fontSize:32, fontWeight:900, letterSpacing:'-1px' }}>{fmt(resultado.custoHora)}<span style={{ fontSize:14 }}>/h</span></div>
+                <div style={{ fontSize:10, opacity:.75, marginTop:4 }}>Base: {horasMes}h × {fmtH(resultado.totalPct)}% encargos</div>
+              </div>
+              {margem > 0 && (
+                <div style={{ background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:10, padding:14, marginTop:10, textAlign:'center' }}>
+                  <div style={{ fontSize:11, color:'#15803D', marginBottom:4 }}>🎯 Preço de venda sugerido (com {margem}% de margem)</div>
+                  <div style={{ fontSize:24, fontWeight:800, color:'#15803D' }}>{fmt(resultado.precoVenda)}<span style={{ fontSize:12 }}>/h</span></div>
+                </div>
+              )}
+              {usuarios.length > 0 && (
+                <div style={{ background:'#F8FAFC', borderRadius:10, padding:14, marginTop:14 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:'#475569', marginBottom:8 }}>📌 Aplicar custo em um funcionário</div>
+                  <select value={usuarioAlvo} onChange={e => { setUsuarioAlvo(e.target.value); setAplicado(false) }} style={{ ...fi, marginBottom:10 }}>
+                    <option value="">— Selecione —</option>
+                    {usuarios.map(u => (
+                      <option key={u.id} value={u.id}>{u.nome} (atual: {fmt(u.custo_hora || 0)}/h)</option>
+                    ))}
+                  </select>
+                  {usuarioAlvo && (
+                    <Btn variant="primary" onClick={aplicarFuncionario} disabled={editarUser.isPending}>
+                      {aplicado ? '✓ Aplicado!' : `Aplicar ${fmt(resultado.custoHora)}/h`}
+                    </Btn>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {usuarios.length > 0 && (
+        <Card>
+          <CardHeader title="Custo/hora atual da equipe" icon="👥" />
+          <div style={{ overflowX:'auto' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+              <thead>
+                <tr style={{ background:'#F8FAFC' }}>
+                  {['Funcionário','Perfil','Custo/hora','Custo mensal (160h)','Preço venda (+{margem}%)'].map(h => (
+                    <th key={h} style={{ padding:'10px 14px', textAlign:'left', fontWeight:600, color:'#64748B', borderBottom:'1px solid #E2E8F0' }}>
+                      {h.replace('{margem}', margem)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {usuarios.map(u => {
+                  const ch = u.custo_hora || 0
+                  const mensal = ch * 160
+                  const venda = ch * (1 + margem / 100)
+                  return (
+                    <tr key={u.id} style={{ borderBottom:'1px solid #F8FAFC' }}>
+                      <td style={{ padding:'10px 14px', fontWeight:600 }}>{u.nome}</td>
+                      <td style={{ padding:'10px 14px', color:'#64748B', textTransform:'capitalize' }}>{u.perfil}</td>
+                      <td style={{ padding:'10px 14px', fontWeight:700, color:'#6366F1' }}>{fmt(ch)}</td>
+                      <td style={{ padding:'10px 14px', color:'#334155' }}>{fmt(mensal)}</td>
+                      <td style={{ padding:'10px 14px', fontWeight:600, color:'#15803D' }}>{fmt(venda)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              <tfoot>
+                <tr style={{ background:'#F8FAFC', borderTop:'2px solid #E2E8F0' }}>
+                  <td colSpan={2} style={{ padding:'10px 14px', fontWeight:700, color:'#0F172A' }}>Total equipe (160h/mês)</td>
+                  <td style={{ padding:'10px 14px', fontWeight:700, color:'#6366F1' }}>{fmt(usuarios.reduce((a, u) => a + (u.custo_hora || 0), 0))}</td>
+                  <td style={{ padding:'10px 14px', fontWeight:700, color:'#334155' }}>{fmt(usuarios.reduce((a, u) => a + (u.custo_hora || 0) * 160, 0))}</td>
+                  <td style={{ padding:'10px 14px', fontWeight:700, color:'#15803D' }}>{fmt(usuarios.reduce((a, u) => a + (u.custo_hora || 0) * (1 + margem / 100), 0))}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </Card>
+      )}
+    </div>
+  )
+}
+
 export default function ConfigPage() {
   const { empresa, profile } = useAuthStore()
   const qc = useQueryClient()
   const [saved, setSaved] = useState(false)
-  const [tab, setTab] = useState('empresa') // empresa | equipe | operacional
+  const [saveError, setSaveError] = useState('')
+  const [tab, setTab] = useState('empresa')
 
-  // Dados da empresa
   const [empForm, setEmpForm] = useState({ nome:'', email:'', telefone:'', cnpj:'', site:'' })
-
-  // Config operacional
   const [opForm, setOpForm] = useState({ custoHora:35, aprovacaoLimite:2000, fechamentoDia:5, nfDia:1, reuniaoDia:10 })
-
-  // Config proposta
   const [propForm, setPropForm] = useState({
-    quemSomos: '',
-    instagram: '',
-    representante: '',
-    cargo: '',
-    cpf_rep: '',
-    endereco: '',
-    cidade: '',
-    foro: '',
-    num1_valor: '+120', num1_label: 'Rotinas financeiras geridas',
-    num2_valor: '+200', num2_label: 'Empresas impactadas',
-    num3_valor: '+95%', num3_label: 'De satisfação dos clientes',
-    num4_valor: '+3 anos', num4_label: 'De experiência',
-    dep1_nome: '', dep1_texto: '',
-    dep2_nome: '', dep2_texto: '',
-    dep3_nome: '', dep3_texto: '',
+    quemSomos:'', instagram:'', representante:'', cargo:'', cpf_rep:'', endereco:'', cidade:'', foro:'',
+    num1_valor:'+120', num1_label:'Rotinas financeiras geridas',
+    num2_valor:'+200', num2_label:'Empresas impactadas',
+    num3_valor:'+95%', num3_label:'De satisfação dos clientes',
+    num4_valor:'+3 anos', num4_label:'De experiência',
+    dep1_nome:'', dep1_texto:'', dep2_nome:'', dep2_texto:'', dep3_nome:'', dep3_texto:'',
   })
 
-  // Usuários da empresa
   const { data: usuarios = [], isLoading: uLoading } = useQuery({
-    queryKey: ['usuarios'],
+    queryKey: ['usuarios', empresa?.id],
     queryFn: async () => {
-      const { data } = await supabase.from('usuarios').select('*').order('nome')
+      const { data } = await supabase.from('usuarios').select('*').eq('empresa_id', empresa?.id).order('nome')
       return data || []
-    }
+    },
+    enabled: !!empresa?.id,
   })
 
-  const [novoUser, setNovoUser] = useState({ nome:'', email:'', perfil:'operador', custo_hora:35 })
+  const [novoUser, setNovoUser] = useState({ nome:'', email:'', perfil:'operador', custo_hora:35, mensagem:'' })
   const [showNovoUser, setShowNovoUser] = useState(false)
+  const [editUser, setEditUser] = useState(null)
+  const [planSel, setPlanSel] = useState('pro')
+  const [assinando, setAssinando] = useState(false)
+
+  const handleAssinar = async () => {
+    const cnpj = empresa?.cnpj || window.prompt('Informe o CNPJ ou CPF para faturamento (só números):')
+    if (!cnpj) return
+    setAssinando(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('asaas-create-subscription', {
+        body: { plano: planSel, cpfCnpj: cnpj },
+      })
+      if (error) {
+        let detail = error.message
+        try { const body = await error.context?.json(); detail = JSON.stringify(body) } catch {}
+        throw new Error('Erro função: ' + detail)
+      }
+      if (!data?.paymentUrl) throw new Error('Sem link. Resposta: ' + JSON.stringify(data))
+      window.open(data.paymentUrl, '_blank')
+    } catch (e) {
+      alert('Erro: ' + e.message)
+    } finally {
+      setAssinando(false)
+    }
+  }
+  const [deleteUser, setDeleteUser] = useState(null)
+  const [inviteLink, setInviteLink] = useState('')
 
   const addUser = useMutation({
     mutationFn: async (u) => {
-      // Cria usuário via auth
-      const { data: authData, error } = await supabase.functions.invoke('swift-api', {
-        body: { nome: u.nome, email: u.email, perfil: u.perfil, custo_hora: u.custo_hora, empresa_id: empresa?.id }
-      })
-      // Insere na tabela usuarios
-      await supabase.from('usuarios').insert({
-        nome: u.nome, email: u.email, perfil: u.perfil,
-        custo_hora: u.custo_hora, empresa_id: empresa?.id,
-        ativo: true
-      })
+      const { data: { session } } = await supabase.auth.getSession()
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 20000) // 20s timeout
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-user`,
+          {
+            method: 'POST',
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({
+              nome: u.nome,
+              email: u.email,
+              perfil: u.perfil,
+              custo_hora: u.custo_hora,
+              empresa_id: empresa?.id,
+            }),
+          }
+        )
+        clearTimeout(timeout)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const data = await res.json()
+        if (data?.error) throw new Error(data.error)
+        return data
+      } catch (e) {
+        clearTimeout(timeout)
+        if (e.name === 'AbortError') throw new Error('Tempo esgotado. Verifique sua conexão e tente novamente.')
+        throw e
+      }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey:['usuarios'] }); setShowNovoUser(false); setNovoUser({ nome:'', email:'', perfil:'operador', custo_hora:35 }) }
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['usuarios'] })
+      setNovoUser({ nome:'', email:'', perfil:'operador', custo_hora:35, mensagem:'' })
+      // Se email não foi enviado, mostra o link para compartilhamento manual
+      if (!data?.emailSent && data?.magicLink) {
+        setInviteLink(data.magicLink)
+      } else {
+        setShowNovoUser(false)
+      }
+    }
   })
+
+  const editarUser = useMutation({
+    mutationFn: async (u) => {
+      await supabase.from('usuarios').update({ nome: u.nome, perfil: u.perfil, custo_hora: u.custo_hora, ativo: u.ativo }).eq('id', u.id)
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['usuarios'] }); setEditUser(null) }
+  })
+
+  const excluirUser = useMutation({
+    mutationFn: async (u) => { await supabase.from('usuarios').delete().eq('id', u.id) },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['usuarios'] }); setDeleteUser(null) }
+  })
+
+  const [reenvioStatus, setReenvioStatus] = useState({}) // { [userId]: 'sending' | 'ok' | 'err' }
+  const [linkConvite, setLinkConvite] = useState(null) // { nome, link }
+  const reenviarConvite = async (u) => {
+    setReenvioStatus(s => ({ ...s, [u.id]: 'sending' }))
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            nome: u.nome,
+            email: u.email,
+            perfil: u.perfil,
+            custo_hora: u.custo_hora,
+            empresa_id: empresa?.id,
+          }),
+        }
+      )
+      const data = await res.json()
+      if (data?.error) throw new Error(data.error)
+      if (data?.magicLink && !data?.emailSent) {
+        // Email não enviado — mostra link para compartilhar manualmente
+        setLinkConvite({ nome: u.nome, link: data.magicLink })
+      }
+      setReenvioStatus(s => ({ ...s, [u.id]: data?.emailSent ? 'ok' : 'link' }))
+      setTimeout(() => setReenvioStatus(s => { const n={...s}; delete n[u.id]; return n }), data?.emailSent ? 3000 : 60000)
+    } catch (e) {
+      setReenvioStatus(s => ({ ...s, [u.id]: 'err' }))
+      setTimeout(() => setReenvioStatus(s => { const n={...s}; delete n[u.id]; return n }), 5000)
+    }
+  }
 
   useEffect(() => {
     if (empresa) {
-      setEmpForm({ nome: empresa.nome||'', email: empresa.email||'', telefone:'', cnpj:'', site:'' })
+      setEmpForm({ nome: empresa.nome||'', email: empresa.email||'', telefone: empresa.telefone||'', cnpj: empresa.cnpj||'', site: empresa.site||'' })
       if (empresa.config) {
         try { setOpForm(o => ({ ...o, ...empresa.config })) } catch{}
         try { if (empresa.config.proposta) setPropForm(o => ({ ...o, ...empresa.config.proposta })) } catch{}
@@ -75,21 +406,30 @@ export default function ConfigPage() {
 
   async function salvarEmpresa() {
     if (!empresa) return
-    await supabase.from('empresas').update({ nome: empForm.nome, email: empForm.email }).eq('id', empresa.id)
-    setSaved(true); setTimeout(() => setSaved(false), 2000)
+    try {
+      const { error } = await supabase.from('empresas').update({ nome: empForm.nome, email: empForm.email, cnpj: empForm.cnpj, telefone: empForm.telefone, site: empForm.site }).eq('id', empresa.id)
+      if (error) throw error
+      setSaved(true); setTimeout(() => setSaved(false), 2000)
+    } catch (e) { setSaveError(e.message || 'Erro ao salvar'); setTimeout(() => setSaveError(''), 3000) }
   }
 
   async function salvarOp() {
     if (!empresa) return
-    await supabase.from('empresas').update({ config: opForm }).eq('id', empresa.id)
-    setSaved(true); setTimeout(() => setSaved(false), 2000)
+    try {
+      const { error } = await supabase.from('empresas').update({ config: opForm }).eq('id', empresa.id)
+      if (error) throw error
+      setSaved(true); setTimeout(() => setSaved(false), 2000)
+    } catch (e) { setSaveError(e.message || 'Erro ao salvar'); setTimeout(() => setSaveError(''), 3000) }
   }
 
   async function salvarProposta() {
     if (!empresa) return
-    const configAtual = empresa.config || {}
-    await supabase.from('empresas').update({ config: { ...configAtual, proposta: propForm } }).eq('id', empresa.id)
-    setSaved(true); setTimeout(() => setSaved(false), 2000)
+    try {
+      const configAtual = empresa.config || {}
+      const { error } = await supabase.from('empresas').update({ config: { ...configAtual, proposta: propForm } }).eq('id', empresa.id)
+      if (error) throw error
+      setSaved(true); setTimeout(() => setSaved(false), 2000)
+    } catch (e) { setSaveError(e.message || 'Erro ao salvar'); setTimeout(() => setSaveError(''), 3000) }
   }
 
   const fi = { width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'inherit', background:'#fff' }
@@ -103,10 +443,15 @@ export default function ConfigPage() {
           ✓ Configurações salvas com sucesso!
         </div>
       )}
+      {saveError && (
+        <div style={{ background:'#FEF2F2', border:'1px solid #FECDD3', borderRadius:10, padding:'10px 16px', marginBottom:14, color:'#991B1B', fontWeight:600, fontSize:12 }}>
+          ✗ {saveError}
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{ display:'flex', gap:4, marginBottom:18, borderBottom:'1px solid #E2E8F0', paddingBottom:0 }}>
-        {[['empresa','🏢 Empresa'],['equipe','👥 Equipe'],['operacional','⚙️ Operacional'],['proposta','📊 Proposta']].map(([id, label]) => (
+        {[['empresa','🏢 Empresa'],['equipe','👥 Equipe'],['custoHora','💰 Custo/Hora'],['operacional','⚙️ Operacional'],['proposta','📊 Proposta'],...(profile?.perfil==='admin'?[['plano','💳 Meu Plano']]:[]  )].map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{ padding:'8px 16px', border:'none', background:'transparent', cursor:'pointer', fontSize:12, fontWeight:600, color: tab===id?'#6366F1':'#94A3B8', borderBottom: tab===id?'2px solid #6366F1':'2px solid transparent', marginBottom:-1 }}>
             {label}
           </button>
@@ -118,32 +463,18 @@ export default function ConfigPage() {
         <Card>
           <CardHeader title="Dados da empresa" icon="🏢" />
           <div style={{ padding:16, display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-            <div>
-              <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Nome do BPO *</label>
-              <input style={fi} value={empForm.nome} onChange={e=>setEmpForm(f=>({...f,nome:e.target.value}))} placeholder="Ex: Empreenda BPO" />
-            </div>
-            <div>
-              <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>CNPJ</label>
-              <input style={fi} value={empForm.cnpj} onChange={e=>setEmpForm(f=>({...f,cnpj:e.target.value}))} placeholder="00.000.000/0001-00" />
-            </div>
-            <div>
-              <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>E-mail</label>
-              <input style={fi} type="email" value={empForm.email} onChange={e=>setEmpForm(f=>({...f,email:e.target.value}))} placeholder="contato@seubpo.com.br" />
-            </div>
-            <div>
-              <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>WhatsApp / Telefone</label>
-              <input style={fi} value={empForm.telefone} onChange={e=>setEmpForm(f=>({...f,telefone:e.target.value}))} placeholder="(11) 99999-0000" />
-            </div>
-            <div>
-              <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Site</label>
-              <input style={fi} value={empForm.site} onChange={e=>setEmpForm(f=>({...f,site:e.target.value}))} placeholder="www.seubpo.com.br" />
-            </div>
-            <div style={{ display:'flex', alignItems:'flex-end' }}>
-              <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px', border:'1px solid #E2E8F0', fontSize:11, color:'#64748B', width:'100%' }}>
-                <div style={{ fontWeight:600, color:'#0F172A' }}>Plano atual</div>
-                <div style={{ color:'#6366F1', fontWeight:700, fontSize:13, marginTop:2 }}>{empresa?.plano?.toUpperCase() || 'PRO'}</div>
+            {[
+              { label:'Nome do BPO *',  key:'nome',     placeholder:'Ex: Empreenda BPO' },
+              { label:'E-mail',         key:'email',    placeholder:'contato@empresa.com', type:'email' },
+              { label:'CNPJ',           key:'cnpj',     placeholder:'00.000.000/0001-00' },
+              { label:'Telefone',       key:'telefone', placeholder:'(11) 99999-9999' },
+              { label:'Site',           key:'site',     placeholder:'https://empresa.com.br' },
+            ].map(({ label, key, placeholder, type }) => (
+              <div key={key} style={key==='site'||key==='nome'?{gridColumn:'1/-1'}:{}}>
+                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>{label}</label>
+                <input type={type||'text'} style={fi} value={empForm[key]||''} onChange={e=>setEmpForm(f=>({...f,[key]:e.target.value}))} placeholder={placeholder} />
               </div>
-            </div>
+            ))}
           </div>
           <div style={{ padding:'12px 16px', borderTop:'1px solid #F1F5F9', display:'flex', justifyContent:'flex-end' }}>
             <Btn variant="primary" onClick={salvarEmpresa}>Salvar dados</Btn>
@@ -153,206 +484,336 @@ export default function ConfigPage() {
 
       {/* ABA EQUIPE */}
       {tab === 'equipe' && (
-        <Card>
-          <CardHeader title="Equipe" icon="👥" right={
-            <Btn small variant="primary" onClick={() => setShowNovoUser(true)}>+ Adicionar membro</Btn>
-          } />
-
-          {showNovoUser && (
-            <div style={{ padding:16, borderBottom:'1px solid #E2E8F0', background:'#F8FAFC' }}>
-              <div style={{ fontWeight:600, fontSize:12, marginBottom:12 }}>Novo membro da equipe</div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
-                <div>
-                  <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Nome *</label>
-                  <input style={fi} value={novoUser.nome} onChange={e=>setNovoUser(u=>({...u,nome:e.target.value}))} placeholder="Nome completo" />
-                </div>
-                <div>
-                  <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>E-mail *</label>
-                  <input style={fi} type="email" value={novoUser.email} onChange={e=>setNovoUser(u=>({...u,email:e.target.value}))} placeholder="email@seubpo.com.br" />
-                </div>
-                <div>
-                  <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Perfil</label>
-                  <select style={fi} value={novoUser.perfil} onChange={e=>setNovoUser(u=>({...u,perfil:e.target.value}))}>
-                    {PERFIS.map(p=><option key={p.v} value={p.v}>{p.l}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Custo-hora (R$)</label>
-                  <input style={fi} type="number" value={novoUser.custo_hora} onChange={e=>setNovoUser(u=>({...u,custo_hora:+e.target.value}))} />
-                </div>
-              </div>
-              <div style={{ fontSize:11, color:'#64748B', marginBottom:10 }}>
-                ℹ️ O membro receberá um e-mail para definir sua senha de acesso.
-              </div>
-              <div style={{ display:'flex', gap:8 }}>
-                <Btn onClick={() => setShowNovoUser(false)}>Cancelar</Btn>
-                <Btn variant="primary" disabled={!novoUser.nome||!novoUser.email} onClick={() => addUser.mutate(novoUser)}>
-                  Adicionar membro
-                </Btn>
-              </div>
+        <div>
+          <Card style={{ marginBottom:14 }}>
+            <div style={{ padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <div style={{ fontWeight:700, fontSize:14, color:'#0F172A' }}>👥 Membros da equipe</div>
+              <Btn variant="primary" onClick={()=>setShowNovoUser(v=>!v)}>
+                {showNovoUser ? '✕ Cancelar' : '+ Convidar membro'}
+              </Btn>
             </div>
-          )}
 
-          <div>
-            {uLoading ? <div style={{ padding:20, textAlign:'center', color:'#94A3B8', fontSize:12 }}>Carregando...</div>
-              : usuarios.map(u => (
-              <div key={u.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', borderBottom:'1px solid #F8FAFC' }}>
-                <div style={{ width:36, height:36, borderRadius:'50%', background:'#6366F1', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, color:'#fff', flexShrink:0 }}>
-                  {u.nome?.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase()}
+            {showNovoUser && (
+              <div style={{ padding:'0 16px 16px', borderTop:'1px solid #F1F5F9' }}>
+                <div style={{ background:'#F8FAFC', borderRadius:10, padding:14, marginTop:14 }}>
+                  <div style={{ fontWeight:700, fontSize:12, color:'#0F172A', marginBottom:12 }}>✉️ Novo convite por e-mail</div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                    <div>
+                      <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Nome *</label>
+                      <input style={fi} value={novoUser.nome} onChange={e=>setNovoUser(f=>({...f,nome:e.target.value}))} placeholder="Nome completo" />
+                    </div>
+                    <div>
+                      <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>E-mail *</label>
+                      <input type="email" style={fi} value={novoUser.email} onChange={e=>setNovoUser(f=>({...f,email:e.target.value}))} placeholder="email@empresa.com" />
+                    </div>
+                    <div>
+                      <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Perfil</label>
+                      <select style={fi} value={novoUser.perfil} onChange={e=>setNovoUser(f=>({...f,perfil:e.target.value}))}>
+                        {PERFIS.map(p=><option key={p.v} value={p.v}>{p.l}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Custo/hora (R$)</label>
+                      <input type="number" style={fi} value={novoUser.custo_hora} onChange={e=>setNovoUser(f=>({...f,custo_hora:+e.target.value}))} min={0} />
+                    </div>
+                    <div style={{ gridColumn:'1/-1' }}>
+                      <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Mensagem de boas-vindas</label>
+                      <textarea style={{ ...fi, height:70, resize:'vertical' }} value={novoUser.mensagem} onChange={e=>setNovoUser(f=>({...f,mensagem:e.target.value}))} placeholder={`Olá, ${novoUser.nome||'nome'}! Você foi convidado(a)...`} />
+                    </div>
+                  </div>
+                  <div style={{ display:'flex', justifyContent:'flex-end', marginTop:10 }}>
+                    <Btn variant="primary" onClick={()=>{ setInviteLink(''); addUser.mutate(novoUser) }} disabled={addUser.isPending||!novoUser.nome||!novoUser.email}>
+                      {addUser.isPending ? 'Criando acesso...' : '📧 Enviar convite'}
+                    </Btn>
+                  </div>
+                  {addUser.isError && <div style={{ color:'#991B1B', fontSize:11, marginTop:8 }}>✗ {addUser.error?.message}</div>}
+                  {addUser.isSuccess && !inviteLink && <div style={{ color:'#15803D', fontSize:11, marginTop:8 }}>✓ Convite enviado por email!</div>}
+                  {inviteLink && (
+                    <div style={{ marginTop:12, padding:'12px 14px', background:'#FFF7ED', border:'1px solid #FED7AA', borderRadius:8 }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:'#92400E', marginBottom:6 }}>
+                        ⚠️ Email não enviado — compartilhe este link com a funcionária:
+                      </div>
+                      <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                        <input readOnly value={inviteLink} style={{ flex:1, fontSize:10, padding:'5px 8px', border:'1px solid #FED7AA', borderRadius:6, background:'#fff', color:'#334155', fontFamily:'monospace' }} onClick={e=>e.target.select()} />
+                        <Btn onClick={()=>{ navigator.clipboard.writeText(inviteLink) }} style={{ fontSize:10, padding:'5px 10px', whiteSpace:'nowrap' }}>Copiar</Btn>
+                      </div>
+                      <div style={{ fontSize:10, color:'#92400E', marginTop:6 }}>O acesso já foi criado. Este link expira em 24 horas.</div>
+                    </div>
+                  )}
                 </div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13, fontWeight:600, color:'#0F172A' }}>{u.nome}</div>
-                  <div style={{ fontSize:11, color:'#64748B' }}>{u.email}</div>
+              </div>
+            )}
+
+            {linkConvite && (
+              <div style={{ margin:'0 16px 12px', padding:'12px 14px', background:'#FFF7ED', border:'1px solid #FED7AA', borderRadius:8 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:'#92400E', marginBottom:6 }}>
+                  ⚠️ Email não chegou para {linkConvite.nome} — copie e envie por WhatsApp:
                 </div>
-                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                  <span style={{ fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:99, background: PERFIL_COLOR[u.perfil]+'20', color: PERFIL_COLOR[u.perfil] }}>
-                    {PERFIS.find(p=>p.v===u.perfil)?.l || u.perfil}
-                  </span>
-                  <span style={{ fontSize:11, color:'#64748B', fontFamily:'monospace' }}>R$ {u.custo_hora}/h</span>
+                <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                  <input readOnly value={linkConvite.link} style={{ flex:1, fontSize:10, padding:'5px 8px', border:'1px solid #FED7AA', borderRadius:6, background:'#fff', color:'#334155', fontFamily:'monospace' }} onClick={e=>e.target.select()} />
+                  <Btn onClick={()=>{ navigator.clipboard.writeText(linkConvite.link); }} style={{ fontSize:10, padding:'5px 10px', whiteSpace:'nowrap' }}>Copiar</Btn>
                 </div>
+                <div style={{ fontSize:10, color:'#92400E', marginTop:6 }}>
+                  Este link expira em 24h. Após usar, ela poderá criar sua senha normalmente.
+                  <span style={{ marginLeft:8, cursor:'pointer', textDecoration:'underline' }} onClick={()=>setLinkConvite(null)}>Fechar</span>
+                </div>
+              </div>
+            )}
+
+            {uLoading ? <div style={{ padding:16, color:'#94A3B8', fontSize:12 }}>Carregando...</div> : (
+              <div>
+                {usuarios.map(u => (
+                  <div key={u.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 16px', borderTop:'1px solid #F8FAFC' }}>
+                    <div style={{ width:36, height:36, borderRadius:'50%', background: PERFIL_COLOR[u.perfil]||'#6366F1', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, color:'#fff', flexShrink:0 }}>
+                      {u.nome?.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase()||'U'}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:600, color:'#0F172A' }}>{u.nome}</div>
+                      <div style={{ fontSize:11, color:'#94A3B8' }}>{u.email}</div>
+                    </div>
+                    <span style={{ fontSize:10, padding:'2px 8px', borderRadius:99, background: (PERFIL_COLOR[u.perfil]||'#6366F1')+'18', color: PERFIL_COLOR[u.perfil]||'#6366F1', fontWeight:700, textTransform:'capitalize' }}>{u.perfil}</span>
+                    <span style={{ fontSize:10, color:'#94A3B8', fontFamily:'monospace', minWidth:60, textAlign:'right' }}>R${(u.custo_hora||0).toFixed(0)}/h</span>
+                    <span style={{ fontSize:10, padding:'2px 8px', borderRadius:99, background: u.ativo?'#F0FDF4':'#FEF2F2', color: u.ativo?'#15803D':'#991B1B', fontWeight:600 }}>{u.ativo ? 'Ativo' : 'Inativo'}</span>
+                    <div style={{ display:'flex', gap:4, flexShrink:0 }}>
+                      {(() => {
+                        const st = reenvioStatus[u.id]
+                        return (
+                          <button
+                            onClick={() => reenviarConvite(u)}
+                            disabled={st === 'sending'}
+                            title="Reenviar convite por email"
+                            style={{ padding:'5px 8px', borderRadius:6, fontSize:11, cursor: st==='sending'?'default':'pointer', border: st==='ok'?'1px solid #BBF7D0': st==='err'?'1px solid #FECDD3': st==='link'?'1px solid #FDE68A':'1px solid #E0E7FF', background: st==='ok'?'#F0FDF4': st==='err'?'#FEF2F2': st==='link'?'#FFFBEB':'#EEF2FF', color: st==='ok'?'#15803D': st==='err'?'#991B1B': st==='link'?'#92400E':'#4F46E5' }}
+                          >
+                            {st==='sending'?'⏳': st==='ok'?'✓ Enviado': st==='err'?'✗ Erro': st==='link'?'🔗 Ver link':'📧'}
+                          </button>
+                        )
+                      })()}
+                      <button onClick={()=>setEditUser({...u})} style={{ padding:'5px 8px', borderRadius:6, border:'1px solid #E2E8F0', background:'#fff', color:'#475569', cursor:'pointer', fontSize:11 }}>✏</button>
+                      <button onClick={()=>setDeleteUser(u)} style={{ padding:'5px 8px', borderRadius:6, border:'1px solid #FECDD3', background:'#FEF2F2', color:'#991B1B', cursor:'pointer', fontSize:11 }}>🗑</button>
+                    </div>
+                  </div>
+                ))}
+                {usuarios.length === 0 && (
+                  <div style={{ padding:'24px 16px', textAlign:'center', color:'#94A3B8', fontSize:12 }}>Nenhum usuário encontrado</div>
+                )}
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* ABA CUSTO/HORA */}
+      {tab === 'custoHora' && <CalculadoraCustoHora usuarios={usuarios} editarUser={editarUser} />}
+
+      {/* ABA OPERACIONAL */}
+      {tab === 'operacional' && (
+        <Card>
+          <CardHeader title="Configurações operacionais" icon="⚙️" />
+          <div style={{ padding:16, display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            {[
+              { label:'Custo hora padrão (R$)',           key:'custoHora',       type:'number', hint:'Usado no cálculo de capacidade' },
+              { label:'Limite aprovação automática (R$)', key:'aprovacaoLimite', type:'number', hint:'Acima disso exige aprovação manual' },
+              { label:'Dia fechamento mensal',            key:'fechamentoDia',   type:'number', hint:'Dia do mês para fechar o período' },
+              { label:'Dia emissão NF',                   key:'nfDia',           type:'number', hint:'Dia do mês para emitir notas fiscais' },
+              { label:'Dia reunião estratégica',          key:'reuniaoDia',      type:'number', hint:'Dia do mês para reunião com clientes' },
+            ].map(({ label, key, type, hint }) => (
+              <div key={key}>
+                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>{label}</label>
+                <input type={type} style={fi} value={opForm[key]||''} onChange={e=>setOpForm(f=>({...f,[key]:+e.target.value}))} min={0} />
+                {hint && <div style={{ fontSize:9, color:'#94A3B8', marginTop:3 }}>{hint}</div>}
               </div>
             ))}
+          </div>
+          <div style={{ padding:'12px 16px', borderTop:'1px solid #F1F5F9', display:'flex', justifyContent:'flex-end' }}>
+            <Btn variant="primary" onClick={salvarOp}>Salvar configurações</Btn>
           </div>
         </Card>
       )}
 
-      {/* ABA OPERACIONAL */}
-      {tab === 'operacional' && (
-        <>
-          <Card style={{ marginBottom:14 }}>
-            <CardHeader title="Financeiro e rentabilidade" icon="💰" />
-            <div style={{ padding:16, display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-              <div>
-                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Custo-hora padrão da equipe (R$)</label>
-                <input type="number" style={fi} value={opForm.custoHora} onChange={e=>setOpForm(f=>({...f,custoHora:+e.target.value}))} />
-                <div style={{ fontSize:10, color:'#94A3B8', marginTop:4 }}>Usado para calcular a rentabilidade por cliente</div>
-              </div>
-              <div>
-                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Valor mínimo para aprovação (R$)</label>
-                <input type="number" style={fi} value={opForm.aprovacaoLimite} onChange={e=>setOpForm(f=>({...f,aprovacaoLimite:+e.target.value}))} />
-                <div style={{ fontSize:10, color:'#94A3B8', marginTop:4 }}>Pagamentos acima deste valor precisam de aprovação</div>
-              </div>
-            </div>
-          </Card>
-
-          <Card style={{ marginBottom:14 }}>
-            <CardHeader title="Calendário mensal padrão" icon="📅" />
-            <div style={{ padding:16, display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
-              <div>
-                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Início fechamento (dia)</label>
-                <input type="number" style={fi} value={opForm.fechamentoDia} min={1} max={10} onChange={e=>setOpForm(f=>({...f,fechamentoDia:+e.target.value}))} />
-              </div>
-              <div>
-                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Emissão de NFs (dia)</label>
-                <input type="number" style={fi} value={opForm.nfDia} min={1} max={28} onChange={e=>setOpForm(f=>({...f,nfDia:+e.target.value}))} />
-              </div>
-              <div>
-                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Reunião mensal (dia)</label>
-                <input type="number" style={fi} value={opForm.reuniaoDia} min={1} max={28} onChange={e=>setOpForm(f=>({...f,reuniaoDia:+e.target.value}))} />
-              </div>
-            </div>
-          </Card>
-
-          <div style={{ display:'flex', justifyContent:'flex-end' }}>
-            <Btn variant="primary" onClick={salvarOp}>Salvar configurações</Btn>
-          </div>
-        </>
-      )}
-
       {/* ABA PROPOSTA */}
       {tab === 'proposta' && (
-        <>
-          <div style={{ background:'#EFF6FF', border:'1px solid #BFDBFE', borderRadius:8, padding:'10px 14px', marginBottom:14, fontSize:12, color:'#1E40AF' }}>
-            📊 Esses dados aparecem automaticamente na sua Proposta Visual gerada pelo sistema.
-          </div>
-
-          <div style={{ background:'#fff', border:'1px solid #E2E8F0', borderRadius:12, padding:20, marginBottom:14 }}>
-            <div style={{ fontSize:13, fontWeight:700, color:'#0F172A', marginBottom:14 }}>🏢 Identidade do BPO</div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-              <div style={{ gridColumn:'1/-1' }}>
-                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Quem somos (aparece na proposta)</label>
-                <textarea style={{ ...fi, minHeight:80, resize:'vertical' }} value={propForm.quemSomos} onChange={e=>setPropForm(f=>({...f,quemSomos:e.target.value}))} placeholder="Ex: Na [Sua Empresa], transformamos números em estratégia. Atuamos como o braço financeiro das empresas..." />
-              </div>
-              <div>
-                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Instagram</label>
-                <input style={fi} value={propForm.instagram} onChange={e=>setPropForm(f=>({...f,instagram:e.target.value}))} placeholder="@seubpo" />
-              </div>
-              <div>
-                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Representante Legal</label>
-                <input style={fi} value={propForm.representante} onChange={e=>setPropForm(f=>({...f,representante:e.target.value}))} placeholder="Nome completo" />
-              </div>
-              <div>
-                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Cargo</label>
-                <input style={fi} value={propForm.cargo} onChange={e=>setPropForm(f=>({...f,cargo:e.target.value}))} placeholder="Ex: Sócia Administradora" />
-              </div>
-              <div>
-                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>CPF do Representante</label>
-                <input style={fi} value={propForm.cpf_rep} onChange={e=>setPropForm(f=>({...f,cpf_rep:e.target.value}))} placeholder="000.000.000-00" />
-              </div>
-              <div style={{ gridColumn:'1/-1' }}>
-                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Endereço completo</label>
-                <input style={fi} value={propForm.endereco} onChange={e=>setPropForm(f=>({...f,endereco:e.target.value}))} placeholder="Rua, número, bairro, cidade/UF, CEP" />
-              </div>
-              <div>
-                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Cidade (para assinatura)</label>
-                <input style={fi} value={propForm.cidade} onChange={e=>setPropForm(f=>({...f,cidade:e.target.value}))} placeholder="Ex: Barueri/SP" />
-              </div>
-              <div>
-                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Foro (cláusula contratual)</label>
-                <input style={fi} value={propForm.foro} onChange={e=>setPropForm(f=>({...f,foro:e.target.value}))} placeholder="Ex: Barueri/SP" />
-              </div>
-            </div>
-          </div>
-
-          <div style={{ background:'#fff', border:'1px solid #E2E8F0', borderRadius:12, padding:20, marginBottom:14 }}>
-            <div style={{ fontSize:13, fontWeight:700, color:'#0F172A', marginBottom:14 }}>📊 Números da empresa (aparecem na proposta)</div>
+        <Card>
+          <CardHeader title="Configurações da proposta comercial" icon="📊" />
+          <div style={{ padding:16, display:'flex', flexDirection:'column', gap:12 }}>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
               {[
-                ['num1_valor','num1_label'],
-                ['num2_valor','num2_label'],
-                ['num3_valor','num3_label'],
-                ['num4_valor','num4_label'],
-              ].map(([vk, lk], i) => (
-                <div key={i} style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:8 }}>
-                  <div>
-                    <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Número {i+1}</label>
-                    <input style={fi} value={propForm[vk]} onChange={e=>setPropForm(f=>({...f,[vk]:e.target.value}))} placeholder="+120" />
-                  </div>
-                  <div>
-                    <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Descrição</label>
-                    <input style={fi} value={propForm[lk]} onChange={e=>setPropForm(f=>({...f,[lk]:e.target.value}))} placeholder="Rotinas geridas" />
-                  </div>
+                { label:'Representante legal',  key:'representante', placeholder:'Cláudia Bernardo' },
+                { label:'Cargo',                key:'cargo',         placeholder:'Sócia-Diretora' },
+                { label:'CPF do representante', key:'cpf_rep',       placeholder:'000.000.000-00' },
+                { label:'Instagram',            key:'instagram',     placeholder:'@empreendabpo' },
+                { label:'Endereço',             key:'endereco',      placeholder:'Rua...' },
+                { label:'Cidade/UF',            key:'cidade',        placeholder:'Barueri/SP' },
+                { label:'Foro contratual',      key:'foro',          placeholder:'Barueri/SP' },
+              ].map(({ label, key, placeholder }) => (
+                <div key={key}>
+                  <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>{label}</label>
+                  <input style={fi} value={propForm[key]||''} onChange={e=>setPropForm(f=>({...f,[key]:e.target.value}))} placeholder={placeholder} />
                 </div>
               ))}
             </div>
-          </div>
-
-          <div style={{ background:'#fff', border:'1px solid #E2E8F0', borderRadius:12, padding:20, marginBottom:14 }}>
-            <div style={{ fontSize:13, fontWeight:700, color:'#0F172A', marginBottom:4 }}>💬 Depoimentos (até 3)</div>
-            <div style={{ fontSize:11, color:'#64748B', marginBottom:14 }}>Aparecem na proposta visual. Se vazio, a seção é omitida.</div>
-            {[1,2,3].map(n => (
-              <div key={n} style={{ borderTop: n>1 ? '1px solid #F1F5F9' : 'none', paddingTop: n>1 ? 14 : 0, marginBottom:14 }}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#6366F1', marginBottom:8 }}>Depoimento {n}</div>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:8 }}>
-                  <div>
-                    <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Nome do cliente</label>
-                    <input style={fi} value={propForm['dep'+n+'_nome']} onChange={e=>setPropForm(f=>({...f,['dep'+n+'_nome']:e.target.value}))} placeholder="Ex: João Silva" />
-                  </div>
-                  <div>
-                    <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Depoimento</label>
-                    <textarea style={{ ...fi, minHeight:60, resize:'vertical' }} value={propForm['dep'+n+'_texto']} onChange={e=>setPropForm(f=>({...f,['dep'+n+'_texto']:e.target.value}))} placeholder="O que o cliente disse..." />
-                  </div>
+            <div>
+              <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Quem somos (texto da proposta)</label>
+              <textarea style={{ ...fi, height:80, resize:'vertical' }} value={propForm.quemSomos||''} onChange={e=>setPropForm(f=>({...f,quemSomos:e.target.value}))} placeholder="Descreva sua empresa..." />
+            </div>
+            <div style={{ fontWeight:700, fontSize:12, color:'#475569', paddingBottom:6, borderBottom:'1px solid #F1F5F9' }}>Números de impacto</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:10 }}>
+              {[1,2,3,4].map(n => (
+                <div key={n}>
+                  <input style={{ ...fi, marginBottom:6, textAlign:'center', fontWeight:700 }} value={propForm[`num${n}_valor`]||''} onChange={e=>setPropForm(f=>({...f,[`num${n}_valor`]:e.target.value}))} placeholder="+100" />
+                  <input style={{ ...fi, fontSize:11 }} value={propForm[`num${n}_label`]||''} onChange={e=>setPropForm(f=>({...f,[`num${n}_label`]:e.target.value}))} placeholder="Descrição" />
                 </div>
+              ))}
+            </div>
+            <div style={{ fontWeight:700, fontSize:12, color:'#475569', paddingBottom:6, borderBottom:'1px solid #F1F5F9' }}>Depoimentos (até 3)</div>
+            {[1,2,3].map(n => (
+              <div key={n} style={{ display:'grid', gridTemplateColumns:'200px 1fr', gap:10 }}>
+                <input style={fi} value={propForm[`dep${n}_nome`]||''} onChange={e=>setPropForm(f=>({...f,[`dep${n}_nome`]:e.target.value}))} placeholder={`Nome cliente ${n}`} />
+                <input style={fi} value={propForm[`dep${n}_texto`]||''} onChange={e=>setPropForm(f=>({...f,[`dep${n}_texto`]:e.target.value}))} placeholder="Depoimento..." />
               </div>
             ))}
           </div>
-
-          <div style={{ display:'flex', justifyContent:'flex-end' }}>
-            <button onClick={salvarProposta} style={{ padding:'10px 24px', background:'#6366F1', color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
-              Salvar configurações da proposta
-            </button>
+          <div style={{ padding:'12px 16px', borderTop:'1px solid #F1F5F9', display:'flex', justifyContent:'flex-end' }}>
+            <Btn variant="primary" onClick={salvarProposta}>Salvar configurações da proposta</Btn>
           </div>
-        </>
+        </Card>
+      )}
+
+      {/* ABA MEU PLANO — só admin */}
+      {tab === 'plano' && profile?.perfil === 'admin' && (() => {
+        const plano = empresa?.plano || 'trial'
+        const expira = empresa?.trial_expira_em ? new Date(empresa.trial_expira_em) : null
+        const diasRestantes = expira ? Math.max(0, Math.ceil((expira - new Date()) / (1000*60*60*24))) : 0
+        const paymentUrl = empresa?.asaas_payment_url
+        const PLANOS = [
+          { id:'essencial', nome:'Essencial', preco:'R$ 59/mês', desc:'Até 3 usuários · Tarefas, cofre, precificação · Suporte por e-mail' },
+          { id:'pro',       nome:'Pro',       preco:'R$ 97/mês', desc:'Usuários ilimitados · CRM · Relatórios · Suporte WhatsApp', destaque:true },
+        ]
+        return (
+          <Card>
+            <CardHeader title="Meu Plano" icon="💳" />
+            <div style={{ padding:20, display:'flex', flexDirection:'column', gap:20 }}>
+
+              {/* Status atual */}
+              <div style={{ background: plano==='trial'?'#F0F9FF':'#F0FDF4', border:`1px solid ${plano==='trial'?'#BAE6FD':'#BBF7D0'}`, borderRadius:10, padding:'14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:700, color:'#64748B', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:4 }}>Plano atual</div>
+                  <div style={{ fontSize:16, fontWeight:800, color:'#0F172A', textTransform:'capitalize' }}>
+                    {plano === 'trial' ? `Trial gratuito` : plano}
+                  </div>
+                  {plano === 'trial' && expira && (
+                    <div style={{ fontSize:12, color: diasRestantes<=2?'#EF4444':'#0369A1', marginTop:2 }}>
+                      {diasRestantes === 0 ? 'Expira hoje' : `${diasRestantes} dia${diasRestantes>1?'s':''} restante${diasRestantes>1?'s':''}`}
+                    </div>
+                  )}
+                  {plano !== 'trial' && <div style={{ fontSize:12, color:'#16A34A', marginTop:2 }}>✓ Ativo</div>}
+                </div>
+                {plano === 'trial' && (
+                  <div style={{ height:8, background:'#BAE6FD', borderRadius:99, width:120, overflow:'hidden', alignSelf:'center' }}>
+                    <div style={{ height:'100%', borderRadius:99, background:'#0EA5E9', width:`${Math.round(((7-diasRestantes)/7)*100)}%` }} />
+                  </div>
+                )}
+              </div>
+
+              {/* Planos */}
+              {plano === 'trial' && (
+                <>
+                  <div style={{ fontSize:13, fontWeight:700, color:'#0F172A' }}>Escolha seu plano</div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                    {PLANOS.map(p => {
+                      const sel = planSel === p.id
+                      return (
+                        <div key={p.id} onClick={()=>setPlanSel(p.id)} style={{ border:`2px solid ${sel?'#6366F1':'#E2E8F0'}`, borderRadius:12, padding:16, background: sel?'#F5F3FF':'#fff', position:'relative', cursor:'pointer', transition:'all .15s' }}>
+                          {p.destaque && <div style={{ position:'absolute', top:-11, left:'50%', transform:'translateX(-50%)', background:'#6366F1', color:'#fff', fontSize:10, fontWeight:700, padding:'2px 12px', borderRadius:99 }}>Mais popular</div>}
+                          {sel && <div style={{ position:'absolute', top:10, right:10, width:18, height:18, borderRadius:99, background:'#6366F1', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#fff' }}>✓</div>}
+                          <div style={{ fontSize:14, fontWeight:800, color:'#0F172A', marginBottom:4 }}>{p.nome}</div>
+                          <div style={{ fontSize:20, fontWeight:800, color:'#6366F1', marginBottom:6 }}>{p.preco}</div>
+                          <div style={{ fontSize:11, color:'#64748B', lineHeight:1.5 }}>{p.desc}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <button
+                    onClick={handleAssinar}
+                    disabled={assinando}
+                    style={{ display:'block', width:'100%', textAlign:'center', background: assinando ? '#A5B4FC' : 'linear-gradient(135deg,#6366F1,#8B5CF6)', color:'#fff', padding:'13px', borderRadius:10, fontSize:14, fontWeight:700, border:'none', cursor: assinando ? 'not-allowed' : 'pointer' }}>
+                    {assinando ? 'Gerando link...' : `Assinar plano ${planSel === 'pro' ? 'Pro' : 'Essencial'} →`}
+                  </button>
+                </>
+              )}
+
+              {/* Cancelar */}
+              <div style={{ borderTop:'1px solid #F1F5F9', paddingTop:16 }}>
+                <div style={{ fontSize:12, color:'#94A3B8', marginBottom:8 }}>Para cancelar sua assinatura, entre em contato com o suporte.</div>
+                <a
+                  href={`https://wa.me/5511917101173?text=Quero+cancelar+minha+assinatura+do+Fluxe+BPO+-+Empresa:+${encodeURIComponent(empresa?.nome||'')}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize:13, color:'#EF4444', textDecoration:'none', fontWeight:600 }}>
+                  Solicitar cancelamento →
+                </a>
+              </div>
+
+            </div>
+          </Card>
+        )
+      })()}
+
+      {/* MODAL EDITAR USUÁRIO */}
+      {editUser && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}>
+          <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:440, boxShadow:'0 25px 50px rgba(0,0,0,.15)' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px', borderBottom:'1px solid #F1F5F9' }}>
+              <span style={{ fontWeight:700, fontSize:14 }}>✏️ Editar usuário</span>
+              <button onClick={()=>setEditUser(null)} style={{ border:'none', background:'none', cursor:'pointer', fontSize:20, color:'#94A3B8' }}>×</button>
+            </div>
+            <div style={{ padding:18, display:'flex', flexDirection:'column', gap:10 }}>
+              <div>
+                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Nome</label>
+                <input style={fi} value={editUser.nome||''} onChange={e=>setEditUser(f=>({...f,nome:e.target.value}))} />
+              </div>
+              <div>
+                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Perfil</label>
+                <select style={fi} value={editUser.perfil||'operador'} onChange={e=>setEditUser(f=>({...f,perfil:e.target.value}))}>
+                  {PERFIS.map(p=><option key={p.v} value={p.v}>{p.l}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Custo/hora (R$)</label>
+                <input type="number" style={fi} value={editUser.custo_hora||0} onChange={e=>setEditUser(f=>({...f,custo_hora:+e.target.value}))} min={0} />
+              </div>
+              <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:13 }}>
+                <input type="checkbox" checked={!!editUser.ativo} onChange={e=>setEditUser(f=>({...f,ativo:e.target.checked}))} style={{ width:16, height:16, accentColor:'#6366F1' }} />
+                Usuário ativo
+              </label>
+            </div>
+            <div style={{ padding:'12px 18px', borderTop:'1px solid #F1F5F9', display:'flex', justifyContent:'flex-end', gap:8 }}>
+              <Btn onClick={()=>setEditUser(null)}>Cancelar</Btn>
+              <Btn variant="primary" onClick={()=>editarUser.mutate(editUser)} disabled={editarUser.isPending}>
+                {editarUser.isPending ? 'Salvando...' : 'Salvar alterações'}
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRMAR EXCLUSÃO */}
+      {deleteUser && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}>
+          <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:400, boxShadow:'0 25px 50px rgba(0,0,0,.15)' }}>
+            <div style={{ padding:24, textAlign:'center' }}>
+              <div style={{ fontSize:40, marginBottom:12 }}>🗑️</div>
+              <div style={{ fontWeight:700, fontSize:16, color:'#0F172A', marginBottom:8 }}>Excluir usuário?</div>
+              <div style={{ fontSize:13, color:'#64748B', marginBottom:20 }}>
+                <strong>{deleteUser.nome}</strong> será removido da equipe. Esta ação não pode ser desfeita.
+              </div>
+              <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
+                <Btn onClick={()=>setDeleteUser(null)}>Cancelar</Btn>
+                <Btn variant="danger" onClick={()=>excluirUser.mutate(deleteUser)} disabled={excluirUser.isPending}>
+                  {excluirUser.isPending ? 'Excluindo...' : 'Sim, excluir'}
+                </Btn>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

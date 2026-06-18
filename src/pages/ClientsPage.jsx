@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '../hooks/useData'
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useTarefaModelos } from '../hooks/useData'
 import { Card, CardHeader, Badge, Btn, Loader, EmptyState, fmt, fmtR } from '../components/ui'
 import { useAuthStore } from '../store/authStore'
+import ImportModal from '../components/ui/ImportModal'
+import { exportToXlsx, CLIENTES_EXPORT_COLS, downloadClienteTemplate, mapRowToCliente } from '../utils/excel'
 
-const ETAPA_COLOR = { comercial:'pu', pre_ob:'yw', onboarding:'bl', implantacao:'or', operacional:'gr', estrategico:'cy', acompanhamento:'gy' }
-const ETAPA_LABEL = { comercial:'Comercial', pre_ob:'Pré-Onb.', onboarding:'Onboarding', implantacao:'Implantação', operacional:'Operacional', estrategico:'Estratégico', acompanhamento:'Acompanham.' }
+const ETAPA_COLOR = { comercial:'pu', pre_ob:'yw', onboarding:'bl', implantacao:'or', operacional:'gr', estrategico:'cy', acompanhamento:'gy', encerramento:'gy' }
+const ETAPA_LABEL = { comercial:'Comercial', pre_ob:'Pré-Onb.', onboarding:'Onboarding', implantacao:'Implantação', operacional:'Operacional', estrategico:'Estratégico', acompanhamento:'Acompanham.', encerramento:'Encerramento' }
 const STATUS_COLOR = { ativo:'gr', onboarding:'bl', implantacao:'or', inativo:'gy', pausado:'yw' }
+const STATUS_LABEL = { ativo:'Ativo', inativo:'Inativo', pausado:'Pausado', onboarding:'Onboarding', implantacao:'Implantação' }
 
 const BANCOS_LIST = ['Banco do Brasil','Santander','Caixa Econômica Federal','Bradesco','Itaú','Nubank','C6 Bank','Banco Inter','Mercado Pago','PagBank','Sicoob','Sicredi','Banco Original','BTG Pactual','Stone','Cora','Asaas','Outro']
 const SOFTWARES = ['Omie','Conta Azul','Meu Dinheiro Web','Nibo','Bom Controle','Bling','Nexaas','Gestão Fácil','Outro']
@@ -28,12 +31,92 @@ export default function ClientsPage() {
 
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [importOpen, setImportOpen] = useState(false)
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState({})
   const [cnpjLoading, setCnpjLoading] = useState(false)
   const [cnpjError, setCnpjError] = useState('')
   const [selectedBancos, setSelectedBancos] = useState([])
-  const [tab, setTab] = useState('dados') // dados | financeiro | bancos
+  const [tab, setTab] = useState('dados') // dados | financeiro | bancos | rotina
+
+  // Rotinas
+  const { data: rotinas = [] } = useRotinas(modal?.id)
+  const createRotina  = useCreateRotina()
+  const deleteRotina  = useDeleteRotina()
+  const DIAS_SEMANA_R = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo']
+  const PERIODO_LABEL = { manha:'🌅 Manhã', tarde:'🌇 Tarde', dia_todo:'🌞 Dia todo' }
+  const [rotinaForm, setRotinaForm] = useState({ titulo:'', tipo:'semanal', dia_semana:0, dia_mes:1, periodo:'dia_todo', observacao:'' })
+  const [rotinaErr,  setRotinaErr]  = useState('')
+
+  // Tarefas do cliente
+  const { data: tarefasCliente = [] } = useTasks({ clientId: modal?.id })
+  const { data: modelos = [] } = useTarefaModelos()
+  const createTask = useCreateTask()
+  const updateTask = useUpdateTask()
+  const [taskForm, setTaskForm] = useState({ titulo:'', prazo:'', status:'pendente', prioridade:'normal' })
+  const [taskErr,  setTaskErr]  = useState('')
+
+  // Sugestão de modelos ao mudar etapa
+  const [sugestaoEtapa,    setSugestaoEtapa]    = useState(null)   // etapa que disparou a sugestão
+  const [showAplicarModal, setShowAplicarModal] = useState(false)
+  const [modelosSel,       setModelosSel]       = useState([])     // ids selecionados no modal
+  const [aplicando,        setAplicando]        = useState(false)
+  const [aplicadoOk,       setAplicadoOk]       = useState(false)
+
+  const ETAPA_LABEL_M = { comercial:'Comercial', pre_ob:'Pré-Onboarding', onboarding:'Onboarding', implantacao:'Implantação', operacional:'Operacional', estrategico:'Estratégico', acompanhamento:'Acompanhamento', encerramento:'Encerramento' }
+
+  function onEtapaChange(novaEtapa) {
+    setForm(f => ({ ...f, etapa: novaEtapa }))
+    setAplicadoOk(false)
+    const sugestoes = modelos.filter(m => m.etapa === novaEtapa)
+    if (sugestoes.length > 0 && modal?.mode === 'edit') {
+      setSugestaoEtapa(novaEtapa)
+      setModelosSel(sugestoes.map(m => m.id))
+    } else {
+      setSugestaoEtapa(null)
+    }
+  }
+
+  function abrirAplicarModal() {
+    const sugestoes = modelos.filter(m => m.etapa === sugestaoEtapa)
+    setModelosSel(sugestoes.map(m => m.id))
+    setShowAplicarModal(true)
+  }
+
+  async function aplicarModelos() {
+    setAplicando(true)
+    const selecionados = modelos.filter(m => modelosSel.includes(m.id))
+    for (const m of selecionados) {
+      // Não cria se já existir tarefa ativa com o mesmo título para este cliente
+      const jaExiste = tarefasCliente.some(t => t.titulo === m.titulo && t.status !== 'concluida')
+      if (jaExiste) continue
+      await createTask.mutateAsync({
+        titulo:     m.titulo,
+        prioridade: m.prioridade || 'normal',
+        status:     'pendente',
+        prazo:      null,
+        cliente_id: modal.id,
+      })
+    }
+    setAplicando(false)
+    setShowAplicarModal(false)
+    setSugestaoEtapa(null)
+    setAplicadoOk(true)
+  }
+
+  async function salvarTarefa() {
+    if (!taskForm.titulo.trim()) { setTaskErr('Informe o título da tarefa'); return }
+    setTaskErr('')
+    await createTask.mutateAsync({ ...taskForm, prazo: taskForm.prazo || null, cliente_id: modal.id })
+    setTaskForm({ titulo:'', prazo:'', status:'pendente', prioridade:'normal' })
+  }
+
+  async function salvarRotina() {
+    if (!rotinaForm.titulo.trim()) { setRotinaErr('Informe o título da rotina'); return }
+    setRotinaErr('')
+    await createRotina.mutateAsync({ ...rotinaForm, cliente_id: modal.id, ativo: true })
+    setRotinaForm({ titulo:'', tipo:'semanal', dia_semana:0, dia_mes:1, periodo:'dia_todo', observacao:'' })
+  }
 
   const filtered = clients.filter(c => {
     const q = search.toLowerCase()
@@ -126,6 +209,14 @@ export default function ClientsPage() {
         </select>
         <div style={{ flex:1 }} />
         <span style={{ fontSize:11, color:'var(--tx3)' }}>{filtered.length} cliente{filtered.length!==1?'s':''}</span>
+        <button onClick={() => exportToXlsx(filtered, CLIENTES_EXPORT_COLS, 'clientes.xlsx')}
+          style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #CBD5E1', background:'#fff', cursor:'pointer', fontSize:12, fontWeight:600, color:'#334155' }}>
+          ⬇ Exportar Excel
+        </button>
+        <button onClick={() => setImportOpen(true)}
+          style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #CBD5E1', background:'#fff', cursor:'pointer', fontSize:12, fontWeight:600, color:'#334155' }}>
+          ⬆ Importar
+        </button>
         <button className="btn bp bsm" onClick={openNew}>
           <i className="fa-solid fa-plus"></i> Novo cliente
         </button>
@@ -155,7 +246,7 @@ export default function ClientsPage() {
                     </td>
                     <td style={{ padding:'10px 14px', fontSize:11, color:'var(--tx2)', fontFamily:'var(--mo)' }}>{cl.cnpj || '—'}</td>
                     <td style={{ padding:'10px 14px' }}><span className={`b b-${ETAPA_COLOR[cl.etapa]||'gy'}`}>{ETAPA_LABEL[cl.etapa]||cl.etapa}</span></td>
-                    <td style={{ padding:'10px 14px' }}><span className={`b b-${STATUS_COLOR[cl.status]||'gy'}`}>{cl.status}</span></td>
+                    <td style={{ padding:'10px 14px' }}><span className={`b b-${STATUS_COLOR[cl.status]||'gy'}`}>{STATUS_LABEL[cl.status] || cl.status}</span></td>
                     <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color:'var(--grt)', fontFamily:'var(--mo)' }}>{fmtR(cl.valor_mrr)}</td>
                     <td style={{ padding:'10px 14px', fontSize:11, color:'var(--tx2)' }}>{cl.software_erp || '—'}</td>
                     <td style={{ padding:'10px 14px' }}>
@@ -192,7 +283,7 @@ export default function ClientsPage() {
 
             {/* Tabs */}
             <div style={{ display:'flex', borderBottom:'1px solid var(--bo)', padding:'0 18px' }}>
-              {[['dados','📋 Dados'],['financeiro','💰 Financeiro'],['bancos','🏦 Bancos']].map(([id, label]) => (
+              {[['dados','📋 Dados'],['financeiro','💰 Financeiro'],['bancos','🏦 Bancos'],['rotina','🔁 Rotina'],['tarefas','✅ Tarefas']].map(([id, label]) => (
                 <button key={id} onClick={() => setTab(id)}
                   style={{ padding:'8px 14px', border:'none', background:'transparent', cursor:'pointer', fontSize:11, fontWeight:600,
                     color: tab===id?'var(--br)':'var(--tx3)', borderBottom: tab===id?'2px solid var(--br)':'2px solid transparent', marginBottom:-1 }}>
@@ -275,11 +366,34 @@ export default function ClientsPage() {
                     <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Vencimento (dia do mês)</label>
                     <input type="number" value={form.vencimento_dia||''} onChange={e=>setForm(f=>({...f,vencimento_dia:e.target.value}))} className="fi" placeholder="10" min={1} max={28} />
                   </div>
-                  <div>
+                  <div style={{ gridColumn:'1/-1' }}>
                     <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Etapa BPO</label>
-                    <select value={form.etapa||'operacional'} onChange={e=>setForm(f=>({...f,etapa:e.target.value}))} className="fi">
+                    <select value={form.etapa||'operacional'} onChange={e => onEtapaChange(e.target.value)} className="fi">
                       {Object.entries(ETAPA_LABEL).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
                     </select>
+                    {/* Banner de sugestão */}
+                    {sugestaoEtapa && !aplicadoOk && (
+                      <div style={{ marginTop:8, padding:'10px 14px', background:'#EFF6FF', border:'1px solid #BFDBFE', borderRadius:'var(--r)', display:'flex', alignItems:'center', gap:10 }}>
+                        <span style={{ fontSize:18 }}>🎯</span>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:12, fontWeight:700, color:'#1D4ED8' }}>
+                            {modelos.filter(m => m.etapa === sugestaoEtapa).length} tarefas recomendadas para {ETAPA_LABEL_M[sugestaoEtapa]}
+                          </div>
+                          <div style={{ fontSize:11, color:'#3B82F6' }}>Aplique o checklist padrão com um clique</div>
+                        </div>
+                        <button onClick={abrirAplicarModal}
+                          style={{ padding:'6px 14px', background:'#2563EB', color:'#fff', border:'none', borderRadius:6, cursor:'pointer', fontSize:12, fontWeight:700, flexShrink:0 }}>
+                          Ver e aplicar
+                        </button>
+                        <button onClick={() => setSugestaoEtapa(null)}
+                          style={{ background:'none', border:'none', cursor:'pointer', color:'#94A3B8', fontSize:16, lineHeight:1, flexShrink:0 }}>×</button>
+                      </div>
+                    )}
+                    {aplicadoOk && (
+                      <div style={{ marginTop:8, padding:'8px 14px', background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:'var(--r)', fontSize:12, color:'#15803D', fontWeight:600 }}>
+                        ✓ Tarefas criadas! Configure prazos e responsáveis na aba Tarefas.
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Status</label>
@@ -336,18 +450,244 @@ export default function ClientsPage() {
                   )}
                 </div>
               )}
+
+              {/* ABA TAREFAS */}
+              {tab === 'tarefas' && (
+                modal?.mode === 'new'
+                  ? <div style={{ padding:'28px 16px', textAlign:'center', color:'var(--tx3)', fontSize:13 }}>Salve o cliente primeiro para adicionar tarefas.</div>
+                  : <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+
+                    {/* Lista de tarefas */}
+                    {tarefasCliente.length === 0 ? (
+                      <div style={{ textAlign:'center', padding:'28px 0', color:'var(--tx3)' }}>
+                        <div style={{ fontSize:24, marginBottom:8 }}>📋</div>
+                        <div style={{ fontSize:13, fontWeight:600, marginBottom:4 }}>Nenhuma tarefa ainda</div>
+                        <div style={{ fontSize:11 }}>Vá em <strong>Financeiro → Etapa BPO</strong> para aplicar o checklist padrão,<br/>ou adicione uma tarefa avulsa abaixo.</div>
+                      </div>
+                    ) : (
+                      <div style={{ display:'flex', flexDirection:'column', gap:5, maxHeight:300, overflowY:'auto' }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:2 }}>
+                          {tarefasCliente.length} tarefa{tarefasCliente.length!==1?'s':''}
+                        </div>
+                        {tarefasCliente.map(t => {
+                          const statusColor = { pendente:'#F59E0B', em_andamento:'#3B82F6', concluida:'#22C55E', aprovacao:'#8B5CF6' }
+                          const statusLabel = { pendente:'Pendente', em_andamento:'Em andamento', concluida:'Concluída', aprovacao:'Aprovação' }
+                          const prazoVencido = t.prazo && new Date(t.prazo) < new Date() && t.status !== 'concluida'
+                          return (
+                            <div key={t.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 12px', border:`1px solid ${prazoVencido?'#FECDD3':'var(--bo)'}`, borderRadius:'var(--r)', background: prazoVencido?'#FFF1F2':'var(--s2)' }}>
+                              <div style={{ flex:1, minWidth:0 }}>
+                                <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)', textDecoration: t.status==='concluida'?'line-through':'none' }}>{t.titulo}</div>
+                                <div style={{ display:'flex', gap:6, marginTop:3, flexWrap:'wrap', alignItems:'center' }}>
+                                  <span style={{ fontSize:9, padding:'1px 6px', borderRadius:99, background: (statusColor[t.status]||'#94A3B8')+'22', color: statusColor[t.status]||'#94A3B8', fontWeight:700 }}>
+                                    {statusLabel[t.status] || t.status}
+                                  </span>
+                                  {t.prazo && <span style={{ fontSize:9, color: prazoVencido?'var(--rdt)':'var(--tx3)' }}>{prazoVencido?'⚠ ':''}{new Date(t.prazo+'T12:00:00').toLocaleDateString('pt-BR')}</span>}
+                                  {t.usuarios?.nome && <span style={{ fontSize:9, color:'var(--tx3)', background:'var(--bo)', padding:'1px 5px', borderRadius:99 }}>👤 {t.usuarios.nome}</span>}
+                                </div>
+                              </div>
+                              {t.status !== 'concluida' && (
+                                <button onClick={() => updateTask.mutate({ id: t.id, status:'concluida' })}
+                                  style={{ border:'1px solid #BBF7D0', background:'#F0FDF4', color:'#15803D', borderRadius:5, cursor:'pointer', fontSize:10, padding:'3px 8px', fontWeight:700, flexShrink:0 }}>✓</button>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {/* Tarefa avulsa */}
+                    <div style={{ borderTop:'1px solid var(--bo)', paddingTop:12 }}>
+                      <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:8 }}>+ Tarefa avulsa</div>
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr auto auto', gap:8, alignItems:'end' }}>
+                        <input value={taskForm.titulo} onChange={e=>setTaskForm(f=>({...f,titulo:e.target.value}))}
+                          onKeyDown={e => e.key==='Enter' && salvarTarefa()}
+                          className="fi" placeholder="Título da tarefa..." />
+                        <input type="date" value={taskForm.prazo} onChange={e=>setTaskForm(f=>({...f,prazo:e.target.value}))} className="fi" style={{ width:140 }} />
+                        <button className="btn bp bsm" onClick={salvarTarefa} disabled={createTask.isPending}>
+                          {createTask.isPending ? '…' : '+ Adicionar'}
+                        </button>
+                      </div>
+                      {taskErr && <div style={{ fontSize:11, color:'var(--rdt)', marginTop:4 }}>{taskErr}</div>}
+                    </div>
+                  </div>
+              )}
+
+              {/* ABA ROTINA */}
+              {tab === 'rotina' && (
+                <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                  {modal?.mode === 'new' ? (
+                    <div style={{ padding:'28px 16px', textAlign:'center', color:'var(--tx3)', fontSize:13 }}>
+                      Salve o cliente primeiro para adicionar rotinas.
+                    </div>
+                  ) : (<>
+
+                    {/* Tooltip educativo */}
+                    <div style={{ background:'#EFF6FF', border:'1px solid #BFDBFE', borderRadius:'var(--r)', padding:'12px 14px', fontSize:12, color:'#1D4ED8', lineHeight:1.6 }}>
+                      <div style={{ fontWeight:700, marginBottom:4 }}>💡 O que é a Rotina?</div>
+                      Registre as tarefas recorrentes deste cliente — ex: <em>"Toda terça, agendamento bancário"</em> ou <em>"Todo dia 5, envio de relatório"</em>.
+                      Elas aparecem automaticamente na <strong>Central Operacional</strong> no dia certo, sem precisar criar tarefa avulsa toda semana.
+                    </div>
+
+                    {/* Rotinas existentes */}
+                    {rotinas.length > 0 && (
+                      <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em' }}>Rotinas cadastradas</div>
+                        {rotinas.map(r => (
+                          <div key={r.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--s2)' }}>
+                            <span style={{ fontSize:16 }}>{r.tipo === 'semanal' ? '📅' : '📆'}</span>
+                            <div style={{ flex:1 }}>
+                              <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{r.titulo}</div>
+                              <div style={{ fontSize:10, color:'var(--tx3)' }}>
+                                {r.tipo === 'semanal'
+                                  ? `Toda ${DIAS_SEMANA_R[r.dia_semana]}`
+                                  : `Todo dia ${r.dia_mes}`}
+                                {' · '}{PERIODO_LABEL[r.periodo] || r.periodo}
+                                {r.observacao && <> · <em>{r.observacao}</em></>}
+                              </div>
+                            </div>
+                            <button onClick={() => { if(confirm('Remover esta rotina?')) deleteRotina.mutate(r.id) }}
+                              style={{ border:'none', background:'none', cursor:'pointer', color:'var(--tx3)', fontSize:18, lineHeight:1 }}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Form nova rotina */}
+                    <div style={{ border:'1px solid var(--bo)', borderRadius:'var(--r)', padding:'14px', background:'var(--sur)' }}>
+                      <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:10 }}>+ Nova rotina</div>
+                      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                        <div>
+                          <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Título *</label>
+                          <input value={rotinaForm.titulo} onChange={e=>setRotinaForm(f=>({...f,titulo:e.target.value}))}
+                            className="fi" placeholder="Ex: Agendamento bancário, Envio de relatório..." />
+                        </div>
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                          <div>
+                            <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Recorrência</label>
+                            <select value={rotinaForm.tipo} onChange={e=>setRotinaForm(f=>({...f,tipo:e.target.value}))} className="fi">
+                              <option value="semanal">Semanal (dia da semana)</option>
+                              <option value="mensal">Mensal (dia fixo do mês)</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>
+                              {rotinaForm.tipo === 'semanal' ? 'Dia da semana' : 'Dia do mês'}
+                            </label>
+                            {rotinaForm.tipo === 'semanal' ? (
+                              <select value={rotinaForm.dia_semana} onChange={e=>setRotinaForm(f=>({...f,dia_semana:Number(e.target.value)}))} className="fi">
+                                {DIAS_SEMANA_R.map((d,i)=><option key={i} value={i}>{d}</option>)}
+                              </select>
+                            ) : (
+                              <input type="number" min={1} max={31} value={rotinaForm.dia_mes}
+                                onChange={e=>setRotinaForm(f=>({...f,dia_mes:Number(e.target.value)}))} className="fi" />
+                            )}
+                          </div>
+                          <div>
+                            <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Período</label>
+                            <select value={rotinaForm.periodo} onChange={e=>setRotinaForm(f=>({...f,periodo:e.target.value}))} className="fi">
+                              <option value="manha">🌅 Manhã</option>
+                              <option value="tarde">🌇 Tarde</option>
+                              <option value="dia_todo">🌞 Dia todo</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Observação</label>
+                            <input value={rotinaForm.observacao} onChange={e=>setRotinaForm(f=>({...f,observacao:e.target.value}))}
+                              className="fi" placeholder="Detalhe opcional..." />
+                          </div>
+                        </div>
+                        {rotinaErr && <div style={{ fontSize:11, color:'var(--rdt)' }}>{rotinaErr}</div>}
+                        <button className="btn bp bsm" onClick={salvarRotina} disabled={createRotina.isPending}
+                          style={{ alignSelf:'flex-start' }}>
+                          {createRotina.isPending ? 'Salvando…' : '+ Adicionar rotina'}
+                        </button>
+                      </div>
+                    </div>
+                  </>)}
+                </div>
+              )}
             </div>
 
             {/* Footer */}
             <div style={{ padding:'12px 18px', borderTop:'1px solid var(--bo)', display:'flex', justifyContent:'flex-end', gap:8 }}>
-              <button className="btn bo" onClick={close}>Cancelar</button>
-              <button className="btn bp" onClick={save} disabled={createClient.isPending||updateClient.isPending}>
-                {createClient.isPending||updateClient.isPending ? 'Salvando…' : 'Salvar cliente'}
-              </button>
+              <button className="btn bo" onClick={close}>Fechar</button>
+              {tab !== 'tarefas' && tab !== 'rotina' && (
+                <button className="btn bp" onClick={save} disabled={createClient.isPending||updateClient.isPending}>
+                  {createClient.isPending||updateClient.isPending ? 'Salvando…' : 'Salvar cliente'}
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
+
+      {/* Modal de aplicar modelos por etapa */}
+      {showAplicarModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1100, padding:16 }}>
+          <div style={{ background:'var(--sur)', borderRadius:'var(--rx)', width:'100%', maxWidth:480, maxHeight:'80vh', display:'flex', flexDirection:'column', boxShadow:'var(--sh3)' }}>
+            <div style={{ padding:'14px 18px', borderBottom:'1px solid var(--bo)', display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ fontSize:20 }}>🎯</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:700, fontSize:14, color:'var(--tx)' }}>Checklist de {ETAPA_LABEL_M[sugestaoEtapa]}</div>
+                <div style={{ fontSize:11, color:'var(--tx3)' }}>Selecione as tarefas para criar neste cliente</div>
+              </div>
+              <button onClick={() => setShowAplicarModal(false)} style={{ border:'none', background:'none', cursor:'pointer', fontSize:20, color:'var(--tx3)' }}>×</button>
+            </div>
+            <div style={{ padding:'12px 18px', overflowY:'auto', flex:1, display:'flex', flexDirection:'column', gap:6 }}>
+              {modelos.filter(m => m.etapa === sugestaoEtapa).map(m => {
+                const checked = modelosSel.includes(m.id)
+                const jaExiste = tarefasCliente.some(t => t.titulo === m.titulo && t.status !== 'concluida')
+                const priColor = { baixa:'#16A34A', media:'#D97706', alta:'#DC2626' }
+                return (
+                  <label key={m.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', border:`1px solid ${jaExiste?'#E2E8F0':checked?'var(--br)':'var(--bo)'}`, borderRadius:'var(--r)', background: jaExiste?'var(--s2)':checked?'var(--brl)':'var(--sur)', cursor: jaExiste?'default':'pointer', opacity: jaExiste?.6:1 }}>
+                    <input type="checkbox" checked={checked && !jaExiste} disabled={jaExiste}
+                      onChange={() => !jaExiste && setModelosSel(s => checked ? s.filter(x=>x!==m.id) : [...s, m.id])}
+                      style={{ width:14, height:14, accentColor:'var(--br)', flexShrink:0 }} />
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{m.titulo}</div>
+                      {m.categoria && <div style={{ fontSize:10, color:'var(--tx3)' }}>{m.categoria}</div>}
+                    </div>
+                    {jaExiste
+                      ? <span style={{ fontSize:9, color:'#15803D', background:'#DCFCE7', padding:'2px 6px', borderRadius:99, fontWeight:700, flexShrink:0 }}>já existe</span>
+                      : <div style={{ width:8, height:8, borderRadius:'50%', background: priColor[m.prioridade]||'#94A3B8', flexShrink:0 }} title={m.prioridade} />
+                    }
+                  </label>
+                )
+              })}
+            </div>
+            <div style={{ padding:'12px 18px', borderTop:'1px solid var(--bo)', display:'flex', gap:8, justifyContent:'space-between', alignItems:'center' }}>
+              <span style={{ fontSize:11, color:'var(--tx3)' }}>{modelosSel.length} selecionada{modelosSel.length!==1?'s':''}</span>
+              <div style={{ display:'flex', gap:8 }}>
+                <button className="btn bo" onClick={() => setShowAplicarModal(false)}>Cancelar</button>
+                <button className="btn bp" onClick={aplicarModelos} disabled={aplicando || modelosSel.length===0}>
+                  {aplicando ? 'Criando tarefas…' : `✓ Aplicar ${modelosSel.length} tarefa${modelosSel.length!==1?'s':''}`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        title="Importar Clientes"
+        downloadTemplate={downloadClienteTemplate}
+        mapRow={mapRowToCliente}
+        previewCols={[
+          { label: 'Razão Social', key: 'razao_social' },
+          { label: 'Fantasia',     key: 'fantasia' },
+          { label: 'CNPJ',         key: 'cnpj' },
+          { label: 'Status',       key: 'status' },
+          { label: 'Etapa',        key: 'etapa' },
+          { label: 'MRR (R$)',     key: 'valor_mrr' },
+        ]}
+        onImport={async (rows) => {
+          for (const row of rows) {
+            await createClient.mutateAsync(row)
+          }
+        }}
+      />
     </div>
   )
 }

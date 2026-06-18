@@ -1,7 +1,4 @@
-import { useClients } from '../hooks/useData'
-import { useTasks } from '../hooks/useData'
-import { usePendencias } from '../hooks/useData'
-import { useApontamentos } from '../hooks/useData'
+import { useClients, useTasks, usePendencias, useApontamentos } from '../hooks/useData'
 import { KpiCard, Card, CardHeader, Loader, Badge, fmtR } from '../components/ui'
 
 export default function ExecPage() {
@@ -44,7 +41,7 @@ export default function ExecPage() {
         <KpiCard label="Em onboarding" value={onboarding} color="purple" />
         <KpiCard label="Tarefas atrasadas" value={vencidas.length} color={vencidas.length>0?'red':'green'} />
         <KpiCard label="Pendências" value={pends.length} color={pends.length>3?'yellow':'green'} />
-        <KpiCard label="Horas registradas" value={`${horasTotal.toFixed(1)}h`} color="cyan" sub="este mês" />
+        <KpiCard label="Horas registradas" value={`${horasTotal.toFixed(1)}h`} color="cyan" sub="total apontado" />
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14 }}>
@@ -55,7 +52,7 @@ export default function ExecPage() {
               <div key={k} style={{ display:'flex', alignItems:'center', gap:10, padding:'4px 0' }}>
                 <div style={{ fontSize:11, color:'#334155', width:90, flexShrink:0 }}>{l}</div>
                 <div style={{ flex:1, height:8, background:'#F1F5F9', borderRadius:99, overflow:'hidden' }}>
-                  <div style={{ height:'100%', borderRadius:99, width:`${Math.round((etapaCount[k]||0)/maxEt*100)}%`, background: etapaColor[k]==='green'?'#22C55E':etapaColor[k]==='blue'?'#6366F1':'#F59E0B' }} />
+                  <div style={{ height:'100%', borderRadius:99, width:`${Math.round((etapaCount[k]||0)/maxEt*100)}%`, background: {green:'#22C55E',blue:'#6366F1',purple:'#A855F7',orange:'#F97316',cyan:'#22D3EE',yellow:'#F59E0B'}[etapaColor[k]]||'#94A3B8' }} />
                 </div>
                 <div style={{ fontSize:11, fontWeight:700, color:'#334155', width:20, textAlign:'right' }}>{etapaCount[k]||0}</div>
               </div>

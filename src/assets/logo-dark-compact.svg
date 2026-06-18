@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 56" width="200" height="56">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#7C3AED"/>
+      <stop offset="50%"  stop-color="#818CF8"/>
+      <stop offset="100%" stop-color="#0EA5E9"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Symbol: F scaled to 56px height -->
+  <ellipse cx="22" cy="16" rx="20" ry="10" transform="rotate(-8 22 16)" fill="url(#g)"/>
+  <ellipse cx="22" cy="43" rx="18" ry="9"  transform="rotate(-8 22 43)" fill="url(#g)"/>
+
+  <!-- Wordmark: "Fluxe" vertically centered -->
+  <text
+    x="52" y="38"
+    font-family="'Poppins','Inter','Helvetica Neue',Arial,sans-serif"
+    font-size="30"
+    font-weight="700"
+    fill="#FFFFFF"
+    letter-spacing="-0.5"
+    dominant-baseline="auto">Fluxe</text>
+</svg>
