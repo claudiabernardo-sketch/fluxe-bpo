@@ -569,5 +569,57 @@ export function useDeleteRotina() {
       await logAudit('DELETE', 'rotinas', id)
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['rotinas'] }),
+  })}
+// ── CLIENTE MODELOS (vínculos) ────────────────────────────────────
+export function useClienteModelos(clienteId) {
+  return useQuery({
+    queryKey: ['cliente_modelos', clienteId],
+    queryFn: async () => {
+      if (!clienteId) return []
+      const { data, error } = await supabase
+        .from('cliente_modelos')
+        .select('*, tarefa_modelos(id, titulo, categoria, recorrencia, prioridade, dia_mes, checklist_items)')
+        .eq('cliente_id', clienteId)
+        .eq('ativo', true)
+        .order('criado_em')
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!clienteId,
+  })
+}
+
+export function useVincularModelo() {
+  const qc = useQueryClient()
+  const { empresa } = useAuthStore()
+  return useMutation({
+    mutationFn: async ({ clienteId, modeloId }) => {
+      const { data, error } = await supabase
+        .from('cliente_modelos')
+        .upsert({
+          cliente_id: clienteId,
+          modelo_id: modeloId,
+          empresa_id: empresa?.id,
+          ativo: true,
+        }, { onConflict: 'cliente_id,modelo_id' })
+        .select().single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['cliente_modelos', vars.clienteId] }),
+  })
+}
+
+export function useDesvincularModelo() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, clienteId }) => {
+      const { error } = await supabase
+        .from('cliente_modelos')
+        .update({ ativo: false })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['cliente_modelos', vars.clienteId] }),
   })
 }
