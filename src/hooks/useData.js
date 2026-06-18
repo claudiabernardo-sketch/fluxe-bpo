@@ -25,7 +25,8 @@ export function useClients() {
         .from('clientes')
         .select('*, usuarios(nome, perfil)')
         .eq('empresa_id', empresa?.id)
-        .is('deleted_at', null)  // soft delete
+        .is('deleted_at', null)
+        .not('cliente_id', 'is', null)  // soft delete
         .order('razao_social')
         .limit(500)
       if (error) throw error
