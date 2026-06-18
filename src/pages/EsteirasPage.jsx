@@ -29,7 +29,9 @@ const ESTEIRAS = [
         { titulo:'Solicitar documentação da empresa', categoria:'Relacionamento', checklist:['CNPJ e contrato social','RG/CPF do sócio responsável','Comprovante de endereço','Certificado digital (se tiver)','Senha e-CAC (Receita Federal)'] },
         { titulo:'Verificar regime tributário', categoria:'Estratégico', checklist:['Simples Nacional?','Lucro Presumido?','Lucro Real?','Verificar pendências na Receita'] },
       ]},
-      { titulo:'Acessos ao sistema financeiro', tasks:[
+      { titulo:'Acessos ao sistema financeiro', materiais:[
+        { nome:'Guia de Acesso Bancário', url:'/materiais/guia-acesso-bancario.pdf', icon:'🏦' },
+      ], tasks:[
         { titulo:'Solicitar acesso ao internet banking', categoria:'Relacionamento', checklist:['Definir nível de acesso (consulta ou operacional)','Cadastrar IP se necessário','Testar acesso'] },
         { titulo:'Solicitar acesso ao ERP ou sistema de gestão', categoria:'Implantação', checklist:['Omie?','Conta Azul?','Meu Dinheiro Web?','Nibo?','Bom Controle?','Outro sistema?'] },
         { titulo:'Solicitar acesso à plataforma de emissão de NF', categoria:'Implantação', checklist:['Prefeitura (NFS-e)?','Dentro do ERP?','Testar emissão'] },
@@ -213,6 +215,21 @@ export default function EsteirasPage() {
                 + Aplicar ao cliente ({et.tasks.length} tarefas)
               </Btn>
             } />
+            {et.materiais?.length > 0 && (
+              <div style={{ padding:'8px 16px', borderBottom:'1px solid #F1F5F9', background:'#F8FAFF' }}>
+                <div style={{ fontSize:10, fontWeight:700, color:'#64748B', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:6 }}>📎 Materiais de apoio</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+                  {et.materiais.map((mat, mIdx) => (
+                    <a key={mIdx} href={mat.url} download target="_blank" rel="noopener noreferrer"
+                      style={{ display:'flex', alignItems:'center', gap:6, background:'#fff', border:'1px solid #DBEAFE', borderRadius:8, padding:'6px 12px', textDecoration:'none', color:'#1A56DB', fontSize:11, fontWeight:600 }}>
+                      <span>{mat.icon}</span>
+                      <span>{mat.nome}</span>
+                      <span style={{ color:'#93C5FD', fontSize:10 }}>↓ PDF</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
             <div style={{ padding:'8px 0' }}>
               {et.tasks.map((task, tIdx) => (
                 <div key={tIdx} style={{ borderBottom:'1px solid #F8FAFC' }}>

@@ -332,6 +332,14 @@ export default function PrecificacaoPage() {
   const [calc, setCalc] = useState(null)
   const [valorProposta, setValorProposta] = useState('')
   const [acadAberto, setAcadAberto] = useState(null)
+  const [contratoGerado, setContratoGerado] = useState(false)
+  const [contratoForm, setContratoForm] = useState({
+    indiceReajuste: 'IGPM/FGV',
+    diaVencimento: '05',
+    formaPagamento: 'boleto bancário',
+    vigencia: '12',
+    dataInicio: new Date().toISOString().split('T')[0],
+  })
   const { empresa } = useAuthStore()
 
   // FORM STATE
@@ -347,7 +355,7 @@ export default function PrecificacaoPage() {
   const num = (k) => (e) => set(k, parseFloat(e.target.value) || 0)
   const sel = (k) => (e) => set(k, parseFloat(e.target.value) || 0)
 
-  const irPara = (n) => { setEtapa(n); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const irPara = (n) => { setEtapa(n); if (n < 6) setContratoGerado(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 
   const irParaAnalise = useCallback(() => {
     const diag = {
@@ -892,6 +900,77 @@ export default function PrecificacaoPage() {
           const val = parseFloat(valorProposta)
           const fmt2 = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 })
           const servicos = calc.items.filter(it => !it.nome.includes('Ajuste de porte'))
+
+          const vigenciaTexto = {
+            '6': '6 (seis) meses',
+            '12': '12 (doze) meses',
+            '24': '24 (vinte e quatro) meses',
+            'indeterminado': 'prazo indeterminado',
+          }[contratoForm.vigencia] || '12 (doze) meses'
+
+          const dataInicioFmt = contratoForm.dataInicio
+            ? new Date(contratoForm.dataInicio + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+            : '___/___/______'
+
+          const setCF = (k) => (e) => setContratoForm(f => ({ ...f, [k]: e.target.value }))
+
+          if (!contratoGerado) {
+            return (
+              <div>
+                <div className="prec-card">
+                  <div className="prec-card-num">Etapa 06</div>
+                  <div className="prec-card-title">Configurar contrato</div>
+                  <div className="prec-card-desc">Revise as condições contratuais antes de gerar o documento. Os campos já estão preenchidos com os valores padrão — edite conforme necessário.</div>
+
+                  <div className="prec-sec">Condições contratuais</div>
+                  <div className="prec-fgrid">
+                    <Campo label="Índice de reajuste anual">
+                      <select className="prec-select" value={contratoForm.indiceReajuste} onChange={setCF('indiceReajuste')}>
+                        <option>IGPM/FGV</option>
+                        <option>IPCA</option>
+                        <option>INPC</option>
+                        <option>Fixo (sem reajuste)</option>
+                        <option>A combinar</option>
+                      </select>
+                    </Campo>
+                    <Campo label="Dia de vencimento" hint="Dia do mês para pagamento (1 a 28)">
+                      <input className="prec-input" type="number" min="1" max="28" value={contratoForm.diaVencimento} onChange={setCF('diaVencimento')} />
+                    </Campo>
+                    <Campo label="Forma de pagamento">
+                      <select className="prec-select" value={contratoForm.formaPagamento} onChange={setCF('formaPagamento')}>
+                        <option>boleto bancário</option>
+                        <option>PIX</option>
+                        <option>transferência bancária (TED/DOC)</option>
+                        <option>cartão de crédito</option>
+                      </select>
+                    </Campo>
+                    <Campo label="Vigência do contrato">
+                      <select className="prec-select" value={contratoForm.vigencia} onChange={setCF('vigencia')}>
+                        <option value="6">6 meses</option>
+                        <option value="12">12 meses</option>
+                        <option value="24">24 meses</option>
+                        <option value="indeterminado">Prazo indeterminado</option>
+                      </select>
+                    </Campo>
+                    <Campo label="Data de início" hint="Data a partir da qual o contrato entra em vigor">
+                      <input className="prec-input" type="date" value={contratoForm.dataInicio} onChange={setCF('dataInicio')} />
+                    </Campo>
+                  </div>
+
+                  <div className="prec-alert prec-alert-info" style={{ marginTop: 4 }}>
+                    <span>💡</span>
+                    <span>Os dados da CONTRATADA (<strong>{nomeEmp}</strong>) vêm das Configurações da conta. Verifique se estão corretos antes de imprimir.</span>
+                  </div>
+                </div>
+
+                <div className="prec-btn-row">
+                  <button className="prec-btn prec-btn-ghost" onClick={() => irPara(5)}>← Voltar</button>
+                  <button className="prec-btn prec-btn-primary" onClick={() => setContratoGerado(true)}>Gerar contrato →</button>
+                </div>
+              </div>
+            )
+          }
+
           return (
             <div className="print-only">
               <style>{`
@@ -962,9 +1041,9 @@ export default function PrecificacaoPage() {
                 <div className="ctr-val">
                   <div style={{fontSize:11,fontWeight:600,color:'#1A4D3A',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:4}}>Mensalidade contratada</div>
                   <div className="ctr-val-num">{fmt2(val)}</div>
-                  <div style={{fontSize:11,color:'#2D7A5A',marginTop:4}}>Pagamento até o dia 05 de cada mês via boleto bancário</div>
+                  <div style={{fontSize:11,color:'#2D7A5A',marginTop:4}}>Pagamento até o dia {contratoForm.diaVencimento} de cada mês via {contratoForm.formaPagamento}</div>
                 </div>
-                <p className="ctr-p">O primeiro honorário será pago no ato da assinatura. Os demais serão pagos até o dia 05 de cada mês via boleto.</p>
+                <p className="ctr-p">O primeiro honorário será pago no ato da assinatura. Os demais serão pagos até o dia {contratoForm.diaVencimento} de cada mês via {contratoForm.formaPagamento}.</p>
                 <p className="ctr-cl">CLÁUSULA 6ª — Do Volume de Serviços</p>
                 <table className="ctr-tb">
                   <thead><tr><th>Serviço</th><th>Limite Mensal</th></tr></thead>
@@ -977,11 +1056,11 @@ export default function PrecificacaoPage() {
                   </tbody>
                 </table>
                 <p className="ctr-cl">CLÁUSULA 7ª — Da Mora e Reajuste</p>
-                <p className="ctr-p">Pagamento em atraso: multa de 2% + juros de 0,08% ao dia + correção pelo IGPM/FGV. Atraso superior a 15 dias faculta à CONTRATADA suspender os serviços. Reajuste anual pelo IGPM/FGV, piso 5% e teto 15%.</p>
+                <p className="ctr-p">Pagamento em atraso: multa de 2% + juros de 0,08% ao dia + correção pelo {contratoForm.indiceReajuste}. Atraso superior a 15 dias faculta à CONTRATADA suspender os serviços. Reajuste anual pelo {contratoForm.indiceReajuste}, piso 5% e teto 15%.</p>
 
                 <div className="ctr-sec">V — Da Vigência e Rescisão</div>
                 <p className="ctr-cl">CLÁUSULA 8ª — Da Vigência</p>
-                <p className="ctr-p">Vigência de 12 (doze) meses a partir da assinatura, com renovação automática, salvo aviso prévio por escrito de 30 (trinta) dias. O descumprimento do aviso implica multa de 1 (um) honorário mensal.</p>
+                <p className="ctr-p">Vigência de {vigenciaTexto} a partir de {dataInicioFmt}, com renovação automática, salvo aviso prévio por escrito de 30 (trinta) dias. O descumprimento do aviso implica multa de 1 (um) honorário mensal.</p>
 
                 <div className="ctr-sec">VI — Confidencialidade e LGPD</div>
                 <p className="ctr-cl">CLÁUSULA 9ª — Da Confidencialidade e LGPD (Lei 13.709/2018)</p>
@@ -1015,7 +1094,7 @@ export default function PrecificacaoPage() {
                 </div>
               </div>
               <div className="prec-btn-row" style={{marginTop:16}}>
-                <button className="prec-btn prec-btn-ghost" onClick={() => irPara(5)}>← Voltar</button>
+                <button className="prec-btn prec-btn-ghost" onClick={() => setContratoGerado(false)}>← Editar condições</button>
                 <button className="prec-btn prec-btn-ghost" onClick={() => { irPara(1); setCalc(null); setValorProposta('') }}>Novo cliente</button>
                 <button className="prec-btn prec-btn-primary" onClick={() => window.print()}>🖨 Imprimir / PDF</button>
               </div>
