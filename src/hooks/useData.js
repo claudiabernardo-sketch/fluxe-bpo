@@ -94,7 +94,8 @@ export function useTasks(filters = {}) {
         .from('tarefas')
         .select('*, clientes(razao_social, fantasia), usuarios!tarefas_responsavel_id_fkey(nome)')
         .eq('empresa_id', empresa?.id)
-        .is('deleted_at', null)  // soft delete — ignora registros excluídos
+       .is('deleted_at', null)  // soft delete — ignora registros excluídos
+        .not('cliente_id', 'is', null)
         .order('prazo', { ascending: true })
         .limit(500) // segurança de volume — BPO raramente ultrapassa 500 tarefas ativas
 
