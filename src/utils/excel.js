@@ -5,6 +5,15 @@ import * as XLSX from 'xlsx'
 
 // XLSXStyle para arquivos estilizados (templates), XLSX para export/import genérico
 
+// Reexporta os dados puros (sem custo de bundle adicional — quem importa
+// só os mapeamentos deve preferir '../utils/excelMappings' diretamente,
+// pra não puxar este arquivo, que carrega as libs pesadas de xlsx).
+export {
+  CLIENTES_IMPORT_COLS, CLIENTES_EXPORT_COLS,
+  TAREFAS_IMPORT_COLS, TAREFAS_EXPORT_COLS,
+  mapRowToCliente, mapRowToTarefa,
+} from './excelMappings'
+
 // ── EXPORTAR ─────────────────────────────────────────────────────────
 // columns: [{ label: 'Nome da Coluna', get: (row) => row.campo }]
 export function exportToXlsx(rows, columns, filename = 'exportacao.xlsx') {
@@ -83,35 +92,6 @@ export function importFromXlsx(file) {
     reader.readAsArrayBuffer(file)
   })
 }
-
-// ── TEMPLATE DE IMPORTAÇÃO — CLIENTES ────────────────────────────────
-export const CLIENTES_IMPORT_COLS = [
-  { label: 'Razão Social *',   key: 'razao_social',      required: true },
-  { label: 'Fantasia',          key: 'fantasia',           required: false },
-  { label: 'CNPJ',              key: 'cnpj',               required: false },
-  { label: 'Email',             key: 'email',              required: false },
-  { label: 'Telefone',          key: 'telefone',           required: false },
-  { label: 'Status',            key: 'status',             required: false, default: 'ativo' },  // ativo | inativo
-  { label: 'Etapa',             key: 'etapa',              required: false, default: 'operacional' }, // operacional | onboarding | etc
-  { label: 'MRR (R$)',          key: 'valor_mrr',          required: false, type: 'number' },
-  { label: 'Segmento',          key: 'segmento',           required: false },
-  { label: 'Software Contábil', key: 'software_contabil',  required: false },
-  { label: 'Responsável',       key: 'responsavel_nome',   required: false }, // apenas info
-]
-
-export const CLIENTES_EXPORT_COLS = [
-  { label: 'Razão Social',      get: r => r.razao_social },
-  { label: 'Fantasia',          get: r => r.fantasia },
-  { label: 'CNPJ',              get: r => r.cnpj },
-  { label: 'Email',             get: r => r.email },
-  { label: 'Telefone',          get: r => r.telefone },
-  { label: 'Status',            get: r => r.status },
-  { label: 'Etapa',             get: r => r.etapa },
-  { label: 'MRR (R$)',          get: r => r.valor_mrr || 0 },
-  { label: 'Segmento',          get: r => r.segmento },
-  { label: 'Software Contábil', get: r => r.software_contabil },
-  { label: 'Responsável',       get: r => r.usuarios?.nome || '' },
-]
 
 // ── Paleta Fluxe BPO ─────────────────────────────────────────────────
 const C = {
@@ -263,27 +243,6 @@ export function downloadClienteTemplate() {
 }
 
 // ── TEMPLATE DE IMPORTAÇÃO — TAREFAS ─────────────────────────────────
-export const TAREFAS_IMPORT_COLS = [
-  { label: 'Título *',      key: 'titulo',       required: true },
-  { label: 'Categoria',     key: 'categoria',    required: false },
-  { label: 'Status',        key: 'status',       required: false, default: 'aberta' },
-  { label: 'Prioridade',    key: 'prioridade',   required: false, default: 'media' },
-  { label: 'Prazo',         key: 'prazo',        required: false }, // DD/MM/AAAA
-  { label: 'Recorrência',   key: 'recorrencia',  required: false }, // única | diária | semanal | quinzenal | mensal
-  { label: 'Observações',   key: 'obs',          required: false },
-]
-
-export const TAREFAS_EXPORT_COLS = [
-  { label: 'Título',        get: r => r.titulo },
-  { label: 'Categoria',     get: r => r.categoria },
-  { label: 'Status',        get: r => r.status },
-  { label: 'Prioridade',    get: r => r.prioridade },
-  { label: 'Prazo',         get: r => r.prazo ? r.prazo.split('-').reverse().join('/') : '' },
-  { label: 'Cliente',       get: r => r.clientes?.razao_social || r.clientes?.fantasia || '' },
-  { label: 'Responsável',   get: r => r['usuarios!tarefas_responsavel_id_fkey']?.nome || '' },
-  { label: 'Observações',   get: r => r.obs },
-]
-
 export function downloadTarefaTemplate() {
   const wb = XLSXStyle.utils.book_new()
 
@@ -438,62 +397,3 @@ export function downloadTarefaTemplate() {
   XLSXStyle.writeFile(wb, 'modelo_importacao_tarefas.xlsx')
 }
 
-// ── MAPEAR LINHA IMPORTADA → OBJETO DO SISTEMA ────────────────────────
-export function mapRowToCliente(row) {
-  const mrr = parseFloat(String(row['MRR (R$)'] || '0').replace(/[^\d.,]/g, '').replace(',', '.')) || 0
-  return {
-    razao_social:     String(row['Razão Social *'] || row['Razao Social'] || '').trim(),
-    fantasia:         String(row['Fantasia'] || '').trim(),
-    cnpj:             String(row['CNPJ'] || '').replace(/\D/g, ''),
-    email:            String(row['Email'] || '').trim(),
-    telefone:         String(row['Telefone'] || '').trim(),
-    status:           String(row['Status'] || 'ativo').toLowerCase(),
-    etapa:            String(row['Etapa'] || 'operacional').toLowerCase(),
-    valor_mrr:        mrr,
-    segmento:         String(row['Segmento'] || '').trim(),
-    software_contabil:String(row['Software Contábil'] || row['Software Contabil'] || '').trim(),
-  }
-}
-
-export function mapRowToTarefa(row) {
-  const titulo = String(row['Título *'] || row['Titulo'] || '').trim()
-
-  // Ignora linhas de comentário (começam com #) e linhas sem título
-  if (!titulo || titulo.startsWith('#')) return null
-
-  // Normaliza data: Date object (cellDates:true), DD/MM/AAAA, AAAA-MM-DD ou serial
-  let prazo = null
-  const rawPrazo = row['Prazo']
-  if (rawPrazo instanceof Date) {
-    prazo = rawPrazo.toISOString().slice(0, 10)
-  } else if (rawPrazo) {
-    const s = String(rawPrazo).trim()
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
-      // DD/MM/AAAA → AAAA-MM-DD
-      const [d, m, y] = s.split('/')
-      prazo = `${y}-${m}-${d}`
-    } else {
-      prazo = s.slice(0, 10) // assume AAAA-MM-DD
-    }
-  }
-
-  const statusValidos    = ['aberta','andamento','aguardando','concluida']
-  const prioridadeValida = ['baixa','media','alta']
-  const status    = String(row['Status']    || 'aberta').toLowerCase()
-  const prioridade = String(row['Prioridade'] || 'media').toLowerCase()
-
-  // Recorrência como anotação no obs (campo informativo — tarefas recorrentes automáticas usam Modelos)
-  const rec = String(row['Recorrência'] || row['Recorrencia'] || '').trim().toLowerCase()
-  const recValidos = ['diária','diaria','semanal','quinzenal','mensal']
-  const obsBase = String(row['Observações'] || row['Observacoes'] || '').trim()
-  const obs = (recValidos.includes(rec) ? `[Recorrência: ${rec}]${obsBase ? ' ' + obsBase : ''}` : obsBase) || null
-
-  return {
-    titulo,
-    categoria:  String(row['Categoria'] || '').trim() || null,
-    status:     statusValidos.includes(status) ? status : 'aberta',
-    prioridade: prioridadeValida.includes(prioridade) ? prioridade : 'media',
-    prazo,
-    obs,
-  }
-}

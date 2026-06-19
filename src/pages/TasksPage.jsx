@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, lazy, Suspense } from 'react'
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask, useClients, useUsuarios, useTarefaModelos } from '../hooks/useData'
 import { Card, Btn, Loader, EmptyState, PrioBadge, StatusBadge, fmt, isVencida } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
-import ImportModal from '../components/ui/ImportModal'
-import { exportToXlsx, TAREFAS_EXPORT_COLS, downloadTarefaTemplate, mapRowToTarefa } from '../utils/excel'
+const ImportModal = lazy(() => import('../components/ui/ImportModal'))
+import { TAREFAS_EXPORT_COLS, mapRowToTarefa } from '../utils/excelMappings'
 import { useTimerStore } from '../components/layout/TimerBar'
 import { supabase } from '../lib/supabase'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -385,7 +385,7 @@ export default function TasksPage() {
           {!selectedTask && (
             <div style={{ display:'flex', gap:6, justifyContent:'flex-end' }}>
               <span style={{ fontSize:10, color:'#94A3B8', alignSelf:'center' }}>{filtered.length} tarefas</span>
-              <button onClick={() => exportToXlsx(filtered, TAREFAS_EXPORT_COLS, 'tarefas.xlsx')}
+              <button onClick={() => import('../utils/excel').then(m => m.exportToXlsx(filtered, TAREFAS_EXPORT_COLS, 'tarefas.xlsx'))}
                 style={{ padding:'5px 10px', borderRadius:8, border:'1px solid #CBD5E1', background:'#fff', cursor:'pointer', fontSize:11, fontWeight:600, color:'#334155' }}>⬇ Excel</button>
               <button onClick={() => setImportOpen(true)}
                 style={{ padding:'5px 10px', borderRadius:8, border:'1px solid #CBD5E1', background:'#fff', cursor:'pointer', fontSize:11, fontWeight:600, color:'#334155' }}>⬆ Importar</button>
@@ -792,23 +792,27 @@ export default function TasksPage() {
         </div>
       )}
 
-      <ImportModal
-        open={importOpen}
-        onClose={() => setImportOpen(false)}
-        title="Importar Tarefas"
-        downloadTemplate={downloadTarefaTemplate}
-        mapRow={mapRowToTarefa}
-        previewCols={[
-          { label: 'Título',    key: 'titulo' },
-          { label: 'Categoria', key: 'categoria' },
-          { label: 'Status',    key: 'status' },
-          { label: 'Prazo',     key: 'prazo' },
-        ]}
-        onImport={async (rows) => {
-          const validas = rows.filter(Boolean) // remove linhas de comentário (null)
-          for (const row of validas) await createTask.mutateAsync(row)
-        }}
-      />
+      {importOpen && (
+        <Suspense fallback={null}>
+          <ImportModal
+            open={importOpen}
+            onClose={() => setImportOpen(false)}
+            title="Importar Tarefas"
+            downloadTemplate={() => import('../utils/excel').then(m => m.downloadTarefaTemplate())}
+            mapRow={mapRowToTarefa}
+            previewCols={[
+              { label: 'Título',    key: 'titulo' },
+              { label: 'Categoria', key: 'categoria' },
+              { label: 'Status',    key: 'status' },
+              { label: 'Prazo',     key: 'prazo' },
+            ]}
+            onImport={async (rows) => {
+              const validas = rows.filter(Boolean) // remove linhas de comentário (null)
+              for (const row of validas) await createTask.mutateAsync(row)
+            }}
+          />
+        </Suspense>
+      )}
     </div>
     </>
   )

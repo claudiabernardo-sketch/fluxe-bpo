@@ -1,10 +1,14 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useTarefaModelos, useClienteModelos, useVincularModelo, useDesvincularModelo, useAcessos, useSaveAcesso, useDeleteAcesso } from '../hooks/useData'
 import { Card, CardHeader, Badge, Btn, Loader, EmptyState, fmt, fmtR } from '../components/ui'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
-import ImportModal from '../components/ui/ImportModal'
-import { exportToXlsx, CLIENTES_EXPORT_COLS, downloadClienteTemplate, mapRowToCliente } from '../utils/excel'
+import { CLIENTES_EXPORT_COLS, mapRowToCliente } from '../utils/excelMappings'
+
+// ImportModal e downloadClienteTemplate puxam as libs de planilha (~800KB) —
+// só devem ser carregados quando o usuário realmente abrir o import/export,
+// não no carregamento inicial da página de clientes.
+const ImportModal = lazy(() => import('../components/ui/ImportModal'))
 
 const ETAPA_COLOR = { comercial:'pu', pre_ob:'yw', onboarding:'bl', implantacao:'or', operacional:'gr', estrategico:'cy', acompanhamento:'gy', encerramento:'gy' }
 const ETAPA_LABEL = { comercial:'Comercial', pre_ob:'Pré-Onb.', onboarding:'Onboarding', implantacao:'Implantação', operacional:'Operacional', estrategico:'Estratégico', acompanhamento:'Acompanham.', encerramento:'Encerramento' }
@@ -281,7 +285,7 @@ export default function ClientsPage() {
         </select>
         <div style={{ flex:1 }} />
         <span style={{ fontSize:11, color:'var(--tx3)' }}>{filtered.length} cliente{filtered.length!==1?'s':''}</span>
-        <button onClick={() => exportToXlsx(filtered, CLIENTES_EXPORT_COLS, 'clientes.xlsx')}
+        <button onClick={() => import('../utils/excel').then(m => m.exportToXlsx(filtered, CLIENTES_EXPORT_COLS, 'clientes.xlsx'))}
           style={{ padding:'6px 12px', borderRadius:8, border:'1px solid #CBD5E1', background:'#fff', cursor:'pointer', fontSize:12, fontWeight:600, color:'#334155' }}>
           ⬇ Exportar Excel
         </button>
@@ -949,26 +953,30 @@ export default function ClientsPage() {
         </div>
       )}
 
-      <ImportModal
-        open={importOpen}
-        onClose={() => setImportOpen(false)}
-        title="Importar Clientes"
-        downloadTemplate={downloadClienteTemplate}
-        mapRow={mapRowToCliente}
-        previewCols={[
-          { label: 'Razão Social', key: 'razao_social' },
-          { label: 'Fantasia',     key: 'fantasia' },
-          { label: 'CNPJ',         key: 'cnpj' },
-          { label: 'Status',       key: 'status' },
-          { label: 'Etapa',        key: 'etapa' },
-          { label: 'MRR (R$)',     key: 'valor_mrr' },
-        ]}
-        onImport={async (rows) => {
-          for (const row of rows) {
-            await createClient.mutateAsync(row)
-          }
-        }}
-      />
+      {importOpen && (
+        <Suspense fallback={null}>
+          <ImportModal
+            open={importOpen}
+            onClose={() => setImportOpen(false)}
+            title="Importar Clientes"
+            downloadTemplate={() => import('../utils/excel').then(m => m.downloadClienteTemplate())}
+            mapRow={mapRowToCliente}
+            previewCols={[
+              { label: 'Razão Social', key: 'razao_social' },
+              { label: 'Fantasia',     key: 'fantasia' },
+              { label: 'CNPJ',         key: 'cnpj' },
+              { label: 'Status',       key: 'status' },
+              { label: 'Etapa',        key: 'etapa' },
+              { label: 'MRR (R$)',     key: 'valor_mrr' },
+            ]}
+            onImport={async (rows) => {
+              for (const row of rows) {
+                await createClient.mutateAsync(row)
+              }
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   )
 }
