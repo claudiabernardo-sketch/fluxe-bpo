@@ -1,5 +1,5 @@
 import { useState, lazy, Suspense } from 'react'
-import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useTarefaModelos, useClienteModelos, useVincularModelo, useDesvincularModelo, useAcessos, useSaveAcesso, useDeleteAcesso } from '../hooks/useData'
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTarefaModelos, useClienteModelos, useVincularModelo, useDesvincularModelo, useAcessos, useSaveAcesso, useDeleteAcesso } from '../hooks/useData'
 import { Card, CardHeader, Badge, Btn, Loader, EmptyState, fmt, fmtR } from '../components/ui'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
@@ -134,7 +134,8 @@ export default function ClientsPage() {
   const { data: modelos = [] } = useTarefaModelos()
   const createTask = useCreateTask()
   const updateTask = useUpdateTask()
-  const [taskForm, setTaskForm] = useState({ titulo:'', prazo:'', status:'pendente', prioridade:'normal' })
+  const deleteTask = useDeleteTask()
+  const [taskForm, setTaskForm] = useState({ titulo:'', prazo:'', status:'aberta', prioridade:'media' })
   const [taskErr,  setTaskErr]  = useState('')
 
   // Sugestão de modelos ao mudar etapa
@@ -188,20 +189,22 @@ export default function ClientsPage() {
   async function salvarTarefa() {
     if (!taskForm.titulo.trim()) { setTaskErr('Informe o título da tarefa'); return }
     setTaskErr('')
-    await createTask.mutateAsync({ ...taskForm, prazo: taskForm.prazo || null, cliente_id: modal.id })
-    setTaskForm({ titulo:'', prazo:'', status:'pendente', prioridade:'normal' })
+    await createTask.mutateAsync({ ...taskForm, prazo: taskForm.prazo || null, cliente_id: modal.id, data_execucao: new Date().toISOString().slice(0,10) })
+    setTaskForm({ titulo:'', prazo:'', status:'aberta', prioridade:'media' })
   }
 
   async function vincularEAplicarModelo(modelo) {
     try {
       await vincularModelo.mutateAsync({ clienteId: modal?.id, modeloId: modelo.id })
       // Modelos "pontuais" (vindos de Esteira) não esperam o gerador diário —
-      // criam a tarefa de verdade já no momento do vínculo, com checklist.
+      // criam a tarefa de verdade já no momento do vínculo, com checklist,
+      // e com data_execucao = hoje pra já aparecer em "Meu Dia".
       if (modelo.recorrencia === 'unica') {
         const tarefa = await createTask.mutateAsync({
           titulo: modelo.titulo, categoria: modelo.categoria || null,
           prioridade: modelo.prioridade || 'media', status: 'aberta',
           cliente_id: modal.id, modelo_id: modelo.id,
+          data_execucao: new Date().toISOString().slice(0,10),
         })
         if (modelo.checklist_items?.length && tarefa?.id) {
           const items = modelo.checklist_items.map((texto, ordem) => ({ tarefa_id: tarefa.id, texto, ordem }))
@@ -587,8 +590,8 @@ export default function ClientsPage() {
                           {tarefasCliente.length} tarefa{tarefasCliente.length!==1?'s':''}
                         </div>
                         {tarefasCliente.map(t => {
-                          const statusColor = { pendente:'#F59E0B', em_andamento:'#3B82F6', concluida:'#22C55E', aprovacao:'#8B5CF6' }
-                          const statusLabel = { pendente:'Pendente', em_andamento:'Em andamento', concluida:'Concluída', aprovacao:'Aprovação' }
+                          const statusColor = { aberta:'#3B82F6', andamento:'#F59E0B', aguardando:'#8B5CF6', revisao:'#06B6D4', concluida:'#22C55E', impedimento:'#EF4444' }
+                          const statusLabel = { aberta:'Aberta', andamento:'Em andamento', aguardando:'Ag. cliente', revisao:'Em revisão', concluida:'Concluída', impedimento:'Impedimento' }
                           const prazoVencido = t.prazo && new Date(t.prazo) < new Date() && t.status !== 'concluida'
                           return (
                             <div key={t.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 12px', border:`1px solid ${prazoVencido?'#FECDD3':'var(--bo)'}`, borderRadius:'var(--r)', background: prazoVencido?'#FFF1F2':'var(--s2)' }}>
@@ -603,9 +606,11 @@ export default function ClientsPage() {
                                 </div>
                               </div>
                               {t.status !== 'concluida' && (
-                                <button onClick={() => updateTask.mutate({ id: t.id, status:'concluida' })}
+                                <button onClick={() => updateTask.mutate({ id: t.id, status:'concluida' }, { onError: (err) => alert('Erro ao concluir: ' + (err?.message||'')) })}
                                   style={{ border:'1px solid #BBF7D0', background:'#F0FDF4', color:'#15803D', borderRadius:5, cursor:'pointer', fontSize:10, padding:'3px 8px', fontWeight:700, flexShrink:0 }}>✓</button>
                               )}
+                              <button onClick={() => { if(confirm('Remover esta tarefa?')) deleteTask.mutate(t.id, { onError: (err) => alert('Erro ao remover: ' + (err?.message||'')) }) }}
+                                style={{ border:'1px solid #FECDD3', background:'#FEF2F2', color:'#991B1B', borderRadius:5, cursor:'pointer', fontSize:10, padding:'3px 8px', fontWeight:700, flexShrink:0 }}>×</button>
                             </div>
                           )
                         })}
