@@ -222,13 +222,17 @@ export default function ClientsPage() {
       setRotinaErr('Selecione pelo menos um dia da semana'); return
     }
     setRotinaErr('')
-    // dia_semana (singular) é mantido só por compatibilidade com dados antigos/AgendaPage
-    await createRotina.mutateAsync({
-      ...rotinaForm,
-      dia_semana: rotinaForm.tipo === 'semanal' ? rotinaForm.dias_semana[0] : null,
-      cliente_id: modal.id, ativo: true,
-    })
-    setRotinaForm({ titulo:'', tipo:'semanal', dias_semana:[0], dia_mes:1, hora:'08:00', observacao:'' })
+    try {
+      // dia_semana (singular) é mantido só por compatibilidade com dados antigos/AgendaPage
+      await createRotina.mutateAsync({
+        ...rotinaForm,
+        dia_semana: rotinaForm.tipo === 'semanal' ? rotinaForm.dias_semana[0] : null,
+        cliente_id: modal.id, ativo: true,
+      })
+      setRotinaForm({ titulo:'', tipo:'semanal', dias_semana:[0], dia_mes:1, hora:'08:00', observacao:'' })
+    } catch (err) {
+      setRotinaErr('Erro ao salvar: ' + (err?.message || 'erro desconhecido'))
+    }
   }
 
   function toggleDiaSemana(i) {
