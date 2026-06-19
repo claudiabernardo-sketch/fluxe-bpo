@@ -42,7 +42,7 @@ export default function ClientsPage() {
   const createClient = useCreateClient()
   const updateClient = useUpdateClient()
   const deleteClient = useDeleteClient()
-  const { temPermissao } = useAuthStore()
+  const { temPermissao, empresa } = useAuthStore()
 
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
@@ -91,7 +91,7 @@ export default function ClientsPage() {
   async function salvarAcessoCliente() {
     if (!cofreForm.sistema?.trim()) return alert('Informe o nome do sistema')
     const { _temSenha, _novaSenha, ...dados } = cofreForm
-    const payload = { ...dados, cliente_id: modal.id }
+    const payload = { ...dados, cliente_id: modal.id, empresa_id: empresa?.id }
     if (_novaSenha?.trim()) {
       const { data: enc, error: encErr } = await supabase.rpc('cofre_encrypt', { plaintext: _novaSenha })
       if (encErr) return alert('Erro ao criptografar a senha. Tente novamente.')
@@ -99,10 +99,15 @@ export default function ClientsPage() {
     } else {
       delete payload.senha_enc
     }
-    if (cofreModal.mode === 'edit') {
-      await saveAcesso.mutateAsync({ id: cofreModal.id, ...payload })
-    } else {
-      await saveAcesso.mutateAsync(payload)
+    try {
+      if (cofreModal.mode === 'edit') {
+        await saveAcesso.mutateAsync({ id: cofreModal.id, ...payload })
+      } else {
+        await saveAcesso.mutateAsync(payload)
+      }
+    } catch (err) {
+      alert('Erro ao salvar acesso: ' + (err?.message || 'erro desconhecido'))
+      return
     }
     setCofreModal(null); setCofreForm({}); setRevealedAcesso({})
   }
