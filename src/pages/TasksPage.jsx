@@ -69,27 +69,51 @@ export default function TasksPage() {
     const modelosAtivos = modelos.filter(m => m.ativo)
     if (modelosAtivos.length === 0) return
 
+    // Modelos "Geral" (sem cliente_id fixo) podem estar vinculados a clientes
+    // específicos via cliente_modelos (aba Tarefas do cadastro do cliente).
+    // Sem isso, vincular um modelo geral a um cliente não tinha efeito nenhum
+    // na geração de tarefas — só ficava salvo sem servir pra nada.
+    const { data: vinculos } = await supabase
+      .from('cliente_modelos')
+      .select('cliente_id, modelo_id')
+      .eq('empresa_id', empresa.id)
+      .eq('ativo', true)
+    const vinculosPorModelo = {}
+    ;(vinculos || []).forEach(v => {
+      if (!vinculosPorModelo[v.modelo_id]) vinculosPorModelo[v.modelo_id] = []
+      vinculosPorModelo[v.modelo_id].push(v.cliente_id)
+    })
+
     const { data: existentes } = await supabase
       .from('tarefas')
-      .select('modelo_id, data_execucao')
+      .select('modelo_id, data_execucao, cliente_id')
       .eq('empresa_id', empresa.id)
       .in('modelo_id', modelosAtivos.map(m => m.id))
       .gte('data_execucao', datas[0])
       .lte('data_execucao', datas[datas.length - 1])
 
-    const existSet = new Set((existentes || []).map(t => `${t.modelo_id}::${t.data_execucao}`))
+    const existSet = new Set((existentes || []).map(t => `${t.modelo_id}::${t.data_execucao}::${t.cliente_id || 'null'}`))
 
     const toInsert = []
     for (const modelo of modelosAtivos) {
+      // clientes-alvo desse modelo: o próprio cliente_id fixo (se houver),
+      // senão os clientes vinculados via cliente_modelos, senão "geral" (null)
+      const clientesAlvo = modelo.cliente_id
+        ? [modelo.cliente_id]
+        : (vinculosPorModelo[modelo.id]?.length ? vinculosPorModelo[modelo.id] : [null])
+
       for (const data of datas) {
-        if (existSet.has(`${modelo.id}::${data}`)) continue
         if (!deveGerarNaData(modelo, data, feriadosSet)) continue
-        toInsert.push({
-          empresa_id: empresa.id, modelo_id: modelo.id,
-          cliente_id: modelo.cliente_id || null, titulo: modelo.titulo,
-          categoria: modelo.categoria || null, prioridade: modelo.prioridade,
-          status: 'aberta', data_execucao: data,
-        })
+        for (const clienteId of clientesAlvo) {
+          const key = `${modelo.id}::${data}::${clienteId || 'null'}`
+          if (existSet.has(key)) continue
+          toInsert.push({
+            empresa_id: empresa.id, modelo_id: modelo.id,
+            cliente_id: clienteId, titulo: modelo.titulo,
+            categoria: modelo.categoria || null, prioridade: modelo.prioridade,
+            status: 'aberta', data_execucao: data,
+          })
+        }
       }
     }
 
@@ -296,8 +320,12 @@ export default function TasksPage() {
   }
 
   async function quickStatus(id, status) {
-    await updateTask.mutateAsync({ id, status })
-    await logHistorico(id, `Status → ${status}`)
+    try {
+      await updateTask.mutateAsync({ id, status })
+      await logHistorico(id, `Status → ${status}`)
+    } catch (err) {
+      alert('Não foi possível atualizar o status da tarefa: ' + (err?.message || 'erro desconhecido'))
+    }
   }
 
   async function saveMotivo(id, motivo_pendencia) {
