@@ -66,11 +66,11 @@ const ESTEIRAS = [
   { id:'implantacao', name:'Implantação', icon:'⚙️', color:'#F97316',
     etapas:[
       { titulo:'Configuração do software', tasks:[
-        { titulo:'Configurar empresa no Omie ERP', categoria:'Implantação', checklist:['Criar conta / acessar empresa','Configurar CNPJ e regime tributário','Cadastrar contas bancárias com OFX','Configurar plano de contas','Cadastrar fornecedores recorrentes','Ativar módulo de NF-e / NFS-e','Testar emissão de primeira NF'] },
-        { titulo:'Configurar empresa no Conta Azul', categoria:'Implantação', checklist:['Criar conta / acessar empresa','Conectar via Open Finance','Configurar plano de contas','Cadastrar produtos/serviços','Configurar integrações (maquininha)','Testar boleto e NF'] },
-        { titulo:'Configurar empresa no Meu Dinheiro Web', categoria:'Implantação', checklist:['Acessar empresa','Cadastrar contas bancárias','Definir categorias','Lançar saldo inicial'] },
-        { titulo:'Configurar empresa no Nibo', categoria:'Implantação', checklist:['Acessar empresa','Conectar contas via OFX','Configurar plano de contas gerencial','Ativar módulo DRE','Testar importação de extrato'] },
-        { titulo:'Configurar empresa no Bom Controle', categoria:'Implantação', checklist:['Acessar empresa','Cadastrar contas bancárias','Definir categorias de CP e CR'] },
+        { titulo:'Configurar empresa no Omie ERP', categoria:'Implantação', software:'Omie', checklist:['Criar conta / acessar empresa','Configurar CNPJ e regime tributário','Cadastrar contas bancárias com OFX','Configurar plano de contas','Cadastrar fornecedores recorrentes','Ativar módulo de NF-e / NFS-e','Testar emissão de primeira NF'] },
+        { titulo:'Configurar empresa no Conta Azul', categoria:'Implantação', software:'Conta Azul', checklist:['Criar conta / acessar empresa','Conectar via Open Finance','Configurar plano de contas','Cadastrar produtos/serviços','Configurar integrações (maquininha)','Testar boleto e NF'] },
+        { titulo:'Configurar empresa no Meu Dinheiro Web', categoria:'Implantação', software:'Meu Dinheiro Web', checklist:['Acessar empresa','Cadastrar contas bancárias','Definir categorias','Lançar saldo inicial'] },
+        { titulo:'Configurar empresa no Nibo', categoria:'Implantação', software:'Nibo', checklist:['Acessar empresa','Conectar contas via OFX','Configurar plano de contas gerencial','Ativar módulo DRE','Testar importação de extrato'] },
+        { titulo:'Configurar empresa no Bom Controle', categoria:'Implantação', software:'Bom Controle', checklist:['Acessar empresa','Cadastrar contas bancárias','Definir categorias de CP e CR'] },
       ]},
       { titulo:'Primeiros lançamentos', tasks:[
         { titulo:'Lançar saldo inicial de todas as contas bancárias', categoria:'Conciliação Bancária', checklist:['Confirmar saldo com extrato','Lançar no sistema','Validar com o cliente'] },
@@ -210,8 +210,32 @@ export default function EsteirasPage() {
   }
 
   async function aplicarTarefas(clienteId, tasks) {
+    // Trava: tarefas marcadas com `software` (ex: "Configurar empresa no Omie")
+    // só fazem sentido pro sistema que o cliente realmente usa. Sem essa
+    // trava, aplicar a etapa "Configuração do software" cria uma tarefa pra
+    // CADA sistema (Omie, Conta Azul, Nibo...), mesmo o cliente só usando um.
+    const cliente = clients.find(c => c.id === clienteId)
+    const softwareCliente = (cliente?.software_contabil || '').trim().toLowerCase()
+    const temTarefaDeSoftware = tasks.some(t => t.software)
+    const softwareClienteBateComAlguma = temTarefaDeSoftware && tasks.some(t => t.software && t.software.toLowerCase() === softwareCliente)
+
+    const tasksFiltradas = tasks.filter(t => {
+      if (!t.software) return true // tarefa normal, sem filtro
+      if (!softwareClienteBateComAlguma) return true // não sabemos qual é → mantém todas, não arrisca sumir tarefa
+      return t.software.toLowerCase() === softwareCliente // só a do sistema certo
+    })
+
+    if (temTarefaDeSoftware && !softwareClienteBateComAlguma) {
+      const continuar = confirm(
+        `O campo "Software Contábil" deste cliente está vazio ou não bate com nenhuma opção conhecida (Omie, Conta Azul, Meu Dinheiro Web, Nibo, Bom Controle).\n\n` +
+        `Por segurança, vou criar a tarefa de configuração para TODOS os sistemas — o que provavelmente não é o que você quer.\n\n` +
+        `Recomendo cancelar, preencher o campo "Software Contábil" no cadastro do cliente e aplicar de novo. Continuar mesmo assim?`
+      )
+      if (!continuar) { setApplyModal(null); return }
+    }
+
     setApplying(true)
-    for (const task of tasks) {
+    for (const task of tasksFiltradas) {
       const created = await createTask.mutateAsync({
         titulo: task.titulo,
         categoria: task.categoria,
