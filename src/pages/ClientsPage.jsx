@@ -192,6 +192,27 @@ export default function ClientsPage() {
     setTaskForm({ titulo:'', prazo:'', status:'pendente', prioridade:'normal' })
   }
 
+  async function vincularEAplicarModelo(modelo) {
+    try {
+      await vincularModelo.mutateAsync({ clienteId: modal?.id, modeloId: modelo.id })
+      // Modelos "pontuais" (vindos de Esteira) não esperam o gerador diário —
+      // criam a tarefa de verdade já no momento do vínculo, com checklist.
+      if (modelo.recorrencia === 'unica') {
+        const tarefa = await createTask.mutateAsync({
+          titulo: modelo.titulo, categoria: modelo.categoria || null,
+          prioridade: modelo.prioridade || 'media', status: 'aberta',
+          cliente_id: modal.id, modelo_id: modelo.id,
+        })
+        if (modelo.checklist_items?.length && tarefa?.id) {
+          const items = modelo.checklist_items.map((texto, ordem) => ({ tarefa_id: tarefa.id, texto, ordem }))
+          await supabase.from('tarefa_checklists').insert(items)
+        }
+      }
+    } catch (err) {
+      alert('Não foi possível vincular o modelo: ' + (err?.message || 'erro desconhecido'))
+    }
+  }
+
   async function salvarRotina() {
     if (!rotinaForm.titulo.trim()) { setRotinaErr('Informe o título da rotina'); return }
     if (rotinaForm.tipo === 'semanal' && rotinaForm.dias_semana.length === 0) {
@@ -661,17 +682,24 @@ export default function ClientsPage() {
                           <div style={{ display:'flex', flexDirection:'column', gap:6, maxHeight:300, overflowY:'auto' }}>
                             {todosModelos
                               .filter(m => m.ativo && !clienteModelos.find(cm => cm.modelo_id === m.id))
+                              .filter(m => {
+                                // Trava: se o modelo é específico de um software (ex: "Configurar Omie"),
+                                // só aparece pra clientes que usam aquele software — evita repetir o
+                                // problema de oferecer/criar a tarefa de todos os ERPs pro mesmo cliente.
+                                if (!m.software_alvo) return true
+                                const softwareCliente = (clients.find(c=>c.id===modal?.id)?.software_contabil || '').trim().toLowerCase()
+                                return m.software_alvo.toLowerCase() === softwareCliente
+                              })
                               .map(m => (
                                 <div key={m.id}
-                                  onClick={() => vincularModelo.mutate(
-                                    { clienteId: modal?.id, modeloId: m.id },
-                                    { onError: (err) => alert('Não foi possível vincular o modelo: ' + (err?.message || 'erro desconhecido')) }
-                                  )}
+                                  onClick={() => vincularEAplicarModelo(m)}
                                   style={{ padding:'10px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', cursor:'pointer', background:'var(--s2)' }}
                                   onMouseEnter={e => e.currentTarget.style.background='var(--s3)'}
                                   onMouseLeave={e => e.currentTarget.style.background='var(--s2)'}>
                                   <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{m.titulo}</div>
-                                  <div style={{ fontSize:10, color:'var(--tx3)', marginTop:2 }}>{m.categoria} · {m.recorrencia}</div>
+                                  <div style={{ fontSize:10, color:'var(--tx3)', marginTop:2 }}>
+                                    {m.categoria} · {m.recorrencia === 'unica' ? '⚡ pontual (cria tarefa na hora)' : m.recorrencia}
+                                  </div>
                                 </div>
                               ))}
                             {todosModelos.filter(m => m.ativo && !clienteModelos.find(cm => cm.modelo_id === m.id)).length === 0 && (

@@ -47,6 +47,7 @@ export default function ModelosPage() {
   const [form, setForm]     = useState(EMPTY_FORM)
   const [newCk, setNewCk]   = useState('')
   const [fCliente, setFCliente] = useState('')
+  const [fEtapa, setFEtapa] = useState('')
   const [confirmDel, setConfirmDel] = useState(null)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -119,12 +120,13 @@ export default function ModelosPage() {
     set('dias_mes', arr.sort((a, b) => a - b))
   }
 
-  const recLabel = { diaria:'Diária', dias_uteis:'Dias úteis', semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal', dias_especificos:'Dias espec.', bimestral:'Bimestral', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual' }
+  const recLabel = { unica:'⚡ Pontual', diaria:'Diária', dias_uteis:'Dias úteis', semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal', dias_especificos:'Dias espec.', bimestral:'Bimestral', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual' }
   const prioColor = { baixa:'#16A34A', media:'#D97706', alta:'#DC2626' }
 
-  const modelosFiltrados = fCliente
+  const modelosFiltrados = (fCliente
     ? modelos.filter(m => m.cliente_id === fCliente || (!m.cliente_id && fCliente === '__geral'))
     : modelos
+  ).filter(m => !fEtapa || m.etapa === fEtapa)
 
   if (isLoading) return <Loader />
 
@@ -153,10 +155,10 @@ export default function ModelosPage() {
         <Btn variant="primary" onClick={abrirNovo}>+ Novo modelo</Btn>
       </div>
 
-      {/* FILTRO CLIENTE */}
-      <div style={{ marginBottom:16, maxWidth:320 }}>
+      {/* FILTRO CLIENTE + ETAPA */}
+      <div style={{ marginBottom:16, maxWidth:520, display:'flex', gap:8 }}>
         <select value={fCliente} onChange={e => setFCliente(e.target.value)}
-          style={{ width:'100%', padding:'9px 12px', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer',
+          style={{ flex:1, padding:'9px 12px', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer',
             border:'1px solid #E2E8F0', background:'#fff', color:'#334155' }}>
           <option value="">Todos os clientes</option>
           <option value="__geral">Geral (sem cliente)</option>
@@ -166,6 +168,12 @@ export default function ModelosPage() {
             .map(c => (
               <option key={c.id} value={c.id}>{c.fantasia || c.razao_social}</option>
             ))}
+        </select>
+        <select value={fEtapa} onChange={e => setFEtapa(e.target.value)}
+          style={{ flex:1, padding:'9px 12px', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer',
+            border:'1px solid #E2E8F0', background:'#fff', color:'#334155' }}>
+          <option value="">Todas as etapas</option>
+          {ETAPAS_MODELO.filter(e=>e.v).map(e => <option key={e.v} value={e.v}>{e.label}</option>)}
         </select>
       </div>
 
@@ -191,6 +199,8 @@ export default function ModelosPage() {
                     {m.categoria && <span>📂 {m.categoria}</span>}
                     {cliente && <span>🏢 {cliente.fantasia || cliente.razao_social}</span>}
                     {!m.cliente_id && <span>🌐 Geral</span>}
+                    {m.software_alvo && <span>💻 {m.software_alvo}</span>}
+                    {m.origem === 'esteira' && <span style={{ color:'#7C3AED' }}>🛤 Esteira</span>}
                     {m.checklist_items?.length > 0 && <span>✓ {m.checklist_items.length} itens</span>}
                   </div>
                 </div>
