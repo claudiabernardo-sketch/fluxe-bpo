@@ -3,6 +3,7 @@ import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotin
 import { Card, CardHeader, Badge, Btn, Loader, EmptyState, fmt, fmtR } from '../components/ui'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
+import ContextTooltip from '../components/ui/ContextTooltip'
 import { CLIENTES_EXPORT_COLS, mapRowToCliente } from '../utils/excelMappings'
 
 // ImportModal e downloadClienteTemplate puxam as libs de planilha (~800KB) —
@@ -120,8 +121,7 @@ export default function ClientsPage() {
   const desvincularModelo = useDesvincularModelo()
   const { data: todosModelos = [] } = useTarefaModelos()
   const DIAS_SEMANA_R = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo']
-  const PERIODO_LABEL = { manha:'🌅 Manhã', tarde:'🌇 Tarde', dia_todo:'🌞 Dia todo' }
-  const [rotinaForm, setRotinaForm] = useState({ titulo:'', tipo:'semanal', dia_semana:0, dia_mes:1, periodo:'dia_todo', observacao:'' })
+  const [rotinaForm, setRotinaForm] = useState({ titulo:'', tipo:'semanal', dias_semana:[0], dia_mes:1, hora:'08:00', observacao:'' })
   const [rotinaErr,  setRotinaErr]  = useState('')
 
   // Tarefas do cliente
@@ -189,9 +189,24 @@ export default function ClientsPage() {
 
   async function salvarRotina() {
     if (!rotinaForm.titulo.trim()) { setRotinaErr('Informe o título da rotina'); return }
+    if (rotinaForm.tipo === 'semanal' && rotinaForm.dias_semana.length === 0) {
+      setRotinaErr('Selecione pelo menos um dia da semana'); return
+    }
     setRotinaErr('')
-    await createRotina.mutateAsync({ ...rotinaForm, cliente_id: modal.id, ativo: true })
-    setRotinaForm({ titulo:'', tipo:'semanal', dia_semana:0, dia_mes:1, periodo:'dia_todo', observacao:'' })
+    // dia_semana (singular) é mantido só por compatibilidade com dados antigos/AgendaPage
+    await createRotina.mutateAsync({
+      ...rotinaForm,
+      dia_semana: rotinaForm.tipo === 'semanal' ? rotinaForm.dias_semana[0] : null,
+      cliente_id: modal.id, ativo: true,
+    })
+    setRotinaForm({ titulo:'', tipo:'semanal', dias_semana:[0], dia_mes:1, hora:'08:00', observacao:'' })
+  }
+
+  function toggleDiaSemana(i) {
+    setRotinaForm(f => ({
+      ...f,
+      dias_semana: f.dias_semana.includes(i) ? f.dias_semana.filter(d => d !== i) : [...f.dias_semana, i].sort()
+    }))
   }
 
   const filtered = clients.filter(c => {
@@ -752,27 +767,38 @@ export default function ClientsPage() {
                     </div>
                   ) : (<>
 
-                    {/* Tooltip educativo */}
-                    <div style={{ background:'#EFF6FF', border:'1px solid #BFDBFE', borderRadius:'var(--r)', padding:'12px 14px', fontSize:12, color:'#1D4ED8', lineHeight:1.6 }}>
-                      <div style={{ fontWeight:700, marginBottom:4 }}>💡 O que é a Rotina?</div>
-                      Registre as tarefas recorrentes deste cliente — ex: <em>"Toda terça, agendamento bancário"</em> ou <em>"Todo dia 5, envio de relatório"</em>.
-                      Elas aparecem automaticamente na <strong>Central Operacional</strong> no dia certo, sem precisar criar tarefa avulsa toda semana.
-                    </div>
+                    {/* Tooltip educativo — some depois de fechado uma vez (localStorage) */}
+                    <ContextTooltip
+                      pageKey="rotina_cliente"
+                      icon="🗓"
+                      title="O que é a Rotina do cliente?"
+                      color="#1D4ED8"
+                      tips={[
+                        'É a agenda fixa desse cliente: o que precisa ser feito, em que dia e horário — ex: "Toda terça às 10h, agendamento bancário" ou "Todo dia útil às 8h, conciliação".',
+                        'Cadastrada aqui, ela aparece sozinha na Central Operacional no dia e horário certos — você não precisa lembrar nem recriar toda semana.',
+                        'Dica pra quem trabalha sozinho: reserve um horário fixo só pra WhatsApp (ex: 8h e 14h). Ficar respondendo cliente o dia todo no chat impede a operação de andar — a rotina ajuda a proteger esse tempo.',
+                        'Não é obrigatório usar — se você não cadastrar nada aqui, essa aba simplesmente fica vazia.',
+                      ]}
+                    />
 
                     {/* Rotinas existentes */}
                     {rotinas.length > 0 && (
                       <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                         <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em' }}>Rotinas cadastradas</div>
-                        {rotinas.map(r => (
+                        {[...rotinas].sort((a,b) => (a.hora||'').localeCompare(b.hora||'')).map(r => (
                           <div key={r.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--s2)' }}>
-                            <span style={{ fontSize:16 }}>{r.tipo === 'semanal' ? '📅' : '📆'}</span>
+                            <div style={{ width:46, flexShrink:0, textAlign:'center' }}>
+                              <div style={{ fontSize:13, fontWeight:700, color:'var(--br)' }}>{r.hora ? r.hora.slice(0,5) : '—'}</div>
+                            </div>
+                            <span style={{ fontSize:16 }}>{r.tipo === 'diaria' ? '🔁' : r.tipo === 'semanal' ? '📅' : '📆'}</span>
                             <div style={{ flex:1 }}>
                               <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{r.titulo}</div>
                               <div style={{ fontSize:10, color:'var(--tx3)' }}>
-                                {r.tipo === 'semanal'
-                                  ? `Toda ${DIAS_SEMANA_R[r.dia_semana]}`
-                                  : `Todo dia ${r.dia_mes}`}
-                                {' · '}{PERIODO_LABEL[r.periodo] || r.periodo}
+                                {r.tipo === 'diaria'
+                                  ? 'Todos os dias'
+                                  : r.tipo === 'semanal'
+                                    ? (r.dias_semana?.length ? r.dias_semana.map(d=>DIAS_SEMANA_R[d].slice(0,3)).join(', ') : DIAS_SEMANA_R[r.dia_semana])
+                                    : `Todo dia ${r.dia_mes}`}
                                 {r.observacao && <> · <em>{r.observacao}</em></>}
                               </div>
                             </div>
@@ -790,38 +816,47 @@ export default function ClientsPage() {
                         <div>
                           <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Título *</label>
                           <input value={rotinaForm.titulo} onChange={e=>setRotinaForm(f=>({...f,titulo:e.target.value}))}
-                            className="fi" placeholder="Ex: Agendamento bancário, Envio de relatório..." />
+                            className="fi" placeholder="Ex: Agendamento bancário, Checar WhatsApp, Conciliação..." />
                         </div>
                         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                           <div>
                             <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Recorrência</label>
                             <select value={rotinaForm.tipo} onChange={e=>setRotinaForm(f=>({...f,tipo:e.target.value}))} className="fi">
-                              <option value="semanal">Semanal (dia da semana)</option>
+                              <option value="diaria">Todo dia</option>
+                              <option value="semanal">Semanal (escolher dias)</option>
                               <option value="mensal">Mensal (dia fixo do mês)</option>
                             </select>
                           </div>
                           <div>
-                            <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>
-                              {rotinaForm.tipo === 'semanal' ? 'Dia da semana' : 'Dia do mês'}
-                            </label>
-                            {rotinaForm.tipo === 'semanal' ? (
-                              <select value={rotinaForm.dia_semana} onChange={e=>setRotinaForm(f=>({...f,dia_semana:Number(e.target.value)}))} className="fi">
-                                {DIAS_SEMANA_R.map((d,i)=><option key={i} value={i}>{d}</option>)}
-                              </select>
-                            ) : (
+                            <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Horário</label>
+                            <input type="time" value={rotinaForm.hora} onChange={e=>setRotinaForm(f=>({...f,hora:e.target.value}))} className="fi" />
+                          </div>
+                          {rotinaForm.tipo === 'semanal' && (
+                            <div style={{ gridColumn:'1/-1' }}>
+                              <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Dias da semana</label>
+                              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                                {DIAS_SEMANA_R.map((d,i) => (
+                                  <button key={i} type="button" onClick={() => toggleDiaSemana(i)}
+                                    style={{
+                                      padding:'5px 10px', borderRadius:99, fontSize:11, fontWeight:600, cursor:'pointer',
+                                      border: rotinaForm.dias_semana.includes(i) ? '1px solid var(--br)' : '1px solid var(--bo)',
+                                      background: rotinaForm.dias_semana.includes(i) ? 'var(--brl)' : 'var(--sur)',
+                                      color: rotinaForm.dias_semana.includes(i) ? 'var(--br)' : 'var(--tx3)',
+                                    }}>
+                                    {d.slice(0,3)}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {rotinaForm.tipo === 'mensal' && (
+                            <div>
+                              <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Dia do mês</label>
                               <input type="number" min={1} max={31} value={rotinaForm.dia_mes}
                                 onChange={e=>setRotinaForm(f=>({...f,dia_mes:Number(e.target.value)}))} className="fi" />
-                            )}
-                          </div>
-                          <div>
-                            <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Período</label>
-                            <select value={rotinaForm.periodo} onChange={e=>setRotinaForm(f=>({...f,periodo:e.target.value}))} className="fi">
-                              <option value="manha">🌅 Manhã</option>
-                              <option value="tarde">🌇 Tarde</option>
-                              <option value="dia_todo">🌞 Dia todo</option>
-                            </select>
-                          </div>
-                          <div>
+                            </div>
+                          )}
+                          <div style={{ gridColumn: rotinaForm.tipo === 'diaria' ? '1/-1' : undefined }}>
                             <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Observação</label>
                             <input value={rotinaForm.observacao} onChange={e=>setRotinaForm(f=>({...f,observacao:e.target.value}))}
                               className="fi" placeholder="Detalhe opcional..." />

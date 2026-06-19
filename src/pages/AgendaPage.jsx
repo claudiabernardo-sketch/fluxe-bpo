@@ -119,10 +119,13 @@ export default function AgendaPage() {
     const jsDow = d.getDay() // 0=Dom, 1=Seg... 6=Sab
     const dow   = jsDow === 0 ? 6 : jsDow - 1 // 0=Seg..6=Dom
     const dom   = d.getDate()
-    return todasRotinas.filter(r => r.ativo && (
-      (r.tipo === 'semanal' && r.dia_semana === dow) ||
-      (r.tipo === 'mensal'  && r.dia_mes    === dom)
-    ))
+    return todasRotinas
+      .filter(r => r.ativo && (
+        r.tipo === 'diaria' ||
+        (r.tipo === 'semanal' && (r.dias_semana?.length ? r.dias_semana.includes(dow) : r.dia_semana === dow)) ||
+        (r.tipo === 'mensal'  && r.dia_mes === dom)
+      ))
+      .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''))
   }, [todasRotinas])
 
   // Lista filtrada para Tarefas de Hoje
@@ -309,12 +312,14 @@ export default function AgendaPage() {
                 {rotinasHoje.map(r => {
                   const cl = clients.find(c => c.id === r.cliente_id)
                   const nomeCliente = cl ? (cl.fantasia || cl.razao_social) : '—'
-                  const periodoLabel = { manha:'🌅 Manhã', tarde:'🌇 Tarde', dia_todo:'🌞 Dia todo' }[r.periodo] || r.periodo
                   return (
                     <div key={r.id} style={{ background:'#fff', border:'1px solid #BBF7D0', borderRadius:10, padding:'10px 14px', minWidth:200, flex:'1 1 200px' }}>
-                      <div style={{ fontSize:12, fontWeight:700, color:'#065F46', marginBottom:2 }}>{r.titulo}</div>
+                      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:2 }}>
+                        {r.hora && <span style={{ fontSize:11, fontWeight:700, color:'#16A34A' }}>{r.hora.slice(0,5)}</span>}
+                        <div style={{ fontSize:12, fontWeight:700, color:'#065F46' }}>{r.titulo}</div>
+                      </div>
                       <div style={{ fontSize:11, color:'#047857', fontWeight:600 }}>{nomeCliente}</div>
-                      <div style={{ fontSize:10, color:'#6EE7B7', marginTop:4 }}>{periodoLabel}{r.observacao ? ` · ${r.observacao}` : ''}</div>
+                      {r.observacao && <div style={{ fontSize:10, color:'#6EE7B7', marginTop:4 }}>{r.observacao}</div>}
                     </div>
                   )
                 })}
