@@ -3,6 +3,7 @@ import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import { Card, CardHeader, Btn } from '../components/ui'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useFeriados, useCreateFeriado, useDeleteFeriado } from '../hooks/useData'
 
 // ── Calculadora de Custo Real da Hora ─────────────────────────────────────
 function CalculadoraCustoHora({ usuarios = [], editarUser }) {
@@ -248,6 +249,10 @@ export default function ConfigPage() {
 
   const [empForm, setEmpForm] = useState({ nome:'', email:'', telefone:'', cnpj:'', site:'' })
   const [opForm, setOpForm] = useState({ custoHora:35, aprovacaoLimite:2000, fechamentoDia:5, nfDia:1, reuniaoDia:10 })
+  const { data: feriados = [] } = useFeriados()
+  const createFeriado = useCreateFeriado()
+  const deleteFeriado = useDeleteFeriado()
+  const [novoFeriado, setNovoFeriado] = useState({ data:'', descricao:'' })
   const [propForm, setPropForm] = useState({
     quemSomos:'', instagram:'', representante:'', cargo:'', cpf_rep:'', endereco:'', cidade:'', foro:'',
     num1_valor:'+120', num1_label:'Rotinas financeiras geridas',
@@ -626,6 +631,52 @@ export default function ConfigPage() {
           </div>
           <div style={{ padding:'12px 16px', borderTop:'1px solid #F1F5F9', display:'flex', justifyContent:'flex-end' }}>
             <Btn variant="primary" onClick={salvarOp}>Salvar configurações</Btn>
+          </div>
+        </Card>
+      )}
+
+      {tab === 'operacional' && (
+        <Card style={{ marginTop:16 }}>
+          <CardHeader title="Calendário de feriados" icon="📅" />
+          <div style={{ padding:'4px 16px 16px' }}>
+            <div style={{ fontSize:11, color:'#94A3B8', marginBottom:12, lineHeight:1.5 }}>
+              Tarefas com recorrência <strong>"dias úteis"</strong> não são geradas nessas datas. Já vieram cadastrados os feriados nacionais fixos do ano atual e do próximo — adicione aqui os móveis (Carnaval, Páscoa) e os municipais/estaduais dos seus clientes.
+            </div>
+
+            <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap' }}>
+              <input type="date" style={{ ...fi, flex:'0 0 160px' }} value={novoFeriado.data}
+                onChange={e=>setNovoFeriado(f=>({...f,data:e.target.value}))} />
+              <input style={{ ...fi, flex:1, minWidth:160 }} placeholder="Descrição (ex: Carnaval, Aniversário da cidade...)"
+                value={novoFeriado.descricao} onChange={e=>setNovoFeriado(f=>({...f,descricao:e.target.value}))} />
+              <Btn variant="primary" disabled={!novoFeriado.data || !novoFeriado.descricao.trim() || createFeriado.isPending}
+                onClick={async () => {
+                  try {
+                    await createFeriado.mutateAsync(novoFeriado)
+                    setNovoFeriado({ data:'', descricao:'' })
+                  } catch (err) {
+                    alert('Erro ao adicionar feriado: ' + (err?.message || 'já existe um feriado nessa data?'))
+                  }
+                }}>
+                + Adicionar
+              </Btn>
+            </div>
+
+            {feriados.length === 0 ? (
+              <div style={{ fontSize:12, color:'#94A3B8', textAlign:'center', padding:'16px 0' }}>Nenhum feriado cadastrado ainda.</div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:4, maxHeight:280, overflowY:'auto' }}>
+                {feriados.map(f => (
+                  <div key={f.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 10px', borderRadius:8, background:'#F8FAFC' }}>
+                    <span style={{ fontSize:11, fontWeight:700, color:'#475569', width:80, flexShrink:0 }}>
+                      {new Date(f.data + 'T12:00:00').toLocaleDateString('pt-BR')}
+                    </span>
+                    <span style={{ fontSize:12, color:'#334155', flex:1 }}>{f.descricao}</span>
+                    <button onClick={() => { if(confirm('Remover este feriado?')) deleteFeriado.mutate(f.id) }}
+                      style={{ border:'none', background:'none', cursor:'pointer', color:'#94A3B8', fontSize:16, lineHeight:1 }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </Card>
       )}

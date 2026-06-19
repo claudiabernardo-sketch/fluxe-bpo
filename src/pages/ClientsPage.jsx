@@ -633,7 +633,7 @@ export default function ClientsPage() {
                                   {cm.tarefa_modelos?.categoria} · {cm.tarefa_modelos?.recorrencia} · Prioridade {cm.tarefa_modelos?.prioridade}
                                 </div>
                               </div>
-                              <button onClick={() => { if(confirm('Desvincular este modelo do cliente?')) desvincularModelo.mutate({ id: cm.id, clienteId: modal?.id }) }}
+                              <button onClick={() => { if(confirm('Desvincular este modelo do cliente?')) desvincularModelo.mutate({ id: cm.id, clienteId: modal?.id }, { onError: (err) => alert('Erro ao desvincular: ' + (err?.message || 'erro desconhecido')) }) }}
                                 style={{ border:'none', background:'none', cursor:'pointer', color:'var(--tx3)', fontSize:18, lineHeight:1, padding:'4px' }}>×</button>
                             </div>
                           ))}
@@ -658,7 +658,10 @@ export default function ClientsPage() {
                               .filter(m => m.ativo && !clienteModelos.find(cm => cm.modelo_id === m.id))
                               .map(m => (
                                 <div key={m.id}
-                                  onClick={() => vincularModelo.mutate({ clienteId: modal?.id, modeloId: m.id })}
+                                  onClick={() => vincularModelo.mutate(
+                                    { clienteId: modal?.id, modeloId: m.id },
+                                    { onError: (err) => alert('Não foi possível vincular o modelo: ' + (err?.message || 'erro desconhecido')) }
+                                  )}
                                   style={{ padding:'10px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', cursor:'pointer', background:'var(--s2)' }}
                                   onMouseEnter={e => e.currentTarget.style.background='var(--s3)'}
                                   onMouseLeave={e => e.currentTarget.style.background='var(--s2)'}>

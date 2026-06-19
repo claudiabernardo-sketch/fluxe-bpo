@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, lazy, Suspense } from 'react'
-import { useTasks, useCreateTask, useUpdateTask, useDeleteTask, useClients, useUsuarios, useTarefaModelos } from '../hooks/useData'
+import { useTasks, useCreateTask, useUpdateTask, useDeleteTask, useClients, useUsuarios, useTarefaModelos, useFeriados } from '../hooks/useData'
 import { Card, Btn, Loader, EmptyState, PrioBadge, StatusBadge, fmt, isVencida } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 const ImportModal = lazy(() => import('../components/ui/ImportModal'))
@@ -46,6 +46,7 @@ export default function TasksPage() {
   const qc = useQueryClient()
   const fileInputRef = useRef(null)
   const { data: modelos = [] } = useTarefaModelos()
+  const { data: feriados = [] } = useFeriados()
   const { empresa } = useAuthStore()
   const geradoRef = useRef(false)
 
@@ -57,6 +58,7 @@ export default function TasksPage() {
   }, [modelos, empresa]) // eslint-disable-line
 
   async function gerarTarefasRecorrentes() {
+    const feriadosSet = new Set(feriados.map(f => f.data))
     const hoje = new Date()
     const datas = []
     for (let i = 29; i >= 0; i--) {
@@ -81,7 +83,7 @@ export default function TasksPage() {
     for (const modelo of modelosAtivos) {
       for (const data of datas) {
         if (existSet.has(`${modelo.id}::${data}`)) continue
-        if (!deveGerarNaData(modelo, data)) continue
+        if (!deveGerarNaData(modelo, data, feriadosSet)) continue
         toInsert.push({
           empresa_id: empresa.id, modelo_id: modelo.id,
           cliente_id: modelo.cliente_id || null, titulo: modelo.titulo,
@@ -99,7 +101,7 @@ export default function TasksPage() {
     qc.invalidateQueries({ queryKey: ['tasks'] })
   }
 
-  function deveGerarNaData(modelo, dateStr) {
+  function deveGerarNaData(modelo, dateStr, feriadosSet = new Set()) {
     const d = new Date(dateStr + 'T12:00:00')
     const dow = d.getDay()   // 0=Dom,1=Seg...6=Sab
     const dom = d.getDate()
@@ -108,7 +110,7 @@ export default function TasksPage() {
 
     switch (modelo.recorrencia) {
       case 'diaria':          return true
-      case 'dias_uteis':      return dow >= 1 && dow <= 5
+      case 'dias_uteis':      return dow >= 1 && dow <= 5 && !feriadosSet.has(dateStr)
       case 'semanal':         return (modelo.dias_semana || []).includes(dow)
       case 'quinzenal':       return dom === diaAlvo || dom === Math.min(diaAlvo + 15, 28)
       case 'mensal':          return dom === diaAlvo

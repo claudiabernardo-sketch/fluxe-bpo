@@ -637,3 +637,48 @@ export function useDesvincularModelo() {
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['cliente_modelos', vars.clienteId] }),
   })
 }
+
+// ── FERIADOS ──────────────────────────────────────────
+export function useFeriados() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['feriados', empresa?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('feriados')
+        .select('*')
+        .eq('empresa_id', empresa?.id)
+        .order('data')
+        .limit(500)
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 5 * 60_000, // muda raramente — cache mais longo
+    enabled: !!empresa?.id,
+  })
+}
+
+export function useCreateFeriado() {
+  const qc = useQueryClient()
+  const { empresa } = useAuthStore()
+  return useMutation({
+    mutationFn: async ({ data, descricao }) => {
+      const { data: row, error } = await supabase
+        .from('feriados').insert({ data, descricao, empresa_id: empresa?.id }).select().single()
+      if (error) throw error
+      return row
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['feriados'] }),
+  })
+}
+
+export function useDeleteFeriado() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('feriados').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['feriados'] }),
+  })
+}
