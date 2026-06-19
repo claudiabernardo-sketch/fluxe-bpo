@@ -302,9 +302,23 @@ export default function TasksPage() {
 
   const selectedTask = tasks.find(t => t.id === selTask)
 
-  function openNew() { setForm({ status:'aberta', prioridade:'media' }); setModal({ mode:'new' }) }
+  function openNew() { setForm({ status:'aberta', prioridade:'media' }); setModal({ mode:'new', modeloId:'' }) }
   function openEdit(t) { setForm({...t}); setModal({ mode:'edit', id:t.id }) }
   function closeModal() { setModal(null); setForm({}) }
+
+  function aplicarModelo(modeloId) {
+    setModal(m => ({ ...m, modeloId }))
+    if (!modeloId) return
+    const modelo = modelos.find(m => m.id === modeloId)
+    if (!modelo) return
+    setForm(f => ({
+      ...f,
+      titulo: modelo.titulo,
+      categoria: modelo.categoria || f.categoria,
+      prioridade: modelo.prioridade || f.prioridade,
+      cliente_id: modelo.cliente_id || f.cliente_id,
+    }))
+  }
 
   async function save() {
     if (!form.titulo?.trim()) return alert('Título obrigatório')
@@ -312,6 +326,14 @@ export default function TasksPage() {
     if (modal.mode === 'new') {
       const t = await createTask.mutateAsync(payload)
       await logHistorico(t.id, 'Tarefa criada')
+      // Se veio de um modelo com checklist pronto, já cria os itens na tarefa nova
+      const modeloOrigem = modal.modeloId ? modelos.find(m => m.id === modal.modeloId) : null
+      if (modeloOrigem?.checklist_items?.length) {
+        for (const texto of modeloOrigem.checklist_items) {
+          await supabase.from('tarefa_checklists').insert({ tarefa_id: t.id, empresa_id: empresa?.id, texto })
+        }
+        qc.invalidateQueries({ queryKey: ['checklists', t.id] })
+      }
     } else {
       await updateTask.mutateAsync({ id: modal.id, ...payload })
       await logHistorico(modal.id, 'Tarefa editada')
@@ -748,6 +770,18 @@ export default function TasksPage() {
               <button onClick={closeModal} style={{ border:'none',background:'none',cursor:'pointer',fontSize:20,color:'#94A3B8' }}>×</button>
             </div>
             <div style={{ padding:18,overflowY:'auto',flex:1,display:'flex',flexDirection:'column',gap:11 }}>
+              {modal.mode === 'new' && modelos.filter(m=>m.ativo).length > 0 && (
+                <div style={{ background:'#EEF2FF', border:'1px solid #C7D2FE', borderRadius:10, padding:'10px 12px' }}>
+                  <label style={{ fontSize:10,fontWeight:700,color:'#4F46E5',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'.07em' }}>⚡ Puxar de um modelo pronto (opcional)</label>
+                  <select value={modal.modeloId||''} onChange={e=>aplicarModelo(e.target.value)} style={fi}>
+                    <option value="">— Começar do zero —</option>
+                    {modelos.filter(m=>m.ativo).map(m=>(
+                      <option key={m.id} value={m.id}>{m.titulo} · {m.categoria}{m.checklist_items?.length ? ` · ${m.checklist_items.length} itens` : ''}</option>
+                    ))}
+                  </select>
+                  <div style={{ fontSize:9, color:'#6366F1', marginTop:4 }}>Preenche título, categoria, prioridade e checklist — você edita o que precisar depois (ex: nome do banco).</div>
+                </div>
+              )}
               <div>
                 <label style={{ fontSize:10,fontWeight:700,color:'#94A3B8',display:'block',marginBottom:4,textTransform:'uppercase',letterSpacing:'.07em' }}>Título *</label>
                 <input value={form.titulo||''} onChange={e=>setForm(f=>({...f,titulo:e.target.value}))} style={fi} placeholder="Descreva a tarefa..." autoFocus />
