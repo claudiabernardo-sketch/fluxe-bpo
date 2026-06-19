@@ -154,24 +154,19 @@ export default function ModelosPage() {
       </div>
 
       {/* FILTRO CLIENTE */}
-      <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap' }}>
-        <button onClick={() => setFCliente('')}
-          style={{ padding:'5px 14px', borderRadius:99, fontSize:12, fontWeight:600, cursor:'pointer', border:'none',
-            background: !fCliente ? '#6366F1' : '#F1F5F9', color: !fCliente ? '#fff' : '#475569' }}>
-          Todos
-        </button>
-        <button onClick={() => setFCliente('__geral')}
-          style={{ padding:'5px 14px', borderRadius:99, fontSize:12, fontWeight:600, cursor:'pointer', border:'none',
-            background: fCliente === '__geral' ? '#6366F1' : '#F1F5F9', color: fCliente === '__geral' ? '#fff' : '#475569' }}>
-          Geral (sem cliente)
-        </button>
-        {clients.map(c => (
-          <button key={c.id} onClick={() => setFCliente(c.id)}
-            style={{ padding:'5px 14px', borderRadius:99, fontSize:12, fontWeight:600, cursor:'pointer', border:'none',
-              background: fCliente === c.id ? '#6366F1' : '#F1F5F9', color: fCliente === c.id ? '#fff' : '#475569' }}>
-            {c.fantasia || c.razao_social}
-          </button>
-        ))}
+      <div style={{ marginBottom:16, maxWidth:320 }}>
+        <select value={fCliente} onChange={e => setFCliente(e.target.value)}
+          style={{ width:'100%', padding:'9px 12px', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer',
+            border:'1px solid #E2E8F0', background:'#fff', color:'#334155' }}>
+          <option value="">Todos os clientes</option>
+          <option value="__geral">Geral (sem cliente)</option>
+          {clients
+            .slice()
+            .sort((a,b) => (a.fantasia||a.razao_social||'').localeCompare(b.fantasia||b.razao_social||''))
+            .map(c => (
+              <option key={c.id} value={c.id}>{c.fantasia || c.razao_social}</option>
+            ))}
+        </select>
       </div>
 
       {/* LISTA */}
