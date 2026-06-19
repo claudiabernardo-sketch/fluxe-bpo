@@ -191,7 +191,7 @@ export default function EsteirasPage() {
   const createTask = useCreateTask()
   const qc = useQueryClient()
   const [selected, setSelected] = useState(null)
-  const [checked, setChecked] = useState({})
+  const [tasksSelecionadas, setTasksSelecionadas] = useState({}) // { 'etIdx-tIdx': true|false }
   const [applyModal, setApplyModal] = useState(null) // { esteira, etapa } or { esteira, all }
   const [applyClient, setApplyClient] = useState('')
   const [applying, setApplying] = useState(false)
@@ -199,14 +199,20 @@ export default function EsteirasPage() {
 
   const est = ESTEIRAS.find(e => e.id === selected)
 
-  function toggleCheck(etIdx, tIdx, ckIdx) {
-    const key = `${selected}-${etIdx}-${tIdx}-${ckIdx}`
-    setChecked(p => ({ ...p, [key]: !p[key] }))
+  // Por padrão todas as tarefas vêm marcadas — usuário desmarca o que não quer aplicar
+  function isTaskSelecionada(etIdx, tIdx) {
+    const key = `${etIdx}-${tIdx}`
+    return tasksSelecionadas[key] !== false
   }
-
-  function getTaskProgress(etIdx, tIdx, checklist) {
-    const done = checklist.filter((_, i) => checked[`${selected}-${etIdx}-${tIdx}-${i}`]).length
-    return { done, total: checklist.length }
+  function toggleTask(etIdx, tIdx) {
+    const key = `${etIdx}-${tIdx}`
+    setTasksSelecionadas(p => ({ ...p, [key]: !isTaskSelecionada(etIdx, tIdx) }))
+  }
+  function tasksDaEtapaSelecionadas(et, etIdx) {
+    return et.tasks.filter((_, tIdx) => isTaskSelecionada(etIdx, tIdx))
+  }
+  function todasTasksSelecionadas(esteira) {
+    return esteira.etapas.flatMap((et, etIdx) => tasksDaEtapaSelecionadas(et, etIdx))
   }
 
   async function aplicarTarefas(clienteId, tasks) {
@@ -256,14 +262,14 @@ export default function EsteirasPage() {
   }
 
   if (selected && est) {
-    const totalTasks = est.etapas.reduce((a, e) => a + e.tasks.length, 0)
+    const totalSelecionadas = todasTasksSelecionadas(est).length
     return (
       <div>
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
           <button onClick={() => setSelected(null)} style={{ border:'1px solid #E2E8F0', background:'#fff', borderRadius:8, padding:'6px 12px', cursor:'pointer', fontSize:12 }}>← Voltar</button>
           <span style={{ fontSize:16, fontWeight:700, color:'#0F172A', flex:1 }}>{est.icon} {est.name}</span>
-          <Btn variant="primary" onClick={() => setApplyModal({ esteira: est, all: true })}>
-            ⚡ Aplicar todas ao cliente ({totalTasks} tarefas)
+          <Btn variant="primary" disabled={totalSelecionadas===0} onClick={() => setApplyModal({ esteira: est, all: true })}>
+            ⚡ Aplicar selecionadas ao cliente ({totalSelecionadas} tarefa{totalSelecionadas!==1?'s':''})
           </Btn>
         </div>
 
@@ -273,11 +279,13 @@ export default function EsteirasPage() {
           </div>
         )}
 
-        {est.etapas.map((et, etIdx) => (
+        {est.etapas.map((et, etIdx) => {
+          const selecionadasEtapa = tasksDaEtapaSelecionadas(et, etIdx)
+          return (
           <Card key={etIdx} style={{ marginBottom:14 }}>
             <CardHeader title={et.titulo} right={
-              <Btn small variant="primary" onClick={() => setApplyModal({ esteira: est, etapa: et, etIdx })}>
-                + Aplicar ao cliente ({et.tasks.length} tarefas)
+              <Btn small variant="primary" disabled={selecionadasEtapa.length===0} onClick={() => setApplyModal({ esteira: est, etapa: et, etIdx })}>
+                + Aplicar selecionadas ({selecionadasEtapa.length} de {et.tasks.length})
               </Btn>
             } />
             {et.materiais?.length > 0 && (
@@ -296,42 +304,43 @@ export default function EsteirasPage() {
               </div>
             )}
             <div style={{ padding:'8px 0' }}>
-              {et.tasks.map((task, tIdx) => (
-                <div key={tIdx} style={{ borderBottom:'1px solid #F8FAFC' }}>
+              {et.tasks.map((task, tIdx) => {
+                const sel = isTaskSelecionada(etIdx, tIdx)
+                return (
+                <div key={tIdx} style={{ borderBottom:'1px solid #F8FAFC', opacity: sel ? 1 : .5 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 16px', background:'#FAFAFA' }}>
-                    <div style={{ flex:1 }}>
+                    <div onClick={() => toggleTask(etIdx, tIdx)} style={{ width:16, height:16, borderRadius:4, border:`2px solid ${sel?'#6366F1':'#CBD5E1'}`, background: sel?'#6366F1':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, cursor:'pointer' }}
+                      title={sel ? 'Clique pra não incluir essa tarefa' : 'Clique pra incluir essa tarefa'}>
+                      {sel && <span style={{ color:'#fff', fontSize:10 }}>✓</span>}
+                    </div>
+                    <div style={{ flex:1, cursor:'pointer' }} onClick={() => toggleTask(etIdx, tIdx)}>
                       <div style={{ fontSize:12, fontWeight:600, color:'#0F172A' }}>{task.titulo}</div>
                       <div style={{ fontSize:10, color:'#94A3B8', marginTop:2 }}>📂 {task.categoria} · {task.checklist.length} itens de checklist</div>
                     </div>
-                    <div style={{ fontSize:10, color:'#64748B' }}>
-                      {getTaskProgress(etIdx, tIdx, task.checklist).done}/{task.checklist.length}
-                    </div>
                   </div>
-                  <div style={{ padding:'4px 16px 8px 32px' }}>
+                  {/* Checklist é só pré-visualização do que vem dentro da tarefa — não é interativo aqui */}
+                  <div style={{ padding:'4px 16px 8px 38px' }}>
                     {task.checklist.map((ck, ckIdx) => (
-                      <div key={ckIdx} onClick={() => toggleCheck(etIdx, tIdx, ckIdx)}
-                        style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 0', cursor:'pointer' }}>
-                        <div style={{ width:14, height:14, borderRadius:3, border:`2px solid ${checked[`${selected}-${etIdx}-${tIdx}-${ckIdx}`]?'#22C55E':'#CBD5E1'}`, background: checked[`${selected}-${etIdx}-${tIdx}-${ckIdx}`]?'#22C55E':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                          {checked[`${selected}-${etIdx}-${tIdx}-${ckIdx}`] && <span style={{ color:'#fff', fontSize:8 }}>✓</span>}
-                        </div>
-                        <span style={{ fontSize:11, color: checked[`${selected}-${etIdx}-${tIdx}-${ckIdx}`]?'#94A3B8':'#475569', textDecoration: checked[`${selected}-${etIdx}-${tIdx}-${ckIdx}`]?'line-through':'none' }}>{ck}</span>
+                      <div key={ckIdx} style={{ display:'flex', alignItems:'center', gap:8, padding:'3px 0' }}>
+                        <span style={{ color:'#CBD5E1', fontSize:10 }}>•</span>
+                        <span style={{ fontSize:11, color:'#94A3B8' }}>{ck}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </Card>
-        ))}
+        )})}
 
         {applyModal && (
           <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }}>
             <div style={{ background:'#fff', borderRadius:16, padding:24, width:400 }}>
               <div style={{ fontWeight:700, fontSize:15, marginBottom:8 }}>
-                {applyModal.all ? `Aplicar toda a esteira "${est.name}"` : `Aplicar etapa "${applyModal.etapa.titulo}"`}
+                {applyModal.all ? `Aplicar selecionadas de "${est.name}"` : `Aplicar selecionadas de "${applyModal.etapa.titulo}"`}
               </div>
               <div style={{ fontSize:12, color:'#64748B', marginBottom:16 }}>
-                {applyModal.all ? totalTasks : applyModal.etapa.tasks.length} tarefas serão criadas com checklists completos, vinculadas ao cliente selecionado.
+                {applyModal.all ? totalSelecionadas : tasksDaEtapaSelecionadas(applyModal.etapa, applyModal.etIdx).length} tarefas serão criadas com checklists completos, vinculadas ao cliente selecionado.
               </div>
               <div style={{ marginBottom:16 }}>
                 <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'.07em' }}>Selecionar cliente *</label>
@@ -345,8 +354,8 @@ export default function EsteirasPage() {
                 <Btn onClick={() => { setApplyModal(null); setApplyClient('') }}>Cancelar</Btn>
                 <Btn variant="primary" disabled={!applyClient || applying} onClick={() => {
                   const tasks = applyModal.all
-                    ? est.etapas.flatMap(e => e.tasks)
-                    : applyModal.etapa.tasks
+                    ? todasTasksSelecionadas(est)
+                    : tasksDaEtapaSelecionadas(applyModal.etapa, applyModal.etIdx)
                   aplicarTarefas(applyClient, tasks)
                 }}>
                   {applying ? 'Criando tarefas...' : '⚡ Criar tarefas'}
