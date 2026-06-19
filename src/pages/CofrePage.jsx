@@ -71,8 +71,8 @@ export default function CofrePage() {
       setRevealed(p => ({...p, [id]: data || ''}))
     } catch (err) {
       console.error('Erro ao descriptografar:', err)
-      // Fallback: se o banco ainda não tem a função, mostra direto (período de transição)
-      setRevealed(p => ({...p, [id]: ac.senha_enc}))
+      setRevealed(p => { const n = {...p}; delete n[id]; return n })
+      alert('Não foi possível revelar a senha agora. Tente novamente em instantes.')
     }
   }
 

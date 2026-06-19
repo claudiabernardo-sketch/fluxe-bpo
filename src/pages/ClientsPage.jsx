@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useTarefaModelos, useClienteModelos, useVincularModelo, useDesvincularModelo } from '../hooks/useData'
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useTarefaModelos, useClienteModelos, useVincularModelo, useDesvincularModelo, useAcessos, useSaveAcesso, useDeleteAcesso } from '../hooks/useData'
 import { Card, CardHeader, Badge, Btn, Loader, EmptyState, fmt, fmtR } from '../components/ui'
 import { useAuthStore } from '../store/authStore'
+import { supabase } from '../lib/supabase'
 import ImportModal from '../components/ui/ImportModal'
 import { exportToXlsx, CLIENTES_EXPORT_COLS, downloadClienteTemplate, mapRowToCliente } from '../utils/excel'
 
@@ -9,6 +10,15 @@ const ETAPA_COLOR = { comercial:'pu', pre_ob:'yw', onboarding:'bl', implantacao:
 const ETAPA_LABEL = { comercial:'Comercial', pre_ob:'Pré-Onb.', onboarding:'Onboarding', implantacao:'Implantação', operacional:'Operacional', estrategico:'Estratégico', acompanhamento:'Acompanham.', encerramento:'Encerramento' }
 const STATUS_COLOR = { ativo:'gr', onboarding:'bl', implantacao:'or', inativo:'gy', pausado:'yw' }
 const STATUS_LABEL = { ativo:'Ativo', inativo:'Inativo', pausado:'Pausado', onboarding:'Onboarding', implantacao:'Implantação' }
+
+const CATEGORIAS_COFRE = [
+  { id:'banco',    icon:'🏦', label:'Banco' },
+  { id:'erp',      icon:'💻', label:'ERP / Sistema' },
+  { id:'governo',  icon:'🏛', label:'Governo' },
+  { id:'email',    icon:'📧', label:'E-mail' },
+  { id:'outro',    icon:'🔑', label:'Outro' },
+]
+function getCatCofre(id) { return CATEGORIAS_COFRE.find(c=>c.id===id) || CATEGORIAS_COFRE[4] }
 
 const BANCOS_LIST = ['Banco do Brasil','Santander','Caixa Econômica Federal','Bradesco','Itaú','Nubank','C6 Bank','Banco Inter','Mercado Pago','PagBank','Sicoob','Sicredi','Banco Original','BTG Pactual','Stone','Cora','Asaas','Outro']
 const SOFTWARES = ['Omie','Conta Azul','Meu Dinheiro Web','Nibo','Bom Controle','Bling','Nexaas','Gestão Fácil','Outro']
@@ -37,8 +47,65 @@ export default function ClientsPage() {
   const [cnpjLoading, setCnpjLoading] = useState(false)
   const [cnpjError, setCnpjError] = useState('')
   const [selectedBancos, setSelectedBancos] = useState([])
-  const [tab, setTab] = useState('dados') // dados | financeiro | bancos | tarefas | rotina
+  const [tab, setTab] = useState('dados') // dados | financeiro | bancos | cofre | rotina | tarefas
   const [showAddModelo, setShowAddModelo] = useState(false)
+
+  // Cofre (acessos) — escopado ao cliente aberto
+  const canSeeSenhas = temPermissao('ver_senhas')
+  const { data: acessosCliente = [], isLoading: acessosLoading } = useAcessos(modal?.mode === 'edit' ? modal?.id : null)
+  const saveAcesso = useSaveAcesso()
+  const deleteAcesso = useDeleteAcesso()
+  const [cofreSearch, setCofreSearch] = useState('')
+  const [revealedAcesso, setRevealedAcesso] = useState({})
+  const [cofreModal, setCofreModal] = useState(null) // { mode:'new'|'edit', id? }
+  const [cofreForm, setCofreForm] = useState({})
+
+  async function toggleRevealAcesso(ac) {
+    const id = ac.id
+    if (revealedAcesso[id]) { setRevealedAcesso(p => { const n = {...p}; delete n[id]; return n }); return }
+    if (!ac.senha_enc) return
+    setRevealedAcesso(p => ({...p, [id]: 'loading'}))
+    try {
+      const { data, error } = await supabase.rpc('cofre_decrypt', { acesso_id: id })
+      if (error) throw error
+      setRevealedAcesso(p => ({...p, [id]: data || ''}))
+    } catch (err) {
+      console.error('Erro ao descriptografar:', err)
+      setRevealedAcesso(p => { const n = {...p}; delete n[id]; return n })
+      alert('Não foi possível revelar a senha agora. Tente novamente em instantes.')
+    }
+  }
+
+  function openNewAcesso() { setCofreForm({ categoria:'outro' }); setCofreModal({ mode:'new' }) }
+  function openEditAcesso(a) {
+    const { senha_enc, ...rest } = a
+    setCofreForm({ ...rest, _temSenha: !!senha_enc })
+    setCofreModal({ mode:'edit', id:a.id })
+  }
+
+  async function salvarAcessoCliente() {
+    if (!cofreForm.sistema?.trim()) return alert('Informe o nome do sistema')
+    const { _temSenha, _novaSenha, ...dados } = cofreForm
+    const payload = { ...dados, cliente_id: modal.id }
+    if (_novaSenha?.trim()) {
+      const { data: enc, error: encErr } = await supabase.rpc('cofre_encrypt', { plaintext: _novaSenha })
+      if (encErr) return alert('Erro ao criptografar a senha. Tente novamente.')
+      payload.senha_enc = enc
+    } else {
+      delete payload.senha_enc
+    }
+    if (cofreModal.mode === 'edit') {
+      await saveAcesso.mutateAsync({ id: cofreModal.id, ...payload })
+    } else {
+      await saveAcesso.mutateAsync(payload)
+    }
+    setCofreModal(null); setCofreForm({}); setRevealedAcesso({})
+  }
+
+  const acessosFiltrados = acessosCliente.filter(a => {
+    const q = cofreSearch.toLowerCase()
+    return !q || a.sistema?.toLowerCase().includes(q) || a.login?.toLowerCase().includes(q)
+  })
 
   // Rotinas
   const { data: rotinas = [] } = useRotinas(modal?.id)
@@ -288,7 +355,7 @@ export default function ClientsPage() {
 
             {/* Tabs */}
             <div style={{ display:'flex', borderBottom:'1px solid var(--bo)', padding:'0 18px' }}>
-              {[['dados','📋 Dados'],['financeiro','💰 Financeiro'],['bancos','🏦 Bancos'],['rotina','🔁 Rotina'],['tarefas','✅ Tarefas']].map(([id, label]) => (
+              {[['dados','📋 Dados'],['financeiro','💰 Financeiro'],['bancos','🏦 Bancos'],['cofre','🔐 Cofre'],['rotina','🔁 Rotina'],['tarefas','✅ Tarefas']].map(([id, label]) => (
                 <button key={id} onClick={() => setTab(id)}
                   style={{ padding:'8px 14px', border:'none', background:'transparent', cursor:'pointer', fontSize:11, fontWeight:600,
                     color: tab===id?'var(--br)':'var(--tx3)', borderBottom: tab===id?'2px solid var(--br)':'2px solid transparent', marginBottom:-1 }}>
@@ -595,6 +662,83 @@ export default function ClientsPage() {
                 </div>
               )}
 
+              {/* ABA COFRE */}
+              {tab === 'cofre' && (
+                <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                  {modal?.mode === 'new' ? (
+                    <div style={{ padding:'28px 16px', textAlign:'center', color:'var(--tx3)', fontSize:13 }}>
+                      Salve o cliente primeiro para adicionar acessos ao cofre.
+                    </div>
+                  ) : (<>
+                    <div style={{ background:'#F5F3FF', border:'1px solid #DDD6FE', borderRadius:'var(--r)', padding:'12px 14px', fontSize:12, color:'#6D28D9', lineHeight:1.6 }}>
+                      <div style={{ fontWeight:700, marginBottom:4 }}>🔐 Cofre de senhas deste cliente</div>
+                      Logins e senhas de bancos, ERPs e portais ficam criptografados no servidor — nunca em texto puro no app.
+                    </div>
+
+                    <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                      <input value={cofreSearch} onChange={e=>setCofreSearch(e.target.value)} placeholder="🔍 Buscar sistema ou login..."
+                        className="fi" style={{ flex:1 }} />
+                      {canSeeSenhas && (
+                        <button className="btn bp bsm" onClick={openNewAcesso} style={{ whiteSpace:'nowrap', flexShrink:0 }}>
+                          + Novo acesso
+                        </button>
+                      )}
+                    </div>
+
+                    {acessosLoading ? (
+                      <Loader />
+                    ) : acessosFiltrados.length === 0 ? (
+                      <div style={{ padding:'24px 16px', textAlign:'center', color:'var(--tx3)', fontSize:12 }}>
+                        Nenhum acesso cadastrado para este cliente ainda.
+                      </div>
+                    ) : (
+                      <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                        {acessosFiltrados.map(ac => {
+                          const cat = getCatCofre(ac.categoria)
+                          const revState = revealedAcesso[ac.id]
+                          const isLoadingRev = revState === 'loading'
+                          const isRev = revState && revState !== 'loading'
+                          return (
+                            <div key={ac.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--s2)' }}>
+                              <span style={{ fontSize:16 }}>{cat.icon}</span>
+                              <div style={{ flex:1, minWidth:0 }}>
+                                <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{ac.sistema}</div>
+                                <div style={{ fontSize:10, color:'var(--tx3)', display:'flex', gap:8, flexWrap:'wrap' }}>
+                                  {ac.login && <span>👤 {ac.login}</span>}
+                                  {ac.url && <span>🔗 {ac.url}</span>}
+                                  {ac.obs && <em>{ac.obs}</em>}
+                                </div>
+                              </div>
+                              {canSeeSenhas && ac.senha_enc ? (
+                                <div style={{ textAlign:'right', flexShrink:0 }}>
+                                  <div style={{ fontFamily:'monospace', fontSize:11, color:'var(--tx)', marginBottom:3 }}>
+                                    {isLoadingRev ? '⏳' : isRev ? revState : '••••••••'}
+                                  </div>
+                                  <button onClick={() => toggleRevealAcesso(ac)} disabled={isLoadingRev}
+                                    style={{ padding:'2px 7px', borderRadius:6, border:'1px solid var(--bo)', background:'var(--sur)', color:'var(--tx3)', cursor:'pointer', fontSize:9, fontWeight:600 }}>
+                                    {isLoadingRev ? '...' : isRev ? '🙈 Ocultar' : '👁 Revelar'}
+                                  </button>
+                                </div>
+                              ) : !ac.senha_enc ? (
+                                <span style={{ fontSize:10, color:'var(--tx3)', flexShrink:0 }}>sem senha</span>
+                              ) : null}
+                              {canSeeSenhas && (
+                                <div style={{ display:'flex', gap:4, flexShrink:0 }}>
+                                  <button onClick={() => openEditAcesso(ac)}
+                                    style={{ border:'none', background:'none', cursor:'pointer', color:'var(--tx3)', fontSize:13 }}>✏</button>
+                                  <button onClick={() => { if(confirm('Excluir este acesso?')) deleteAcesso.mutate(ac.id) }}
+                                    style={{ border:'none', background:'none', cursor:'pointer', color:'var(--tx3)', fontSize:16, lineHeight:1 }}>×</button>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </>)}
+                </div>
+              )}
+
               {/* ABA ROTINA */}
               {tab === 'rotina' && (
                 <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
@@ -694,7 +838,7 @@ export default function ClientsPage() {
             {/* Footer */}
             <div style={{ padding:'12px 18px', borderTop:'1px solid var(--bo)', display:'flex', justifyContent:'flex-end', gap:8 }}>
               <button className="btn bo" onClick={close}>Fechar</button>
-              {tab !== 'tarefas' && tab !== 'rotina' && (
+              {tab !== 'tarefas' && tab !== 'rotina' && tab !== 'cofre' && (
                 <button className="btn bp" onClick={save} disabled={createClient.isPending||updateClient.isPending}>
                   {createClient.isPending||updateClient.isPending ? 'Salvando…' : 'Salvar cliente'}
                 </button>
@@ -746,6 +890,60 @@ export default function ClientsPage() {
                   {aplicando ? 'Criando tarefas…' : `✓ Aplicar ${modelosSel.length} tarefa${modelosSel.length!==1?'s':''}`}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal novo/editar acesso do Cofre */}
+      {cofreModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1200, padding:16 }}>
+          <div style={{ background:'var(--sur)', borderRadius:'var(--rx)', width:'100%', maxWidth:460, maxHeight:'85vh', display:'flex', flexDirection:'column', boxShadow:'var(--sh3)' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px', borderBottom:'1px solid var(--bo)' }}>
+              <span style={{ fontWeight:700, fontSize:14, color:'var(--tx)' }}>🔐 {cofreModal.mode==='new' ? 'Novo acesso' : 'Editar acesso'}</span>
+              <button onClick={() => { setCofreModal(null); setCofreForm({}) }} style={{ border:'none', background:'none', cursor:'pointer', fontSize:20, color:'var(--tx3)' }}>×</button>
+            </div>
+            <div style={{ padding:'16px 18px', overflowY:'auto', flex:1, display:'flex', flexDirection:'column', gap:12 }}>
+              <div>
+                <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Sistema / Nome *</label>
+                <input value={cofreForm.sistema||''} onChange={e=>setCofreForm(f=>({...f,sistema:e.target.value}))} className="fi" placeholder="Ex: Banco do Brasil, Omie, SEFAZ..." autoFocus />
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                <div>
+                  <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Categoria</label>
+                  <select value={cofreForm.categoria||'outro'} onChange={e=>setCofreForm(f=>({...f,categoria:e.target.value}))} className="fi">
+                    {CATEGORIAS_COFRE.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Login / Usuário</label>
+                  <input value={cofreForm.login||''} onChange={e=>setCofreForm(f=>({...f,login:e.target.value}))} className="fi" placeholder="usuario@email.com" />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize:10, fontWeight:700, color:'var(--br)', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>
+                  🔑 {cofreModal.mode==='edit' ? 'Nova senha (deixe em branco para manter)' : 'Senha'}
+                </label>
+                <input type="text" value={cofreForm._novaSenha||''} onChange={e=>setCofreForm(f=>({...f,_novaSenha:e.target.value}))}
+                  className="fi" placeholder={cofreModal.mode==='edit' && cofreForm._temSenha ? '(senha mantida)' : 'Senha ou token de acesso'} />
+                {cofreModal.mode==='edit' && cofreForm._temSenha && (
+                  <div style={{ fontSize:9, color:'var(--tx3)', marginTop:3 }}>🔒 Senha criptografada armazenada. Digite para substituir.</div>
+                )}
+              </div>
+              <div>
+                <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>URL / Endereço</label>
+                <input value={cofreForm.url||''} onChange={e=>setCofreForm(f=>({...f,url:e.target.value}))} className="fi" placeholder="https://..." />
+              </div>
+              <div>
+                <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Observações</label>
+                <textarea value={cofreForm.obs||''} onChange={e=>setCofreForm(f=>({...f,obs:e.target.value}))} className="fi" style={{ height:60, resize:'vertical' }} placeholder="Informações adicionais..." />
+              </div>
+            </div>
+            <div style={{ padding:'12px 18px', borderTop:'1px solid var(--bo)', display:'flex', justifyContent:'flex-end', gap:8 }}>
+              <button className="btn bo" onClick={() => { setCofreModal(null); setCofreForm({}) }}>Cancelar</button>
+              <button className="btn bp" onClick={salvarAcessoCliente} disabled={saveAcesso.isPending}>
+                {saveAcesso.isPending ? 'Salvando…' : 'Salvar acesso'}
+              </button>
             </div>
           </div>
         </div>

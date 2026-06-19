@@ -502,7 +502,21 @@ export function useSaveAcesso() {
       await logAudit('UPDATE', 'acessos', data.id, { sistema: acesso.sistema })
       return data
     },
-    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['acessos', vars.cliente_id] }),
+    // Invalida por prefixo: cobre useAcessos(clienteId) (['acessos', empresaId, clienteId])
+    // e qualquer outra listagem de acessos (ex: CofrePage)
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['acessos'] }),
+  })
+}
+
+export function useDeleteAcesso() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('acessos').delete().eq('id', id)
+      if (error) throw error
+      await logAudit('DELETE', 'acessos', id)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['acessos'] }),
   })
 }
 
