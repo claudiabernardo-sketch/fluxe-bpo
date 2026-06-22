@@ -361,7 +361,8 @@ export default function ClientsPage() {
               </thead>
               <tbody>
                 {filtered.map(cl => (
-                  <tr key={cl.id} style={{ borderBottom:'1px solid var(--s2)' }}
+                  <tr key={cl.id} onClick={() => openEdit(cl)}
+                    style={{ borderBottom:'1px solid var(--s2)', cursor:'pointer' }}
                     onMouseEnter={e=>e.currentTarget.style.background='var(--s2)'}
                     onMouseLeave={e=>e.currentTarget.style.background=''}>
                     <td style={{ padding:'10px 14px' }}>
@@ -373,7 +374,7 @@ export default function ClientsPage() {
                     <td style={{ padding:'10px 14px' }}><span className={`b b-${STATUS_COLOR[cl.status]||'gy'}`}>{STATUS_LABEL[cl.status] || cl.status}</span></td>
                     <td style={{ padding:'10px 14px', fontSize:12, fontWeight:600, color:'var(--grt)', fontFamily:'var(--mo)' }}>{fmtR(cl.valor_mrr)}</td>
                     <td style={{ padding:'10px 14px', fontSize:11, color:'var(--tx2)' }}>{cl.software_erp || '—'}</td>
-                    <td style={{ padding:'10px 14px' }}>
+                    <td style={{ padding:'10px 14px' }} onClick={e => e.stopPropagation()}>
                       <div style={{ display:'flex', gap:5 }}>
                         <button className="btn bo bsm" onClick={() => openEdit(cl)}>
                           <i className="fa-solid fa-pencil"></i>
