@@ -205,7 +205,23 @@ const CSS = `
 `
 
 // ─── UTILITÁRIOS ────────────────────────────────────────────
-const fmt = v => (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 })
+// ─── FORMATAÇÃO ───────────────────────────────────────────────
+const fmt = v => (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+// Retorna valor por extenso para valores grandes (≥ 10.000) — ex: "R$ 120.000,00 (cento e vinte mil reais)"
+function fmtExtensoParcial(v) {
+  if (!v || v < 10000) return fmt(v)
+  if (v >= 1000000) {
+    const m = (v / 1000000)
+    const mStr = m % 1 === 0 ? m.toFixed(0) : m.toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+    return `${fmt(v)} (${mStr} milhão${m >= 2 ? 'ões' : ''} de reais)`
+  }
+  if (v >= 100000) {
+    const k = Math.round(v / 1000)
+    return `${fmt(v)} (${k} mil reais)`
+  }
+  return fmt(v)
+}
 const calcPeso = (h, max) => h / max < 0.3 ? 'baixo' : h / max < 0.6 ? 'médio' : 'alto'
 
 // ─── MOTOR DE CÁLCULO ───────────────────────────────────────
@@ -225,8 +241,8 @@ function calcularMetodologia(d) {
   if (d.carec > 0) add('Contas a receber', 0.5 + d.carec * 0.04, calcPeso(0.5 + d.carec * 0.04, 5),
     `${d.carec} recebíveis/mês`)
 
-  if (d.agend) add('Agendamento bancário', 0.5 + d.capag * 0.04, calcPeso(0.5 + d.capag * 0.04, 5),
-    `Execução de ${d.capag} pagamentos`)
+  if (d.agend > 0) add('Agendamento bancário', 0.5 + d.agend * 0.033, calcPeso(0.5 + d.agend * 0.033, 5),
+    `${d.agend} agendamento${d.agend > 1 ? 's' : ''}/mês (base 0,5h + ~2 min por pagamento)`)
 
   if (d.nfs > 0) add('Emissão de notas fiscais', 0.3 + d.nfs * 0.07, calcPeso(0.3 + d.nfs * 0.07, 4),
     `${d.nfs} NFs/mês (~4min por nota)`)
@@ -282,7 +298,7 @@ function calcularMetodologia(d) {
       nome: 'Ajuste de porte (faturamento)',
       horas: Math.round((totalHoras - totalBase) * 10) / 10,
       peso: 'médio',
-      motivo: `Fator ${fatorFat}× por faturamento de ${fmt(d.fat)}/mês`
+      motivo: `Fator ${fatorFat}× por faturamento de ${fmtExtensoParcial(d.fat)}/mês`
     })
   }
 
@@ -554,11 +570,10 @@ export default function PrecificacaoPage() {
                     <option value="2">Sim — 2 ou mais</option>
                   </select>
                 </Campo>
-                <Campo label="Precisa de agendamento bancário?">
-                  <select className="prec-select" value={d.agend} onChange={sel('agend')}>
-                    <option value="0">Não</option>
-                    <option value="1">Sim — executo os pagamentos</option>
-                  </select>
+                <Campo label="Agendamentos bancários por mês" hint="Quantos pagamentos você executa no banco (TEDs, boletos, etc). Ex: 380 agendamentos ≈ 13h/mês.">
+                  <input type="number" min="0" max="9999" className="prec-select"
+                    value={d.agend || ''} placeholder="0"
+                    onChange={e => sel('agend')({ target: { value: Math.max(0, parseInt(e.target.value)||0) } })} />
                 </Campo>
                 <Campo label="Precisa de folha de pagamento / DP?">
                   <select className="prec-select" value={d.folha} onChange={sel('folha')}>
@@ -691,7 +706,7 @@ export default function PrecificacaoPage() {
               <div className="prec-reasoning-title">Como a Metodologia Fluxe chegou a esses números</div>
               {[
                 ['Cliente', calc.d.nome],
-                ['Faturamento mensal', calc.d.fat > 0 ? fmt(calc.d.fat) : 'Não informado'],
+                ['Faturamento mensal', calc.d.fat > 0 ? fmtExtensoParcial(calc.d.fat) : 'Não informado'],
                 ['Contas bancárias', calc.d.bancos, calc.d.bancos >= 4 ? 'alto' : calc.d.bancos >= 2 ? 'médio' : 'baixo'],
                 ['Movimentações / mês', calc.d.mov, calc.d.mov > 500 ? 'alto' : calc.d.mov > 150 ? 'médio' : 'baixo'],
                 ['Contas a pagar', `${calc.d.capag} títulos/mês`],
@@ -909,7 +924,7 @@ export default function PrecificacaoPage() {
                 <div>
                   <div style={{ fontSize: 10, color: 'var(--ptext3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Cliente</div>
                   <div style={{ fontSize: 14, fontWeight: 600 }}>{calc.d.nome || '—'}</div>
-                  {calc.d.fat > 0 && <div style={{ fontSize: 11, color: 'var(--ptext2)' }}>Faturamento: {fmt(calc.d.fat)}/mês</div>}
+                  {calc.d.fat > 0 && <div style={{ fontSize: 11, color: 'var(--ptext2)' }}>Faturamento: {fmtExtensoParcial(calc.d.fat)}/mês</div>}
                 </div>
                 <div>
                   <div style={{ fontSize: 10, color: 'var(--ptext3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Data</div>
