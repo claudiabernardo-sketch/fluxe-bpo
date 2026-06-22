@@ -208,7 +208,7 @@ const CSS = `
 // ─── FORMATAÇÃO ───────────────────────────────────────────────
 const fmt = v => (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-// Retorna valor por extenso para valores grandes (≥ 10.000) — ex: "R$ 120.000,00 (cento e vinte mil reais)"
+// Retorna valor por extenso para valores grandes (≥ 10.000)
 function fmtExtensoParcial(v) {
   if (!v || v < 10000) return fmt(v)
   if (v >= 1000000) {
@@ -221,6 +221,15 @@ function fmtExtensoParcial(v) {
     return `${fmt(v)} (${k} mil reais)`
   }
   return fmt(v)
+}
+
+// Converte string no formato brasileiro (ex: "80.000,00" ou "80000") para número
+function parseBRL(str) {
+  if (!str && str !== 0) return 0
+  const s = String(str).trim()
+  // Remove R$, espaços, e pontos de milhar; substitui vírgula decimal por ponto
+  const clean = s.replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.')
+  return parseFloat(clean) || 0
 }
 const calcPeso = (h, max) => h / max < 0.3 ? 'baixo' : h / max < 0.6 ? 'médio' : 'alto'
 
@@ -441,7 +450,7 @@ export default function PrecificacaoPage() {
   const irParaAnalise = useCallback(() => {
     const diag = {
       ...d,
-      fat: parseFloat(d.fat) || 0,
+      fat: parseBRL(d.fat),
       aliquota: parseFloat(d.regime) / 100,
       margem: parseFloat(d.margem) / 100,
     }
@@ -520,10 +529,10 @@ export default function PrecificacaoPage() {
                 <Campo label="Faturamento mensal (R$)" hint="Receita bruta média do cliente. Se não souber exato, use uma estimativa. Impacta o nível de complexidade.">
                   <input className="prec-input" type="text" inputMode="numeric"
                     value={d.fat} onChange={e => set('fat', e.target.value)}
-                    placeholder="Ex: 80000" />
-                  {parseFloat(String(d.fat).replace(',','.')) >= 10000 && (
+                    placeholder="Ex: 80.000" />
+                  {parseBRL(d.fat) >= 10000 && (
                     <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>
-                      {fmtExtensoParcial(parseFloat(String(d.fat).replace(',','.')))}/mês
+                      {fmtExtensoParcial(parseBRL(d.fat))}/mês
                     </div>
                   )}
                 </Campo>
