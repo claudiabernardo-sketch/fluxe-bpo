@@ -58,32 +58,23 @@ export default function CRMPage() {
   const [convertErro, setConvertErro] = useState('')
   const [perdaModal, setPerdaModal]   = useState(null) // { id, nome, nextEtapa }
   const [perdaForm, setPerdaForm]     = useState({ motivo:'', obs:'' })
-  const [view, setView]               = useState('kanban') // kanban | lista
+  const [view, setView]               = useState('kanban')
 
-  if (isLoading) return <Loader />
-
-  // ── Métricas ───────────────────────────────────────────────
-  const ativos     = leads.filter(l => l.etapa !== 'perdido' && l.etapa !== 'convertido')
-  const fechados   = leads.filter(l => l.etapa === 'fechado' || l.etapa === 'convertido')
-  const perdidos   = leads.filter(l => l.etapa === 'perdido')
-  const totalAtivo = ativos.reduce((a, l) => a + (l.valor_estimado || 0), 0)
-  const totalFech  = fechados.reduce((a, l) => a + (l.valor_estimado || 0), 0)
+  // ── Métricas (hooks devem ficar antes de qualquer early return) ──
+  const ativos     = useMemo(() => leads.filter(l => l.etapa !== 'perdido' && l.etapa !== 'convertido'), [leads])
+  const fechados   = useMemo(() => leads.filter(l => l.etapa === 'fechado'  || l.etapa === 'convertido'), [leads])
+  const perdidos   = useMemo(() => leads.filter(l => l.etapa === 'perdido'), [leads])
+  const totalAtivo = useMemo(() => ativos.reduce((a, l) => a + (l.valor_estimado || 0), 0), [ativos])
+  const totalFech  = useMemo(() => fechados.reduce((a, l) => a + (l.valor_estimado || 0), 0), [fechados])
   const txConv     = leads.length > 0 ? Math.round((fechados.length / leads.length) * 100) : 0
-
-  const followUpsHoje = ativos.filter(l => {
-    const d = diasAte(l.proximo_contato)
-    return d !== null && d <= 0
-  })
-
-  // Motivos de perda agrupados
-  const motivosAgrup = useMemo(() => {
+  const followUpsHoje = useMemo(() => ativos.filter(l => { const d = diasAte(l.proximo_contato); return d !== null && d <= 0 }), [ativos])
+  const motivosAgrup  = useMemo(() => {
     const map = {}
-    perdidos.forEach(l => {
-      const m = l.motivo_perda || 'outro'
-      map[m] = (map[m] || 0) + 1
-    })
+    perdidos.forEach(l => { const m = l.motivo_perda || 'outro'; map[m] = (map[m] || 0) + 1 })
     return Object.entries(map).sort((a,b) => b[1]-a[1])
   }, [perdidos])
+
+  if (isLoading) return <Loader />
 
   function setF(k, v) { setForm(f => ({ ...f, [k]: v })) }
 
