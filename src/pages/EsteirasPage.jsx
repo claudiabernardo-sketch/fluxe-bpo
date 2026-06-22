@@ -248,7 +248,7 @@ export default function EsteirasPage() {
         prioridade: 'media',
         status: 'aberta',
         cliente_id: clienteId,
-        data_execucao: new Date().toISOString().slice(0,10),
+        data_execucao: new Date().toLocaleDateString('en-CA'),
       })
       if (task.checklist?.length && created?.id) {
         const items = task.checklist.map((texto, ordem) => ({ tarefa_id: created.id, texto, ordem }))

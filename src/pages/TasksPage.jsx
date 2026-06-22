@@ -51,10 +51,16 @@ export default function TasksPage() {
   const geradoRef = useRef(false)
 
   // ── Auto-geração de tarefas recorrentes ────────────────────────────
+  // Usa localStorage pra garantir que roda 1x por dia — se o browser
+  // ficar aberto da véspera sem recarregar, o useRef seria true mas a
+  // geração de hoje nunca teria acontecido.
   useEffect(() => {
     if (geradoRef.current || modelos.length === 0 || !empresa?.id) return
+    const hoje = new Date().toISOString().slice(0, 10)
+    const chave = `fluxe_gerado_${empresa.id}_${hoje}`
+    if (localStorage.getItem(chave)) return // já gerou hoje
     geradoRef.current = true
-    gerarTarefasRecorrentes()
+    gerarTarefasRecorrentes().then(() => localStorage.setItem(chave, '1'))
   }, [modelos, empresa]) // eslint-disable-line
 
   async function gerarTarefasRecorrentes() {
@@ -64,7 +70,7 @@ export default function TasksPage() {
     for (let i = 29; i >= 0; i--) {
       const d = new Date(hoje)
       d.setDate(d.getDate() - i)
-      datas.push(d.toISOString().slice(0, 10))
+      datas.push(d.toLocaleDateString('en-CA')) // fuso local, não UTC
     }
     const modelosAtivos = modelos.filter(m => m.ativo)
     if (modelosAtivos.length === 0) return
@@ -273,7 +279,9 @@ export default function TasksPage() {
   }
 
   // ── Filtros ───────────────────────────────────────────────────────────
-  const today = new Date().toISOString().slice(0, 10)
+  // toISOString() retorna UTC — no fuso de Brasília (UTC-3) isso faz
+  // "hoje" virar "amanhã" depois das 21h. Usa formatação local em vez disso.
+  const today = new Date().toLocaleDateString('en-CA') // 'en-CA' retorna YYYY-MM-DD no fuso local
   const filtered = tasks.filter(t => {
     const q = search.toLowerCase()
     // Data de referência da tarefa: data_execucao ou prazo

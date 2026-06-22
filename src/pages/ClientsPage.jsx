@@ -189,7 +189,7 @@ export default function ClientsPage() {
   async function salvarTarefa() {
     if (!taskForm.titulo.trim()) { setTaskErr('Informe o título da tarefa'); return }
     setTaskErr('')
-    await createTask.mutateAsync({ ...taskForm, prazo: taskForm.prazo || null, cliente_id: modal.id, data_execucao: new Date().toISOString().slice(0,10) })
+    await createTask.mutateAsync({ ...taskForm, prazo: taskForm.prazo || null, cliente_id: modal.id, data_execucao: new Date().toLocaleDateString('en-CA') })
     setTaskForm({ titulo:'', prazo:'', status:'aberta', prioridade:'media' })
   }
 
@@ -204,7 +204,7 @@ export default function ClientsPage() {
           titulo: modelo.titulo, categoria: modelo.categoria || null,
           prioridade: modelo.prioridade || 'media', status: 'aberta',
           cliente_id: modal.id, modelo_id: modelo.id,
-          data_execucao: new Date().toISOString().slice(0,10),
+          data_execucao: new Date().toLocaleDateString('en-CA'),
         })
         if (modelo.checklist_items?.length && tarefa?.id) {
           const items = modelo.checklist_items.map((texto, ordem) => ({ tarefa_id: tarefa.id, texto, ordem }))
