@@ -21,6 +21,129 @@ const MOTIVOS_PERDA = [
   { id:'outro',        label:'📝 Outro' },
 ]
 
+// Templates por etapa — {nome} e {empresa} são substituídos pelos dados do lead
+const TEMPLATES_ETAPA = {
+  novo: [
+    {
+      id: 'abordagem_fria',
+      label: '🤝 Primeiro contato',
+      texto: `Olá, {nome}! Tudo bem?
+
+Sou {minhaNome} da {minhaEmpresa}, BPO Financeiro especializado em organizar e automatizar o financeiro de empresas como a {empresa}.
+
+Vi que vocês atuam em {segmento} e acredito que posso ajudar a reduzir o tempo gasto com contas a pagar, conciliação bancária e relatórios gerenciais.
+
+Teria 15 minutinhos esta semana para uma conversa rápida?`,
+    },
+  ],
+  contato: [
+    {
+      id: 'confirmar_reuniao',
+      label: '📅 Confirmar reunião de diagnóstico',
+      texto: `Olá, {nome}! Tudo bem?
+
+Passando para confirmar nossa conversa sobre o financeiro da {empresa}.
+
+Data e horário: [PREENCHER]
+Link / local: [PREENCHER]
+
+Vou preparar algumas perguntas para entender melhor a operação de vocês e ver como posso ajudar. Confirma presença?`,
+    },
+  ],
+  diagnostico: [
+    {
+      id: 'envio_proposta',
+      label: '📄 Envio de proposta',
+      texto: `Olá, {nome}! Tudo bem?
+
+Conforme conversamos, segue a proposta de serviços de BPO Financeiro para a {empresa}:
+
+[LINK DA PROPOSTA]
+
+Em resumo, o escopo inclui:
+• Conciliação bancária mensal
+• Gestão de contas a pagar e a receber
+• Relatórios gerenciais mensais
+• [OUTROS SERVIÇOS]
+
+Investimento: R$ {valor}/mês
+
+Qualquer dúvida, estou à disposição. O que acha?`,
+    },
+  ],
+  proposta: [
+    {
+      id: 'followup_proposta',
+      label: '🔔 Follow-up da proposta',
+      texto: `Olá, {nome}! Tudo bem?
+
+Passando para saber se você teve a chance de analisar a proposta que enviei para a {empresa}.
+
+Fico à disposição para esclarecer qualquer dúvida ou ajustar algum ponto do escopo. O que achou?`,
+    },
+    {
+      id: 'followup_2',
+      label: '⏰ Último contato',
+      texto: `Olá, {nome}!
+
+Tentei falar com você algumas vezes sobre a proposta para a {empresa}, mas não consegui retorno.
+
+Vou encerrar o processo de contato por agora para não ser inconveniente. Se no futuro precisar de apoio no financeiro, estarei à disposição.
+
+Sucesso nos projetos! 🤝`,
+    },
+    {
+      id: 'cobranca_aprovacao',
+      label: '✍️ Cobrar aprovação pendente',
+      texto: `Olá, {nome}! Tudo bem?
+
+Ainda aguardo sua confirmação para dar início aos serviços de BPO Financeiro na {empresa}.
+
+Para começarmos, precisamos apenas da sua aprovação. Podemos avançar?`,
+    },
+  ],
+  fechado: [
+    {
+      id: 'boas_vindas',
+      label: '🎉 Boas-vindas e próximos passos',
+      texto: `Olá, {nome}! Seja muito bem-vindo(a)!
+
+Estou muito feliz em ter a {empresa} como cliente da {minhaEmpresa}!
+
+Nossos próximos passos:
+1. Vou te enviar o contrato para assinatura
+2. Precisarei de alguns acessos (internet banking, sistema)
+3. Agendamos uma reunião de kickoff
+
+Alguma dúvida ou ponto que queira alinhar antes de começarmos?`,
+    },
+    {
+      id: 'solicitar_assinatura',
+      label: '📝 Solicitar assinatura de contrato',
+      texto: `Olá, {nome}!
+
+Segue o contrato de prestação de serviços de BPO Financeiro para a {empresa}:
+
+[LINK DO CONTRATO]
+
+Assim que assinado, já posso dar início ao onboarding. Qualquer dúvida sobre os termos, fico à disposição!`,
+    },
+    {
+      id: 'solicitar_acesso',
+      label: '🔑 Solicitar acessos',
+      texto: `Olá, {nome}!
+
+Para iniciarmos o trabalho na {empresa}, precisarei dos seguintes acessos:
+
+• Internet banking (acesso de consulta ou operacional)
+• Sistema financeiro ([OMIE / CONTA AZUL / OUTRO])
+• Portal de emissão de NF (se aplicável)
+
+Você consegue providenciar até [DATA]? Se preferir, podemos fazer uma chamada rápida para configurar juntos.`,
+    },
+  ],
+}
+
 function formatCNPJ(v) {
   const d = v.replace(/\D/g, '').slice(0, 14)
   return d
@@ -59,6 +182,35 @@ export default function CRMPage() {
   const [perdaModal, setPerdaModal]   = useState(null) // { id, nome, nextEtapa }
   const [perdaForm, setPerdaForm]     = useState({ motivo:'', obs:'' })
   const [view, setView]               = useState('kanban')
+  const [templateModal, setTemplateModal] = useState(null) // { lead, template }
+  const [templateCopiado, setTemplateCopiado] = useState(false)
+
+  function abrirTemplate(lead, template) {
+    const { empresa: emp } = useAuthStore.getState()
+    const texto = template.texto
+      .replace(/{nome}/g, lead.contato || lead.nome || '')
+      .replace(/{empresa}/g, lead.fantasia || lead.nome || '')
+      .replace(/{segmento}/g, lead.segmento || '[segmento]')
+      .replace(/{valor}/g, lead.valor_estimado ? fmtR(lead.valor_estimado).replace('R$\u00a0','').trim() : '[valor]')
+      .replace(/{minhaNome}/g, emp?.responsavel_nome || '[seu nome]')
+      .replace(/{minhaEmpresa}/g, emp?.nome || 'Fluxe BPO')
+    setTemplateModal({ lead, texto })
+    setTemplateCopiado(false)
+  }
+
+  function copiarTemplate() {
+    navigator.clipboard.writeText(templateModal.texto).then(() => {
+      setTemplateCopiado(true)
+      setTimeout(() => setTemplateCopiado(false), 2500)
+    })
+  }
+
+  function abrirWhatsApp() {
+    const num = templateModal.lead.whatsapp?.replace(/\D/g, '')
+    if (!num) { alert('Número de WhatsApp não cadastrado neste lead.'); return }
+    const texto = encodeURIComponent(templateModal.texto)
+    window.open(`https://wa.me/55${num}?text=${texto}`, '_blank')
+  }
 
   // ── Métricas (hooks devem ficar antes de qualquer early return) ──
   const ativos     = useMemo(() => leads.filter(l => l.etapa !== 'perdido' && l.etapa !== 'convertido'), [leads])
@@ -314,6 +466,17 @@ export default function CRMPage() {
                               💰 Proposta
                             </button>
                           )}
+                          {TEMPLATES_ETAPA[l.etapa]?.length > 0 && (
+                            <div style={{ position:'relative', display:'inline-block' }}>
+                              <select
+                                onChange={e => { if(e.target.value) { const t = TEMPLATES_ETAPA[l.etapa].find(x=>x.id===e.target.value); if(t) abrirTemplate(l,t); e.target.value=''; } }}
+                                style={{ fontSize:9, padding:'2px 6px', border:'1px solid #BBF7D0', borderRadius:5, cursor:'pointer', background:'#F0FDF4', color:'#15803D', fontWeight:600, appearance:'none' }}
+                                defaultValue="">
+                                <option value="" disabled>💬 Mensagem</option>
+                                {TEMPLATES_ETAPA[l.etapa].map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                              </select>
+                            </div>
+                          )}
                           {et.id === 'fechado' && !isConvertido && (
                             <button onClick={() => handleConvert(l)} disabled={convert.isPending}
                               style={{ fontSize:9, padding:'2px 8px', border:'1px solid #22C55E', borderRadius:5, cursor:'pointer', background:'#F0FDF4', color:'#15803D', fontWeight:600 }}>
@@ -510,6 +673,40 @@ export default function CRMPage() {
               <Btn variant="primary" onClick={save} disabled={isSaving}>
                 {isSaving ? 'Salvando…' : modal === 'edit' ? 'Salvar' : 'Criar lead'}
               </Btn>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ══ MODAL TEMPLATE DE MENSAGEM ══ */}
+      {templateModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1200, padding:16 }}>
+          <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:520, maxHeight:'85vh', display:'flex', flexDirection:'column' }}>
+            <div style={{ padding:'14px 18px', borderBottom:'1px solid #E2E8F0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <div>
+                <div style={{ fontWeight:700, fontSize:14 }}>💬 Mensagem pronta</div>
+                <div style={{ fontSize:11, color:'#94A3B8', marginTop:2 }}>Edite antes de enviar se precisar</div>
+              </div>
+              <button onClick={() => setTemplateModal(null)} style={{ border:'none', background:'none', cursor:'pointer', fontSize:20, color:'#94A3B8' }}>×</button>
+            </div>
+            <div style={{ padding:'14px 18px', flex:1, overflowY:'auto' }}>
+              <textarea value={templateModal.texto}
+                onChange={e => setTemplateModal(m => ({...m, texto: e.target.value}))}
+                style={{ width:'100%', minHeight:280, padding:'12px', border:'1px solid #E2E8F0', borderRadius:10, fontSize:13, fontFamily:'inherit', resize:'vertical', lineHeight:1.6, boxSizing:'border-box' }} />
+            </div>
+            <div style={{ padding:'12px 18px', borderTop:'1px solid #E2E8F0', display:'flex', gap:8, justifyContent:'flex-end', flexWrap:'wrap' }}>
+              <Btn onClick={() => setTemplateModal(null)}>Fechar</Btn>
+              {templateModal.lead.whatsapp && (
+                <button onClick={abrirWhatsApp}
+                  style={{ padding:'8px 16px', borderRadius:8, border:'none', background:'#22C55E', color:'#fff', fontWeight:700, fontSize:12, cursor:'pointer' }}>
+                  📱 Abrir no WhatsApp
+                </button>
+              )}
+              <button onClick={copiarTemplate}
+                style={{ padding:'8px 16px', borderRadius:8, border:'none',
+                  background: templateCopiado ? '#6366F1' : '#0F172A',
+                  color:'#fff', fontWeight:700, fontSize:12, cursor:'pointer' }}>
+                {templateCopiado ? '✓ Copiado!' : '📋 Copiar mensagem'}
+              </button>
             </div>
           </div>
         </div>
