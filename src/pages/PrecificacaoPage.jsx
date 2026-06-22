@@ -411,12 +411,28 @@ export default function PrecificacaoPage() {
   const { empresa, profile } = useAuthStore()
 
   // FORM STATE
-  const [d, setD] = useState({
-    nome: '', fat: '', cnpjs: 1, funcs: 0,
-    bancos: 1, capag: 0, carec: 0, mov: 0, nfs: 0, boletos: 0,
-    sistcob: 0, cartao: 0, plat: 0, agend: 0, folha: 0,
-    contab: 0, relat: 0, reuniao: 0, consult: 0, lembrete: 0,
-    custoHora: 50, margem: 35, overhead: 600, regime: 6,
+  const [d, setD] = useState(() => {
+    // Se veio do CRM (botão Proposta), pré-preenche com dados do lead
+    try {
+      const lead = JSON.parse(sessionStorage.getItem('crm_lead_precif') || 'null')
+      if (lead) {
+        sessionStorage.removeItem('crm_lead_precif')
+        return {
+          nome: lead.nome || '', fat: '', cnpjs: 1, funcs: 0,
+          bancos: 1, capag: 0, carec: 0, mov: 0, nfs: 0, boletos: 0,
+          sistcob: 0, cartao: 0, plat: 0, agend: 0, folha: 0,
+          contab: 0, relat: 0, reuniao: 0, consult: 0, lembrete: 0,
+          custoHora: 50, margem: 35, overhead: 600, regime: 6,
+        }
+      }
+    } catch {}
+    return {
+      nome: '', fat: '', cnpjs: 1, funcs: 0,
+      bancos: 1, capag: 0, carec: 0, mov: 0, nfs: 0, boletos: 0,
+      sistcob: 0, cartao: 0, plat: 0, agend: 0, folha: 0,
+      contab: 0, relat: 0, reuniao: 0, consult: 0, lembrete: 0,
+      custoHora: 50, margem: 35, overhead: 600, regime: 6,
+    }
   })
   const [custoHoraFonte, setCustoHoraFonte] = useState(null) // null | 'equipe' | 'propria'
 

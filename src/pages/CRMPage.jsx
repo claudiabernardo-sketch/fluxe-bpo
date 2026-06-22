@@ -2,6 +2,7 @@ import { useLeads, useCreateLead, useUpdateLead, useConvertLeadToClient } from '
 import { Card, Loader, EmptyState, Btn, fmtR } from '../components/ui'
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../store/authStore'
 
 const ETAPAS = [
   { id:'novo',        label:'Lead novo',   color:'#94A3B8', icon:'🆕' },
