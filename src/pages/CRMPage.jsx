@@ -336,13 +336,12 @@ export default function CRMPage() {
   }
 
   function abrirPrecificacao(lead) {
-    // Abre precificação com dados do lead no sessionStorage
     sessionStorage.setItem('crm_lead_precif', JSON.stringify({
-      nome: lead.nome || lead.fantasia || '',
+      nome: lead.fantasia || lead.nome || '',
       segmento: lead.segmento || '',
       valor_estimado: lead.valor_estimado || 0,
     }))
-    nav('/precificacao')
+    window.open('/precificacao', '_blank')
   }
 
   const inputStyle = { width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'inherit', boxSizing:'border-box' }
