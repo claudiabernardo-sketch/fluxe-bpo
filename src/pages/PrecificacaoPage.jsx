@@ -540,21 +540,27 @@ export default function PrecificacaoPage() {
               <div className="prec-fgrid3">
                 <Campo label="Contas bancárias para conciliar" hint="Cada conta bancária precisa de conciliação mensal separada.">
                   <input className="prec-input" type="number" value={d.bancos} onChange={num('bancos')} min="0" />
+                  {d.bancos > 0 && <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>≈ {(d.bancos * 1.5 + (d.mov||0) * 0.003).toFixed(1)}h/mês de conciliação</div>}
                 </Campo>
                 <Campo label="Pagamentos (contas a pagar) / mês" hint="Quantos boletos, fornecedores ou despesas fixas são pagas por mês. Ex: 30 fornecedores + 10 fixas = 40.">
                   <input className="prec-input" type="number" value={d.capag} onChange={num('capag')} min="0" />
+                  {d.capag > 0 && <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>≈ {(0.5 + d.capag * 0.05).toFixed(1)}h/mês de gestão CP</div>}
                 </Campo>
                 <Campo label="Cobranças a receber / mês" hint="Número de clientes que pagam ao seu cliente mensalmente.">
                   <input className="prec-input" type="number" value={d.carec} onChange={num('carec')} min="0" />
+                  {d.carec > 0 && <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>≈ {(0.5 + d.carec * 0.04).toFixed(1)}h/mês de gestão CR</div>}
                 </Campo>
                 <Campo label="Movimentações no extrato / mês" hint="Se não souber, some contas a pagar + contas a receber e multiplique por 1,3.">
                   <input className="prec-input" type="number" value={d.mov} onChange={num('mov')} min="0" />
+                  {d.mov > 0 && d.bancos > 0 && <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>impacta conciliação: +{(d.mov * 0.003).toFixed(1)}h</div>}
                 </Campo>
                 <Campo label="Notas fiscais a emitir / mês" hint="NFS-e de serviço ou NF-e de produto. Zero se não for emitir.">
                   <input className="prec-input" type="number" value={d.nfs} onChange={num('nfs')} min="0" />
+                  {d.nfs > 0 && <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>≈ {(0.3 + d.nfs * 0.07).toFixed(1)}h/mês (~4 min por NF)</div>}
                 </Campo>
                 <Campo label="Boletos a emitir / mês" hint="Boletos de cobrança emitidos em nome do cliente.">
                   <input className="prec-input" type="number" value={d.boletos} onChange={num('boletos')} min="0" />
+                  {d.boletos > 0 && <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>≈ {(0.3 + d.boletos * 0.05).toFixed(1)}h/mês de emissão</div>}
                 </Campo>
               </div>
 
@@ -571,7 +577,7 @@ export default function PrecificacaoPage() {
                   )}
                   {d.agend > 0 && d.capag === 0 && (
                     <div style={{ fontSize:10, color:'#F59E0B', marginTop:4 }}>
-                      ⚠ Preencha "Pagamentos / mês" acima para estimar o tempo de agendamento.
+                      ⚠ Preencha "Pagamentos / mês" acima para estimar o tempo.
                     </div>
                   )}
                 </Campo>
