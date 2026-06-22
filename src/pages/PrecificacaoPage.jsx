@@ -518,8 +518,14 @@ export default function PrecificacaoPage() {
                   <input className="prec-input" value={d.nome} onChange={e => set('nome', e.target.value)} placeholder="Ex: Comércio Silva Ltda" />
                 </Campo>
                 <Campo label="Faturamento mensal (R$)" hint="Receita bruta média do cliente. Se não souber exato, use uma estimativa. Impacta o nível de complexidade.">
-                  <input className="prec-input" type="number" value={d.fat} onChange={num('fat')} placeholder="Ex: 80000" />
-                  {d.fat >= 10000 && <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>{fmtExtensoParcial(parseFloat(d.fat))}/mês</div>}
+                  <input className="prec-input" type="text" inputMode="numeric"
+                    value={d.fat} onChange={e => set('fat', e.target.value)}
+                    placeholder="Ex: 80000" />
+                  {parseFloat(String(d.fat).replace(',','.')) >= 10000 && (
+                    <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>
+                      {fmtExtensoParcial(parseFloat(String(d.fat).replace(',','.')))}/mês
+                    </div>
+                  )}
                 </Campo>
                 <Campo label="Quantos CNPJs você vai gerenciar?" hint="Cada CNPJ = um conjunto completo de contas e obrigações.">
                   <input className="prec-input" type="number" value={d.cnpjs} onChange={num('cnpjs')} min="1" />
