@@ -241,8 +241,8 @@ function calcularMetodologia(d) {
   if (d.carec > 0) add('Contas a receber', 0.5 + d.carec * 0.04, calcPeso(0.5 + d.carec * 0.04, 5),
     `${d.carec} recebíveis/mês`)
 
-  if (d.agend > 0) add('Agendamento bancário', 0.5 + d.agend * 0.033, calcPeso(0.5 + d.agend * 0.033, 5),
-    `${d.agend} agendamento${d.agend > 1 ? 's' : ''}/mês (base 0,5h + ~2 min por pagamento)`)
+  if (d.agend > 0) add('Agendamento bancário', 0.5 + d.capag * 0.033, calcPeso(0.5 + d.capag * 0.033, 5),
+    `${d.capag} pagamento${d.capag !== 1 ? 's' : ''}/mês no banco (~2 min cada + 0,5h de gestão)`)
 
   if (d.nfs > 0) add('Emissão de notas fiscais', 0.3 + d.nfs * 0.07, calcPeso(0.3 + d.nfs * 0.07, 4),
     `${d.nfs} NFs/mês (~4min por nota)`)
@@ -509,76 +509,89 @@ export default function PrecificacaoPage() {
             <div className="prec-card">
               <div className="prec-card-num">Etapa 01</div>
               <div className="prec-card-title">Diagnóstico do cliente</div>
-              <div className="prec-card-desc">Quanto mais preciso o diagnóstico, mais precisa a recomendação. Estas informações alimentam o cálculo da complexidade operacional.</div>
+              <div className="prec-card-desc">Preencha com o que você já sabe do cliente. Quanto mais preciso, mais precisa a recomendação de preço.</div>
 
-              <div className="prec-sec">Identificação e porte</div>
+              {/* BLOCO 1: O CLIENTE */}
+              <div className="prec-sec">🏢 O cliente</div>
               <div className="prec-fgrid">
                 <Campo label="Nome do cliente / empresa">
                   <input className="prec-input" value={d.nome} onChange={e => set('nome', e.target.value)} placeholder="Ex: Comércio Silva Ltda" />
                 </Campo>
-                <Campo label="Faturamento mensal estimado (R$)" hint="Receita bruta média. Impacta o nível de exigência e complexidade.">
+                <Campo label="Faturamento mensal (R$)" hint="Receita bruta média do cliente. Se não souber exato, use uma estimativa. Impacta o nível de complexidade.">
                   <input className="prec-input" type="number" value={d.fat} onChange={num('fat')} placeholder="Ex: 80000" />
+                  {d.fat >= 10000 && <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>{fmtExtensoParcial(parseFloat(d.fat))}/mês</div>}
                 </Campo>
-                <Campo label="Número de CNPJs / empresas" hint="Cada CNPJ adicional representa um conjunto completo de obrigações.">
+                <Campo label="Quantos CNPJs você vai gerenciar?" hint="Cada CNPJ = um conjunto completo de contas e obrigações.">
                   <input className="prec-input" type="number" value={d.cnpjs} onChange={num('cnpjs')} min="1" />
                 </Campo>
-                <Campo label="Número de funcionários" hint="Inclui sócios que recebem pró-labore.">
+                <Campo label="Funcionários (incluindo sócios com pró-labore)" hint="Só preencha se você for cuidar da folha de pagamento.">
                   <input className="prec-input" type="number" value={d.funcs} onChange={num('funcs')} min="0" />
                 </Campo>
               </div>
 
-              <div className="prec-sec">Movimentação financeira</div>
+              {/* BLOCO 2: O QUE VOCÊ VAI FAZER */}
+              <div className="prec-sec">📋 O que você vai fazer por esse cliente</div>
               <div className="prec-fgrid3">
-                <Campo label="Contas bancárias" hint="Cada conta = conciliação mensal">
+                <Campo label="Contas bancárias para conciliar" hint="Cada conta bancária precisa de conciliação mensal separada.">
                   <input className="prec-input" type="number" value={d.bancos} onChange={num('bancos')} min="0" />
                 </Campo>
-                <Campo label="Contas a pagar / mês" hint="Média de títulos pagos">
+                <Campo label="Pagamentos (contas a pagar) / mês" hint="Quantos boletos, fornecedores ou despesas fixas são pagas por mês. Ex: 30 fornecedores + 10 fixas = 40.">
                   <input className="prec-input" type="number" value={d.capag} onChange={num('capag')} min="0" />
                 </Campo>
-                <Campo label="Contas a receber / mês" hint="Clientes que geram cobrança">
+                <Campo label="Cobranças a receber / mês" hint="Número de clientes que pagam ao seu cliente mensalmente.">
                   <input className="prec-input" type="number" value={d.carec} onChange={num('carec')} min="0" />
                 </Campo>
-                <Campo label="Movimentações bancárias / mês" hint="Entradas + saídas no extrato">
+                <Campo label="Movimentações no extrato / mês" hint="Se não souber, some contas a pagar + contas a receber e multiplique por 1,3.">
                   <input className="prec-input" type="number" value={d.mov} onChange={num('mov')} min="0" />
                 </Campo>
-                <Campo label="NFs emitidas / mês" hint="Notas de serviço ou produto">
+                <Campo label="Notas fiscais a emitir / mês" hint="NFS-e de serviço ou NF-e de produto. Zero se não for emitir.">
                   <input className="prec-input" type="number" value={d.nfs} onChange={num('nfs')} min="0" />
                 </Campo>
-                <Campo label="Boletos emitidos / mês">
+                <Campo label="Boletos a emitir / mês" hint="Boletos de cobrança emitidos em nome do cliente.">
                   <input className="prec-input" type="number" value={d.boletos} onChange={num('boletos')} min="0" />
                 </Campo>
               </div>
 
-              <div className="prec-sec">Serviços e necessidades</div>
               <div className="prec-fgrid">
-                <Campo label="Usa sistema de cobrança?">
+                <Campo label="Você vai executar os pagamentos no banco?" hint="Agendamento bancário = você entra no internet banking e agenda/paga os boletos. É um serviço extra que exige acesso ao banco.">
+                  <select className="prec-select" value={d.agend} onChange={sel('agend')}>
+                    <option value="0">Não — o cliente paga sozinho</option>
+                    <option value="1">Sim — eu faço os agendamentos</option>
+                  </select>
+                  {d.agend > 0 && d.capag > 0 && (
+                    <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>
+                      ≈ {(0.5 + d.capag * 0.033).toFixed(1)}h/mês para agendar {d.capag} pagamentos (~2 min cada)
+                    </div>
+                  )}
+                  {d.agend > 0 && d.capag === 0 && (
+                    <div style={{ fontSize:10, color:'#F59E0B', marginTop:4 }}>
+                      ⚠ Preencha "Pagamentos / mês" acima para estimar o tempo de agendamento.
+                    </div>
+                  )}
+                </Campo>
+                <Campo label="Usa maquininha / cartão de crédito?" hint="Se o cliente recebe por maquininha, você precisará conciliar as vendas com o banco.">
+                  <select className="prec-select" value={d.cartao} onChange={sel('cartao')}>
+                    <option value="0">Não</option>
+                    <option value="1">Sim — precisa de conciliação</option>
+                  </select>
+                </Campo>
+                <Campo label="Usa sistema de cobrança automática?" hint="Ex: Asaas, Iugu, Receba Fácil. Gera boletos automaticamente e precisa de conciliação.">
                   <select className="prec-select" value={d.sistcob} onChange={sel('sistcob')}>
                     <option value="0">Não usa</option>
                     <option value="1">Sim — Asaas, Iugu, Receba Fácil…</option>
                   </select>
                 </Campo>
-                <Campo label="Usa maquininha / cartão?">
-                  <select className="prec-select" value={d.cartao} onChange={sel('cartao')}>
-                    <option value="0">Não</option>
-                    <option value="1">Sim — precisa conciliação</option>
-                  </select>
-                </Campo>
-                <Campo label="Outras plataformas (PagSeguro, MP…)">
+                <Campo label="Usa outras plataformas de venda?" hint="Ex: Mercado Livre, Shopee, PagSeguro, Mercado Pago. Cada plataforma precisa de conciliação separada.">
                   <select className="prec-select" value={d.plat} onChange={sel('plat')}>
                     <option value="0">Não</option>
                     <option value="1">Sim — 1 plataforma</option>
                     <option value="2">Sim — 2 ou mais</option>
                   </select>
                 </Campo>
-                <Campo label="Agendamentos bancários por mês" hint="Quantos pagamentos você executa no banco (TEDs, boletos, etc). Ex: 380 agendamentos ≈ 13h/mês.">
-                  <input type="number" min="0" max="9999" className="prec-select"
-                    value={d.agend || ''} placeholder="0"
-                    onChange={e => sel('agend')({ target: { value: Math.max(0, parseInt(e.target.value)||0) } })} />
-                </Campo>
-                <Campo label="Precisa de folha de pagamento / DP?">
+                <Campo label="Precisa de folha de pagamento?">
                   <select className="prec-select" value={d.folha} onChange={sel('folha')}>
                     <option value="0">Não</option>
-                    <option value="1">Sim</option>
+                    <option value="1">Sim — eu processo a folha</option>
                   </select>
                 </Campo>
                 <Campo label="Envia documentos para contabilidade?">
@@ -587,28 +600,28 @@ export default function PrecificacaoPage() {
                     <option value="1">Sim — organizo e envio</option>
                   </select>
                 </Campo>
-                <Campo label="Relatórios gerenciais mensais?">
+                <Campo label="Vai gerar relatórios gerenciais?">
                   <select className="prec-select" value={d.relat} onChange={sel('relat')}>
                     <option value="0">Não</option>
-                    <option value="1">Básico (DRE e fluxo de caixa)</option>
-                    <option value="2">Completo (+ indicadores, análises)</option>
+                    <option value="1">Básico — DRE e fluxo de caixa</option>
+                    <option value="2">Completo — DRE, fluxo, indicadores e análises</option>
                   </select>
                 </Campo>
-                <Campo label="Reunião estratégica mensal?">
+                <Campo label="Vai ter reunião estratégica mensal?">
                   <select className="prec-select" value={d.reuniao} onChange={sel('reuniao')}>
                     <option value="0">Não</option>
-                    <option value="1">Sim — 1h online</option>
-                    <option value="1.5">Sim — 1h presencial</option>
+                    <option value="1">Sim — 1 hora online</option>
+                    <option value="1.5">Sim — 1 hora presencial</option>
                   </select>
                 </Campo>
-                <Campo label="Consultoria e planejamento?">
+                <Campo label="Vai oferecer consultoria ou planejamento?">
                   <select className="prec-select" value={d.consult} onChange={sel('consult')}>
                     <option value="0">Não</option>
-                    <option value="1">Sim — análises estratégicas</option>
-                    <option value="2">Sim — planejamento completo</option>
+                    <option value="1">Sim — análises estratégicas mensais</option>
+                    <option value="2">Sim — planejamento completo (budget, metas, DRE projetado)</option>
                   </select>
                 </Campo>
-                <Campo label="Lembrete de vencimento (WhatsApp)?">
+                <Campo label="Vai enviar lembretes de vencimento pelo WhatsApp?">
                   <select className="prec-select" value={d.lembrete} onChange={sel('lembrete')}>
                     <option value="0">Não</option>
                     <option value="1">Sim</option>
@@ -616,13 +629,14 @@ export default function PrecificacaoPage() {
                 </Campo>
               </div>
 
-              <div className="prec-sec">Seus parâmetros (base de custo)</div>
+              {/* BLOCO 3: SEUS NÚMEROS */}
+              <div className="prec-sec">💰 Seus custos (base do cálculo)</div>
               <div className="prec-alert prec-alert-info">
                 <span>💡</span>
-                <span>Esses valores são seus dados operacionais. Configure uma vez — o sistema usa em todos os cálculos.</span>
+                <span>Configure uma vez na aba <strong>Config → Custo/Hora</strong> e o sistema preenche automaticamente em todas as precificações.</span>
               </div>
               <div className="prec-fgrid">
-                <Campo label="Seu custo-hora (R$)" hint={custoHoraFonte ? null : "Configure na aba Config → Calculadora de Custo Real para preencher automaticamente."}>
+                <Campo label="Seu custo-hora (R$/h)" hint="Quanto custa 1 hora do seu trabalho, considerando salário, encargos e overhead. Configure em Config → Custo/Hora para calcular automaticamente.">
                   {custoHoraFonte && (
                     <div style={{ fontSize:10, color:'#6366F1', fontWeight:700, marginBottom:5, display:'flex', alignItems:'center', gap:4 }}>
                       ✓ {custoHoraFonte === 'equipe' ? 'Média da equipe (Config)' : 'Sua hora calculada (Config)'}
@@ -632,21 +646,21 @@ export default function PrecificacaoPage() {
                   <input className="prec-input" type="number" value={d.custoHora}
                     onChange={e => { num('custoHora')(e); setCustoHoraFonte(null) }} step="5" />
                 </Campo>
-                <Campo label="Margem de lucro desejada" hint="BPOs sustentáveis: 30–45% de margem sobre custo.">
+                <Campo label="Margem de lucro desejada" hint="BPOs saudáveis operam com 30–45% de margem. Abaixo de 20% o negócio fica frágil.">
                   <div className="prec-range-wrap">
                     <input type="range" min="10" max="60" value={d.margem} onChange={e => set('margem', e.target.value)} />
                     <span className="prec-range-val">{d.margem}%</span>
                   </div>
                 </Campo>
-                <Campo label="Overhead mensal do BPO (R$)" hint="Rateio de ferramentas, internet, softwares.">
+                <Campo label="Overhead mensal (R$)" hint="Soma dos seus custos fixos mensais divididos pelo número de clientes. Ex: softwares (R$ 300) + internet (R$ 100) + escritório (R$ 400) = R$ 800 ÷ 10 clientes = R$ 80/cliente.">
                   <input className="prec-input" type="number" value={d.overhead} onChange={num('overhead')} step="50" />
                 </Campo>
-                <Campo label="Regime tributário">
+                <Campo label="Regime tributário do seu BPO" hint="Alíquota de impostos sobre o seu faturamento como prestador de serviços.">
                   <select className="prec-select" value={d.regime} onChange={sel('regime')}>
-                    <option value="6">Simples Nacional (6%)</option>
-                    <option value="8.8">Simples Nacional (8,8%)</option>
+                    <option value="0">MEI (isento de IR/CSLL)</option>
+                    <option value="6">Simples Nacional — Anexo III (6%)</option>
+                    <option value="8.8">Simples Nacional — Anexo V (8,8%)</option>
                     <option value="13.5">Lucro Presumido (~13,5%)</option>
-                    <option value="0">MEI (isento)</option>
                   </select>
                 </Campo>
               </div>
