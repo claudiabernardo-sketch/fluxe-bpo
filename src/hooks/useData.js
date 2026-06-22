@@ -138,7 +138,20 @@ export function useUpdateTask() {
       await logAudit('UPDATE', 'tarefas', id, updates)
       return data
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+    // Optimistic update: atualiza o cache local imediatamente sem esperar
+    // o re-fetch do banco -- a tarefa some/muda na hora que o usuário clica
+    onMutate: async ({ id, ...updates }) => {
+      await qc.cancelQueries({ queryKey: ['tasks'] })
+      const prev = qc.getQueriesData({ queryKey: ['tasks'] })
+      qc.setQueriesData({ queryKey: ['tasks'] }, (old) =>
+        Array.isArray(old) ? old.map(t => t.id === id ? { ...t, ...updates } : t) : old
+      )
+      return { prev }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) ctx.prev.forEach(([key, val]) => qc.setQueryData(key, val))
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
   })
 }
 
