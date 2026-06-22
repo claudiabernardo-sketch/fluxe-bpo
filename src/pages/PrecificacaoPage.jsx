@@ -247,8 +247,8 @@ function calcularMetodologia(d) {
   if (d.capag > 0) add('Contas a pagar', 0.5 + d.capag * 0.05, calcPeso(0.5 + d.capag * 0.05, 5),
     `${d.capag} títulos/mês (base 0,5h + 3min por título)`)
 
-  if (d.carec > 0) add('Contas a receber', 0.5 + d.carec * 0.04, calcPeso(0.5 + d.carec * 0.04, 5),
-    `${d.carec} recebíveis/mês`)
+  if (d.carec > 0) add('Cobranças manuais a receber', 0.5 + d.carec * 0.04, calcPeso(0.5 + d.carec * 0.04, 5),
+    `${d.carec} cliente${d.carec > 1 ? 's' : ''} com cobrança individual/mês`)
 
   if (d.agend > 0) add('Agendamento bancário', 0.5 + d.capag * 0.033, calcPeso(0.5 + d.capag * 0.033, 5),
     `${d.capag} pagamento${d.capag !== 1 ? 's' : ''}/mês no banco (~2 min cada + 0,5h de gestão)`)
@@ -259,8 +259,8 @@ function calcularMetodologia(d) {
   if (d.boletos > 0) add('Emissão de boletos', 0.3 + d.boletos * 0.05, calcPeso(0.3 + d.boletos * 0.05, 4),
     `${d.boletos} boletos/mês`)
 
-  if (d.carec > 0) add('Controle de inadimplentes', 0.3 + d.carec * 0.02, 'baixo',
-    `Follow-up sobre ${d.carec} recebíveis`)
+  if (d.carec > 0) add('Cobrança de inadimplentes', 0.3 + d.carec * 0.02, 'baixo',
+    `Follow-up sobre ${d.carec} cobranças manuais`)
 
   if (d.sistcob) add('Gestão sistema de cobrança', 0.5, 'baixo', 'Asaas, Iugu ou similar')
   if (d.cartao) add('Conciliação cartão de crédito', 1.0, 'médio', 'Conciliação fatura + classificação')
@@ -551,17 +551,20 @@ export default function PrecificacaoPage() {
                   <input className="prec-input" type="number" value={d.bancos} onChange={num('bancos')} min="0" />
                   {d.bancos > 0 && <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>≈ {(d.bancos * 1.5 + (d.mov||0) * 0.003).toFixed(1)}h/mês de conciliação</div>}
                 </Campo>
-                <Campo label="Pagamentos (contas a pagar) / mês" hint="Quantos boletos, fornecedores ou despesas fixas são pagas por mês. Ex: 30 fornecedores + 10 fixas = 40.">
+                <Campo label="Pagamentos (contas a pagar) / mês" hint="Quantas contas você vai pagar por ele todo mês — fornecedores, aluguel, luz, internet, etc. Ex: 5 fornecedores + 3 fixas = 8. Raramente passa de 100 num cliente pequeno.">
                   <input className="prec-input" type="number" value={d.capag} onChange={num('capag')} min="0" />
                   {d.capag > 0 && <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>≈ {(0.5 + d.capag * 0.05).toFixed(1)}h/mês de gestão CP</div>}
+                  {d.capag > 200 && <div style={{ fontSize:10, color:'#EF4444', marginTop:2 }}>⚠ Mais de 200 pagamentos/mês é incomum. Confira se preencheu certo.</div>}
                 </Campo>
-                <Campo label="Cobranças a receber / mês" hint="Número de clientes que pagam ao seu cliente mensalmente.">
+                <Campo label="Clientes que pagam manualmente / mês" hint="Quantos clientes do seu cliente pagam por boleto ou PIX avulso, e você precisa conferir um por um. NÃO inclua vendas por maquininha, Mercado Pago ou outras plataformas — essas vão no campo 'Outras plataformas' abaixo.">
                   <input className="prec-input" type="number" value={d.carec} onChange={num('carec')} min="0" />
                   {d.carec > 0 && <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>≈ {(0.5 + d.carec * 0.04).toFixed(1)}h/mês de gestão CR</div>}
+                  {d.carec > 500 && <div style={{ fontSize:10, color:'#EF4444', marginTop:2 }}>⚠ Mais de 500 cobranças individuais é muito alto. Vendas por plataforma (Mercado Pago, cartão) não entram aqui.</div>}
                 </Campo>
-                <Campo label="Movimentações no extrato / mês" hint="Se não souber, some contas a pagar + contas a receber e multiplique por 1,3.">
+                <Campo label="Movimentações no extrato / mês" hint="Quantidade de linhas no extrato bancário por mês. Se não souber: some pagamentos + recebimentos e multiplique por 1,3. Ex: 50 pagamentos + 30 recebimentos = 80 × 1,3 = ~100 movimentações. Raramente passa de 500 num cliente pequeno.">
                   <input className="prec-input" type="number" value={d.mov} onChange={num('mov')} min="0" />
                   {d.mov > 0 && d.bancos > 0 && <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>impacta conciliação: +{(d.mov * 0.003).toFixed(1)}h</div>}
+                  {d.mov > 2000 && <div style={{ fontSize:10, color:'#EF4444', marginTop:2 }}>⚠ Mais de 2.000 movimentações é muito alto para um único CNPJ. Confira se preencheu certo.</div>}
                 </Campo>
                 <Campo label="Notas fiscais a emitir / mês" hint="NFS-e de serviço ou NF-e de produto. Zero se não for emitir.">
                   <input className="prec-input" type="number" value={d.nfs} onChange={num('nfs')} min="0" />
@@ -602,11 +605,11 @@ export default function PrecificacaoPage() {
                     <option value="1">Sim — Asaas, Iugu, Receba Fácil…</option>
                   </select>
                 </Campo>
-                <Campo label="Usa outras plataformas de venda?" hint="Ex: Mercado Livre, Shopee, PagSeguro, Mercado Pago. Cada plataforma precisa de conciliação separada.">
+                <Campo label="Vende por plataformas digitais ou maquininha?" hint="Ex: Mercado Livre, Shopee, iFood, PagSeguro, Mercado Pago, cartão de crédito. Cada plataforma faz repasses em lote e precisa de conciliação separada. Se recebe via Pix avulso de muitos clientes, marque também.">
                   <select className="prec-select" value={d.plat} onChange={sel('plat')}>
-                    <option value="0">Não</option>
-                    <option value="1">Sim — 1 plataforma</option>
-                    <option value="2">Sim — 2 ou mais</option>
+                    <option value="0">Não — recebe só por boleto/TED avulso</option>
+                    <option value="1">Sim — 1 plataforma ou maquininha</option>
+                    <option value="2">Sim — 2 ou mais plataformas</option>
                   </select>
                 </Campo>
                 <Campo label="Precisa de folha de pagamento?">
@@ -745,7 +748,7 @@ export default function PrecificacaoPage() {
                 ['Contas bancárias', calc.d.bancos, calc.d.bancos >= 4 ? 'alto' : calc.d.bancos >= 2 ? 'médio' : 'baixo'],
                 ['Movimentações / mês', calc.d.mov, calc.d.mov > 500 ? 'alto' : calc.d.mov > 150 ? 'médio' : 'baixo'],
                 ['Contas a pagar', `${calc.d.capag} títulos/mês`],
-                ['Contas a receber', `${calc.d.carec} recebíveis/mês`],
+                ['Cobranças manuais a receber', `${calc.d.carec} cliente${calc.d.carec > 1 ? 's' : ''} com cobrança individual`],
                 ['NFs / boletos', `${calc.d.nfs} NFs · ${calc.d.boletos} boletos`],
                 ['Complexidade operacional', calc.complexLabel, calc.complexidade < 40 ? 'baixo' : calc.complexidade < 70 ? 'médio' : 'alto'],
                 ['Risco operacional', calc.riscoLabel, calc.risco < 20 ? 'baixo' : calc.risco < 40 ? 'médio' : 'alto'],
