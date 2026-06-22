@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { supabase } from '../lib/supabase'
 import LOGO_SRC from '../assets/logo-fluxe-white.png'
 
 // ── Conteúdo ───────────────────────────────────────────────────────────────
@@ -63,8 +64,10 @@ export default function LoginPage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const formRef = useRef(null)
 
-  const { signIn, signUp, resetPassword } = useAuthStore()
+  const { signIn, signUp, resetPassword, mfaChallenge, mfaVerifyLogin } = useAuthStore()
   const navigate = useNavigate()
+  const [mfaStep, setMfaStep] = useState(null) // { factorId, challengeId }
+  const [mfaCode, setMfaCode] = useState('')
 
   useEffect(() => {
     const prev = {
@@ -107,8 +110,22 @@ export default function LoginPage() {
     setMsg('')
     if (formMode === 'login') {
       const { error } = await signIn(email, password)
-      if (error) { setMsg(toStr(error)); setLoading(false) }
-      else navigate('/')
+      if (error) { setMsg(toStr(error)); setLoading(false); return }
+      // Verifica se o usuário tem 2FA ativo
+      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+      if (aal?.nextLevel === 'aal2' && aal?.currentLevel !== 'aal2') {
+        // Tem 2FA — inicia o desafio e pede o código
+        const { factorId, challengeId, error: mfaErr } = await mfaChallenge()
+        if (mfaErr) { setMsg('Erro ao iniciar verificação 2FA: ' + mfaErr.message); setLoading(false); return }
+        setMfaStep({ factorId, challengeId })
+        setLoading(false)
+      } else {
+        navigate('/')
+      }
+    } else if (formMode === 'login_mfa') {
+      const { error } = await mfaVerifyLogin(mfaStep.factorId, mfaStep.challengeId, mfaCode.replace(/\s/g, ''))
+      if (error) { setMsg('Código incorreto ou expirado. Tente novamente.'); setLoading(false); return }
+      navigate('/')
     } else if (formMode === 'signup') {
       if (!nome || !nomeEmpresa) { setMsg('Preencha todos os campos'); setLoading(false); return }
       if (!aceitouTermos) { setMsg('Aceite os termos de uso para continuar'); setLoading(false); return }
@@ -277,13 +294,35 @@ export default function LoginPage() {
 
               <div style={{ marginBottom: 22 }}>
                 <div style={{ fontSize: 16, fontWeight: 700, color: '#F1F5F9', marginBottom: 4 }}>
-                  {formMode === 'login' ? 'Bem-vindo(a) de volta' : formMode === 'signup' ? 'Crie sua conta grátis' : 'Recuperar senha'}
+                  {mfaStep ? '🔐 Verificação em duas etapas' : formMode === 'login' ? 'Bem-vindo(a) de volta' : formMode === 'signup' ? 'Crie sua conta grátis' : 'Recuperar senha'}
                 </div>
                 <div style={{ fontSize: 12, color: '#64748B' }}>
-                  {formMode === 'login' ? 'Acesse sua plataforma Fluxe BPO' : formMode === 'signup' ? '7 dias grátis, sem cartão de crédito' : 'Enviaremos um link para seu e-mail'}
+                  {mfaStep ? 'Abra o app autenticador e digite o código de 6 dígitos' : formMode === 'login' ? 'Acesse sua plataforma Fluxe BPO' : formMode === 'signup' ? '7 dias grátis, sem cartão de crédito' : 'Enviaremos um link para seu e-mail'}
                 </div>
               </div>
 
+              {mfaStep ? (
+                <form onSubmit={(e) => { e.preventDefault(); setFormMode('login_mfa'); handleSubmit(e) }}>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.07em' }}>Código do autenticador</label>
+                    <input
+                      type="text" inputMode="numeric" pattern="[0-9 ]*" maxLength={7}
+                      value={mfaCode} onChange={e => setMfaCode(e.target.value)}
+                      placeholder="000 000" autoFocus autoComplete="one-time-code"
+                      style={{ width: '100%', padding: '13px 14px', borderRadius: 10, border: '1.5px solid rgba(99,102,241,.3)', background: 'rgba(255,255,255,.08)', color: '#F1F5F9', fontSize: 24, fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box', textAlign: 'center', letterSpacing: '0.3em' }}
+                    />
+                  </div>
+                  {msg && <div style={{ fontSize: 12, color: '#F87171', marginBottom: 12 }}>{msg}</div>}
+                  <button type="submit" disabled={loading || mfaCode.replace(/\s/g,'').length < 6}
+                    style={{ width: '100%', padding: '13px', borderRadius: 10, border: 'none', background: mfaCode.replace(/\s/g,'').length >= 6 ? 'linear-gradient(135deg,#6366F1,#8B5CF6)' : '#334155', color: '#fff', fontWeight: 700, fontSize: 14, cursor: mfaCode.replace(/\s/g,'').length >= 6 ? 'pointer' : 'not-allowed' }}>
+                    {loading ? 'Verificando...' : 'Verificar e entrar →'}
+                  </button>
+                  <button type="button" onClick={() => { setMfaStep(null); setMfaCode(''); setMsg('') }}
+                    style={{ width: '100%', marginTop: 8, padding: '10px', borderRadius: 10, border: '1px solid #334155', background: 'transparent', color: '#64748B', fontSize: 12, cursor: 'pointer' }}>
+                    ← Voltar ao login
+                  </button>
+                </form>
+              ) : (
               <form onSubmit={handleSubmit}>
                 {formMode === 'signup' && (
                   <>
@@ -344,8 +383,10 @@ export default function LoginPage() {
                   {loading ? 'Aguarde...' : formMode === 'login' ? 'Entrar no Fluxe BPO →' : formMode === 'signup' ? 'Criar conta grátis →' : 'Enviar link de recuperação'}
                 </button>
               </form>
+              )} {/* fim do ternário mfaStep */}
 
-              <div style={{ textAlign: 'center', marginTop: 14, fontSize: 12 }}>
+              {!mfaStep && (
+                <div style={{ textAlign: 'center', marginTop: 14, fontSize: 12 }}>
                 {formMode === 'login' ? (
                   <>
                     <button onClick={() => { setFormMode('reset'); setMsg('') }}
@@ -365,6 +406,7 @@ export default function LoginPage() {
                   </button>
                 )}
               </div>
+              )}
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,.05)' }}>
                 <span style={{ fontSize: 10, color: '#334155' }}>🔒 Dados protegidos e isolados por empresa</span>

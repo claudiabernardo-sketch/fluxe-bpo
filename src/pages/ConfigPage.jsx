@@ -253,6 +253,48 @@ export default function ConfigPage() {
   const createFeriado = useCreateFeriado()
   const deleteFeriado = useDeleteFeriado()
   const [novoFeriado, setNovoFeriado] = useState({ data:'', descricao:'' })
+
+  // ── 2FA ──────────────────────────────────────────────────
+  const [mfaFactors, setMfaFactors] = useState([])
+  const [mfaLoading, setMfaLoading] = useState(false)
+  const [mfaEnrolling, setMfaEnrolling] = useState(null) // { factorId, qrCode, secret }
+  const [mfaCode, setMfaCode] = useState('')
+  const [mfaMsg, setMfaMsg] = useState('')
+  const { mfaListFactors, mfaEnroll, mfaVerifyEnroll, mfaUnenroll } = useAuthStore()
+
+  useEffect(() => {
+    mfaListFactors().then(({ factors }) => setMfaFactors(factors))
+  }, [])
+
+  async function handleEnroll() {
+    setMfaLoading(true); setMfaMsg('')
+    const { factorId, qrCode, secret, error } = await mfaEnroll()
+    if (error) { setMfaMsg('Erro ao iniciar configuração: ' + error.message); setMfaLoading(false); return }
+    setMfaEnrolling({ factorId, qrCode, secret })
+    setMfaLoading(false)
+  }
+
+  async function handleVerifyEnroll() {
+    setMfaLoading(true); setMfaMsg('')
+    const { error } = await mfaVerifyEnroll(mfaEnrolling.factorId, mfaCode.replace(/\s/g,''))
+    if (error) { setMfaMsg('Código incorreto. Tente novamente.'); setMfaLoading(false); return }
+    setMfaEnrolling(null); setMfaCode('')
+    const { factors } = await mfaListFactors()
+    setMfaFactors(factors)
+    setMfaMsg('✅ 2FA ativado com sucesso!')
+    setMfaLoading(false)
+  }
+
+  async function handleUnenroll(factorId) {
+    if (!confirm('Desativar o 2FA? Você ficará menos protegido.')) return
+    setMfaLoading(true)
+    const { error } = await mfaUnenroll(factorId)
+    if (error) { setMfaMsg('Erro ao desativar: ' + error.message); setMfaLoading(false); return }
+    const { factors } = await mfaListFactors()
+    setMfaFactors(factors)
+    setMfaMsg('')
+    setMfaLoading(false)
+  }
   const [propForm, setPropForm] = useState({
     quemSomos:'', instagram:'', representante:'', cargo:'', cpf_rep:'', endereco:'', cidade:'', foro:'',
     num1_valor:'+120', num1_label:'Rotinas financeiras geridas',
@@ -456,7 +498,7 @@ export default function ConfigPage() {
 
       {/* Tabs */}
       <div style={{ display:'flex', gap:4, marginBottom:18, borderBottom:'1px solid #E2E8F0', paddingBottom:0 }}>
-        {[['empresa','🏢 Empresa'],['equipe','👥 Equipe'],['custoHora','💰 Custo/Hora'],['operacional','⚙️ Operacional'],['proposta','📊 Proposta'],...(profile?.perfil==='admin'?[['plano','💳 Meu Plano']]:[]  )].map(([id, label]) => (
+        {[['empresa','🏢 Empresa'],['equipe','👥 Equipe'],['custoHora','💰 Custo/Hora'],['operacional','⚙️ Operacional'],['seguranca','🔐 Segurança'],['proposta','📊 Proposta'],...(profile?.perfil==='admin'?[['plano','💳 Meu Plano']]:[]  )].map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{ padding:'8px 16px', border:'none', background:'transparent', cursor:'pointer', fontSize:12, fontWeight:600, color: tab===id?'#6366F1':'#94A3B8', borderBottom: tab===id?'2px solid #6366F1':'2px solid transparent', marginBottom:-1 }}>
             {label}
           </button>
@@ -682,6 +724,80 @@ export default function ConfigPage() {
       )}
 
       {/* ABA PROPOSTA */}
+      {tab === 'seguranca' && (
+        <Card>
+          <CardHeader title="Verificação em duas etapas (2FA)" icon="🔐" />
+          <div style={{ padding:'8px 16px 20px' }}>
+            <div style={{ fontSize:12, color:'#64748B', marginBottom:16, lineHeight:1.6 }}>
+              Com o 2FA ativo, além da senha você precisa informar um código gerado por um app autenticador (Google Authenticator, Authy, etc) toda vez que fizer login.
+              Isso protege sua conta mesmo que sua senha seja descoberta.
+            </div>
+
+            {mfaMsg && (
+              <div style={{ padding:'10px 14px', borderRadius:10, marginBottom:14, fontSize:12, fontWeight:600,
+                background: mfaMsg.includes('✅') ? '#F0FDF4' : '#FEF2F2',
+                color: mfaMsg.includes('✅') ? '#15803D' : '#991B1B',
+                border: `1px solid ${mfaMsg.includes('✅') ? '#BBF7D0' : '#FECDD3'}` }}>
+                {mfaMsg}
+              </div>
+            )}
+
+            {mfaEnrolling ? (
+              <div style={{ maxWidth:400 }}>
+                <div style={{ fontWeight:700, fontSize:13, color:'#0F172A', marginBottom:12 }}>
+                  📱 Configure o app autenticador
+                </div>
+                <div style={{ fontSize:12, color:'#475569', marginBottom:12, lineHeight:1.6 }}>
+                  1. Instale o <strong>Google Authenticator</strong> ou <strong>Authy</strong> no celular<br/>
+                  2. Escaneie o QR code abaixo (ou digite a chave manualmente)<br/>
+                  3. Digite o código de 6 dígitos que aparecer no app
+                </div>
+                <img src={mfaEnrolling.qrCode} alt="QR Code 2FA" style={{ width:180, height:180, border:'1px solid #E2E8F0', borderRadius:12, display:'block', marginBottom:12 }} />
+                <div style={{ fontSize:10, color:'#94A3B8', fontFamily:'monospace', background:'#F8FAFC', padding:'6px 10px', borderRadius:6, marginBottom:14, wordBreak:'break-all' }}>
+                  Chave manual: {mfaEnrolling.secret}
+                </div>
+                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'.07em' }}>Código do app *</label>
+                <input type="text" inputMode="numeric" maxLength={7} value={mfaCode}
+                  onChange={e=>setMfaCode(e.target.value)} placeholder="000 000" autoFocus
+                  style={{ ...fi, fontFamily:'monospace', fontSize:20, letterSpacing:'0.3em', textAlign:'center', marginBottom:12 }} />
+                <div style={{ display:'flex', gap:8 }}>
+                  <Btn variant="primary" disabled={mfaLoading || mfaCode.replace(/\s/g,'').length < 6} onClick={handleVerifyEnroll}>
+                    {mfaLoading ? 'Verificando...' : '✓ Ativar 2FA'}
+                  </Btn>
+                  <Btn onClick={() => { setMfaEnrolling(null); setMfaCode('') }}>Cancelar</Btn>
+                </div>
+              </div>
+            ) : mfaFactors.length > 0 ? (
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px', background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:10, marginBottom:12 }}>
+                  <span style={{ fontSize:20 }}>✅</span>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:700, color:'#15803D' }}>2FA ativo</div>
+                    <div style={{ fontSize:11, color:'#16A34A' }}>Sua conta está protegida com verificação em duas etapas.</div>
+                  </div>
+                </div>
+                <Btn disabled={mfaLoading} onClick={() => handleUnenroll(mfaFactors[0].id)}>
+                  {mfaLoading ? 'Aguarde...' : '🗑 Desativar 2FA'}
+                </Btn>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px', background:'#FFFBEB', border:'1px solid #FDE68A', borderRadius:10, marginBottom:14 }}>
+                  <span style={{ fontSize:20 }}>⚠️</span>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:700, color:'#92400E' }}>2FA desativado</div>
+                    <div style={{ fontSize:11, color:'#B45309' }}>Recomendamos ativar para proteger o acesso ao cofre de senhas.</div>
+                  </div>
+                </div>
+                <Btn variant="primary" disabled={mfaLoading} onClick={handleEnroll}>
+                  {mfaLoading ? 'Aguarde...' : '🔐 Ativar verificação em duas etapas'}
+                </Btn>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
       {tab === 'proposta' && (
         <Card>
           <CardHeader title="Configurações da proposta comercial" icon="📊" />

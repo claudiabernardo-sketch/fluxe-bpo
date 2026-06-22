@@ -98,6 +98,56 @@ export const useAuthStore = create((set, get) => ({
     return { error }
   },
 
+  // ── MFA / 2FA ────────────────────────────────────────────
+  mfaEnroll: async () => {
+    // Retorna { qrCode, secret, factorId } pra mostrar pro usuário configurar
+    const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', issuer: 'Fluxe BPO' })
+    if (error) return { error }
+    return {
+      factorId: data.id,
+      qrCode: data.totp.qr_code,
+      secret: data.totp.secret,
+    }
+  },
+
+  mfaVerifyEnroll: async (factorId, code) => {
+    // Confirma que o usuário digitou o código certo do app autenticador
+    const { data: challenge, error: challengeErr } = await supabase.auth.mfa.challenge({ factorId })
+    if (challengeErr) return { error: challengeErr }
+    const { error } = await supabase.auth.mfa.verify({ factorId, challengeId: challenge.id, code })
+    return { error }
+  },
+
+  mfaUnenroll: async (factorId) => {
+    const { error } = await supabase.auth.mfa.unenroll({ factorId })
+    return { error }
+  },
+
+  mfaListFactors: async () => {
+    const { data, error } = await supabase.auth.mfa.listFactors()
+    if (error) return { factors: [] }
+    return { factors: data?.totp || [] }
+  },
+
+  mfaChallenge: async () => {
+    // Chamado no login quando o usuário tem 2FA ativo
+    const { data: factors } = await supabase.auth.mfa.listFactors()
+    const totp = factors?.totp?.[0]
+    if (!totp) return { error: { message: 'Nenhum fator 2FA cadastrado' } }
+    const { data: challenge, error } = await supabase.auth.mfa.challenge({ factorId: totp.id })
+    if (error) return { error }
+    return { factorId: totp.id, challengeId: challenge.id }
+  },
+
+  mfaVerifyLogin: async (factorId, challengeId, code) => {
+    const { error } = await supabase.auth.mfa.verify({ factorId, challengeId, code })
+    if (error) return { error }
+    // Após verificar, recarrega o perfil com a sessão AAL2
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) await get().loadProfile(user)
+    return { error: null }
+  },
+
   temPermissao: (acao) => {
     const perfil = get().profile?.perfil || 'sem_perfil'
     const map = {
