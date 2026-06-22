@@ -268,8 +268,6 @@ function calcularMetodologia(d) {
   if (d.plat > 0) add('Conciliação outras plataformas', d.plat * 1.2, 'médio',
     `${d.plat} plataforma${d.plat > 1 ? 's' : ''} (PagSeguro, Mercado Pago…)`)
 
-  if (d.folha && d.funcs > 0) add('Folha de pagamento / DP', 1.0 + d.funcs * 0.25, calcPeso(1.0 + d.funcs * 0.25, 8),
-    `${d.funcs} funcionário${d.funcs > 1 ? 's' : ''} + pró-labore`)
 
   if (d.contab) add('Envio de documentos à contabilidade', 0.5, 'baixo', 'Organização e envio mensal')
 
@@ -317,7 +315,6 @@ function calcularMetodologia(d) {
 
   let risco = 0
   if (d.agend) risco += 20
-  if (d.folha) risco += 15
   if (d.nfs > 50) risco += 10
   if (d.cnpjs > 2) risco += 15
   if (d.consult > 0) risco += 10
@@ -539,9 +536,6 @@ export default function PrecificacaoPage() {
                 <Campo label="Quantos CNPJs você vai gerenciar?" hint="Cada CNPJ = um conjunto completo de contas e obrigações.">
                   <input className="prec-input" type="number" value={d.cnpjs} onChange={num('cnpjs')} min="1" />
                 </Campo>
-                <Campo label="Funcionários (incluindo sócios com pró-labore)" hint="Só preencha se você for cuidar da folha de pagamento.">
-                  <input className="prec-input" type="number" value={d.funcs} onChange={num('funcs')} min="0" />
-                </Campo>
               </div>
 
               {/* BLOCO 2: O QUE VOCÊ VAI FAZER */}
@@ -610,12 +604,6 @@ export default function PrecificacaoPage() {
                     <option value="0">Não — recebe só por boleto/TED avulso</option>
                     <option value="1">Sim — 1 plataforma ou maquininha</option>
                     <option value="2">Sim — 2 ou mais plataformas</option>
-                  </select>
-                </Campo>
-                <Campo label="Precisa de folha de pagamento?">
-                  <select className="prec-select" value={d.folha} onChange={sel('folha')}>
-                    <option value="0">Não</option>
-                    <option value="1">Sim — eu processo a folha</option>
                   </select>
                 </Campo>
                 <Campo label="Envia documentos para contabilidade?">
