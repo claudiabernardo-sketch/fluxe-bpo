@@ -721,11 +721,10 @@ export function useCreateLeadInteracao() {
   return useMutation({
     mutationFn: async ({ lead_id, tipo, nota, proximo_contato }) => {
       const empresa_id = useAuthStore.getState().empresa?.id
-      const user_id   = useAuthStore.getState().user?.id
       if (!empresa_id) throw new Error('Sessão inválida')
       const { data, error } = await supabase
         .from('lead_interacoes')
-        .insert({ lead_id, tipo, nota, empresa_id, criado_por: user_id })
+        .insert({ lead_id, tipo, nota, empresa_id })
         .select().single()
       if (error) throw error
       // Atualiza próximo follow-up no lead se informado

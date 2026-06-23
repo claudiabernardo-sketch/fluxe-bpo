@@ -595,30 +595,32 @@ export default function CRMPage() {
             const diasFU = diasAte(l.proximo_contato)
             const fuVencido = diasFU !== null && diasFU <= 0
             return (
-              <div key={l.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px',
+              <div key={l.id} style={{ display:'flex', flexDirection:'column', padding:'10px 14px',
                 background:'#fff', border:`1px solid ${fuVencido ? '#FECACA' : '#E2E8F0'}`, borderRadius:10 }}>
-                <div style={{ width:10, height:10, borderRadius:'50%', background:et.color, flexShrink:0 }} />
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontWeight:600, fontSize:13, color:'#0F172A' }}>{l.nome}</div>
-                  {l.segmento && <div style={{ fontSize:11, color:'#94A3B8' }}>{l.segmento}</div>}
-                </div>
-                <div style={{ fontSize:11, color:'#15803D', fontWeight:600, flexShrink:0 }}>{l.valor_estimado > 0 ? fmtR(l.valor_estimado)+'/mês' : '—'}</div>
-                <div style={{ fontSize:10, padding:'2px 8px', borderRadius:99, fontWeight:700, background:et.color+'22', color:et.color, flexShrink:0 }}>{et.label}</div>
-                {l.proximo_contato && (
-                  <div style={{ fontSize:10, color: fuVencido ? '#EF4444' : '#64748B', flexShrink:0 }}>
-                    {fuVencido ? '🔴' : '📅'} {new Date(l.proximo_contato+'T12:00:00').toLocaleDateString('pt-BR')}
+                <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                  <div style={{ width:10, height:10, borderRadius:'50%', background:et.color, flexShrink:0 }} />
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontWeight:600, fontSize:13, color:'#0F172A' }}>{l.nome}</div>
+                    {l.segmento && <div style={{ fontSize:11, color:'#94A3B8' }}>{l.segmento}</div>}
                   </div>
-                )}
-                <button onClick={() => openEdit(l)}
-                  style={{ border:'1px solid #E2E8F0', background:'#fff', borderRadius:6, padding:'4px 10px', cursor:'pointer', fontSize:11, color:'#475569', flexShrink:0 }}>
-                  Editar
-                </button>
-                <button onClick={() => abrirPrecificacao(l)}
-                  style={{ border:'1px solid #DDD6FE', background:'#EEF2FF', borderRadius:6, padding:'4px 10px', cursor:'pointer', fontSize:11, color:'#6366F1', fontWeight:600, flexShrink:0 }}>
-                  💰 Proposta
-                </button>
+                  <div style={{ fontSize:11, color:'#15803D', fontWeight:600, flexShrink:0 }}>{l.valor_estimado > 0 ? fmtR(l.valor_estimado)+'/mês' : '—'}</div>
+                  <div style={{ fontSize:10, padding:'2px 8px', borderRadius:99, fontWeight:700, background:et.color+'22', color:et.color, flexShrink:0 }}>{et.label}</div>
+                  {l.proximo_contato && (
+                    <div style={{ fontSize:10, color: fuVencido ? '#EF4444' : '#64748B', flexShrink:0 }}>
+                      {fuVencido ? '🔴' : '📅'} {new Date(l.proximo_contato+'T12:00:00').toLocaleDateString('pt-BR')}
+                    </div>
+                  )}
+                  <button onClick={() => openEdit(l)}
+                    style={{ border:'1px solid #E2E8F0', background:'#fff', borderRadius:6, padding:'4px 10px', cursor:'pointer', fontSize:11, color:'#475569', flexShrink:0 }}>
+                    Editar
+                  </button>
+                  <button onClick={() => abrirPrecificacao(l)}
+                    style={{ border:'1px solid #DDD6FE', background:'#EEF2FF', borderRadius:6, padding:'4px 10px', cursor:'pointer', fontSize:11, color:'#6366F1', fontWeight:600, flexShrink:0 }}>
+                    💰 Proposta
+                  </button>
+                </div>
+                <LinhaDoTempo lead={l} />
               </div>
-              <LinhaDoTempo lead={l} />
             )
           })}
           {leads.filter(l => l.etapa !== 'perdido').length === 0 && (
