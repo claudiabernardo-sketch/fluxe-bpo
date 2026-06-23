@@ -1053,6 +1053,22 @@ export default function PrecificacaoPage() {
                 w.document.close()
                 setTimeout(() => { w.print() }, 500)
               }}>🖨 Imprimir proposta</button>
+              <button className="prec-btn" style={{ background:'#00C4CC', borderColor:'#00C4CC', color:'#fff' }} onClick={() => {
+                window.open('https://canva.link/e0kovr95i9qfsza', '_blank')
+                const dados = [
+                  `CLIENTE: ${calc.d.nome || '—'}`,
+                  `DATA: ${new Date().toLocaleDateString('pt-BR')}`,
+                  ``,
+                  `INVESTIMENTO MENSAL: ${fmt(parseFloat(valorProposta))}`,
+                  ``,
+                  `SERVIÇOS INCLUÍDOS:`,
+                  ...calc.items.map(it => `• ${it.nome}`),
+                  ``,
+                  `APRESENTADA POR: ${empresa?.nome || 'Seu BPO'}`,
+                  empresa?.slogan ? `"${empresa.slogan}"` : '',
+                ].filter(l => l !== undefined).join('\n')
+                navigator.clipboard.writeText(dados).then(() => alert('✓ Dados copiados! Cole no seu template do Canva.'))
+              }}>🎨 Abrir no Canva</button>
               <button className="prec-btn prec-btn-primary" onClick={() => irPara(6)}>Gerar contrato →</button>
             </div>
           </div>
