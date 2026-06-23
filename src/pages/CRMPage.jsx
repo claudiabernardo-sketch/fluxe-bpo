@@ -341,7 +341,7 @@ export default function CRMPage() {
       segmento: lead.segmento || '',
       valor_estimado: lead.valor_estimado || 0,
     }))
-    window.open('/precificacao', '_blank')
+    window.open('/prec', '_blank')
   }
 
   const inputStyle = { width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'inherit', boxSizing:'border-box' }
