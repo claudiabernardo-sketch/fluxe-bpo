@@ -1,4 +1,4 @@
-import { useLeads, useCreateLead, useUpdateLead, useConvertLeadToClient } from '../hooks/useData'
+import { useLeads, useCreateLead, useUpdateLead, useConvertLeadToClient, useLeadInteracoes, useCreateLeadInteracao, useDeleteLeadInteracao } from '../hooks/useData'
 import { Card, Loader, EmptyState, Btn, fmtR } from '../components/ui'
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -164,6 +164,95 @@ function diasAte(dateStr) {
   const hoje = new Date(); hoje.setHours(0,0,0,0)
   const alvo = new Date(dateStr + 'T12:00:00')
   return Math.round((alvo - hoje) / 86400000)
+}
+
+const TIPOS_INTERACAO = [
+  { id:'ligacao',  icon:'📞', label:'Ligação' },
+  { id:'whatsapp', icon:'💬', label:'WhatsApp' },
+  { id:'email',    icon:'📧', label:'Email' },
+  { id:'reuniao',  icon:'👥', label:'Reunião' },
+  { id:'nota',     icon:'📝', label:'Nota' },
+]
+
+function LinhaDoTempo({ lead }) {
+  const { data: interacoes = [], isLoading } = useLeadInteracoes(lead.id)
+  const criar = useCreateLeadInteracao()
+  const deletar = useDeleteLeadInteracao()
+  const [form, setForm] = useState({ tipo:'whatsapp', nota:'', proximo_contato:'' })
+  const [expandido, setExpandido] = useState(false)
+
+  async function salvar() {
+    if (!form.nota.trim()) return
+    await criar.mutateAsync({ lead_id: lead.id, ...form })
+    setForm({ tipo:'whatsapp', nota:'', proximo_contato:'' })
+  }
+
+  const fi = { width:'100%', padding:'6px 8px', border:'1px solid #E2E8F0', borderRadius:6, fontSize:11, fontFamily:'inherit', boxSizing:'border-box' }
+
+  return (
+    <div style={{ marginTop:8, borderTop:'1px solid #F1F5F9', paddingTop:8 }}>
+      <button onClick={() => setExpandido(e => !e)}
+        style={{ background:'none', border:'none', cursor:'pointer', fontSize:10, color:'#6366F1', fontWeight:700, padding:0 }}>
+        {expandido ? '▲ Fechar histórico' : `▼ Histórico${interacoes.length > 0 ? ` (${interacoes.length})` : ''}`}
+      </button>
+
+      {expandido && (
+        <div style={{ marginTop:8 }}>
+          {/* Form novo registro */}
+          <div style={{ background:'#F8FAFC', borderRadius:8, padding:'8px', marginBottom:10, border:'1px solid #E2E8F0' }}>
+            <div style={{ display:'flex', gap:4, marginBottom:6, flexWrap:'wrap' }}>
+              {TIPOS_INTERACAO.map(t => (
+                <button key={t.id} onClick={() => setForm(f => ({...f, tipo:t.id}))}
+                  style={{ padding:'3px 8px', borderRadius:99, fontSize:10, cursor:'pointer', border:'none', fontWeight:600,
+                    background: form.tipo===t.id ? '#6366F1' : '#E2E8F0',
+                    color: form.tipo===t.id ? '#fff' : '#64748B' }}>
+                  {t.icon} {t.label}
+                </button>
+              ))}
+            </div>
+            <textarea value={form.nota} onChange={e => setForm(f => ({...f, nota:e.target.value}))}
+              placeholder="O que aconteceu? O que o cliente disse?"
+              style={{ ...fi, height:56, resize:'none', marginBottom:6 }} />
+            <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:9, color:'#94A3B8', marginBottom:2 }}>Próximo follow-up</div>
+                <input type="date" value={form.proximo_contato} onChange={e => setForm(f => ({...f, proximo_contato:e.target.value}))} style={fi} />
+              </div>
+              <button onClick={salvar} disabled={!form.nota.trim() || criar.isPending}
+                style={{ padding:'6px 12px', borderRadius:6, border:'none', background:'#6366F1', color:'#fff', fontSize:10, fontWeight:700, cursor:'pointer', flexShrink:0, alignSelf:'flex-end' }}>
+                {criar.isPending ? '...' : '+ Registrar'}
+              </button>
+            </div>
+          </div>
+
+          {/* Timeline */}
+          {isLoading ? (
+            <div style={{ fontSize:10, color:'#94A3B8', textAlign:'center', padding:'8px 0' }}>Carregando...</div>
+          ) : interacoes.length === 0 ? (
+            <div style={{ fontSize:10, color:'#94A3B8', textAlign:'center', padding:'8px 0' }}>Nenhuma interação registrada ainda.</div>
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              {interacoes.map(i => {
+                const tipo = TIPOS_INTERACAO.find(t => t.id === i.tipo) || TIPOS_INTERACAO[4]
+                const data = new Date(i.criado_em).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })
+                return (
+                  <div key={i.id} style={{ display:'flex', gap:8, alignItems:'flex-start' }}>
+                    <span style={{ fontSize:14, flexShrink:0, marginTop:1 }}>{tipo.icon}</span>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:11, color:'#0F172A', lineHeight:1.4 }}>{i.nota}</div>
+                      <div style={{ fontSize:9, color:'#94A3B8', marginTop:2 }}>{data}{i.usuarios?.nome ? ` · ${i.usuarios.nome}` : ''}</div>
+                    </div>
+                    <button onClick={() => deletar.mutate({ id:i.id, lead_id:lead.id })}
+                      style={{ border:'none', background:'none', cursor:'pointer', color:'#CBD5E1', fontSize:12, padding:0, flexShrink:0 }}>×</button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function CRMPage() {
@@ -487,6 +576,7 @@ export default function CRMPage() {
                             <span style={{ fontSize:9, padding:'2px 8px', borderRadius:5, background:'#DCFCE7', color:'#15803D', fontWeight:700 }}>✓ Cliente</span>
                           )}
                         </div>
+                        <LinhaDoTempo lead={l} />
                       </div>
                     )
                   })}

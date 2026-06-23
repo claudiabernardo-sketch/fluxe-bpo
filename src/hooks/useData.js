@@ -695,3 +695,57 @@ export function useDeleteFeriado() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['feriados'] }),
   })
 }
+
+// ── INTERAÇÕES DE LEAD (linha do tempo) ──────────────────────
+export function useLeadInteracoes(leadId) {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['lead_interacoes', leadId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lead_interacoes')
+        .select('*, usuarios(nome)')
+        .eq('lead_id', leadId)
+        .order('criado_em', { ascending: false })
+        .limit(50)
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 30_000,
+    enabled: !!leadId && !!empresa?.id,
+  })
+}
+
+export function useCreateLeadInteracao() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ lead_id, tipo, nota, proximo_contato }) => {
+      const empresa_id = useAuthStore.getState().empresa?.id
+      const user_id   = useAuthStore.getState().user?.id
+      if (!empresa_id) throw new Error('Sessão inválida')
+      const { data, error } = await supabase
+        .from('lead_interacoes')
+        .insert({ lead_id, tipo, nota, empresa_id, criado_por: user_id })
+        .select().single()
+      if (error) throw error
+      // Atualiza próximo follow-up no lead se informado
+      if (proximo_contato) {
+        await supabase.from('leads').update({ proximo_contato }).eq('id', lead_id)
+        qc.invalidateQueries({ queryKey: ['leads'] })
+      }
+      return data
+    },
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['lead_interacoes', vars.lead_id] }),
+  })
+}
+
+export function useDeleteLeadInteracao() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, lead_id }) => {
+      const { error } = await supabase.from('lead_interacoes').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['lead_interacoes', vars.lead_id] }),
+  })
+}
