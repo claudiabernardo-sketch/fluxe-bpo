@@ -915,9 +915,32 @@ export default function PrecificacaoPage() {
               {/* Serviços incluídos */}
               <div className="prec-scope-block">
                 <div className="prec-scope-title"><span>📋</span> Serviços incluídos</div>
-                {calc.items.map((it, i) => (
-                  <div key={i} className="prec-scope-item">{it.nome} — {it.horas}h/mês</div>
-                ))}
+                {calc.items.map((it, i) => {
+                  // Monta descrição com quantidades em vez de horas
+                  const d = calc.d
+                  const qtd = {
+                    'Conciliação bancária':          d.bancos > 0 ? `${d.bancos} conta${d.bancos>1?'s':''} bancária${d.bancos>1?'s':''}` : null,
+                    'Contas a pagar':                d.capag > 0 ? `até ${d.capag} pagamentos/mês` : null,
+                    'Cobranças manuais a receber':   d.carec > 0 ? `até ${d.carec} cobranças/mês` : null,
+                    'Agendamento bancário':          d.agend > 0 && d.capag > 0 ? `${d.capag} agendamentos/mês` : null,
+                    'Emissão de notas fiscais':      d.nfs > 0 ? `até ${d.nfs} NFs/mês` : null,
+                    'Emissão de boletos':            d.boletos > 0 ? `até ${d.boletos} boletos/mês` : null,
+                    'Conciliação sistema de cobrança': d.sistcob > 0 ? 'Asaas / Iugu ou similar' : null,
+                    'Conciliação maquininha/cartão': d.cartao > 0 ? 'conciliação mensal' : null,
+                    'Conciliação outras plataformas': d.plat > 0 ? `${d.plat} plataforma${d.plat>1?'s':''}` : null,
+                    'Envio de documentos à contabilidade': 'organização e envio mensal',
+                    'Relatórios gerenciais': d.relat == 2 ? 'DRE + Fluxo de Caixa + Indicadores' : 'DRE + Fluxo de Caixa',
+                    'Reunião estratégica mensal': d.reuniao >= 1.5 ? '1h presencial/mês' : '1h online/mês',
+                    'Consultoria e planejamento': d.consult == 2 ? 'planejamento completo mensal' : 'análises estratégicas mensais',
+                    'Lembretes de vencimento': 'via WhatsApp',
+                  }
+                  const desc = qtd[it.nome]
+                  return (
+                    <div key={i} className="prec-scope-item">
+                      {it.nome}{desc ? ` — ${desc}` : ''}
+                    </div>
+                  )
+                })}
               </div>
 
               {/* Responsabilidades */}
@@ -959,41 +982,52 @@ export default function PrecificacaoPage() {
             {/* PROPOSTA */}
             <div id="proposta-print" className="prec-card">
               <div className="prec-card-num">Proposta comercial</div>
-              <div className="prec-card-title" style={{ fontSize: 16 }}>
-                Proposta · {calc.d.nome || 'Cliente'} · {hoje}
-              </div>
-              <div style={{ height: 16 }} />
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+              {/* Cabeçalho com dados do BPO e cliente */}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:20, paddingBottom:16, borderBottom:'2px solid var(--pborder)' }}>
                 <div>
-                  <div style={{ fontSize: 10, color: 'var(--ptext3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Cliente</div>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{calc.d.nome || '—'}</div>
-                  {calc.d.fat > 0 && <div style={{ fontSize: 11, color: 'var(--ptext2)' }}>Faturamento: {fmtExtensoParcial(calc.d.fat)}/mês</div>}
+                  <div style={{ fontSize:10, color:'var(--ptext3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:4 }}>Apresentada por</div>
+                  <div style={{ fontSize:15, fontWeight:700, color:'var(--ptext)' }}>{empresa?.nome || 'Seu BPO'}</div>
+                  {empresa?.responsavel_nome && <div style={{ fontSize:11, color:'var(--ptext2)', marginTop:2 }}>{empresa.responsavel_nome}</div>}
+                  {empresa?.whatsapp && <div style={{ fontSize:11, color:'var(--ptext2)' }}>{empresa.whatsapp}</div>}
                 </div>
-                <div>
-                  <div style={{ fontSize: 10, color: 'var(--ptext3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Data</div>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{hoje}</div>
+                <div style={{ textAlign:'right' }}>
+                  <div style={{ fontSize:10, color:'var(--ptext3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:4 }}>Proposta para</div>
+                  <div style={{ fontSize:15, fontWeight:700, color:'var(--ptext)' }}>{calc.d.nome || 'Cliente'}</div>
+                  <div style={{ fontSize:11, color:'var(--ptext2)', marginTop:2 }}>Data: {hoje}</div>
+                  <div style={{ fontSize:10, color:'var(--ptext3)', marginTop:2 }}>Válida por 15 dias úteis</div>
                 </div>
               </div>
 
-              <div style={{ background: 'var(--pg-light)', border: '1px solid #A7C5B5', borderRadius: 10, padding: 20, textAlign: 'center', marginBottom: 20 }}>
-                <div style={{ fontSize: 11, color: 'var(--pg)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Investimento mensal</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 40, fontWeight: 500, color: 'var(--pg)', letterSpacing: '-.02em' }}>{fmt(parseFloat(valorProposta))}</div>
-                <div style={{ fontSize: 11, color: 'var(--pg-mid)', marginTop: 4 }}>{calc.totalHoras}h/mês dedicadas</div>
+              <div style={{ background:'var(--pg-light)', border:'1px solid #A7C5B5', borderRadius:10, padding:20, textAlign:'center', marginBottom:20 }}>
+                <div style={{ fontSize:11, color:'var(--pg)', fontWeight:600, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:6 }}>Investimento mensal</div>
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:40, fontWeight:500, color:'var(--pg)', letterSpacing:'-.02em' }}>{fmt(parseFloat(valorProposta))}</div>
+                <div style={{ fontSize:11, color:'var(--pg-mid)', marginTop:4 }}>por mês · primeiro pagamento no fechamento desta proposta</div>
               </div>
 
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ptext2)', marginBottom: 10 }}>O que está incluído:</div>
-                {calc.items.map((it, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid var(--pborder)', fontSize: 12 }}>
-                    <span>{it.nome}</span>
-                    <span style={{ color: 'var(--ptext3)', fontFamily: "'DM Mono',monospace" }}>{it.horas}h</span>
-                  </div>
-                ))}
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', fontSize: 13, fontWeight: 600 }}>
-                  <span>Total de horas mensais dedicadas</span>
-                  <span style={{ color: 'var(--pg)' }}>{calc.totalHoras}h</span>
-                </div>
+              <div style={{ marginBottom:20 }}>
+                <div style={{ fontSize:12, fontWeight:600, color:'var(--ptext2)', marginBottom:10 }}>Serviços incluídos:</div>
+                {calc.items.map((it, i) => {
+                  const d = calc.d
+                  const qtd = {
+                    'Conciliação bancária':          d.bancos > 0 ? `${d.bancos} conta${d.bancos>1?'s':''}` : null,
+                    'Contas a pagar':                d.capag > 0 ? `até ${d.capag}/mês` : null,
+                    'Cobranças manuais a receber':   d.carec > 0 ? `até ${d.carec}/mês` : null,
+                    'Agendamento bancário':          d.agend > 0 && d.capag > 0 ? `${d.capag} pagamentos/mês` : null,
+                    'Emissão de notas fiscais':      d.nfs > 0 ? `até ${d.nfs} NFs/mês` : null,
+                    'Emissão de boletos':            d.boletos > 0 ? `até ${d.boletos}/mês` : null,
+                    'Relatórios gerenciais':         d.relat == 2 ? 'DRE + Fluxo + Indicadores' : 'DRE + Fluxo de Caixa',
+                    'Reunião estratégica mensal':    d.reuniao >= 1.5 ? '1h presencial/mês' : '1h online/mês',
+                    'Conciliação outras plataformas': d.plat > 0 ? `${d.plat} plataforma${d.plat>1?'s':''}` : null,
+                  }
+                  const desc = qtd[it.nome]
+                  return (
+                    <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid var(--pborder)', fontSize:12 }}>
+                      <span>{it.nome}</span>
+                      <span style={{ color:'var(--ptext3)', fontStyle: desc ? 'normal' : 'italic' }}>{desc || 'incluso'}</span>
+                    </div>
+                  )
+                })}
               </div>
 
               <div style={{ background: 'var(--psurface2)', borderRadius: 8, padding: 14, fontSize: 12, color: 'var(--ptext2)', lineHeight: 1.6 }}>
