@@ -704,7 +704,7 @@ export function useLeadInteracoes(leadId) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('lead_interacoes')
-        .select('*, usuarios(nome)')
+        .select('*')
         .eq('lead_id', leadId)
         .order('criado_em', { ascending: false })
         .limit(50)

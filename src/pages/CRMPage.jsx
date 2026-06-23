@@ -240,7 +240,7 @@ function LinhaDoTempo({ lead }) {
                     <span style={{ fontSize:14, flexShrink:0, marginTop:1 }}>{tipo.icon}</span>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:11, color:'#0F172A', lineHeight:1.4 }}>{i.nota}</div>
-                      <div style={{ fontSize:9, color:'#94A3B8', marginTop:2 }}>{data}{i.usuarios?.nome ? ` · ${i.usuarios.nome}` : ''}</div>
+                      <div style={{ fontSize:9, color:'#94A3B8', marginTop:2 }}>{data}</div>
                     </div>
                     <button onClick={() => deletar.mutate({ id:i.id, lead_id:lead.id })}
                       style={{ border:'none', background:'none', cursor:'pointer', color:'#CBD5E1', fontSize:12, padding:0, flexShrink:0 }}>×</button>
