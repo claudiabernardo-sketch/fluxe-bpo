@@ -274,10 +274,9 @@ export function useUpdateLead() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, ...updates }) => {
-      const { data, error } = await supabase
-        .from('leads').update(updates).eq('id', id).select().single()
+      const { error } = await supabase
+        .from('leads').update(updates).eq('id', id)
       if (error) throw error
-      return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['leads'] }),
   })
