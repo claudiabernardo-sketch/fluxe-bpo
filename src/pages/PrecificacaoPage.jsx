@@ -1,7 +1,9 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
-import { gerarContratoDocx, downloadContratoDocx } from '../utils/contratoDocx'
+
+// contratoDocx importa a lib 'docx' que é pesada — lazy pra não bloquear o carregamento
+const getContratoDocx = () => import('../utils/contratoDocx')
 
 // ─── ESTILOS ────────────────────────────────────────────────
 const CSS = `
@@ -1260,6 +1262,7 @@ export default function PrecificacaoPage() {
                   onClick={async () => {
                     setBaixandoDocx(true)
                     try {
+                      const { gerarContratoDocx, downloadContratoDocx } = await getContratoDocx()
                       const blob = await gerarContratoDocx({ calc, contratoForm, empresa, valorProposta })
                       downloadContratoDocx(blob, calc?.d?.nome)
                     } catch (e) {
