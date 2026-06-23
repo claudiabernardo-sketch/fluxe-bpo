@@ -247,7 +247,7 @@ export default function ConfigPage() {
   const [saveError, setSaveError] = useState('')
   const [tab, setTab] = useState('empresa')
 
-  const [empForm, setEmpForm] = useState({ nome:'', email:'', telefone:'', cnpj:'', site:'' })
+  const [empForm, setEmpForm] = useState({ nome:'', email:'', telefone:'', cnpj:'', site:'', slogan:'', cor_primaria:'#6366F1', cor_secundaria:'#8B5CF6', fonte:'Inter', logo_url:'' })
   const [opForm, setOpForm] = useState({ custoHora:35, aprovacaoLimite:2000, fechamentoDia:5, nfDia:1, reuniaoDia:10 })
   const { data: feriados = [] } = useFeriados()
   const createFeriado = useCreateFeriado()
@@ -443,7 +443,7 @@ export default function ConfigPage() {
 
   useEffect(() => {
     if (empresa) {
-      setEmpForm({ nome: empresa.nome||'', email: empresa.email||'', telefone: empresa.telefone||'', cnpj: empresa.cnpj||'', site: empresa.site||'' })
+      setEmpForm({ nome: empresa.nome||'', email: empresa.email||'', telefone: empresa.telefone||'', cnpj: empresa.cnpj||'', site: empresa.site||'', slogan: empresa.slogan||'', cor_primaria: empresa.cor_primaria||'#6366F1', cor_secundaria: empresa.cor_secundaria||'#8B5CF6', fonte: empresa.fonte||'Inter', logo_url: empresa.logo_url||'' })
       if (empresa.config) {
         try { setOpForm(o => ({ ...o, ...empresa.config })) } catch{}
         try { if (empresa.config.proposta) setPropForm(o => ({ ...o, ...empresa.config.proposta })) } catch{}
@@ -454,7 +454,15 @@ export default function ConfigPage() {
   async function salvarEmpresa() {
     if (!empresa) return
     try {
-      const { error } = await supabase.from('empresas').update({ nome: empForm.nome, email: empForm.email, cnpj: empForm.cnpj, telefone: empForm.telefone, site: empForm.site }).eq('id', empresa.id)
+      const { error } = await supabase.from('empresas').update({ 
+        nome: empForm.nome, email: empForm.email, cnpj: empForm.cnpj, 
+        telefone: empForm.telefone, site: empForm.site,
+        slogan: empForm.slogan || null,
+        cor_primaria: empForm.cor_primaria || '#6366F1',
+        cor_secundaria: empForm.cor_secundaria || '#8B5CF6',
+        fonte: empForm.fonte || 'Inter',
+        logo_url: empForm.logo_url || null,
+      }).eq('id', empresa.id)
       if (error) throw error
       setSaved(true); setTimeout(() => setSaved(false), 2000)
     } catch (e) { setSaveError(e.message || 'Erro ao salvar'); setTimeout(() => setSaveError(''), 3000) }
@@ -522,6 +530,54 @@ export default function ConfigPage() {
                 <input type={type||'text'} style={fi} value={empForm[key]||''} onChange={e=>setEmpForm(f=>({...f,[key]:e.target.value}))} placeholder={placeholder} />
               </div>
             ))}
+          </div>
+
+          {/* BRAND KIT */}
+          <div style={{ padding:'0 16px 16px' }}>
+            <div style={{ fontSize:11, fontWeight:700, color:'#334155', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:12, paddingTop:12, borderTop:'1px solid #F1F5F9' }}>
+              🎨 Identidade visual (Brand Kit)
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div style={{ gridColumn:'1/-1' }}>
+                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>URL da Logo</label>
+                <input type="url" style={fi} value={empForm.logo_url||''} onChange={e=>setEmpForm(f=>({...f,logo_url:e.target.value}))} placeholder="https://seusite.com/logo.png" />
+                <div style={{ fontSize:10, color:'#94A3B8', marginTop:4 }}>Cole o link direto da sua logo (PNG ou SVG). Use o Canva, Google Drive ou Dropbox com link público.</div>
+                {empForm.logo_url && (
+                  <img src={empForm.logo_url} alt="Preview logo" style={{ marginTop:8, height:48, objectFit:'contain', border:'1px solid #E2E8F0', borderRadius:8, padding:8, background:'#F8FAFC' }} onError={e => e.target.style.display='none'} />
+                )}
+              </div>
+              <div style={{ gridColumn:'1/-1' }}>
+                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Slogan / Tagline</label>
+                <input type="text" style={fi} value={empForm.slogan||''} onChange={e=>setEmpForm(f=>({...f,slogan:e.target.value}))} placeholder="Ex: Transformamos números em estratégia" />
+              </div>
+              <div>
+                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Cor primária</label>
+                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                  <input type="color" value={empForm.cor_primaria||'#6366F1'} onChange={e=>setEmpForm(f=>({...f,cor_primaria:e.target.value}))} style={{ width:40, height:36, border:'1px solid #E2E8F0', borderRadius:8, cursor:'pointer', padding:2 }} />
+                  <input type="text" style={{ ...fi, flex:1, fontFamily:'monospace' }} value={empForm.cor_primaria||''} onChange={e=>setEmpForm(f=>({...f,cor_primaria:e.target.value}))} placeholder="#6366F1" />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Cor secundária</label>
+                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                  <input type="color" value={empForm.cor_secundaria||'#8B5CF6'} onChange={e=>setEmpForm(f=>({...f,cor_secundaria:e.target.value}))} style={{ width:40, height:36, border:'1px solid #E2E8F0', borderRadius:8, cursor:'pointer', padding:2 }} />
+                  <input type="text" style={{ ...fi, flex:1, fontFamily:'monospace' }} value={empForm.cor_secundaria||''} onChange={e=>setEmpForm(f=>({...f,cor_secundaria:e.target.value}))} placeholder="#8B5CF6" />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Fonte</label>
+                <select style={fi} value={empForm.fonte||'Inter'} onChange={e=>setEmpForm(f=>({...f,fonte:e.target.value}))}>
+                  {['Inter','Poppins','Montserrat','Lato','Open Sans','Raleway','Playfair Display','DM Sans'].map(f => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display:'flex', alignItems:'flex-end' }}>
+                <div style={{ padding:'10px 14px', borderRadius:8, background: empForm.cor_primaria||'#6366F1', color:'#fff', fontSize:12, fontWeight:600, fontFamily: empForm.fonte||'Inter' }}>
+                  Preview: {empForm.nome||'Seu BPO'}
+                </div>
+              </div>
+            </div>
           </div>
           <div style={{ padding:'12px 16px', borderTop:'1px solid #F1F5F9', display:'flex', justifyContent:'flex-end' }}>
             <Btn variant="primary" onClick={salvarEmpresa}>Salvar dados</Btn>

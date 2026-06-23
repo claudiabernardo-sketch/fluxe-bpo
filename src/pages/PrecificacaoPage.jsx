@@ -983,13 +983,17 @@ export default function PrecificacaoPage() {
             <div id="proposta-print" className="prec-card">
               <div className="prec-card-num">Proposta comercial</div>
 
-              {/* Cabeçalho com dados do BPO e cliente */}
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:20, paddingBottom:16, borderBottom:'2px solid var(--pborder)' }}>
-                <div>
-                  <div style={{ fontSize:10, color:'var(--ptext3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:4 }}>Apresentada por</div>
-                  <div style={{ fontSize:15, fontWeight:700, color:'var(--ptext)' }}>{empresa?.nome || 'Seu BPO'}</div>
-                  {empresa?.responsavel_nome && <div style={{ fontSize:11, color:'var(--ptext2)', marginTop:2 }}>{empresa.responsavel_nome}</div>}
-                  {empresa?.whatsapp && <div style={{ fontSize:11, color:'var(--ptext2)' }}>{empresa.whatsapp}</div>}
+              {/* Cabeçalho com identidade visual do BPO */}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:20, paddingBottom:16, borderBottom:`2px solid ${empresa?.cor_primaria||'#6366F1'}` }}>
+                <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                  {empresa?.logo_url && (
+                    <img src={empresa.logo_url} alt="Logo" style={{ height:48, objectFit:'contain' }} onError={e => e.target.style.display='none'} />
+                  )}
+                  <div>
+                    <div style={{ fontSize:15, fontWeight:700, color: empresa?.cor_primaria||'#6366F1', fontFamily: empresa?.fonte||'inherit' }}>{empresa?.nome || 'Seu BPO'}</div>
+                    {empresa?.slogan && <div style={{ fontSize:11, color:'var(--ptext3)', marginTop:2, fontStyle:'italic' }}>{empresa.slogan}</div>}
+                    {empresa?.telefone && <div style={{ fontSize:11, color:'var(--ptext2)', marginTop:1 }}>{empresa.telefone}</div>}
+                  </div>
                 </div>
                 <div style={{ textAlign:'right' }}>
                   <div style={{ fontSize:10, color:'var(--ptext3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:4 }}>Proposta para</div>
@@ -999,10 +1003,10 @@ export default function PrecificacaoPage() {
                 </div>
               </div>
 
-              <div style={{ background:'var(--pg-light)', border:'1px solid #A7C5B5', borderRadius:10, padding:20, textAlign:'center', marginBottom:20 }}>
-                <div style={{ fontSize:11, color:'var(--pg)', fontWeight:600, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:6 }}>Investimento mensal</div>
-                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:40, fontWeight:500, color:'var(--pg)', letterSpacing:'-.02em' }}>{fmt(parseFloat(valorProposta))}</div>
-                <div style={{ fontSize:11, color:'var(--pg-mid)', marginTop:4 }}>por mês · primeiro pagamento no fechamento desta proposta</div>
+              <div style={{ background: (empresa?.cor_primaria||'#6366F1')+'18', border:`1px solid ${empresa?.cor_primaria||'#6366F1'}44`, borderRadius:10, padding:20, textAlign:'center', marginBottom:20 }}>
+                <div style={{ fontSize:11, color:empresa?.cor_primaria||'#6366F1', fontWeight:600, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:6 }}>Investimento mensal</div>
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:40, fontWeight:500, color:empresa?.cor_primaria||'#6366F1', letterSpacing:'-.02em' }}>{fmt(parseFloat(valorProposta))}</div>
+                <div style={{ fontSize:11, color:'var(--ptext3)', marginTop:4 }}>por mês · primeiro pagamento no fechamento desta proposta</div>
               </div>
 
               <div style={{ marginBottom:20 }}>
