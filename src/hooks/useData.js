@@ -746,3 +746,63 @@ export function useDeleteLeadInteracao() {
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['lead_interacoes', vars.lead_id] }),
   })
 }
+
+// ── TEMPLATES DE MENSAGEM CRM ─────────────────────────────────
+export function useCrmTemplates() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['crm_templates', empresa?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('crm_templates')
+        .select('*')
+        .eq('empresa_id', empresa?.id)
+        .order('etapa', { nullsFirst: true })
+        .order('titulo')
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!empresa?.id,
+  })
+}
+
+export function useCreateCrmTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ titulo, etapa, texto }) => {
+      const empresa_id = useAuthStore.getState().empresa?.id
+      const { data, error } = await supabase
+        .from('crm_templates')
+        .insert({ titulo, etapa: etapa || null, texto, empresa_id })
+        .select().single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['crm_templates'] }),
+  })
+}
+
+export function useUpdateCrmTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, titulo, etapa, texto }) => {
+      const { error } = await supabase
+        .from('crm_templates')
+        .update({ titulo, etapa: etapa || null, texto, atualizado_em: new Date().toISOString() })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['crm_templates'] }),
+  })
+}
+
+export function useDeleteCrmTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('crm_templates').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['crm_templates'] }),
+  })
+}

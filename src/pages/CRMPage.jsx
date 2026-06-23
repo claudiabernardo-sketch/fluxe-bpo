@@ -1,4 +1,4 @@
-import { useLeads, useCreateLead, useUpdateLead, useConvertLeadToClient, useLeadInteracoes, useCreateLeadInteracao, useDeleteLeadInteracao } from '../hooks/useData'
+import { useLeads, useCreateLead, useUpdateLead, useConvertLeadToClient, useLeadInteracoes, useCreateLeadInteracao, useDeleteLeadInteracao, useCrmTemplates, useCreateCrmTemplate, useUpdateCrmTemplate, useDeleteCrmTemplate } from '../hooks/useData'
 import { Card, Loader, EmptyState, Btn, fmtR } from '../components/ui'
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -262,6 +262,15 @@ export default function CRMPage() {
   const convert = useConvertLeadToClient()
   const nav     = useNavigate()
 
+  // Templates personalizados
+  const { data: meusTemplates = [] } = useCrmTemplates()
+  const createTemplate = useCreateCrmTemplate()
+  const updateTemplate = useUpdateCrmTemplate()
+  const deleteTemplate = useDeleteCrmTemplate()
+  const [showTemplatesModal, setShowTemplatesModal] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState(null) // null = novo, {id,...} = editando
+  const [templateForm, setTemplateForm] = useState({ titulo:'', etapa:'', texto:'' })
+
   const [modal, setModal]             = useState(false)
   const [form, setForm]               = useState({})
   const [editId, setEditId]           = useState(null)
@@ -274,6 +283,14 @@ export default function CRMPage() {
   const [view, setView]               = useState('kanban')
   const [templateModal, setTemplateModal] = useState(null) // { lead, template }
   const [templateCopiado, setTemplateCopiado] = useState(false)
+
+  function getTemplatesDaEtapa(etapa) {
+    const fixos = TEMPLATES_ETAPA[etapa] || []
+    const personalizados = meusTemplates
+      .filter(t => !t.etapa || t.etapa === etapa)
+      .map(t => ({ id: t.id, label: `✏️ ${t.titulo}`, texto: t.texto, customizado: true }))
+    return [...fixos, ...personalizados]
+  }
 
   function abrirTemplate(lead, template) {
     const { empresa: emp } = useAuthStore.getState()
@@ -479,6 +496,10 @@ export default function CRMPage() {
           ))}
         </div>
         <div style={{ flex:1 }} />
+        <button onClick={() => { setEditingTemplate(null); setTemplateForm({ titulo:'', etapa:'', texto:'' }); setShowTemplatesModal(true) }}
+          style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #E2E8F0', background:'#fff', cursor:'pointer', fontSize:11, fontWeight:600, color:'#475569' }}>
+          ✏️ Gerenciar templates
+        </button>
         <Btn variant="primary" onClick={openNew}>+ Novo lead</Btn>
       </div>
 
@@ -555,14 +576,14 @@ export default function CRMPage() {
                               💰 Proposta
                             </button>
                           )}
-                          {TEMPLATES_ETAPA[l.etapa]?.length > 0 && (
+                          {getTemplatesDaEtapa(l.etapa).length > 0 && (
                             <div style={{ position:'relative', display:'inline-block' }}>
                               <select
-                                onChange={e => { if(e.target.value) { const t = TEMPLATES_ETAPA[l.etapa].find(x=>x.id===e.target.value); if(t) abrirTemplate(l,t); e.target.value=''; } }}
+                                onChange={e => { if(e.target.value) { const todos = getTemplatesDaEtapa(l.etapa); const t = todos.find(x=>x.id===e.target.value); if(t) abrirTemplate(l,t); e.target.value=''; } }}
                                 style={{ fontSize:9, padding:'2px 6px', border:'1px solid #BBF7D0', borderRadius:5, cursor:'pointer', background:'#F0FDF4', color:'#15803D', fontWeight:600, appearance:'none' }}
                                 defaultValue="">
                                 <option value="" disabled>💬 Mensagem</option>
-                                {TEMPLATES_ETAPA[l.etapa].map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                                {getTemplatesDaEtapa(l.etapa).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                               </select>
                             </div>
                           )}
@@ -800,6 +821,85 @@ export default function CRMPage() {
                   color:'#fff', fontWeight:700, fontSize:12, cursor:'pointer' }}>
                 {templateCopiado ? '✓ Copiado!' : '📋 Copiar mensagem'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ MODAL GERENCIAR TEMPLATES ══ */}
+      {showTemplatesModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1300, padding:16 }}>
+          <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:600, maxHeight:'90vh', display:'flex', flexDirection:'column' }}>
+            <div style={{ padding:'14px 18px', borderBottom:'1px solid #E2E8F0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <div style={{ fontWeight:700, fontSize:14 }}>✏️ Meus templates de mensagem</div>
+              <button onClick={() => setShowTemplatesModal(false)} style={{ border:'none', background:'none', cursor:'pointer', fontSize:20, color:'#94A3B8' }}>×</button>
+            </div>
+            <div style={{ padding:'14px 18px', flex:1, overflowY:'auto' }}>
+              <div style={{ background:'#F8FAFC', borderRadius:10, padding:14, marginBottom:16, border:'1px solid #E2E8F0' }}>
+                <div style={{ fontWeight:700, fontSize:12, marginBottom:10, color:'#0F172A' }}>
+                  {editingTemplate ? '✏️ Editar template' : '+ Novo template'}
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
+                  <div>
+                    <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase' }}>Título *</label>
+                    <input value={templateForm.titulo} onChange={e => setTemplateForm(f => ({...f, titulo:e.target.value}))}
+                      placeholder="Ex: Follow-up após reunião"
+                      style={{ width:'100%', padding:'7px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, boxSizing:'border-box' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase' }}>Etapa (opcional)</label>
+                    <select value={templateForm.etapa} onChange={e => setTemplateForm(f => ({...f, etapa:e.target.value}))}
+                      style={{ width:'100%', padding:'7px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12 }}>
+                      <option value="">Todas as etapas</option>
+                      {ETAPAS.map(e => <option key={e.id} value={e.id}>{e.icon} {e.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div style={{ marginBottom:8 }}>
+                  <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase' }}>Texto *</label>
+                  <div style={{ fontSize:10, color:'#94A3B8', marginBottom:4 }}>Variáveis disponíveis: {'{nome}'} {'{empresa}'} {'{valor}'} {'{minhaNome}'} {'{minhaEmpresa}'}</div>
+                  <textarea value={templateForm.texto} onChange={e => setTemplateForm(f => ({...f, texto:e.target.value}))}
+                    placeholder="Olá, {nome}! Tudo bem?..."
+                    style={{ width:'100%', height:120, padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'inherit', resize:'vertical', boxSizing:'border-box' }} />
+                </div>
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={async () => {
+                    if (!templateForm.titulo || !templateForm.texto) return
+                    if (editingTemplate) { await updateTemplate.mutateAsync({ id: editingTemplate.id, ...templateForm }) }
+                    else { await createTemplate.mutateAsync(templateForm) }
+                    setEditingTemplate(null); setTemplateForm({ titulo:'', etapa:'', texto:'' })
+                  }} style={{ padding:'7px 16px', borderRadius:8, border:'none', background:'#6366F1', color:'#fff', fontWeight:700, fontSize:12, cursor:'pointer' }}>
+                    {editingTemplate ? 'Salvar alterações' : 'Criar template'}
+                  </button>
+                  {editingTemplate && (
+                    <button onClick={() => { setEditingTemplate(null); setTemplateForm({ titulo:'', etapa:'', texto:'' }) }}
+                      style={{ padding:'7px 16px', borderRadius:8, border:'1px solid #E2E8F0', background:'#fff', fontSize:12, cursor:'pointer' }}>Cancelar</button>
+                  )}
+                </div>
+              </div>
+              {meusTemplates.length === 0 ? (
+                <div style={{ textAlign:'center', color:'#94A3B8', fontSize:12, padding:'20px 0' }}>Nenhum template personalizado ainda. Crie o primeiro acima!</div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {meusTemplates.map(t => (
+                    <div key={t.id} style={{ border:'1px solid #E2E8F0', borderRadius:10, padding:'10px 14px' }}>
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
+                        <div>
+                          <div style={{ fontWeight:600, fontSize:13 }}>{t.titulo}</div>
+                          <div style={{ fontSize:10, color:'#94A3B8' }}>{t.etapa ? ETAPAS.find(e=>e.id===t.etapa)?.label : 'Todas as etapas'}</div>
+                        </div>
+                        <div style={{ display:'flex', gap:6 }}>
+                          <button onClick={() => { setEditingTemplate(t); setTemplateForm({ titulo:t.titulo, etapa:t.etapa||'', texto:t.texto }) }}
+                            style={{ padding:'4px 10px', borderRadius:6, border:'1px solid #E2E8F0', background:'#fff', fontSize:11, cursor:'pointer' }}>✎ Editar</button>
+                          <button onClick={() => { if(confirm('Excluir este template?')) deleteTemplate.mutate(t.id) }}
+                            style={{ padding:'4px 10px', borderRadius:6, border:'1px solid #FECDD3', background:'#FEF2F2', color:'#DC2626', fontSize:11, cursor:'pointer' }}>× Excluir</button>
+                        </div>
+                      </div>
+                      <div style={{ fontSize:11, color:'#64748B', marginTop:6, whiteSpace:'pre-wrap', maxHeight:60, overflow:'hidden' }}>{t.texto}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
