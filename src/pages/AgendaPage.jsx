@@ -10,7 +10,7 @@ import { supabase } from '../lib/supabase'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
-function fmtDate(d) { return d.toISOString().slice(0, 10) }
+function fmtDate(d) { return d.toLocaleDateString('en-CA') } // en-CA = YYYY-MM-DD no fuso local
 function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r }
 function startOfWeek(d) {
   const r = new Date(d); const day = r.getDay()
