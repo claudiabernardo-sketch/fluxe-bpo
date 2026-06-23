@@ -693,24 +693,21 @@ export default function ClientsPage() {
                             {todosModelos
                               .filter(m => m.ativo && !clienteModelos.find(cm => cm.modelo_id === m.id))
                               .filter(m => {
-                                // Trava: se o modelo é específico de um software (ex: "Configurar Omie"),
-                                // só aparece pra clientes que usam aquele software — evita repetir o
-                                // problema de oferecer/criar a tarefa de todos os ERPs pro mesmo cliente.
                                 if (!m.software_alvo) return true
                                 const softwareCliente = (clients.find(c=>c.id===modal?.id)?.software_contabil || '').trim().toLowerCase()
                                 return m.software_alvo.toLowerCase() === softwareCliente
                               })
                               .map(m => (
-                                <div key={m.id}
+                                <button key={m.id}
                                   onClick={() => vincularEAplicarModelo(m)}
-                                  style={{ padding:'10px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', cursor:'pointer', background:'var(--s2)' }}
+                                  style={{ padding:'10px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', cursor:'pointer', background:'var(--s2)', textAlign:'left', width:'100%' }}
                                   onMouseEnter={e => e.currentTarget.style.background='var(--s3)'}
                                   onMouseLeave={e => e.currentTarget.style.background='var(--s2)'}>
                                   <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{m.titulo}</div>
                                   <div style={{ fontSize:10, color:'var(--tx3)', marginTop:2 }}>
                                     {m.categoria} · {m.recorrencia === 'unica' ? '⚡ pontual (cria tarefa na hora)' : m.recorrencia}
                                   </div>
-                                </div>
+                                </button>
                               ))}
                             {todosModelos.filter(m => m.ativo && !clienteModelos.find(cm => cm.modelo_id === m.id)).length === 0 && (
                               <div style={{ fontSize:12, color:'var(--tx3)', textAlign:'center', padding:'12px' }}>Todos os modelos já estão vinculados.</div>
