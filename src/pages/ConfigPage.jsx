@@ -498,7 +498,7 @@ export default function ConfigPage() {
 
       {/* Tabs */}
       <div style={{ display:'flex', gap:4, marginBottom:18, borderBottom:'1px solid #E2E8F0', paddingBottom:0 }}>
-        {[['empresa','🏢 Empresa'],['equipe','👥 Equipe'],['custoHora','💰 Custo/Hora'],['operacional','⚙️ Operacional'],['seguranca','🔐 Segurança'],['proposta','📊 Proposta'],...(profile?.perfil==='admin'?[['plano','💳 Meu Plano']]:[]  )].map(([id, label]) => (
+        {[['empresa','🏢 Empresa'],['equipe','👥 Equipe'],['custoHora','💰 Custo/Hora'],['operacional','⚙️ Operacional'],['seguranca','🔐 Segurança'],...(profile?.perfil==='admin'?[['plano','💳 Meu Plano']]:[]  )].map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{ padding:'8px 16px', border:'none', background:'transparent', cursor:'pointer', fontSize:12, fontWeight:600, color: tab===id?'#6366F1':'#94A3B8', borderBottom: tab===id?'2px solid #6366F1':'2px solid transparent', marginBottom:-1 }}>
             {label}
           </button>

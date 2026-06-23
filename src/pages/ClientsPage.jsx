@@ -605,23 +605,27 @@ export default function ClientsPage() {
                           const statusLabel = { aberta:'Aberta', andamento:'Em andamento', aguardando:'Ag. cliente', revisao:'Em revisão', concluida:'Concluída', impedimento:'Impedimento' }
                           const prazoVencido = t.prazo && new Date(t.prazo) < new Date() && t.status !== 'concluida'
                           return (
-                            <div key={t.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 12px', border:`1px solid ${prazoVencido?'#FECDD3':'var(--bo)'}`, borderRadius:'var(--r)', background: prazoVencido?'#FFF1F2':'var(--s2)' }}>
-                              <div style={{ flex:1, minWidth:0 }}>
-                                <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)', textDecoration: t.status==='concluida'?'line-through':'none' }}>{t.titulo}</div>
-                                <div style={{ display:'flex', gap:6, marginTop:3, flexWrap:'wrap', alignItems:'center' }}>
-                                  <span style={{ fontSize:9, padding:'1px 6px', borderRadius:99, background: (statusColor[t.status]||'#94A3B8')+'22', color: statusColor[t.status]||'#94A3B8', fontWeight:700 }}>
-                                    {statusLabel[t.status] || t.status}
-                                  </span>
-                                  {t.prazo && <span style={{ fontSize:9, color: prazoVencido?'var(--rdt)':'var(--tx3)' }}>{prazoVencido?'⚠ ':''}{new Date(t.prazo+'T12:00:00').toLocaleDateString('pt-BR')}</span>}
-                                  {t.usuarios?.nome && <span style={{ fontSize:9, color:'var(--tx3)', background:'var(--bo)', padding:'1px 5px', borderRadius:99 }}>👤 {t.usuarios.nome}</span>}
+                            <div key={t.id} style={{ border:`1px solid ${prazoVencido?'#FECDD3':'var(--bo)'}`, borderRadius:'var(--r)', background: prazoVencido?'#FFF1F2':'var(--s2)' }}>
+                              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 12px' }}>
+                                <div style={{ flex:1, minWidth:0 }}>
+                                  <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)', textDecoration: t.status==='concluida'?'line-through':'none' }}>{t.titulo}</div>
+                                  <div style={{ display:'flex', gap:6, marginTop:3, flexWrap:'wrap', alignItems:'center' }}>
+                                    <select value={t.status} onChange={e => updateTask.mutate({ id: t.id, status: e.target.value })}
+                                      style={{ fontSize:9, padding:'1px 4px', borderRadius:99, border:`1px solid ${statusColor[t.status]||'#94A3B8'}`, background:(statusColor[t.status]||'#94A3B8')+'22', color:statusColor[t.status]||'#94A3B8', fontWeight:700, cursor:'pointer' }}>
+                                      {Object.entries(statusLabel).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+                                    </select>
+                                    {t.prazo && <span style={{ fontSize:9, color: prazoVencido?'var(--rdt)':'var(--tx3)' }}>{prazoVencido?'⚠ ':''}{new Date(t.prazo+'T12:00:00').toLocaleDateString('pt-BR')}</span>}
+                                  </div>
                                 </div>
+                                <input type="date" defaultValue={t.prazo||''} onBlur={e => e.target.value && updateTask.mutate({ id: t.id, prazo: e.target.value })}
+                                  title="Prazo" style={{ fontSize:10, border:'1px solid var(--bo)', borderRadius:5, padding:'2px 6px', background:'transparent', cursor:'pointer', flexShrink:0, width:130 }} />
+                                {t.status !== 'concluida' && (
+                                  <button onClick={() => updateTask.mutate({ id: t.id, status:'concluida' })}
+                                    style={{ border:'1px solid #BBF7D0', background:'#F0FDF4', color:'#15803D', borderRadius:5, cursor:'pointer', fontSize:10, padding:'3px 8px', fontWeight:700, flexShrink:0 }}>✓</button>
+                                )}
+                                <button onClick={() => { if(confirm('Remover esta tarefa?')) deleteTask.mutate(t.id) }}
+                                  style={{ border:'1px solid #FECDD3', background:'#FEF2F2', color:'#991B1B', borderRadius:5, cursor:'pointer', fontSize:10, padding:'3px 8px', fontWeight:700, flexShrink:0 }}>×</button>
                               </div>
-                              {t.status !== 'concluida' && (
-                                <button onClick={() => updateTask.mutate({ id: t.id, status:'concluida' }, { onError: (err) => alert('Erro ao concluir: ' + (err?.message||'')) })}
-                                  style={{ border:'1px solid #BBF7D0', background:'#F0FDF4', color:'#15803D', borderRadius:5, cursor:'pointer', fontSize:10, padding:'3px 8px', fontWeight:700, flexShrink:0 }}>✓</button>
-                              )}
-                              <button onClick={() => { if(confirm('Remover esta tarefa?')) deleteTask.mutate(t.id, { onError: (err) => alert('Erro ao remover: ' + (err?.message||'')) }) }}
-                                style={{ border:'1px solid #FECDD3', background:'#FEF2F2', color:'#991B1B', borderRadius:5, cursor:'pointer', fontSize:10, padding:'3px 8px', fontWeight:700, flexShrink:0 }}>×</button>
                             </div>
                           )
                         })}
