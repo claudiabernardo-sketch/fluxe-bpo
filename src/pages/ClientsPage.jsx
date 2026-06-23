@@ -304,7 +304,8 @@ export default function ClientsPage() {
 
   async function save() {
     if (!form.razao_social) { alert('Razão social é obrigatória'); return }
-    const payload = { ...form, bancos: selectedBancos }
+    const mrrNum = parseFloat(String(form.valor_mrr||'0').replace(/\./g,'').replace(',','.')) || 0
+    const payload = { ...form, valor_mrr: mrrNum, bancos: selectedBancos }
     if (modal.mode === 'new') {
       await createClient.mutateAsync(payload)
     } else {
@@ -485,7 +486,13 @@ export default function ClientsPage() {
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
                   <div>
                     <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>MRR (R$/mês)</label>
-                    <input type="number" value={form.valor_mrr||''} onChange={e=>setForm(f=>({...f,valor_mrr:e.target.value}))} className="fi" placeholder="0,00" step="0.01" />
+                    <input type="text" inputMode="numeric" value={form.valor_mrr||''} onChange={e=>setForm(f=>({...f,valor_mrr:e.target.value}))} className="fi" placeholder="Ex: 1.500,00" />
+                    {parseFloat(String(form.valor_mrr||'').replace(/\./g,'').replace(',','.')) >= 1000 && (
+                      <div style={{ fontSize:10, color:'#6366F1', marginTop:3 }}>
+                        {parseFloat(String(form.valor_mrr).replace(/\./g,'').replace(',','.')).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}/mês
+                      </div>
+                    )}
+                  </div>
                   </div>
                   <div>
                     <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Vencimento (dia do mês)</label>
