@@ -1,5 +1,6 @@
 import { useState, lazy, Suspense } from 'react'
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTarefaModelos, useClienteModelos, useVincularModelo, useDesvincularModelo, useAcessos, useSaveAcesso, useDeleteAcesso } from '../hooks/useData'
+import { useQueryClient } from '@tanstack/react-query'
 import { Card, CardHeader, Badge, Btn, Loader, EmptyState, fmt, fmtR } from '../components/ui'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
@@ -53,6 +54,7 @@ export default function ClientsPage() {
   const [cnpjError, setCnpjError] = useState('')
   const [selectedBancos, setSelectedBancos] = useState([])
   const [tab, setTab] = useState('dados') // dados | financeiro | bancos | cofre | rotina | tarefas
+  const [configModeloId, setConfigModeloId] = useState(null) // id do cm sendo configurado
   const [showAddModelo, setShowAddModelo] = useState(false)
 
   // Cofre (acessos) — escopado ao cliente aberto
@@ -135,6 +137,7 @@ export default function ClientsPage() {
   const createTask = useCreateTask()
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
+  const queryClient = useQueryClient()
   const [taskForm, setTaskForm] = useState({ titulo:'', prazo:'', status:'aberta', prioridade:'media' })
   const [taskErr,  setTaskErr]  = useState('')
 
@@ -671,18 +674,61 @@ export default function ClientsPage() {
                           <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em' }}>
                             {clienteModelos.length} modelo(s) vinculado(s)
                           </div>
-                          {clienteModelos.map(cm => (
-                            <div key={cm.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--s2)' }}>
-                              <div style={{ flex:1 }}>
-                                <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{cm.tarefa_modelos?.titulo}</div>
-                                <div style={{ fontSize:10, color:'var(--tx3)', marginTop:2 }}>
-                                  {cm.tarefa_modelos?.categoria} · {cm.tarefa_modelos?.recorrencia} · Prioridade {cm.tarefa_modelos?.prioridade}
+                          {clienteModelos.map(cm => {
+                            const bancosConfig = cm.config?.bancos || []
+                            const isConfiguring = configModeloId === cm.id
+                            return (
+                              <div key={cm.id} style={{ border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--s2)' }}>
+                                <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px' }}>
+                                  <div style={{ flex:1 }}>
+                                    <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{cm.tarefa_modelos?.titulo}</div>
+                                    <div style={{ fontSize:10, color:'var(--tx3)', marginTop:2 }}>
+                                      {cm.tarefa_modelos?.categoria} · {cm.tarefa_modelos?.recorrencia}
+                                      {bancosConfig.length > 0 && (
+                                        <span style={{ color:'#6366F1', fontWeight:600 }}> · 🏦 {bancosConfig.join(', ')}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <button onClick={() => setConfigModeloId(isConfiguring ? null : cm.id)}
+                                    title="Configurar bancos"
+                                    style={{ border:'1px solid var(--bo)', background: isConfiguring ? '#EEF2FF' : 'transparent', color: isConfiguring ? '#6366F1' : 'var(--tx3)', borderRadius:5, cursor:'pointer', fontSize:11, padding:'3px 8px' }}>
+                                    ⚙
+                                  </button>
+                                  <button onClick={() => { if(confirm('Desvincular este modelo do cliente?')) desvincularModelo.mutate({ id: cm.id, clienteId: modal?.id }) }}
+                                    style={{ border:'none', background:'none', cursor:'pointer', color:'var(--tx3)', fontSize:18, lineHeight:1, padding:'4px' }}>×</button>
                                 </div>
+
+                                {isConfiguring && (
+                                  <div style={{ padding:'10px 12px', borderTop:'1px solid var(--bo)', background:'#F8FAFC' }}>
+                                    <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', marginBottom:8, textTransform:'uppercase', letterSpacing:'.06em' }}>
+                                      🏦 Selecione os bancos para este modelo
+                                    </div>
+                                    {(clients.find(c => c.id === modal?.id)?.bancos || []).length === 0 ? (
+                                      <div style={{ fontSize:11, color:'#94A3B8' }}>Nenhum banco cadastrado para este cliente. Adicione na aba Bancos.</div>
+                                    ) : (
+                                      <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                                        {(clients.find(c => c.id === modal?.id)?.bancos || []).map(banco => {
+                                          const sel = bancosConfig.includes(banco)
+                                          return (
+                                            <button key={banco} onClick={async () => {
+                                              const novos = sel ? bancosConfig.filter(b => b !== banco) : [...bancosConfig, banco]
+                                              await supabase.from('cliente_modelos').update({ config: { ...cm.config, bancos: novos } }).eq('id', cm.id)
+                                              queryClient.invalidateQueries({ queryKey: ['cliente_modelos', modal?.id] })
+                                            }}
+                                              style={{ padding:'4px 10px', borderRadius:99, fontSize:11, cursor:'pointer', fontWeight:600, border:'none',
+                                                background: sel ? '#6366F1' : '#E2E8F0',
+                                                color: sel ? '#fff' : '#475569' }}>
+                                              {sel ? '✓ ' : ''}{banco}
+                                            </button>
+                                          )
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </div>
-                              <button onClick={() => { if(confirm('Desvincular este modelo do cliente?')) desvincularModelo.mutate({ id: cm.id, clienteId: modal?.id }, { onError: (err) => alert('Erro ao desvincular: ' + (err?.message || 'erro desconhecido')) }) }}
-                                style={{ border:'none', background:'none', cursor:'pointer', color:'var(--tx3)', fontSize:18, lineHeight:1, padding:'4px' }}>×</button>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       ) : (
                         <div style={{ padding:'20px', textAlign:'center', color:'var(--tx3)', fontSize:12, border:'1px dashed var(--bo)', borderRadius:'var(--r)' }}>
