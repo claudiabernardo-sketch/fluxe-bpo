@@ -493,7 +493,6 @@ export default function ClientsPage() {
                       </div>
                     )}
                   </div>
-                  </div>
                   <div>
                     <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Vencimento (dia do mês)</label>
                     <input type="number" value={form.vencimento_dia||''} onChange={e=>setForm(f=>({...f,vencimento_dia:e.target.value}))} className="fi" placeholder="10" min={1} max={28} />
