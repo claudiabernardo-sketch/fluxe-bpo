@@ -43,7 +43,7 @@ const NAV = [
   { path:'/avulsas',    icon:'fa-solid fa-file-pen',            label:'Avulsas'   },
   { grp:'COMERCIAL' },
   { path:'/crm',        icon:'fa-solid fa-chart-line',          label:'CRM'       },
-  { path:'/prec',       icon:'fa-solid fa-tag',                 label:'Precif.'   },
+  { path:'/precificacao', icon:'fa-solid fa-tag',                 label:'Precif.'   },
   { grp:'CLIENTES' },
   { path:'/clientes',   icon:'fa-solid fa-building',            label:'Clientes'  },
   { path:'/esteiras',   icon:'fa-solid fa-sitemap',             label:'Esteiras'  },
@@ -74,7 +74,7 @@ const TITLES = {
   '/cap':        'Capacidade da Equipe',
   '/cofre':      'Cofre Digital',
   '/crm':        'CRM Comercial',
-  '/prec':       'Precificação',
+  '/precificacao': 'Precificação',
   '/relatorios': 'Relatórios',
   '/config':     'Configurações',
   '/mensagens':  'Mensagens WhatsApp',
@@ -239,7 +239,7 @@ export default function AppShell() {
               <Route path="/cap"        element={<CapPage />} />
               <Route path="/cofre"      element={<CofrePage />} />
               <Route path="/crm"        element={<CRMPage />} />
-              <Route path="/prec"       element={<PrecificacaoPage />} />
+              <Route path="/precificacao"  element={<PrecificacaoPage />} />
               <Route path="/mensagens"  element={<MensagensPage />} />
               <Route path="/relatorios" element={<RelatoriosPage />} />
               <Route path="/config"     element={<ConfigPage />} />

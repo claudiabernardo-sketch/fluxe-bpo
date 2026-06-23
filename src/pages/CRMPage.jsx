@@ -430,7 +430,7 @@ export default function CRMPage() {
       segmento: lead.segmento || '',
       valor_estimado: lead.valor_estimado || 0,
     }))
-    window.open('/prec', '_blank')
+    window.open('/precificacao', '_blank')
   }
 
   const inputStyle = { width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'inherit', boxSizing:'border-box' }
@@ -618,6 +618,7 @@ export default function CRMPage() {
                   💰 Proposta
                 </button>
               </div>
+              <LinhaDoTempo lead={l} />
             )
           })}
           {leads.filter(l => l.etapa !== 'perdido').length === 0 && (
