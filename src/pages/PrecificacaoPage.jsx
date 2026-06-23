@@ -1115,7 +1115,26 @@ export default function PrecificacaoPage() {
                   <div className="prec-card-title">Configurar contrato</div>
                   <div className="prec-card-desc">Revise as condições contratuais antes de gerar o documento. Os campos já estão preenchidos com os valores padrão — edite conforme necessário.</div>
 
-                  <div className="prec-sec">Condições contratuais</div>
+                  <div className="prec-sec" style={{ marginTop:16 }}>Dados do contratante (cliente)</div>
+                  <div className="prec-fgrid">
+                    <Campo label="Razão Social *">
+                      <input className="prec-input" value={contratoForm.clienteNome || calc.d.nome || ''} onChange={setCF('clienteNome')} placeholder="Razão Social do cliente" />
+                    </Campo>
+                    <Campo label="CNPJ / CPF">
+                      <input className="prec-input" value={contratoForm.clienteCnpj || ''} onChange={setCF('clienteCnpj')} placeholder="00.000.000/0001-00" />
+                    </Campo>
+                    <Campo label="Representante legal">
+                      <input className="prec-input" value={contratoForm.clienteRep || ''} onChange={setCF('clienteRep')} placeholder="Nome completo" />
+                    </Campo>
+                    <Campo label="CPF do representante">
+                      <input className="prec-input" value={contratoForm.clienteCpf || ''} onChange={setCF('clienteCpf')} placeholder="000.000.000-00" />
+                    </Campo>
+                    <Campo label="Endereço completo" hint="Rua, número, cidade/UF">
+                      <input className="prec-input" value={contratoForm.clienteEndereco || ''} onChange={setCF('clienteEndereco')} placeholder="Rua X, 123 — São Paulo/SP" />
+                    </Campo>
+                  </div>
+
+                  <div className="prec-sec" style={{ marginTop:16 }}>Condições contratuais</div>
                   <div className="prec-fgrid">
                     <Campo label="Índice de reajuste anual">
                       <select className="prec-select" value={contratoForm.indiceReajuste} onChange={setCF('indiceReajuste')}>
@@ -1224,7 +1243,10 @@ export default function PrecificacaoPage() {
 
                 <div className="ctr-sec">I — Das Partes</div>
                 <p className="ctr-p"><strong>CONTRATANTE:</strong></p>
-                <p className="ctr-p">Razão Social: <strong>{calc.d.nome || '___________________________'}</strong></p>
+                <p className="ctr-p">Razão Social: <strong>{contratoForm.clienteNome || calc.d.nome || '___________________________'}</strong></p>
+                <p className="ctr-p">CNPJ/CPF: <strong>{contratoForm.clienteCnpj || '___________________________'}</strong></p>
+                {contratoForm.clienteEndereco && <p className="ctr-p">Endereço: {contratoForm.clienteEndereco}</p>}
+                <p className="ctr-p">Representante: <strong>{contratoForm.clienteRep || '___________________________'}</strong> · CPF: {contratoForm.clienteCpf || '___.___.___-__'}</p>
                 <p className="ctr-p">CNPJ: ___________________________ | E-mail: ___________________________</p>
                 <p className="ctr-p">Endereço: ___________________________________________________________________</p>
                 <p className="ctr-p">Representado(a) por: ___________________________________ CPF: _______________</p>
@@ -1302,8 +1324,8 @@ export default function PrecificacaoPage() {
                     <div style={{fontSize:11,color:'#6A6760'}}>{nomeEmp} — CONTRATADA</div>
                   </div>
                   <div className="ctr-assin-bl">
-                    <div style={{fontWeight:600,fontSize:12}}>{calc.d.nome || '___________________________'}</div>
-                    <div style={{fontSize:11,color:'#6A6760'}}>Nome / CPF: _______________________ — CONTRATANTE</div>
+                    <div style={{fontWeight:600,fontSize:12}}>{contratoForm.clienteNome || calc.d.nome || '___________________________'}</div>
+                    <div style={{fontSize:11,color:'#6A6760'}}>Nome / CPF: {contratoForm.clienteRep ? `${contratoForm.clienteRep} · ${contratoForm.clienteCpf||''}` : '_______________________ '} — CONTRATANTE</div>
                   </div>
                 </div>
               </div>
