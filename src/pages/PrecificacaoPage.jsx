@@ -1311,6 +1311,43 @@ export default function PrecificacaoPage() {
                   }}
                 >{baixandoDocx ? '⏳ Gerando...' : '⬇ Baixar Word'}</button>
                 <button className="prec-btn prec-btn-primary" onClick={() => window.print()}>🖨 Imprimir / PDF</button>
+                <button className="prec-btn" onClick={() => {
+                  // Abre o template do Canva em nova aba
+                  window.open('https://canva.link/e0kovr95i9qfsza', '_blank')
+                  // Mostra o painel de dados pra copiar
+                  const dados = [
+                    `CLIENTE: ${calc.d.nome || '—'}`,
+                    `DATA: ${new Date().toLocaleDateString('pt-BR')}`,
+                    ``,
+                    `INVESTIMENTO MENSAL: ${fmt(parseFloat(valorProposta))}`,
+                    ``,
+                    `SERVIÇOS INCLUÍDOS:`,
+                    ...calc.items.map(it => {
+                      const d = calc.d
+                      const qtdMap = {
+                        'Conciliação bancária': d.bancos > 0 ? `${d.bancos} conta${d.bancos>1?'s':''}` : null,
+                        'Contas a pagar': d.capag > 0 ? `até ${d.capag}/mês` : null,
+                        'Cobranças manuais a receber': d.carec > 0 ? `até ${d.carec}/mês` : null,
+                        'Agendamento bancário': d.agend > 0 && d.capag > 0 ? `${d.capag} pagamentos/mês` : null,
+                        'Emissão de notas fiscais': d.nfs > 0 ? `até ${d.nfs} NFs/mês` : null,
+                        'Emissão de boletos': d.boletos > 0 ? `até ${d.boletos}/mês` : null,
+                        'Relatórios gerenciais': d.relat == 2 ? 'DRE + Fluxo + Indicadores' : 'DRE + Fluxo de Caixa',
+                        'Reunião estratégica mensal': d.reuniao >= 1.5 ? '1h presencial/mês' : '1h online/mês',
+                      }
+                      const qtd = qtdMap[it.nome]
+                      return `• ${it.nome}${qtd ? ` — ${qtd}` : ''}`
+                    }),
+                    ``,
+                    `APRESENTADA POR: ${empresa?.nome || 'Seu BPO'}`,
+                    empresa?.slogan ? `"${empresa.slogan}"` : '',
+                    empresa?.telefone || '',
+                    `Válida por 15 dias úteis`,
+                  ].filter(l => l !== undefined).join('\n')
+                  navigator.clipboard.writeText(dados).then(() => alert('✓ Dados copiados! Cole no seu template do Canva.'))
+                }}
+                  style={{ background:'#00C4CC', borderColor:'#00C4CC', color:'#fff' }}>
+                  🎨 Abrir no Canva
+                </button>
               </div>
             </div>
           )
