@@ -608,7 +608,6 @@ export function useClienteModelos(clienteId) {
         .select('*, tarefa_modelos(id, titulo, categoria, recorrencia, prioridade, dia_mes, checklist_items)')
         .eq('cliente_id', clienteId)
         .eq('ativo', true)
-        .order('criado_em')
       if (error) throw error
       return data ?? []
     },
