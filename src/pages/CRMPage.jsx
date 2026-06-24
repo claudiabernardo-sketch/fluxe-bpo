@@ -379,6 +379,7 @@ export default function CRMPage() {
     reader.readAsArrayBuffer(file)
     e.target.value = ''
   }
+  const { data: meusTemplates = [] } = useCrmTemplates()
   const createTemplate = useCreateCrmTemplate()
   const updateTemplate = useUpdateCrmTemplate()
   const deleteTemplate = useDeleteCrmTemplate()
