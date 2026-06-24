@@ -183,15 +183,18 @@ export default function AgendaPage() {
     return base
   }, [tarefasAtivas, kanbanPeriodo, kanbanCliente, today])
 
-  // Calendário porDia
+  // Calendário porDia — aplica filtros de cliente e categoria
   const porDia = useMemo(() => {
     const map = {}
-    tasks.forEach(t => {
-      const d = t.data_execucao || t.prazo
-      if (d) { if (!map[d]) map[d]=[]; map[d].push(t) }
-    })
+    tasks
+      .filter(t => !fCliente  || t.cliente_id === fCliente)
+      .filter(t => !fCategoria || t.categoria === fCategoria)
+      .forEach(t => {
+        const d = t.data_execucao || t.prazo
+        if (d) { if (!map[d]) map[d]=[]; map[d].push(t) }
+      })
     return map
-  }, [tasks])
+  }, [tasks, fCliente, fCategoria])
 
   const semanaBase = useMemo(() => startOfWeek(base), [base])
   const diasSemana = useMemo(() => Array.from({length:7},(_,i)=>addDays(semanaBase,i)), [semanaBase])
@@ -219,7 +222,8 @@ export default function AgendaPage() {
   const fi = { padding:'6px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:11, fontFamily:'inherit', background:'#fff', color:'#334155', outline:'none' }
 
   const navCal = dir => {
-    if (viewMode === 'semana' || viewMode === 'dia') setBase(d => addDays(d, dir*7))
+    if (viewMode === 'dia') setBase(d => addDays(d, dir))
+    else if (viewMode === 'semana') setBase(d => addDays(d, dir*7))
     else setBase(d => new Date(d.getFullYear(), d.getMonth()+dir, 1))
   }
 
@@ -592,6 +596,16 @@ export default function AgendaPage() {
             <span style={{ fontSize:14, fontWeight:800, color:'#0F172A', minWidth:160 }}>
               {viewMode==='mes' ? `${MESES[base.getMonth()]} ${base.getFullYear()}` : `${MESES_SHORT[semanaBase.getMonth()]} ${base.getFullYear()}`}
             </span>
+            <select value={fCliente} onChange={e=>setFCliente(e.target.value)} style={{...fi,minWidth:140}}>
+              <option value="">Todos os clientes</option>
+              {clients.map(c=><option key={c.id} value={c.id}>{c.fantasia||c.razao_social}</option>)}
+            </select>
+            <select value={fCategoria} onChange={e=>setFCategoria(e.target.value)} style={{...fi,minWidth:130}}>
+              <option value="">Todas as categorias</option>
+              {[...new Set(tarefasAtivas.map(t=>t.categoria).filter(Boolean))].sort().map(cat=>(
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
             <div style={{ flex:1 }} />
             <div style={{ display:'flex', border:'1px solid #E2E8F0', borderRadius:8, overflow:'hidden' }}>
               {[['mes','Mês'],['semana','Semana'],['dia','Dia']].map(([v,l])=>(
