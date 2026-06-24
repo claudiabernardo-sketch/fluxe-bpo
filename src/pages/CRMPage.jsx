@@ -1,8 +1,9 @@
 import { useLeads, useCreateLead, useUpdateLead, useConvertLeadToClient, useLeadInteracoes, useCreateLeadInteracao, useDeleteLeadInteracao, useCrmTemplates, useCreateCrmTemplate, useUpdateCrmTemplate, useDeleteCrmTemplate } from '../hooks/useData'
 import { Card, Loader, EmptyState, Btn, fmtR } from '../components/ui'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import * as XLSX from 'xlsx'
 
 const ETAPAS = [
   { id:'novo',        label:'Lead novo',   color:'#94A3B8', icon:'🆕' },
@@ -308,8 +309,75 @@ export default function CRMPage() {
   const convert = useConvertLeadToClient()
   const nav     = useNavigate()
 
-  // Templates personalizados
-  const { data: meusTemplates = [] } = useCrmTemplates()
+  const importRef = useRef()
+
+  function exportarLeads() {
+    const rows = leads.map(l => ({
+      'Nome / Razão Social': l.nome || '',
+      'CNPJ': l.cnpj || '',
+      'Nome do Contato': l.contato || '',
+      'WhatsApp': l.whatsapp || '',
+      'Segmento / Atividade': l.segmento || '',
+      'Etapa do Funil': ETAPAS.find(e => e.id === l.etapa)?.label || l.etapa || '',
+      'Valor Mensal Estimado (R$)': l.valor_estimado || 0,
+      'Próximo Follow-up': l.proximo_contato ? new Date(l.proximo_contato+'T12:00:00').toLocaleDateString('pt-BR') : '',
+      'Observações': l.obs || '',
+      'E-mail': l.email || '',
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, '📤 Exportar Leads')
+    // Larguras das colunas
+    ws['!cols'] = [22,18,20,18,22,20,22,18,30,24].map(w => ({ wch: w }))
+    XLSX.writeFile(wb, `Fluxe_Leads_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.xlsx`)
+  }
+
+  async function importarLeads(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = async (ev) => {
+      try {
+        const wb = XLSX.read(ev.target.result, { type: 'array' })
+        // Pega a primeira aba que tiver dados (ignora abas de instrução)
+        const wsName = wb.SheetNames.find(n => !n.includes('Instrução') && !n.includes('📋')) || wb.SheetNames[0]
+        const ws = wb.Sheets[wsName]
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
+        
+        const etapaMap = {
+          'lead novo':'novo','contato':'contato','diagnóstico':'diagnostico',
+          'diagnostico':'diagnostico','proposta':'proposta','fechado':'fechado','perdido':'perdido'
+        }
+        
+        let importados = 0, erros = 0
+        for (const row of rows) {
+          const nome = row['Nome / Razão Social'] || row['nome'] || row['Nome'] || ''
+          if (!nome || nome.toString().startsWith('⬇') || nome.toString().startsWith('✅')) continue
+          const etapaRaw = (row['Etapa do Funil'] || row['etapa'] || 'novo').toString().toLowerCase().trim()
+          const etapa = etapaMap[etapaRaw] || 'novo'
+          const valor = parseFloat(String(row['Valor Mensal Estimado (R$)'] || row['valor'] || '0').replace(/[^0-9.,]/g,'').replace(',','.')) || 0
+          try {
+            await create.mutateAsync({
+              nome: nome.toString(),
+              cnpj: row['CNPJ']?.toString().replace(/\D/g,'') || null,
+              contato: row['Nome do Contato']?.toString() || '',
+              whatsapp: row['WhatsApp']?.toString() || '',
+              segmento: row['Segmento / Atividade']?.toString() || '',
+              etapa,
+              valor_estimado: valor,
+              obs: row['Observações']?.toString() || null,
+            })
+            importados++
+          } catch { erros++ }
+        }
+        alert(`✅ Importação concluída!\n${importados} leads importados${erros > 0 ? `\n⚠️ ${erros} linhas com erro (verifique os dados)` : ''}`)
+      } catch (err) {
+        alert('Erro ao ler o arquivo. Certifique-se de usar a planilha modelo do Fluxe.')
+      }
+    }
+    reader.readAsArrayBuffer(file)
+    e.target.value = ''
+  }
   const createTemplate = useCreateCrmTemplate()
   const updateTemplate = useUpdateCrmTemplate()
   const deleteTemplate = useDeleteCrmTemplate()
@@ -545,6 +613,15 @@ export default function CRMPage() {
           ))}
         </div>
         <div style={{ flex:1 }} />
+        <input ref={importRef} type="file" accept=".xlsx,.xls" style={{ display:'none' }} onChange={importarLeads} />
+        <button onClick={() => importRef.current?.click()}
+          style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #E2E8F0', background:'#fff', cursor:'pointer', fontSize:11, fontWeight:600, color:'#475569' }}>
+          ⬆ Importar
+        </button>
+        <button onClick={exportarLeads}
+          style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #E2E8F0', background:'#fff', cursor:'pointer', fontSize:11, fontWeight:600, color:'#475569' }}>
+          ⬇ Exportar
+        </button>
         <button onClick={() => { setEditingTemplate(null); setTemplateForm({ titulo:'', etapa:'', texto:'' }); setShowTemplatesModal(true) }}
           style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #E2E8F0', background:'#fff', cursor:'pointer', fontSize:11, fontWeight:600, color:'#475569' }}>
           ✏️ Gerenciar templates
