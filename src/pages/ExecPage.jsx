@@ -83,7 +83,7 @@ export default function ExecPage() {
       </div>
 
       <Card>
-        <CardHeader title="Top clientes por MRR" icon="🏆" />
+        <CardHeader title="Top clientes por valor mensal" icon="🏆" />
         <div style={{ padding:'10px 16px' }}>
           {topMrr.map((cl,i) => (
             <div key={cl.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'6px 0' }}>

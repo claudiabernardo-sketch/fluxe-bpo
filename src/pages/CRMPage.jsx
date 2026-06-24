@@ -579,7 +579,7 @@ export default function CRMPage() {
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:10, marginBottom:16 }}>
         {[
           { label:'Pipeline ativo', value: fmtR(totalAtivo), sub:`${ativos.length} leads`, color:'#6366F1' },
-          { label:'MRR fechado', value: fmtR(totalFech), sub:`${fechados.length} clientes`, color:'#22C55E' },
+          { label:'Receita mensal fechada', value: fmtR(totalFech), sub:`${fechados.length} clientes`, color:'#22C55E' },
           { label:'Taxa de conversão', value:`${txConv}%`, sub:`${perdidos.length} perdidos`, color:'#F59E0B' },
           { label:'Follow-ups hoje', value: followUpsHoje.length, sub: followUpsHoje.length > 0 ? '⚠ ligar agora' : 'em dia', color: followUpsHoje.length > 0 ? '#EF4444' : '#22C55E' },
         ].map(m => (
@@ -885,7 +885,7 @@ export default function CRMPage() {
 
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                 <div>
-                  <label style={labelStyle}>MRR estimado (R$)</label>
+                  <label style={labelStyle}>Valor mensal estimado (R$)</label>
                   <input type="number" value={form.valor_estimado || ''} onChange={e => setF('valor_estimado', e.target.value)}
                     placeholder="0" style={inputStyle} />
                 </div>

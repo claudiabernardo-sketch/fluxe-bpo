@@ -358,7 +358,7 @@ export default function ClientsPage() {
           : <table className="tbl">
               <thead>
                 <tr>
-                  {['Cliente','CNPJ','Etapa','Status','MRR','Software','Ações'].map(h => (
+                  {['Cliente','CNPJ','Etapa','Status','Valor/mês','Software','Ações'].map(h => (
                     <th key={h} style={{ padding:'10px 14px', textAlign:'left', fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.06em', borderBottom:'1px solid var(--bo)' }}>{h}</th>
                   ))}
                 </tr>
@@ -488,7 +488,7 @@ export default function ClientsPage() {
               {tab === 'financeiro' && (
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
                   <div>
-                    <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>MRR (R$/mês)</label>
+                    <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Valor mensal (R$/mês)</label>
                     <input type="text" inputMode="numeric" value={form.valor_mrr||''} onChange={e=>setForm(f=>({...f,valor_mrr:e.target.value}))} className="fi" placeholder="Ex: 1.500,00" />
                     {parseFloat(String(form.valor_mrr||'').replace(/\./g,'').replace(',','.')) >= 1000 && (
                       <div style={{ fontSize:10, color:'#6366F1', marginTop:3 }}>

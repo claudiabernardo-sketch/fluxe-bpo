@@ -495,7 +495,7 @@ export default function LoginPage() {
                       <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#6366F1,#A855F7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#fff', fontWeight: 700 }}>MA</div>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: 8, marginBottom: 12 }}>
-                      {[{v:'R$18,4k',l:'MRR',c:'#6366F1'},{v:'23',l:'Clientes',c:'#10B981'},{v:'12',l:'Tarefas hoje',c:'#F59E0B'},{v:'3',l:'Em atraso',c:'#EF4444'}].map((k,i)=>(
+                      {[{v:'R$18,4k',l:'Valor/mês',c:'#6366F1'},{v:'23',l:'Clientes',c:'#10B981'},{v:'12',l:'Tarefas hoje',c:'#F59E0B'},{v:'3',l:'Em atraso',c:'#EF4444'}].map((k,i)=>(
                         <div key={i} style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: '10px 12px', position: 'relative', overflow: 'hidden' }}>
                           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: k.c }} />
                           <div style={{ fontSize: isMobile ? 14 : 18, fontWeight: 800, color: k.c, marginBottom: 2 }}>{k.v}</div>
@@ -592,7 +592,7 @@ export default function LoginPage() {
                       <div style={{ fontSize: 10, color: '#94A3B8' }}>Análise por cliente · Junho 2026</div>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(3,1fr)', gap: 8, marginBottom: 10 }}>
-                      {[{v:'R$18,4k',l:'MRR Total',c:'#6366F1'},{v:'68,3%',l:'Margem Global',c:'#10B981'},{v:'R$35',l:'Custo/hora',c:'#F59E0B'}].map((k,i)=>(
+                      {[{v:'R$18,4k',l:'Receita mensal',c:'#6366F1'},{v:'68,3%',l:'Margem Global',c:'#10B981'},{v:'R$35',l:'Custo/hora',c:'#F59E0B'}].map((k,i)=>(
                         <div key={i} style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: '10px 12px' }}>
                           <div style={{ fontSize: 15, fontWeight: 800, color: k.c }}>{k.v}</div>
                           <div style={{ fontSize: 9, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', marginTop: 2 }}>{k.l}</div>
@@ -601,7 +601,7 @@ export default function LoginPage() {
                     </div>
                     <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, overflow: 'hidden' }}>
                       <div style={{ padding: '8px 12px 8px', borderBottom: '1px solid #F1F5F9', fontSize: 10, fontWeight: 700, color: '#94A3B8', display: 'grid', gridTemplateColumns: '1fr 60px 60px 60px' }}>
-                        <span>CLIENTE</span><span>MRR</span><span>HORAS</span><span>MARGEM</span>
+                        <span>CLIENTE</span><span>Valor/mês</span><span>HORAS</span><span>MARGEM</span>
                       </div>
                       {[['ABC Contabilidade','R$2.200','18h','81%','#15803D'],['Gama Comércio','R$1.800','22h','54%','#92400E'],['Beta Serviços','R$900','28h','-12%','#991B1B']].map(([n,m,h,mg,c],i)=>(
                         <div key={i} style={{ padding: '8px 12px', borderBottom: i<2?'1px solid #F8FAFC':'none', display: 'grid', gridTemplateColumns: '1fr 60px 60px 60px', alignItems: 'center' }}>

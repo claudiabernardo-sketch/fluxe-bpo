@@ -62,7 +62,7 @@ export default function RentPage() {
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
             <thead>
               <tr style={{ borderBottom:'1px solid #F1F5F9' }}>
-                {['Cliente','MRR','Horas/mês','Custo (R$)','Margem R$','Margem %','Situação'].map(h=>(
+                {['Cliente','Valor/mês','Horas/mês','Custo (R$)','Margem R$','Margem %','Situação'].map(h=>(
                   <th key={h} style={{ padding:'10px 14px', textAlign:'left', fontSize:10, fontWeight:700, color:'#94A3B8', textTransform:'uppercase', letterSpacing:'.06em' }}>{h}</th>
                 ))}
               </tr>

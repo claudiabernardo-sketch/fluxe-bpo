@@ -126,7 +126,7 @@ export default function InsightsDash() {
         color: '#EF4444',
         bg: '#FEF2F2',
         title: `${margemNegativa.length} cliente${margemNegativa.length > 1 ? 's' : ''} com margem negativa`,
-        desc: `${nomes}${margemNegativa.length > 2 ? ` e mais ${margemNegativa.length - 2}` : ''} — custo de atendimento supera o MRR.`,
+        desc: `${nomes}${margemNegativa.length > 2 ? ` e mais ${margemNegativa.length - 2}` : ''} — custo de atendimento supera o valor mensal.`,
         action: '/rentabilidade',
         cta: 'Ver rentabilidade',
       })
