@@ -3,7 +3,8 @@ import { Card, Loader, EmptyState, Btn, fmtR } from '../components/ui'
 import { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import * as XLSX from 'xlsx'
+
+const getXLSX = () => import('xlsx')
 
 const ETAPAS = [
   { id:'novo',        label:'Lead novo',   color:'#94A3B8', icon:'🆕' },
@@ -311,7 +312,8 @@ export default function CRMPage() {
 
   const importRef = useRef()
 
-  function exportarLeads() {
+  async function exportarLeads() {
+    const XLSX = await getXLSX()
     const rows = leads.map(l => ({
       'Nome / Razão Social': l.nome || '',
       'CNPJ': l.cnpj || '',
@@ -322,19 +324,18 @@ export default function CRMPage() {
       'Valor Mensal Estimado (R$)': l.valor_estimado || 0,
       'Próximo Follow-up': l.proximo_contato ? new Date(l.proximo_contato+'T12:00:00').toLocaleDateString('pt-BR') : '',
       'Observações': l.obs || '',
-      'E-mail': l.email || '',
     }))
     const ws = XLSX.utils.json_to_sheet(rows)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, '📤 Exportar Leads')
-    // Larguras das colunas
-    ws['!cols'] = [22,18,20,18,22,20,22,18,30,24].map(w => ({ wch: w }))
+    ws['!cols'] = [22,18,20,18,22,20,22,18,30].map(w => ({ wch: w }))
     XLSX.writeFile(wb, `Fluxe_Leads_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.xlsx`)
   }
 
   async function importarLeads(e) {
     const file = e.target.files[0]
     if (!file) return
+    const XLSX = await getXLSX()
     const reader = new FileReader()
     reader.onload = async (ev) => {
       try {
