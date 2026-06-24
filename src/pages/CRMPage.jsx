@@ -975,6 +975,39 @@ export default function CRMPage() {
                 <div style={{ fontWeight:700, fontSize:12, marginBottom:10, color:'#0F172A' }}>
                   {editingTemplate ? '✏️ Editar template' : '+ Novo template'}
                 </div>
+                {!editingTemplate && (
+                  <div style={{ marginBottom:10, fontSize:11, color:'#6366F1' }}>
+                    💡 Ou escolha um template fixo como base:
+                    <select defaultValue="" onChange={e => {
+                      if (!e.target.value) return
+                      const [cat, idx] = e.target.value.split('|')
+                      let t
+                      if (cat === 'etapa') {
+                        const todos = Object.values(TEMPLATES_ETAPA).flat()
+                        t = todos[parseInt(idx)]
+                      } else {
+                        t = TEMPLATES_GLOBAIS.flatMap(g => g.templates)[parseInt(idx)]
+                      }
+                      if (t) setTemplateForm({ titulo: t.label.replace(/^[^\w]+/, ''), etapa:'', texto: t.texto })
+                      e.target.value = ''
+                    }} style={{ marginLeft:8, padding:'3px 8px', borderRadius:6, border:'1px solid #C7D2FE', fontSize:11, cursor:'pointer', background:'#EEF2FF', color:'#6366F1' }}>
+                      <option value="">Selecionar...</option>
+                      <optgroup label="📍 Por etapa">
+                        {Object.values(TEMPLATES_ETAPA).flat().map((t, i) => (
+                          <option key={i} value={`etapa|${i}`}>{t.label}</option>
+                        ))}
+                      </optgroup>
+                      {TEMPLATES_GLOBAIS.map((g, gi) => (
+                        <optgroup key={gi} label={g.categoria}>
+                          {g.templates.map((t, ti) => {
+                            const globalIdx = TEMPLATES_GLOBAIS.slice(0, gi).reduce((a, x) => a + x.templates.length, 0) + ti
+                            return <option key={ti} value={`global|${globalIdx}`}>{t.label}</option>
+                          })}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
                   <div>
                     <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase' }}>Título *</label>
