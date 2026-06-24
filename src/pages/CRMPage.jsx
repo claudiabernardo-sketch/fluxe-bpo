@@ -25,125 +25,171 @@ const MOTIVOS_PERDA = [
 // Templates por etapa — {nome} e {empresa} são substituídos pelos dados do lead
 const TEMPLATES_ETAPA = {
   novo: [
-    {
-      id: 'abordagem_fria',
-      label: '🤝 Primeiro contato',
-      texto: `Olá, {nome}! Tudo bem?
+    { id:'abordagem_fria', label:'🤝 Primeiro contato frio', texto:`Olá, {nome}! Tudo bem?
 
-Sou {minhaNome} da {minhaEmpresa}, BPO Financeiro especializado em organizar e automatizar o financeiro de empresas como a {empresa}.
+Meu nome é {minhaNome} e trabalho com gestão financeira para empresas.
 
-Vi que vocês atuam em {segmento} e acredito que posso ajudar a reduzir o tempo gasto com contas a pagar, conciliação bancária e relatórios gerenciais.
+Analisando o perfil da {empresa}, percebi que posso ajudar a organizar os processos financeiros, melhorar o controle do caixa e gerar mais previsibilidade para o negócio.
 
-Teria 15 minutinhos esta semana para uma conversa rápida?`,
-    },
+Gostaria de entender um pouco mais sobre sua operação. Teria 20 minutos nesta semana para uma conversa rápida?` },
+    { id:'abordagem_indicacao', label:'🤝 Primeiro contato por indicação', texto:`Olá, {nome}!
+
+Recebi seu contato por indicação e gostaria de me apresentar.
+
+Trabalho com BPO Financeiro, apoiando empresários no controle financeiro, organização dos processos e geração de informações para tomada de decisão.
+
+Podemos agendar uma conversa rápida para eu entender seu cenário atual?` },
   ],
   contato: [
-    {
-      id: 'confirmar_reuniao',
-      label: '📅 Confirmar reunião de diagnóstico',
-      texto: `Olá, {nome}! Tudo bem?
+    { id:'confirmar_reuniao', label:'📅 Confirmar reunião de diagnóstico', texto:`Olá, {nome}! Tudo bem?
 
 Passando para confirmar nossa conversa sobre o financeiro da {empresa}.
 
 Data e horário: [PREENCHER]
 Link / local: [PREENCHER]
 
-Vou preparar algumas perguntas para entender melhor a operação de vocês e ver como posso ajudar. Confirma presença?`,
-    },
+Preparei algumas perguntas para entender melhor a operação de vocês. Confirma presença?` },
   ],
   diagnostico: [
-    {
-      id: 'envio_proposta',
-      label: '📄 Envio de proposta',
-      texto: `Olá, {nome}! Tudo bem?
+    { id:'envio_proposta', label:'📄 Envio de proposta', texto:`Olá, {nome}! Tudo bem?
 
 Conforme conversamos, segue a proposta de serviços de BPO Financeiro para a {empresa}:
 
 [LINK DA PROPOSTA]
 
-Em resumo, o escopo inclui:
-• Conciliação bancária mensal
-• Gestão de contas a pagar e a receber
-• Relatórios gerenciais mensais
-• [OUTROS SERVIÇOS]
-
 Investimento: R$ {valor}/mês
 
-Qualquer dúvida, estou à disposição. O que acha?`,
-    },
+Qualquer dúvida, estou à disposição. O que acha?` },
   ],
   proposta: [
-    {
-      id: 'followup_proposta',
-      label: '🔔 Follow-up da proposta',
-      texto: `Olá, {nome}! Tudo bem?
+    { id:'followup_proposta', label:'🔔 Follow-up da proposta', texto:`Olá, {nome}! Tudo bem?
 
-Passando para saber se você teve a chance de analisar a proposta que enviei para a {empresa}.
+Passando para verificar se conseguiu analisar a proposta enviada para a {empresa}.
 
-Fico à disposição para esclarecer qualquer dúvida ou ajustar algum ponto do escopo. O que achou?`,
-    },
-    {
-      id: 'followup_2',
-      label: '⏰ Último contato',
-      texto: `Olá, {nome}!
+Caso tenha alguma dúvida ou queira discutir algum ponto específico, estou à disposição.` },
+    { id:'followup_2', label:'⏰ Último contato', texto:`Olá, {nome}!
 
 Tentei falar com você algumas vezes sobre a proposta para a {empresa}, mas não consegui retorno.
 
 Vou encerrar o processo de contato por agora para não ser inconveniente. Se no futuro precisar de apoio no financeiro, estarei à disposição.
 
-Sucesso nos projetos! 🤝`,
-    },
-    {
-      id: 'cobranca_aprovacao',
-      label: '✍️ Cobrar aprovação pendente',
-      texto: `Olá, {nome}! Tudo bem?
+Sucesso nos projetos! 🤝` },
+    { id:'cobranca_aprovacao', label:'✍️ Cobrar aprovação pendente', texto:`Olá, {nome}! Tudo bem?
 
 Ainda aguardo sua confirmação para dar início aos serviços de BPO Financeiro na {empresa}.
 
-Para começarmos, precisamos apenas da sua aprovação. Podemos avançar?`,
-    },
+Para começarmos, precisamos apenas da sua aprovação. Podemos avançar?` },
   ],
   fechado: [
-    {
-      id: 'boas_vindas',
-      label: '🎉 Boas-vindas e próximos passos',
-      texto: `Olá, {nome}! Seja muito bem-vindo(a)!
+    { id:'boas_vindas', label:'🎉 Boas-vindas e próximos passos', texto:`Olá, {nome}! Seja muito bem-vindo(a)!
 
-Estou muito feliz em ter a {empresa} como cliente da {minhaEmpresa}!
+Estamos felizes em ter a {empresa} como cliente da {minhaEmpresa}!
 
 Nossos próximos passos:
 1. Vou te enviar o contrato para assinatura
 2. Precisarei de alguns acessos (internet banking, sistema)
 3. Agendamos uma reunião de kickoff
 
-Alguma dúvida ou ponto que queira alinhar antes de começarmos?`,
-    },
-    {
-      id: 'solicitar_assinatura',
-      label: '📝 Solicitar assinatura de contrato',
-      texto: `Olá, {nome}!
+Alguma dúvida antes de começarmos?` },
+    { id:'solicitar_assinatura', label:'📝 Solicitar assinatura de contrato', texto:`Olá, {nome}!
 
 Segue o contrato de prestação de serviços de BPO Financeiro para a {empresa}:
 
 [LINK DO CONTRATO]
 
-Assim que assinado, já posso dar início ao onboarding. Qualquer dúvida sobre os termos, fico à disposição!`,
-    },
-    {
-      id: 'solicitar_acesso',
-      label: '🔑 Solicitar acessos',
-      texto: `Olá, {nome}!
+Assim que assinado, já posso dar início ao onboarding!` },
+    { id:'solicitar_acesso', label:'🔑 Solicitar acessos', texto:`Olá, {nome}!
 
 Para iniciarmos o trabalho na {empresa}, precisarei dos seguintes acessos:
 
-• Internet banking (acesso de consulta ou operacional)
+• Internet banking (consulta ou operacional)
 • Sistema financeiro ([OMIE / CONTA AZUL / OUTRO])
 • Portal de emissão de NF (se aplicável)
 
-Você consegue providenciar até [DATA]? Se preferir, podemos fazer uma chamada rápida para configurar juntos.`,
-    },
+Você consegue providenciar até [DATA]?` },
   ],
 }
+
+const TEMPLATES_GLOBAIS = [
+  { categoria:'📚 Educação', templates: [
+    { id:'bpo_curto', label:'O que é BPO? (WhatsApp)', texto:`Olá, {nome}!
+
+O BPO Financeiro funciona como um departamento financeiro terceirizado para sua empresa.
+
+Cuidamos da organização financeira, fluxo de caixa, contas a pagar, contas a receber e relatórios gerenciais — dando mais controle e previsibilidade sobre os números do negócio.
+
+Quer entender como isso funcionaria para a {empresa}?` },
+    { id:'bpo_completo', label:'O que é BPO? (e-mail completo)', texto:`Olá, {nome}!
+
+O BPO Financeiro é um departamento financeiro terceirizado para a {empresa}.
+
+O que fazemos:
+• Organização do fluxo de caixa
+• Gestão de contas a pagar e a receber
+• Conciliação bancária
+• Emissão de notas fiscais
+• Relatórios gerenciais mensais
+• Reunião estratégica mensal
+
+O que você ganha:
+• Clareza sobre o caixa
+• Previsibilidade para decisões
+• Tempo livre para focar no crescimento
+• Financeiro profissional sem custo CLT
+
+Posso te mandar uma proposta personalizada?` },
+  ]},
+  { categoria:'🔍 Diagnóstico', templates: [
+    { id:'perguntas_diagnostico', label:'📋 Roteiro de diagnóstico', texto:`Olá, {nome}! Antes da nossa reunião, me ajuda com algumas informações sobre a {empresa}?
+
+1. Quantas contas bancárias a empresa tem?
+2. Quantas notas fiscais emitem por mês, em média?
+3. Usam algum sistema financeiro ou ERP hoje?
+4. Quem cuida do financeiro hoje?
+5. Qual a maior dificuldade com o financeiro atualmente?
+
+Com isso já consigo preparar uma proposta bem ajustada! 😊` },
+    { id:'pre_reuniao', label:'📅 Pré-reunião (WhatsApp)', texto:`Olá, {nome}! Confirmando nossa conversa de hoje.
+
+Para aproveitar bem o tempo, me conta rapidinho:
+
+• Qual o maior desafio financeiro da {empresa} hoje?
+• Vocês já usam algum sistema financeiro?
+
+Te vejo em breve! 👋` },
+  ]},
+  { categoria:'🛡 Objeções', templates: [
+    { id:'obj_contador', label:'"Já tenho contador"', texto:`Perfeito, {nome}!
+
+Na verdade, contador e BPO Financeiro têm funções complementares.
+
+O contador cuida das obrigações fiscais e contábeis. O BPO atua na operação financeira do dia a dia — fluxo de caixa, pagamentos, relatórios gerenciais.
+
+A maioria dos nossos clientes já tinha contador quando nos contratou.
+
+Faz sentido conversarmos?` },
+    { id:'obj_caro', label:'"É caro"', texto:`Entendo, {nome}!
+
+Um auxiliar financeiro CLT custa em média R$ 2.500 a R$ 3.500/mês (salário + encargos + benefícios).
+
+Com o BPO, você tem um time especializado por uma fração desse custo — sem vínculo empregatício e com experiência em múltiplos negócios.
+
+Posso te mostrar uma simulação?` },
+    { id:'obj_momento', label:'"Não é o momento"', texto:`Compreendo, {nome}!
+
+O momento de organizar o financeiro é justamente quando parece que não há tempo — porque a bagunça financeira consome energia que deveria ir para o crescimento.
+
+Não precisa ser agora. Quando fizer sentido, estarei aqui.
+
+Posso te mandar um material para avaliar com calma?` },
+    { id:'obj_pensar', label:'"Deixa eu pensar"', texto:`Claro, {nome}! Leva o tempo que precisar.
+
+Se surgir alguma dúvida sobre escopo, valores ou como funciona na prática, pode me chamar a qualquer momento.
+
+Combinado?` },
+  ]},
+]
+
 
 function formatCNPJ(v) {
   const d = v.replace(/\D/g, '').slice(0, 14)
@@ -285,11 +331,14 @@ export default function CRMPage() {
   const [templateCopiado, setTemplateCopiado] = useState(false)
 
   function getTemplatesDaEtapa(etapa) {
-    const fixos = TEMPLATES_ETAPA[etapa] || []
+    const fixosDaEtapa = (TEMPLATES_ETAPA[etapa] || []).map(t => ({ ...t, grupo: '📍 Desta etapa' }))
+    const globais = TEMPLATES_GLOBAIS.flatMap(g =>
+      g.templates.map(t => ({ ...t, grupo: g.categoria }))
+    )
     const personalizados = meusTemplates
       .filter(t => !t.etapa || t.etapa === etapa)
-      .map(t => ({ id: t.id, label: `✏️ ${t.titulo}`, texto: t.texto, customizado: true }))
-    return [...fixos, ...personalizados]
+      .map(t => ({ id: t.id, label: t.titulo, texto: t.texto, grupo: '✏️ Meus templates', customizado: true }))
+    return [...fixosDaEtapa, ...globais, ...personalizados]
   }
 
   function abrirTemplate(lead, template) {
@@ -576,17 +625,25 @@ export default function CRMPage() {
                               💰 Proposta
                             </button>
                           )}
-                          {getTemplatesDaEtapa(l.etapa).length > 0 && (
-                            <div style={{ position:'relative', display:'inline-block' }}>
+                          {getTemplatesDaEtapa(l.etapa).length > 0 && (() => {
+                            const todos = getTemplatesDaEtapa(l.etapa)
+                            const grupos = [...new Set(todos.map(t => t.grupo))]
+                            return (
                               <select
-                                onChange={e => { if(e.target.value) { const todos = getTemplatesDaEtapa(l.etapa); const t = todos.find(x=>x.id===e.target.value); if(t) abrirTemplate(l,t); e.target.value=''; } }}
+                                onChange={e => { if(e.target.value) { const t = todos.find(x=>x.id===e.target.value); if(t) abrirTemplate(l,t); e.target.value=''; } }}
                                 style={{ fontSize:9, padding:'2px 6px', border:'1px solid #BBF7D0', borderRadius:5, cursor:'pointer', background:'#F0FDF4', color:'#15803D', fontWeight:600, appearance:'none' }}
                                 defaultValue="">
                                 <option value="" disabled>💬 Mensagem</option>
-                                {getTemplatesDaEtapa(l.etapa).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                                {grupos.map(grupo => (
+                                  <optgroup key={grupo} label={grupo}>
+                                    {todos.filter(t => t.grupo === grupo).map(t => (
+                                      <option key={t.id} value={t.id}>{t.label}</option>
+                                    ))}
+                                  </optgroup>
+                                ))}
                               </select>
-                            </div>
-                          )}
+                            )
+                          })()}
                           {et.id === 'fechado' && !isConvertido && (
                             <button onClick={() => handleConvert(l)} disabled={convert.isPending}
                               style={{ fontSize:9, padding:'2px 8px', border:'1px solid #22C55E', borderRadius:5, cursor:'pointer', background:'#F0FDF4', color:'#15803D', fontWeight:600 }}>
