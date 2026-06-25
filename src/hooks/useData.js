@@ -44,9 +44,9 @@ export function useCreateClient() {
     mutationFn: async (client) => {
       const { usuarios, empresas, id, criado_em, atualizado_em, ...clean } = client
       const { data, error } = await supabase
-        .from('clientes').insert({ ...clean, empresa_id: empresa?.id }).select().single()
+        .from('clientes').insert({ ...clean, empresa_id: empresa?.id }).select()
       if (error) throw error
-      await logAudit('CREATE', 'clientes', data.id, { razao: clean.razao_social })
+      await logAudit('CREATE', 'clientes', data?.[0]?.id, { razao: clean.razao_social })
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
@@ -59,7 +59,7 @@ export function useUpdateClient() {
     mutationFn: async ({ id, ...updates }) => {
       const { usuarios, empresas, empresa_id, ...clean } = updates
       const { data, error } = await supabase
-        .from('clientes').update(clean).eq('id', id).select().single()
+        .from('clientes').update(clean).eq('id', id).select()
       if (error) throw error
       await logAudit('UPDATE', 'clientes', id, { id })
       return data
@@ -118,9 +118,9 @@ export function useCreateTask() {
   return useMutation({
     mutationFn: async (task) => {
       const { data, error } = await supabase
-        .from('tarefas').insert({ ...task, empresa_id: empresa?.id }).select().single()
+        .from('tarefas').insert({ ...task, empresa_id: empresa?.id }).select()
       if (error) throw error
-      await logAudit('CREATE', 'tarefas', data.id, { titulo: task.titulo })
+      await logAudit('CREATE', 'tarefas', data?.[0]?.id, { titulo: task.titulo })
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
@@ -133,7 +133,7 @@ export function useUpdateTask() {
     mutationFn: async ({ id, ...updates }) => {
       const { data, error } = await supabase
         .from('tarefas').update({ ...updates, atualizado_em: new Date().toISOString() })
-        .eq('id', id).select().single()
+        .eq('id', id).select()
       if (error) throw error
       await logAudit('UPDATE', 'tarefas', id, updates)
       return data
@@ -197,9 +197,9 @@ export function useCreateModelo() {
   return useMutation({
     mutationFn: async (modelo) => {
       const { data, error } = await supabase
-        .from('tarefa_modelos').insert({ ...modelo, empresa_id: empresa?.id }).select().single()
+        .from('tarefa_modelos').insert({ ...modelo, empresa_id: empresa?.id }).select()
       if (error) throw error
-      return data
+      return data?.[0]
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tarefa_modelos'] }),
   })
@@ -211,9 +211,9 @@ export function useUpdateModelo() {
     mutationFn: async ({ id, ...updates }) => {
       const { data, error } = await supabase
         .from('tarefa_modelos').update({ ...updates, atualizado_em: new Date().toISOString() })
-        .eq('id', id).select().single()
+        .eq('id', id).select()
       if (error) throw error
-      return data
+      return data?.[0]
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tarefa_modelos'] }),
   })
@@ -262,9 +262,9 @@ export function useCreateLead() {
       const empresa_id = useAuthStore.getState().empresa?.id
       if (!empresa_id) throw new Error('Sessão inválida. Faça login novamente.')
       const { data, error } = await supabase
-        .from('leads').insert({ ...lead, empresa_id }).select().single()
+        .from('leads').insert({ ...lead, empresa_id }).select()
       if (error) throw error
-      return data
+      return data?.[0]
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['leads'] }),
   })
@@ -356,9 +356,9 @@ export function useCreatePendencia() {
   return useMutation({
     mutationFn: async (pend) => {
       const { data, error } = await supabase
-        .from('pendencias').insert({ ...pend, empresa_id: empresa?.id }).select().single()
+        .from('pendencias').insert({ ...pend, empresa_id: empresa?.id }).select()
       if (error) throw error
-      return data
+      return data?.[0]
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['pendencias'] }),
   })
@@ -369,9 +369,9 @@ export function useUpdatePendencia() {
   return useMutation({
     mutationFn: async ({ id, ...updates }) => {
       const { data, error } = await supabase
-        .from('pendencias').update(updates).eq('id', id).select().single()
+        .from('pendencias').update(updates).eq('id', id).select()
       if (error) throw error
-      return data
+      return data?.[0]
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['pendencias'] }),
   })
@@ -413,9 +413,9 @@ export function useSaveApontamento() {
   return useMutation({
     mutationFn: async (ap) => {
       const { data, error } = await supabase
-        .from('apontamentos').insert({ ...ap, empresa_id: empresa?.id }).select().single()
+        .from('apontamentos').insert({ ...ap, empresa_id: empresa?.id }).select()
       if (error) throw error
-      await logAudit('CREATE', 'apontamentos', data.id, { segundos: ap.segundos })
+      await logAudit('CREATE', 'apontamentos', data?.[0]?.id, { segundos: ap.segundos })
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['apontamentos'] }),
@@ -448,7 +448,7 @@ export function useUpdateAprovacao() {
     mutationFn: async ({ id, status, obs }) => {
       const { data, error } = await supabase
         .from('aprovacoes').update({ status, atualizado_em: new Date().toISOString() })
-        .eq('id', id).select().single()
+        .eq('id', id).select()
       if (error) throw error
       await supabase.from('aprovacao_historico').insert({
         aprovacao_id: id, acao: status, obs
@@ -557,9 +557,9 @@ export function useCreateRotina() {
   return useMutation({
     mutationFn: async (rotina) => {
       const { data, error } = await supabase
-        .from('rotinas').insert({ ...rotina, empresa_id: empresa?.id }).select().single()
+        .from('rotinas').insert({ ...rotina, empresa_id: empresa?.id }).select()
       if (error) throw error
-      await logAudit('CREATE', 'rotinas', data.id, { titulo: rotina.titulo })
+      await logAudit('CREATE', 'rotinas', data?.[0]?.id, { titulo: rotina.titulo })
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['rotinas'] }),
@@ -571,9 +571,9 @@ export function useUpdateRotina() {
   return useMutation({
     mutationFn: async ({ id, ...updates }) => {
       const { data, error } = await supabase
-        .from('rotinas').update(updates).eq('id', id).select().single()
+        .from('rotinas').update(updates).eq('id', id).select()
       if (error) throw error
-      return data
+      return data?.[0]
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['rotinas'] }),
   })
@@ -624,9 +624,9 @@ export function useVincularModelo() {
           empresa_id: empresa?.id,
           ativo: true,
         }, { onConflict: 'cliente_id,modelo_id' })
-        .select().single()
+        .select()
       if (error) throw error
-      return data
+      return data?.[0]
     },
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['cliente_modelos', vars.clienteId] }),
   })
@@ -672,7 +672,7 @@ export function useCreateFeriado() {
   return useMutation({
     mutationFn: async ({ data, descricao }) => {
       const { data: row, error } = await supabase
-        .from('feriados').insert({ data, descricao, empresa_id: empresa?.id }).select().single()
+        .from('feriados').insert({ data, descricao, empresa_id: empresa?.id }).select()
       if (error) throw error
       return row
     },
@@ -720,7 +720,7 @@ export function useCreateLeadInteracao() {
       const { data, error } = await supabase
         .from('lead_interacoes')
         .insert({ lead_id, tipo, nota, empresa_id })
-        .select().single()
+        .select()
       if (error) throw error
       // Atualiza próximo follow-up no lead se informado
       if (proximo_contato) {
@@ -771,9 +771,9 @@ export function useCreateCrmTemplate() {
       const { data, error } = await supabase
         .from('crm_templates')
         .insert({ titulo, etapa: etapa || null, texto, empresa_id })
-        .select().single()
+        .select()
       if (error) throw error
-      return data
+      return data?.[0]
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['crm_templates'] }),
   })
