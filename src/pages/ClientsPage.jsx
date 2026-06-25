@@ -261,7 +261,10 @@ export default function ClientsPage() {
   }
 
   function openEdit(cl) {
-    setForm({ ...cl })
+    const valorFormatado = cl.valor_mrr
+      ? Number(cl.valor_mrr).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : ''
+    setForm({ ...cl, valor_mrr: valorFormatado })
     setSelectedBancos(cl.bancos || [])
     setTab('dados')
     setModal({ mode:'edit', id: cl.id })
