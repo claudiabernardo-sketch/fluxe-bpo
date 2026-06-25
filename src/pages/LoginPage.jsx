@@ -320,6 +320,8 @@ export default function LoginPage() {
                   </div>
                 </div>
               )}
+              {mfaStep ? (
+              <form onSubmit={handleMfa}>
                   <div style={{ marginBottom: 16 }}>
                     <label style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.07em' }}>Código do autenticador</label>
                     <input
