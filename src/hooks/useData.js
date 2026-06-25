@@ -52,6 +52,7 @@ export function useCreateClient() {
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -67,6 +68,7 @@ export function useUpdateClient() {
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -83,6 +85,7 @@ export function useDeleteClient() {
       await logAudit('DELETE', 'clientes', id)
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -125,6 +128,7 @@ export function useCreateTask() {
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -169,6 +173,7 @@ export function useDeleteTask() {
       await logAudit('DELETE', 'tarefas', id)
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -203,6 +208,7 @@ export function useCreateModelo() {
       return data?.[0]
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tarefa_modelos'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -217,6 +223,7 @@ export function useUpdateModelo() {
       return data?.[0]
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tarefa_modelos'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -233,6 +240,7 @@ export function useDeleteModelo() {
       await logAudit('DELETE', 'tarefa_modelos', id)
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tarefa_modelos'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -268,6 +276,7 @@ export function useCreateLead() {
       return data?.[0]
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['leads'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -280,6 +289,7 @@ export function useUpdateLead() {
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['leads'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -362,6 +372,7 @@ export function useCreatePendencia() {
       return data?.[0]
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['pendencias'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -375,6 +386,7 @@ export function useUpdatePendencia() {
       return data?.[0]
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['pendencias'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -420,6 +432,7 @@ export function useSaveApontamento() {
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['apontamentos'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -457,6 +470,7 @@ export function useUpdateAprovacao() {
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['aprovacoes'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -515,6 +529,7 @@ export function useSaveAcesso() {
       return data?.[0]
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['acessos'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -527,6 +542,7 @@ export function useDeleteAcesso() {
       await logAudit('DELETE', 'acessos', id)
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['acessos'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -564,6 +580,7 @@ export function useCreateRotina() {
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['rotinas'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -577,6 +594,7 @@ export function useUpdateRotina() {
       return data?.[0]
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['rotinas'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -593,6 +611,7 @@ export function useDeleteRotina() {
       await logAudit('DELETE', 'rotinas', id)
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['rotinas'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })}
 // ── CLIENTE MODELOS (vínculos) ────────────────────────────────────
 export function useClienteModelos(clienteId) {
@@ -630,6 +649,7 @@ export function useVincularModelo() {
       return data?.[0]
     },
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['cliente_modelos', vars.clienteId] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -644,6 +664,7 @@ export function useDesvincularModelo() {
       if (error) throw error
     },
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['cliente_modelos', vars.clienteId] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -678,6 +699,7 @@ export function useCreateFeriado() {
       return row
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['feriados'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -689,6 +711,7 @@ export function useDeleteFeriado() {
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['feriados'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -731,6 +754,7 @@ export function useCreateLeadInteracao() {
       return data
     },
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['lead_interacoes', vars.lead_id] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -742,6 +766,7 @@ export function useDeleteLeadInteracao() {
       if (error) throw error
     },
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['lead_interacoes', vars.lead_id] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -777,6 +802,7 @@ export function useCreateCrmTemplate() {
       return data?.[0]
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['crm_templates'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -791,6 +817,7 @@ export function useUpdateCrmTemplate() {
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['crm_templates'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 
@@ -802,5 +829,6 @@ export function useDeleteCrmTemplate() {
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['crm_templates'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }

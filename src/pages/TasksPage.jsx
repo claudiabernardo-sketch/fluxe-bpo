@@ -230,14 +230,16 @@ export default function TasksPage() {
     mutationFn: async ({ id, concluido }) => {
       await supabase.from('tarefa_checklists').update({ concluido }).eq('id', id)
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['checklists', selTask] })
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['checklists', selTask] }),
+    onError: (err) => alert('Erro ao atualizar checklist: ' + err.message),
   })
 
   const deleteCheck = useMutation({
     mutationFn: async (id) => {
       await supabase.from('tarefa_checklists').delete().eq('id', id)
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['checklists', selTask] })
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['checklists', selTask] }),
+    onError: (err) => alert('Erro ao remover item: ' + err.message),
   })
 
   const logHistorico = (tarefa_id, acao) => {

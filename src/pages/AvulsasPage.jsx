@@ -35,7 +35,8 @@ export default function AvulsasPage() {
       if (error) throw error
       return data?.[0]
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey:['avulsas'] }); setModal(false); setForm({ prioridade:'media', status:'aberta' }); setIsAgend(false) }
+    onSuccess: () => { qc.invalidateQueries({ queryKey:['avulsas'] }); setModal(false); setForm({ prioridade:'media', status:'aberta' }); setIsAgend(false) },
+    onError: (err) => alert('Erro ao criar tarefa: ' + err.message),
   })
 
   const update = useMutation({
@@ -43,7 +44,8 @@ export default function AvulsasPage() {
       const { error } = await supabase.from('tarefas_avulsas').update(data).eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey:['avulsas'] })
+    onSuccess: () => qc.invalidateQueries({ queryKey:['avulsas'] }),
+    onError: (err) => alert('Erro ao atualizar tarefa: ' + err.message),
   })
 
   const DIAS_AG = [ {value:'proxima_segunda',label:'Próxima segunda'},{value:'proxima_terca',label:'Próxima terça'},{value:'proxima_quarta',label:'Próxima quarta'},{value:'proxima_quinta',label:'Próxima quinta'},{value:'proxima_sexta',label:'Próxima sexta'},{value:'urgente',label:'Urgente — hoje'} ]

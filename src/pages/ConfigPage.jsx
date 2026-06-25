@@ -388,19 +388,22 @@ export default function ConfigPage() {
       } else {
         setShowNovoUser(false)
       }
-    }
+    },
+    onError: (err) => alert('Erro ao convidar usuário: ' + err.message),
   })
 
   const editarUser = useMutation({
     mutationFn: async (u) => {
       await supabase.from('usuarios').update({ nome: u.nome, perfil: u.perfil, custo_hora: u.custo_hora, ativo: u.ativo }).eq('id', u.id)
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['usuarios'] }); setEditUser(null) }
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['usuarios'] }); setEditUser(null) },
+    onError: (err) => alert('Erro ao editar usuário: ' + err.message),
   })
 
   const excluirUser = useMutation({
     mutationFn: async (u) => { await supabase.from('usuarios').delete().eq('id', u.id) },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['usuarios'] }); setDeleteUser(null) }
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['usuarios'] }); setDeleteUser(null) },
+    onError: (err) => alert('Erro ao excluir usuário: ' + err.message),
   })
 
   const [reenvioStatus, setReenvioStatus] = useState({}) // { [userId]: 'sending' | 'ok' | 'err' }
