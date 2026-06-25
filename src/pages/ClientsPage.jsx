@@ -915,7 +915,7 @@ export default function ClientsPage() {
                                 {r.tipo === 'diaria'
                                   ? 'Todos os dias'
                                   : r.tipo === 'semanal'
-                                    ? (r.dias_semana?.length ? r.dias_semana.map(d=>DIAS_SEMANA_R[d].slice(0,3)).join(', ') : DIAS_SEMANA_R[r.dia_semana])
+                                    ? (r.dias_semana?.length ? r.dias_semana.map(d=>DIAS_SEMANA_R[d]?.slice(0,3)).filter(Boolean).join(', ') : (DIAS_SEMANA_R[r.dia_semana] || '—'))
                                     : `Todo dia ${r.dia_mes}`}
                                 {r.observacao && <> · <em>{r.observacao}</em></>}
                               </div>

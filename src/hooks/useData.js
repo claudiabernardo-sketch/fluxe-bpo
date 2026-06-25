@@ -32,7 +32,7 @@ export function useClients() {
         .order('razao_social')
         .limit(500)
       if (error) throw error
-      return data
+      return data ?? []
     },
     staleTime: 30_000,
     enabled: !!empresa?.id,
@@ -257,7 +257,7 @@ export function useLeads() {
         .order('criado_em', { ascending: false })
         .limit(300)
       if (error) throw error
-      return data
+      return data ?? []
     },
     staleTime: 30_000,
     enabled: !!empresa?.id,
@@ -354,7 +354,7 @@ export function usePendencias(filters = {}) {
 
       const { data, error } = await q
       if (error) throw error
-      return data
+      return data ?? []
     },
     staleTime: 30_000,
     enabled: !!empresa?.id,
@@ -413,7 +413,7 @@ export function useApontamentos(filters = {}) {
 
       const { data, error } = await q
       if (error) throw error
-      return data
+      return data ?? []
     },
     staleTime: 30_000,
     enabled: !!empresa?.id,
@@ -449,7 +449,7 @@ export function useAprovacoes() {
         .order('criado_em', { ascending: false })
         .limit(200)
       if (error) throw error
-      return data
+      return data ?? []
     },
     staleTime: 30_000,
     enabled: !!empresa?.id,
@@ -488,7 +488,7 @@ export function useUsuarios() {
         .order('nome')
         .limit(100)
       if (error) throw error
-      return data
+      return data ?? []
     },
     staleTime: 60_000, // equipe muda pouco — cache mais longo
     enabled: !!empresa?.id,
@@ -511,7 +511,7 @@ export function useAcessos(clienteId) {
         .order('sistema')
         .limit(200)
       if (error) throw error
-      return data
+      return data ?? []
     },
     enabled: !!clienteId && !!empresa?.id,
     staleTime: 30_000,
