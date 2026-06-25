@@ -1,4 +1,19 @@
 import { useEffect } from 'react'
+import { supabase } from './lib/supabase'
+
+// Refresh de sessão quando a aba volta ao foco
+function SessionRefresher() {
+  useEffect(() => {
+    const handleVisibility = async () => {
+      if (document.visibilityState === 'visible') {
+        await supabase.auth.refreshSession()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [])
+  return null
+}
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useAuthStore } from './store/authStore'
@@ -12,8 +27,9 @@ const qc = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      staleTime: 3 * 60 * 1000,  // 3 min — não refaz query ao trocar de aba
-      gcTime:    10 * 60 * 1000, // 10 min — mantém cache em memória
+      staleTime: 3 * 60 * 1000,
+      gcTime:    10 * 60 * 1000,
+      refetchOnWindowFocus: true,
     },
   },
 })
@@ -41,6 +57,7 @@ export default function App() {
 
   return (
     <QueryClientProvider client={qc}>
+      <SessionRefresher />
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
