@@ -508,14 +508,11 @@ export function useSaveAcesso() {
   return useMutation({
     mutationFn: async (acesso) => {
       const { data, error } = acesso.id
-        ? await supabase.from('acessos').update(acesso).eq('id', acesso.id).select().single()
-        : await supabase.from('acessos').insert(acesso).select().single()
+        ? await supabase.from('acessos').update(acesso).eq('id', acesso.id).select()
+        : await supabase.from('acessos').insert(acesso).select()
       if (error) throw error
-      await logAudit('UPDATE', 'acessos', data.id, { sistema: acesso.sistema })
-      return data
+      return data?.[0]
     },
-    // Invalida por prefixo: cobre useAcessos(clienteId) (['acessos', empresaId, clienteId])
-    // e qualquer outra listagem de acessos (ex: CofrePage)
     onSuccess: () => qc.invalidateQueries({ queryKey: ['acessos'] }),
   })
 }
