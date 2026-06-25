@@ -311,13 +311,27 @@ export default function ClientsPage() {
   async function save() {
     if (!form.razao_social) { alert('Razão social é obrigatória'); return }
     const mrrNum = parseFloat(String(form.valor_mrr||'0').replace(/\./g,'').replace(',','.')) || 0
-    const payload = { ...form, valor_mrr: mrrNum, bancos: selectedBancos }
-    if (modal.mode === 'new') {
-      await createClient.mutateAsync(payload)
-    } else {
-      await updateClient.mutateAsync({ id: modal.id, ...payload })
+    const vencDia = form.vencimento_dia ? parseInt(form.vencimento_dia, 10) || null : null
+    // Remove campos calculados/relacionais que não pertencem à tabela clientes
+    const { usuarios, empresas, id, criado_em, atualizado_em, deleted_at, municipio, ...cleanForm } = form
+    const payload = {
+      ...cleanForm,
+      valor_mrr: mrrNum,
+      vencimento_dia: vencDia,
+      bancos: selectedBancos,
+      inicio_contrato: form.inicio_contrato || null,
+      software_erp: form.software_erp || null,
     }
-    close()
+    try {
+      if (modal.mode === 'new') {
+        await createClient.mutateAsync(payload)
+      } else {
+        await updateClient.mutateAsync({ id: modal.id, ...payload })
+      }
+      close()
+    } catch (err) {
+      alert('Erro ao salvar cliente: ' + err.message)
+    }
   }
 
   if (isLoading) return <Loader />
