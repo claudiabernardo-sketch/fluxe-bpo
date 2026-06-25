@@ -35,11 +35,12 @@ export const useAuthStore = create((set, get) => ({
 
   loadProfile: async (user) => {
     try {
-      const { data: profile } = await supabase
+      const { data: profiles } = await supabase
         .from('usuarios')
         .select('*, empresas(*)')
         .eq('id', user.id)
-        .single()
+        .limit(1)
+      const profile = profiles?.[0] || null
 
       set({
         user,

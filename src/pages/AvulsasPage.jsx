@@ -23,7 +23,7 @@ export default function AvulsasPage() {
         .eq('empresa_id', empresa?.id)
         .order('criado_em', { ascending:false })
       if (error) throw error
-      return data
+      return data?.[0]
     },
     enabled: !!empresa?.id,
   })
@@ -31,9 +31,9 @@ export default function AvulsasPage() {
   const create = useMutation({
     mutationFn: async (av) => {
       const { data, error } = await supabase.from('tarefas_avulsas')
-        .insert({ ...av, empresa_id: empresa?.id }).select().single()
+        .insert({ ...av, empresa_id: empresa?.id }).select()
       if (error) throw error
-      return data
+      return data?.[0]
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey:['avulsas'] }); setModal(false); setForm({ prioridade:'media', status:'aberta' }); setIsAgend(false) }
   })

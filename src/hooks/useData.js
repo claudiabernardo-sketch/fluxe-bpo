@@ -4,15 +4,17 @@ import { useAuthStore } from '../store/authStore'
 
 // ── AUDIT LOG ────────────────────────────────────────
 async function logAudit(acao, tabela, registroId, detalhes = {}) {
-  // empresa_id e usuario_id são preenchidos pelo trigger audit_log_set_empresa() no banco
-  // mas enviamos aqui também como defesa em camadas
-  const empresa_id = useAuthStore.getState().empresa?.id
-  const usuario_id = useAuthStore.getState().user?.id
-  if (!empresa_id) return // sem contexto de empresa, não há o que registrar
-  await supabase.from('audit_log').insert({
-    acao, tabela, registro_id: String(registroId), detalhes,
-    empresa_id, usuario_id,
-  })
+  try {
+    const empresa_id = useAuthStore.getState().empresa?.id
+    const usuario_id = useAuthStore.getState().user?.id
+    if (!empresa_id) return
+    await supabase.from('audit_log').insert({
+      acao, tabela, registro_id: String(registroId), detalhes,
+      empresa_id, usuario_id,
+    })
+  } catch {
+    // Falha no audit não deve bloquear a operação principal
+  }
 }
 
 // ── CLIENTES ─────────────────────────────────────────
@@ -94,10 +96,9 @@ export function useTasks(filters = {}) {
         .from('tarefas')
         .select('*, clientes(razao_social, fantasia), usuarios!tarefas_responsavel_id_fkey(nome)')
         .eq('empresa_id', empresa?.id)
-       .is('deleted_at', null)  // soft delete — ignora registros excluídos
-        .not('cliente_id', 'is', null)
+       .is('deleted_at', null)
         .order('prazo', { ascending: true })
-        .limit(500) // segurança de volume — BPO raramente ultrapassa 500 tarefas ativas
+        .limit(500)
 
       if (filters.clientId) q = q.eq('cliente_id', filters.clientId)
       if (filters.status)   q = q.eq('status', filters.status)

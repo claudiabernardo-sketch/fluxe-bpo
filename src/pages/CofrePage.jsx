@@ -96,11 +96,11 @@ export default function CofrePage() {
         if ('senha_enc' in rest && rest.senha_enc === undefined) {
           delete rest.senha_enc
         }
-        const { data, error } = await supabase.from('acessos').update(rest).eq('id', id).select().single()
+        const { data, error } = await supabase.from('acessos').update(rest).eq('id', id).select()
         if (error) throw error
         return data
       } else {
-        const { data, error } = await supabase.from('acessos').insert(payload).select().single()
+        const { data, error } = await supabase.from('acessos').insert(payload).select()
         if (error) throw error
         return data
       }

@@ -87,7 +87,6 @@ function ModalCriarTarefa({ msg, contato, onClose, onSuccess }) {
           status: 'aberta',
         })
         .select()
-        .single()
 
       if (error) throw error
 
