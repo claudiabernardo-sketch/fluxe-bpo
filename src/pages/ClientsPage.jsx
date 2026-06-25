@@ -313,7 +313,7 @@ export default function ClientsPage() {
     const mrrNum = parseFloat(String(form.valor_mrr||'0').replace(/\./g,'').replace(',','.')) || 0
     const vencDia = form.vencimento_dia ? parseInt(form.vencimento_dia, 10) || null : null
     // Remove campos calculados/relacionais que não pertencem à tabela clientes
-    const { usuarios, empresas, id, criado_em, atualizado_em, deleted_at, municipio, logradouro, uf, cep, bairro, numero, complemento, ...cleanForm } = form
+    const { usuarios, empresas, id, criado_em, atualizado_em, deleted_at, ...cleanForm } = form
     const payload = {
       ...cleanForm,
       valor_mrr: mrrNum,
