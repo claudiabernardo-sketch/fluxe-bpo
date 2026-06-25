@@ -241,23 +241,28 @@ export default function EsteirasPage() {
     }
 
     setApplying(true)
-    for (const task of tasksFiltradas) {
-      const created = await createTask.mutateAsync({
-        titulo: task.titulo,
-        categoria: task.categoria,
-        prioridade: 'media',
-        status: 'aberta',
-        cliente_id: clienteId,
-        data_execucao: new Date().toLocaleDateString('en-CA'),
-      })
-      if (task.checklist?.length && created?.id) {
-        const items = task.checklist.map((texto, ordem) => ({ tarefa_id: created.id, texto, ordem }))
-        await supabase.from('tarefa_checklists').insert(items)
+    try {
+      for (const task of tasksFiltradas) {
+        const created = await createTask.mutateAsync({
+          titulo: task.titulo,
+          categoria: task.categoria,
+          prioridade: 'media',
+          status: 'aberta',
+          cliente_id: clienteId,
+          data_execucao: new Date().toLocaleDateString('en-CA'),
+        })
+        if (task.checklist?.length && created?.id) {
+          const items = task.checklist.map((texto, ordem) => ({ tarefa_id: created.id, texto, ordem }))
+          await supabase.from('tarefa_checklists').insert(items)
+        }
       }
+      setApplied(true)
+      setApplyModal(null)
+    } catch (err) {
+      alert('Erro ao aplicar esteira: ' + err.message)
+    } finally {
+      setApplying(false)
     }
-    setApplying(false)
-    setApplied(true)
-    setApplyModal(null)
     qc.invalidateQueries({ queryKey: ['tasks'] })
     setTimeout(() => setApplied(false), 3000)
   }

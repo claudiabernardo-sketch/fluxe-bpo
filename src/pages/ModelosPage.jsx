@@ -86,12 +86,16 @@ export default function ModelosPage() {
       cliente_id: form.cliente_id || null,
       ativo: form.ativo,
     }
-    if (modal === 'edit') {
-      await updateModelo.mutateAsync({ id: form._id, ...payload })
-    } else {
-      await createModelo.mutateAsync(payload)
+    try {
+      if (modal === 'edit') {
+        await updateModelo.mutateAsync({ id: form._id, ...payload })
+      } else {
+        await createModelo.mutateAsync(payload)
+      }
+      setModal(null)
+    } catch (err) {
+      alert('Erro ao salvar modelo: ' + err.message)
     }
-    setModal(null)
   }
 
   async function confirmarDelete() {

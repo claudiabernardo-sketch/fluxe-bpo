@@ -231,7 +231,11 @@ function LinhaDoTempo({ lead }) {
 
   async function salvar() {
     if (!form.nota.trim()) return
-    await criar.mutateAsync({ lead_id: lead.id, ...form })
+    await criar.mutateAsync({
+      lead_id: lead.id,
+      ...form,
+      proximo_contato: form.proximo_contato || null,
+    })
     setForm({ tipo:'whatsapp', nota:'', proximo_contato:'' })
   }
 

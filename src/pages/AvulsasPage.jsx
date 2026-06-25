@@ -23,7 +23,7 @@ export default function AvulsasPage() {
         .eq('empresa_id', empresa?.id)
         .order('criado_em', { ascending:false })
       if (error) throw error
-      return data?.[0]
+      return data ?? []
     },
     enabled: !!empresa?.id,
   })
@@ -137,7 +137,7 @@ export default function AvulsasPage() {
               <Btn onClick={() => { setModal(false); setForm({ prioridade:'media', status:'aberta' }); setIsAgend(false) }}>Cancelar</Btn>
               <Btn variant="primary" disabled={create.isPending} onClick={() => {
                 if (!form.titulo) return alert('Título obrigatório')
-                create.mutate({ ...form, is_agendamento:isAgend })
+                create.mutate({ ...form, is_agendamento:isAgend, agend_valor: form.agend_valor ? parseFloat(form.agend_valor) : null })
               }}>{create.isPending?'Salvando…':'Salvar'}</Btn>
             </div>
           </div>
