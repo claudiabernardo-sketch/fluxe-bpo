@@ -39,7 +39,7 @@ const PLANS = [
 
 const FAQS = [
   { q: 'Preciso instalar algo?', a: 'Não. O Fluxe BPO é 100% web — funciona direto no navegador, sem instalação. Acesse de qualquer computador, tablet ou celular.' },
-  { q: 'Como funciona o período de teste?', a: 'Você cria a conta gratuitamente e tem 7 dias completos para explorar todas as funcionalidades, sem precisar de cartão de crédito.' },
+  { q: 'Como funciona o período de teste?', a: 'Você cria a conta gratuitamente e tem 14 dias completos para explorar todas as funcionalidades, sem precisar de cartão de crédito.' },
   { q: 'Posso convidar minha equipe?', a: 'Sim. O administrador convida analistas, supervisores e gestores. Cada perfil tem permissões configuráveis de acordo com a hierarquia do seu BPO.' },
   { q: 'Meus dados ficam seguros?', a: 'Sim. Cada empresa tem dados completamente isolados. Usamos criptografia em repouso e em trânsito, hospedado em infraestrutura Supabase/AWS.' },
   { q: 'Funciona para qualquer tamanho de BPO?', a: 'Sim, do BPO solo ao escritório com 30+ analistas. O plano Essencial atende quem está começando; o Pro e Enterprise acompanham o crescimento.' },
@@ -215,7 +215,7 @@ export default function LoginPage() {
           ))}
           <button onClick={() => { goSignup(); setMenuOpen(false) }}
             style={{ display: 'block', width: '100%', marginTop: 16, padding: '13px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
-            Começar 7 dias grátis →
+            Começar 14 dias grátis →
           </button>
         </div>
       )}
@@ -233,7 +233,7 @@ export default function LoginPage() {
           <div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(99,102,241,.1)', border: '1px solid rgba(99,102,241,.22)', borderRadius: 99, padding: '6px 14px', marginBottom: 24, width: 'fit-content' }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', display: 'inline-block', boxShadow: '0 0 8px #22C55E80' }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '.12em', textTransform: 'uppercase' }}>Novo — 7 dias grátis, sem cartão de crédito</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '.12em', textTransform: 'uppercase' }}>Novo — 14 dias grátis, sem cartão de crédito</span>
             </div>
 
             <h1 style={{ fontSize: isMobile ? 34 : 54, fontWeight: 900, lineHeight: 1.1, margin: '0 0 20px', color: '#F8FAFC', letterSpacing: '-.03em' }}>
@@ -252,7 +252,7 @@ export default function LoginPage() {
                 style={{ padding: '14px 28px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 24px rgba(99,102,241,.45)', textAlign: 'center', transition: 'all .2s' }}
                 onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 10px 32px rgba(99,102,241,.55)' }}
                 onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(99,102,241,.45)' }}>
-                Começar 7 dias grátis →
+                Começar 14 dias grátis →
               </button>
               <button onClick={() => scrollTo('como-funciona')}
                 style={{ padding: '14px 22px', borderRadius: 10, border: '1px solid rgba(255,255,255,.10)', background: 'transparent', color: '#CBD5E1', fontSize: 15, fontWeight: 600, cursor: 'pointer', textAlign: 'center', transition: 'all .2s' }}
@@ -263,7 +263,7 @@ export default function LoginPage() {
             </div>
 
             <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-              {[['7 dias grátis', 'sem cartão'], ['Preço fixo', 'não cobra por cliente'], ['Configuração', 'em menos de 30 min']].map(([t, s], i) => (
+              {[['14 dias grátis', 'sem cartão'], ['Preço fixo', 'não cobra por cliente'], ['Configuração', 'em menos de 30 min']].map(([t, s], i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(34,197,94,.13)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <span style={{ color: '#22C55E', fontSize: 10, fontWeight: 800 }}>✓</span>
@@ -297,7 +297,7 @@ export default function LoginPage() {
                   {mfaStep ? '🔐 Verificação em duas etapas' : formMode === 'login' ? 'Bem-vindo(a) de volta' : formMode === 'signup' ? 'Crie sua conta grátis' : 'Recuperar senha'}
                 </div>
                 <div style={{ fontSize: 12, color: '#64748B' }}>
-                  {mfaStep ? 'Abra o app autenticador e digite o código de 6 dígitos' : formMode === 'login' ? 'Acesse sua plataforma Fluxe BPO' : formMode === 'signup' ? '7 dias grátis, sem cartão de crédito' : 'Enviaremos um link para seu e-mail'}
+                  {mfaStep ? 'Abra o app autenticador e digite o código de 6 dígitos' : formMode === 'login' ? 'Acesse sua plataforma Fluxe BPO' : formMode === 'signup' ? '14 dias grátis, sem cartão de crédito' : 'Enviaremos um link para seu e-mail'}
                 </div>
               </div>
 
@@ -838,7 +838,7 @@ export default function LoginPage() {
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 56 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>PLANOS</div>
             <h2 style={{ fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 16px', letterSpacing: '-.02em' }}>Preço fixo. Sem cobrar por cliente.</h2>
-            <p style={{ fontSize: isMobile ? 14 : 16, color: '#64748B', maxWidth: 500, margin: '0 auto' }}>Você paga um valor fixo mensal — independente de quantos clientes sua carteira tiver. Comece grátis por 7 dias, sem cartão.</p>
+            <p style={{ fontSize: isMobile ? 14 : 16, color: '#64748B', maxWidth: 500, margin: '0 auto' }}>Você paga um valor fixo mensal — independente de quantos clientes sua carteira tiver. Comece grátis por 14 dias, sem cartão.</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: isMobile ? 16 : 20, maxWidth: 920, margin: '0 auto' }}>
             {PLANS.map((p, i) => (
@@ -887,7 +887,7 @@ export default function LoginPage() {
           <div style={{ textAlign: 'center', marginTop: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 24 }}>
             {[
               { icon: '🔓', text: 'Cancele quando quiser, sem multa' },
-              { icon: '💳', text: 'Sem cartão nos primeiros 7 dias' },
+              { icon: '💳', text: 'Sem cartão nos primeiros 14 dias' },
               { icon: '⚡', text: 'Configure em menos de 30 minutos' },
             ].map((g, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748B' }}>
@@ -936,14 +936,14 @@ export default function LoginPage() {
               <h2 style={{ fontSize: isMobile ? 26 : 40, fontWeight: 900, color: '#F8FAFC', margin: '0 0 16px', letterSpacing: '-.03em', lineHeight: 1.12 }}>
                 Pare de crescer sem saber<br />se está lucrando.
               </h2>
-              <p style={{ fontSize: isMobile ? 14 : 16, color: '#94A3B8', marginBottom: 12 }}>7 dias grátis. Sem cartão. Configure em menos de 30 minutos.</p>
+              <p style={{ fontSize: isMobile ? 14 : 16, color: '#94A3B8', marginBottom: 12 }}>14 dias grátis. Sem cartão. Configure em menos de 30 minutos.</p>
               <p style={{ fontSize: isMobile ? 12 : 13, color: '#475569', marginBottom: 32 }}>Cancele quando quiser, sem multa, sem burocracia.</p>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <button onClick={goSignup}
                   style={{ padding: '14px 32px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 32px rgba(99,102,241,.5)', transition: 'all .2s' }}
                   onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(99,102,241,.65)' }}
                   onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(99,102,241,.5)' }}>
-                  Começar 7 dias grátis →
+                  Começar 14 dias grátis →
                 </button>
                 <a href="https://wa.me/5511917101173?text=Quero+saber+mais+sobre+o+Fluxe+BPO" target="_blank" rel="noreferrer"
                   style={{ padding: '14px 24px', borderRadius: 10, border: '1px solid rgba(255,255,255,.12)', background: 'transparent', color: '#CBD5E1', fontSize: 15, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, transition: 'all .2s' }}

@@ -265,7 +265,7 @@ export default function DashPage() {
       {empresa?.plano === 'trial' && profile?.perfil === 'admin' && (() => {
         const expira = new Date(empresa.trial_expira_em)
         const criado = new Date(empresa.criado_em || empresa.created_at || expira.getTime() - 14*86400000)
-        const diasTotal = Math.max(7, Math.round((expira - criado) / 86400000))
+        const diasTotal = Math.max(14, Math.round((expira - criado) / 86400000))
         const diasRestantes = Math.max(0, Math.ceil((expira - new Date()) / (1000*60*60*24)))
         const pct = Math.min(100, Math.round(((diasTotal - diasRestantes) / diasTotal) * 100))
         const urgente = diasRestantes <= 2
