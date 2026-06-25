@@ -1,9 +1,16 @@
-// xlsx-js-style é um drop-in replacement do xlsx com suporte a estilos de célula
-// Importa como default export (diferente do xlsx que usa namespace import)
-import XLSXStyle from 'xlsx-js-style'
-import * as XLSX from 'xlsx'
+// xlsx carregado de forma lazy para não bloquear o bundle principal
+let _XLSX = null
+let _XLSXStyle = null
 
-// XLSXStyle para arquivos estilizados (templates), XLSX para export/import genérico
+async function getXLSX() {
+  if (!_XLSX) _XLSX = await import('xlsx')
+  return _XLSX
+}
+
+async function getXLSXStyle() {
+  if (!_XLSXStyle) _XLSXStyle = (await import('xlsx-js-style')).default
+  return _XLSXStyle
+}
 
 // Reexporta os dados puros (sem custo de bundle adicional — quem importa
 // só os mapeamentos deve preferir '../utils/excelMappings' diretamente,
@@ -16,7 +23,8 @@ export {
 
 // ── EXPORTAR ─────────────────────────────────────────────────────────
 // columns: [{ label: 'Nome da Coluna', get: (row) => row.campo }]
-export function exportToXlsx(rows, columns, filename = 'exportacao.xlsx') {
+export async function exportToXlsx(rows, columns, filename = 'exportacao.xlsx') {
+  const XLSXStyle = await getXLSXStyle()
   const X = XLSXStyle.utils.encode_cell
   const ws = {}
   const numCols = columns.length
@@ -78,8 +86,9 @@ export function exportToXlsx(rows, columns, filename = 'exportacao.xlsx') {
 export function importFromXlsx(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
+        const XLSX = await getXLSX()
         const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true })
         const ws = wb.Sheets[wb.SheetNames[0]]
         const rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
@@ -148,7 +157,7 @@ function dataCell(value, type = 's', rowIndex = 0, required = false) {
   })
 }
 
-function buildSheet(headers, rows, colWidths) {
+function buildSheet(headers, rows, colWidths, XLSXStyle) {
   // headers: [{ label, required }]
   // rows: [[valor, tipo, obrigatorio], ...]
   const X = XLSXStyle.utils.encode_cell
@@ -181,7 +190,8 @@ function buildSheet(headers, rows, colWidths) {
   return ws
 }
 
-export function downloadClienteTemplate() {
+export async function downloadClienteTemplate() {
+  const XLSXStyle = await getXLSXStyle()
   const headers = [
     { label: 'Razão Social *',   required: true },
     { label: 'Fantasia',          required: false },
@@ -235,7 +245,7 @@ export function downloadClienteTemplate() {
     { wch: 18 }, // Software
   ]
 
-  const ws = buildSheet(headers, rows, colWidths)
+  const ws = buildSheet(headers, rows, colWidths, XLSXStyle)
 
   const wb = XLSXStyle.utils.book_new()
   XLSXStyle.utils.book_append_sheet(wb, ws, '📋 Clientes')
@@ -243,7 +253,8 @@ export function downloadClienteTemplate() {
 }
 
 // ── TEMPLATE DE IMPORTAÇÃO — TAREFAS ─────────────────────────────────
-export function downloadTarefaTemplate() {
+export async function downloadTarefaTemplate() {
+  const XLSXStyle = await getXLSXStyle()
   const wb = XLSXStyle.utils.book_new()
 
   // ── Aba 1: Tarefas ──────────────────────────────────────────────────
