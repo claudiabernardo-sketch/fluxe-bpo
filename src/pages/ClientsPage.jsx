@@ -321,6 +321,8 @@ export default function ClientsPage() {
       bancos: selectedBancos,
       inicio_contrato: form.inicio_contrato || null,
       software_erp: form.software_erp || null,
+      // UUIDs não podem ser string vazia — converte para null
+      responsavel_id: form.responsavel_id || null,
     }
     try {
       if (modal.mode === 'new') {
