@@ -370,7 +370,6 @@ export default function EsteirasPage() {
           </div>
         )}
       </div>
-    </div>
   )
 }
 }
