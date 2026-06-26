@@ -256,4 +256,16 @@ export default function AppShell() {
       {MOB_NAV.map(item => {
         const active = loc.pathname === item.path
         return (
-          <but
+          <button key={item.path}
+            className={`mob-nav-item${active ? ' on' : ''}`}
+            onClick={() => nav(item.path)}
+          >
+            <i className={item.icon} />
+            <span>{item.label}</span>
+          </button>
+        )
+      })}
+    </nav>
+    </>
+  )
+}
