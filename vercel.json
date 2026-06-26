@@ -1,5 +1,5 @@
 {
-  "buildCommand": "node -e \"require('child_process').execSync(require('path').join('node_modules','.bin','vite')+' build',{stdio:'inherit'})\"",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
