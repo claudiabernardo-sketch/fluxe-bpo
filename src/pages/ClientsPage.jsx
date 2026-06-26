@@ -630,68 +630,47 @@ export default function ClientsPage() {
                 </div>
               )}
 
-              {/* ABA ESCOPO */}
-              {tab === 'tarefas' && (
-                modal?.mode === 'new'
-                  ? <div style={{ padding:'28px 16px', textAlign:'center', color:'var(--tx3)', fontSize:13 }}>Salve o cliente primeiro para adicionar tarefas.</div>
-                  : <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-
-                    {/* Lista simples de tarefas */}
-                    {tarefasCliente.length === 0 ? (
-                      <div style={{ textAlign:'center', padding:'28px 0', color:'var(--tx3)' }}>
-                        <div style={{ fontSize:24, marginBottom:8 }}>📋</div>
-                        <div style={{ fontSize:13, fontWeight:600, marginBottom:4 }}>Nenhuma tarefa ainda</div>
-                        <div style={{ fontSize:11 }}>Aplique um checklist em <strong>Financeiro → Etapa BPO</strong> ou adicione abaixo.</div>
-                      </div>
-                    ) : (
-                      <div style={{ display:'flex', flexDirection:'column', gap:4, maxHeight:320, overflowY:'auto' }}>
-                        <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:4 }}>
-                          {tarefasCliente.length} tarefa{tarefasCliente.length!==1?'s':(``)} · Status e prazos em <strong>Tarefas</strong>
-                        </div>
-                        {tarefasCliente.map(t => {
-                          const concluida = t.status === 'concluida'
-                          return (
-                            <div key={t.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--s2)', opacity: concluida ? .55 : 1 }}>
-                              <div style={{ width:8, height:8, borderRadius:'50%', background: concluida ? '#22C55E' : '#6366F1', flexShrink:0 }} />
-                              <div style={{ flex:1, fontSize:12, fontWeight:500, color:'var(--tx)', textDecoration: concluida ? 'line-through' : 'none' }}>{t.titulo}</div>
-                              <button onClick={() => { if(confirm('Remover esta tarefa do escopo?')) deleteTask.mutate(t.id) }}
-                                style={{ border:'none', background:'none', cursor:'pointer', color:'#CBD5E1', fontSize:16, lineHeight:1, flexShrink:0 }}>×</button>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-
-                    {/* Adicionar tarefa avulsa */}
-                    <div style={{ borderTop:'1px solid var(--bo)', paddingTop:10 }}>
-                      <div style={{ display:'flex', gap:8 }}>
-                        <input value={taskForm.titulo} onChange={e=>setTaskForm(f=>({...f,titulo:e.target.value}))}
-                          onKeyDown={e => e.key==='Enter' && salvarTarefa()}
-                          className="fi" placeholder="+ Nova tarefa no escopo..." style={{ flex:1 }} />
-                        <button className="btn bp bsm" onClick={salvarTarefa} disabled={createTask.isPending}>
-                          {createTask.isPending ? '…' : 'Adicionar'}
-                        </button>
-                      </div>
-                      {taskErr && <div style={{ fontSize:11, color:'var(--rdt)', marginTop:4 }}>{taskErr}</div>}
-                    </div>
-                  </div>
-              )}
-
-
-              {/* ABA TAREFAS — vínculos de modelos */}
+              {/* ABA ESCOPO — tarefas vinculadas + avulsas */}
               {tab === 'tarefas' && (
                 <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
                   {modal?.mode === 'new' ? (
                     <div style={{ padding:'28px 16px', textAlign:'center', color:'var(--tx3)', fontSize:13 }}>
-                      Salve o cliente primeiro para vincular tarefas.
+                      Salve o cliente primeiro para adicionar tarefas.
                     </div>
                   ) : (
                     <>
-                      {/* Info */}
-                      <div style={{ background:'#EFF6FF', border:'1px solid #BFDBFE', borderRadius:'var(--r)', padding:'12px 14px', fontSize:12, color:'#1D4ED8', lineHeight:1.6 }}>
-                        <div style={{ fontWeight:700, marginBottom:4 }}>✅ Tarefas vinculadas</div>
-                        Selecione os modelos de rotina que se aplicam a este cliente. Eles ficam registrados aqui — a geração das tarefas é feita separadamente quando você quiser.
+                      {/* Tarefas abertas do cliente */}
+                      {tarefasCliente.length > 0 && (
+                        <div style={{ display:'flex', flexDirection:'column', gap:4, maxHeight:200, overflowY:'auto', marginBottom:4 }}>
+                          <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:4 }}>
+                            {tarefasCliente.length} tarefa{tarefasCliente.length!==1?'s':''} · detalhes em <strong>Tarefas</strong>
+                          </div>
+                          {tarefasCliente.map(t => {
+                            const concluida = t.status === 'concluida'
+                            return (
+                              <div key={t.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--s2)', opacity: concluida ? .5 : 1 }}>
+                                <div style={{ width:7, height:7, borderRadius:'50%', background: concluida ? '#22C55E' : '#6366F1', flexShrink:0 }} />
+                                <div style={{ flex:1, fontSize:12, color:'var(--tx)', textDecoration: concluida ? 'line-through' : 'none' }}>{t.titulo}</div>
+                                <button onClick={() => { if(confirm('Remover esta tarefa do escopo?')) deleteTask.mutate(t.id) }}
+                                  style={{ border:'none', background:'none', cursor:'pointer', color:'#CBD5E1', fontSize:16, lineHeight:1, flexShrink:0 }}>×</button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      {/* Adicionar tarefa avulsa */}
+                      <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+                        <input value={taskForm.titulo} onChange={e=>setTaskForm(f=>({...f,titulo:e.target.value}))}
+                          onKeyDown={e => e.key==='Enter' && salvarTarefa()}
+                          className="fi" placeholder="+ Nova tarefa avulsa..." style={{ flex:1 }} />
+                        <button className="btn bp bsm" onClick={salvarTarefa} disabled={createTask.isPending}>
+                          {createTask.isPending ? '…' : 'Add'}
+                        </button>
                       </div>
+                      {taskErr && <div style={{ fontSize:11, color:'var(--rdt)', marginBottom:8 }}>{taskErr}</div>}
+
+                      <div style={{ borderTop:'1px solid var(--bo)', paddingTop:12 }} />
 
                       {/* Modelos vinculados */}
                       {clienteModelos.length > 0 ? (
