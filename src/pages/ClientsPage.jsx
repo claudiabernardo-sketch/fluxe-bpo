@@ -627,66 +627,46 @@ export default function ClientsPage() {
                 </div>
               )}
 
-              {/* ABA TAREFAS */}
+              {/* ABA ESCOPO */}
               {tab === 'tarefas' && (
                 modal?.mode === 'new'
                   ? <div style={{ padding:'28px 16px', textAlign:'center', color:'var(--tx3)', fontSize:13 }}>Salve o cliente primeiro para adicionar tarefas.</div>
                   : <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
 
-                    {/* Lista de tarefas */}
+                    {/* Lista simples de tarefas */}
                     {tarefasCliente.length === 0 ? (
                       <div style={{ textAlign:'center', padding:'28px 0', color:'var(--tx3)' }}>
                         <div style={{ fontSize:24, marginBottom:8 }}>📋</div>
                         <div style={{ fontSize:13, fontWeight:600, marginBottom:4 }}>Nenhuma tarefa ainda</div>
-                        <div style={{ fontSize:11 }}>Vá em <strong>Financeiro → Etapa BPO</strong> para aplicar o checklist padrão,<br/>ou adicione uma tarefa avulsa abaixo.</div>
+                        <div style={{ fontSize:11 }}>Aplique um checklist em <strong>Financeiro → Etapa BPO</strong> ou adicione abaixo.</div>
                       </div>
                     ) : (
-                      <div style={{ display:'flex', flexDirection:'column', gap:5, maxHeight:300, overflowY:'auto' }}>
-                        <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:2 }}>
-                          {tarefasCliente.length} tarefa{tarefasCliente.length!==1?'s':''}
+                      <div style={{ display:'flex', flexDirection:'column', gap:4, maxHeight:320, overflowY:'auto' }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:4 }}>
+                          {tarefasCliente.length} tarefa{tarefasCliente.length!==1?'s':(``)} · Status e prazos em <strong>Tarefas</strong>
                         </div>
                         {tarefasCliente.map(t => {
-                          const statusColor = { aberta:'#3B82F6', andamento:'#F59E0B', aguardando:'#8B5CF6', revisao:'#06B6D4', concluida:'#22C55E', impedimento:'#EF4444' }
-                          const statusLabel = { aberta:'Aberta', andamento:'Em andamento', aguardando:'Ag. cliente', revisao:'Em revisão', concluida:'Concluída', impedimento:'Impedimento' }
-                          const prazoVencido = t.prazo && new Date(t.prazo) < new Date() && t.status !== 'concluida'
+                          const concluida = t.status === 'concluida'
                           return (
-                            <div key={t.id} style={{ border:`1px solid ${prazoVencido?'#FECDD3':'var(--bo)'}`, borderRadius:'var(--r)', background: prazoVencido?'#FFF1F2':'var(--s2)' }}>
-                              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 12px' }}>
-                                <div style={{ flex:1, minWidth:0 }}>
-                                  <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)', textDecoration: t.status==='concluida'?'line-through':'none' }}>{t.titulo}</div>
-                                  <div style={{ display:'flex', gap:6, marginTop:3, flexWrap:'wrap', alignItems:'center' }}>
-                                    <select value={t.status} onChange={e => updateTask.mutate({ id: t.id, status: e.target.value })}
-                                      style={{ fontSize:9, padding:'1px 4px', borderRadius:99, border:`1px solid ${statusColor[t.status]||'#94A3B8'}`, background:(statusColor[t.status]||'#94A3B8')+'22', color:statusColor[t.status]||'#94A3B8', fontWeight:700, cursor:'pointer' }}>
-                                      {Object.entries(statusLabel).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
-                                    </select>
-                                    {t.prazo && <span style={{ fontSize:9, color: prazoVencido?'var(--rdt)':'var(--tx3)' }}>{prazoVencido?'⚠ ':''}{new Date(t.prazo+'T12:00:00').toLocaleDateString('pt-BR')}</span>}
-                                  </div>
-                                </div>
-                                <input type="date" defaultValue={t.prazo||''} onBlur={e => e.target.value && updateTask.mutate({ id: t.id, prazo: e.target.value })}
-                                  title="Prazo" style={{ fontSize:10, border:'1px solid var(--bo)', borderRadius:5, padding:'2px 6px', background:'transparent', cursor:'pointer', flexShrink:0, width:130 }} />
-                                {t.status !== 'concluida' && (
-                                  <button onClick={() => updateTask.mutate({ id: t.id, status:'concluida' })}
-                                    style={{ border:'1px solid #BBF7D0', background:'#F0FDF4', color:'#15803D', borderRadius:5, cursor:'pointer', fontSize:10, padding:'3px 8px', fontWeight:700, flexShrink:0 }}>✓</button>
-                                )}
-                                <button onClick={() => { if(confirm('Remover esta tarefa?')) deleteTask.mutate(t.id) }}
-                                  style={{ border:'1px solid #FECDD3', background:'#FEF2F2', color:'#991B1B', borderRadius:5, cursor:'pointer', fontSize:10, padding:'3px 8px', fontWeight:700, flexShrink:0 }}>×</button>
-                              </div>
+                            <div key={t.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--s2)', opacity: concluida ? .55 : 1 }}>
+                              <div style={{ width:8, height:8, borderRadius:'50%', background: concluida ? '#22C55E' : '#6366F1', flexShrink:0 }} />
+                              <div style={{ flex:1, fontSize:12, fontWeight:500, color:'var(--tx)', textDecoration: concluida ? 'line-through' : 'none' }}>{t.titulo}</div>
+                              <button onClick={() => { if(confirm('Remover esta tarefa do escopo?')) deleteTask.mutate(t.id) }}
+                                style={{ border:'none', background:'none', cursor:'pointer', color:'#CBD5E1', fontSize:16, lineHeight:1, flexShrink:0 }}>×</button>
                             </div>
                           )
                         })}
                       </div>
                     )}
 
-                    {/* Tarefa avulsa */}
-                    <div style={{ borderTop:'1px solid var(--bo)', paddingTop:12 }}>
-                      <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:8 }}>+ Tarefa avulsa</div>
-                      <div style={{ display:'grid', gridTemplateColumns:'1fr auto auto', gap:8, alignItems:'end' }}>
+                    {/* Adicionar tarefa avulsa */}
+                    <div style={{ borderTop:'1px solid var(--bo)', paddingTop:10 }}>
+                      <div style={{ display:'flex', gap:8 }}>
                         <input value={taskForm.titulo} onChange={e=>setTaskForm(f=>({...f,titulo:e.target.value}))}
                           onKeyDown={e => e.key==='Enter' && salvarTarefa()}
-                          className="fi" placeholder="Título da tarefa..." />
-                        <input type="date" value={taskForm.prazo} onChange={e=>setTaskForm(f=>({...f,prazo:e.target.value}))} className="fi" style={{ width:140 }} />
+                          className="fi" placeholder="+ Nova tarefa no escopo..." style={{ flex:1 }} />
                         <button className="btn bp bsm" onClick={salvarTarefa} disabled={createTask.isPending}>
-                          {createTask.isPending ? '…' : '+ Adicionar'}
+                          {createTask.isPending ? '…' : 'Adicionar'}
                         </button>
                       </div>
                       {taskErr && <div style={{ fontSize:11, color:'var(--rdt)', marginTop:4 }}>{taskErr}</div>}
@@ -922,66 +902,66 @@ export default function ClientsPage() {
                       ]}
                     />
 
-                    {/* Rotinas agrupadas por dia da semana */}
+                    {/* Rotinas em colunas por dia da semana */}
                     {rotinas.length > 0 && (() => {
                       const byHora = (a, b) => (a.hora||'').localeCompare(b.hora||'')
-                      const diarias  = [...rotinas].filter(r => r.tipo === 'diaria').sort(byHora)
-                      const mensais  = [...rotinas].filter(r => r.tipo === 'mensal').sort(byHora)
-                      const grupos   = DIAS_SEMANA_R.map((label, idx) => ({
-                        label, idx,
+                      const diarias = [...rotinas].filter(r => r.tipo === 'diaria').sort(byHora)
+                      const mensais = [...rotinas].filter(r => r.tipo === 'mensal').sort(byHora)
+                      const diasComRotina = DIAS_SEMANA_R.map((label, idx) => ({
+                        label,
                         rotinas: [...rotinas]
                           .filter(r => r.tipo === 'semanal' && (r.dias_semana?.includes(idx) || r.dia_semana === idx))
                           .sort(byHora),
                       })).filter(g => g.rotinas.length > 0)
 
-                      function RotinaRow({ r }) {
-                        return (
-                          <div style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--sur)' }}>
-                            <div style={{ width:40, flexShrink:0, textAlign:'center', fontSize:13, fontWeight:700, color:'var(--br)' }}>
-                              {r.hora ? r.hora.slice(0,5) : '—'}
-                            </div>
-                            <div style={{ flex:1 }}>
-                              <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{r.titulo}</div>
-                              {r.observacao && <div style={{ fontSize:10, color:'var(--tx3)', fontStyle:'italic' }}>{r.observacao}</div>}
-                            </div>
-                            <button onClick={() => { if(confirm('Remover esta rotina?')) deleteRotina.mutate(r.id) }}
-                              style={{ border:'none', background:'none', cursor:'pointer', color:'var(--tx3)', fontSize:18, lineHeight:1, padding:'4px' }}>×</button>
+                      const colStyle = { flex:'1 1 130px', minWidth:0 }
+                      const diaHeader = { fontSize:10, fontWeight:800, color:'var(--br)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:6, paddingBottom:4, borderBottom:'2px solid var(--br)' }
+                      const rotinaItem = (r) => (
+                        <div key={r.id} style={{ display:'flex', alignItems:'flex-start', gap:6, padding:'5px 0', borderBottom:'1px solid var(--bo)' }}>
+                          <div style={{ fontSize:11, fontWeight:700, color:'var(--br)', flexShrink:0, minWidth:36 }}>{r.hora ? r.hora.slice(0,5) : '—'}</div>
+                          <div style={{ flex:1, fontSize:11, color:'var(--tx)', lineHeight:1.4 }}>
+                            {r.titulo}
+                            {r.observacao && <div style={{ fontSize:9, color:'var(--tx3)', fontStyle:'italic' }}>{r.observacao}</div>}
                           </div>
-                        )
-                      }
-
-                      function GrupoLabel({ icon, label }) {
-                        return (
-                          <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em', marginTop:10, marginBottom:4, display:'flex', alignItems:'center', gap:6 }}>
-                            <span>{icon}</span>{label}
-                          </div>
-                        )
-                      }
+                          <button onClick={() => { if(confirm('Remover?')) deleteRotina.mutate(r.id) }}
+                            style={{ border:'none', background:'none', cursor:'pointer', color:'#CBD5E1', fontSize:14, lineHeight:1, flexShrink:0, padding:0 }}>×</button>
+                        </div>
+                      )
 
                       return (
-                        <div style={{ display:'flex', flexDirection:'column' }}>
-                          {diarias.length > 0 && (<>
-                            <GrupoLabel icon="🔁" label="Todo dia" />
-                            {diarias.map(r => <RotinaRow key={r.id} r={r} />)}
-                          </>)}
-                          {grupos.map(g => (<div key={g.idx}>
-                            <GrupoLabel icon="📅" label={g.label} />
-                            {g.rotinas.map(r => <RotinaRow key={r.id} r={r} />)}
-                          </div>))}
-                          {mensais.length > 0 && (<>
-                            <GrupoLabel icon="📆" label="Mensal" />
-                            {mensais.map(r => (
-                              <div key={r.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--sur)' }}>
-                                <div style={{ width:40, flexShrink:0, textAlign:'center', fontSize:13, fontWeight:700, color:'var(--br)' }}>dia {r.dia_mes}</div>
-                                <div style={{ flex:1 }}>
-                                  <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{r.titulo}</div>
-                                  {r.observacao && <div style={{ fontSize:10, color:'var(--tx3)', fontStyle:'italic' }}>{r.observacao}</div>}
+                        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                          {/* Dias da semana em colunas */}
+                          {diasComRotina.length > 0 && (
+                            <div style={{ display:'flex', gap:10, flexWrap:'wrap', alignItems:'flex-start' }}>
+                              {diasComRotina.map(g => (
+                                <div key={g.label} style={colStyle}>
+                                  <div style={diaHeader}>{g.label}</div>
+                                  {g.rotinas.map(rotinaItem)}
                                 </div>
-                                <button onClick={() => { if(confirm('Remover esta rotina?')) deleteRotina.mutate(r.id) }}
-                                  style={{ border:'none', background:'none', cursor:'pointer', color:'var(--tx3)', fontSize:18, lineHeight:1, padding:'4px' }}>×</button>
-                              </div>
-                            ))}
-                          </>)}
+                              ))}
+                            </div>
+                          )}
+                          {/* Todo dia */}
+                          {diarias.length > 0 && (
+                            <div>
+                              <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:4 }}>🔁 Todo dia</div>
+                              {diarias.map(rotinaItem)}
+                            </div>
+                          )}
+                          {/* Mensal */}
+                          {mensais.length > 0 && (
+                            <div>
+                              <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:4 }}>📆 Mensal</div>
+                              {mensais.map(r => (
+                                <div key={r.id} style={{ display:'flex', alignItems:'flex-start', gap:6, padding:'5px 0', borderBottom:'1px solid var(--bo)' }}>
+                                  <div style={{ fontSize:11, fontWeight:700, color:'var(--br)', flexShrink:0, minWidth:36 }}>dia {r.dia_mes}</div>
+                                  <div style={{ flex:1, fontSize:11, color:'var(--tx)' }}>{r.titulo}</div>
+                                  <button onClick={() => { if(confirm('Remover?')) deleteRotina.mutate(r.id) }}
+                                    style={{ border:'none', background:'none', cursor:'pointer', color:'#CBD5E1', fontSize:14, lineHeight:1, flexShrink:0 }}>×</button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )
                     })()}
