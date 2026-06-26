@@ -177,8 +177,8 @@ export default function ClientsPage() {
       if (jaExiste) continue
       await createTask.mutateAsync({
         titulo:     m.titulo,
-        prioridade: m.prioridade || 'normal',
-        status:     'pendente',
+        prioridade: m.prioridade || 'media',
+        status:     'aberta',
         prazo:      null,
         cliente_id: modal.id,
       })

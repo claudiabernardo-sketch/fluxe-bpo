@@ -212,7 +212,7 @@ export default function AgendaPage() {
     e.preventDefault(); setDragOver(null)
     if (!draggedId.current) return
     const id = draggedId.current; draggedId.current = null
-    await supabase.from('tarefas').update({ status: newStatus }).eq('id', id)
+    await supabase.from('tarefas').update({ status: newStatus }).eq('id', id).eq('empresa_id', empresa?.id)
     qc.invalidateQueries({ queryKey: ['tasks'] })
   }
 

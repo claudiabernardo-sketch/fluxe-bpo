@@ -125,7 +125,7 @@ export function useCreateTask() {
         .from('tarefas').insert({ ...task, empresa_id: empresa?.id }).select()
       if (error) throw error
       await logAudit('CREATE', 'tarefas', data?.[0]?.id, { titulo: task.titulo })
-      return data
+      return data?.[0]
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
     onError: (err) => console.error('[Fluxe]', err),
@@ -512,4 +512,137 @@ export function useDeleteAcesso() {
 }
 
 // ── ROTINAS ───────────────────────────────────────────
-export function useRotinas(client
+export function useRotinas(clienteId) {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['rotinas', empresa?.id, clienteId],
+    queryFn: async () => {
+      let q = supabase
+        .from('rotinas')
+        .select('*')
+        .eq('empresa_id', empresa?.id)
+        .eq('ativo', true)
+        .order('titulo')
+        .limit(500)
+      if (clienteId) q = q.eq('cliente_id', clienteId)
+      const { data, error } = await q
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!empresa?.id,
+    staleTime: 30_000,
+  })
+}
+
+export function useCreateRotina() {
+  const qc = useQueryClient()
+  const { empresa } = useAuthStore()
+  return useMutation({
+    mutationFn: async (rotina) => {
+      // dias_semana é array do form mas a coluna é dia_semana (int) — remover do payload
+      const { dias_semana, ...payload } = rotina
+      const { data, error } = await supabase
+        .from('rotinas')
+        .insert({ ...payload, empresa_id: empresa?.id })
+        .select()
+      if (error) throw error
+      return data?.[0]
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['rotinas'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+export function useDeleteRotina() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase
+        .from('rotinas')
+        .update({ ativo: false })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['rotinas'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+// ── CLIENTE_MODELOS ───────────────────────────────────
+export function useClienteModelos(clienteId) {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['cliente_modelos', empresa?.id, clienteId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cliente_modelos')
+        .select('*, tarefa_modelos(id, titulo, descricao, categoria, etapa, prioridade, recorrencia)')
+        .eq('empresa_id', empresa?.id)
+        .eq('cliente_id', clienteId)
+        .eq('ativo', true)
+        .order('criado_em')
+        .limit(200)
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!clienteId && !!empresa?.id,
+    staleTime: 30_000,
+  })
+}
+
+export function useVincularModelo() {
+  const qc = useQueryClient()
+  const { empresa } = useAuthStore()
+  return useMutation({
+    mutationFn: async ({ clienteId, modeloId }) => {
+      const { data, error } = await supabase
+        .from('cliente_modelos')
+        .upsert(
+          { empresa_id: empresa?.id, cliente_id: clienteId, modelo_id: modeloId, ativo: true },
+          { onConflict: 'cliente_id,modelo_id', ignoreDuplicates: false }
+        )
+        .select()
+      if (error) throw error
+      return data?.[0]
+    },
+    onSuccess: (_d, { clienteId }) => {
+      qc.invalidateQueries({ queryKey: ['cliente_modelos'] })
+    },
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+export function useDesvincularModelo() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, clienteId }) => {
+      const { error } = await supabase
+        .from('cliente_modelos')
+        .update({ ativo: false })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['cliente_modelos'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+// ── FERIADOS ──────────────────────────────────────────
+export function useFeriados() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['feriados', empresa?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('feriados')
+        .select('data, descricao')
+        .eq('empresa_id', empresa?.id)
+        .order('data')
+        .limit(500)
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!empresa?.id,
+    staleTime: 60_000 * 60, // feriados mudam pouco — cache de 1h
+  })
+}

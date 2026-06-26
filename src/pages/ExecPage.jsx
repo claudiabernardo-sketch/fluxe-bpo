@@ -12,7 +12,7 @@ export default function ExecPage() {
   const ativos = clients.filter(c=>c.status==='ativo')
   const mrr = ativos.reduce((a,c)=>a+(c.valor_mrr||0), 0)
   const arr = mrr * 12
-  const onboarding = clients.filter(c=>['onboarding','implantacao'].includes(c.status)).length
+  const onboarding = clients.filter(c=>['onboarding','implantacao'].includes(c.etapa)).length
   const today = new Date().toISOString().slice(0,10)
   const vencidas = tasks.filter(t=>t.prazo && t.prazo < today && t.status !== 'concluida')
   const horasTotal = aponts.reduce((a,ap)=>a+(ap.segundos||0),0)/3600

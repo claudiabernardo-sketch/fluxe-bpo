@@ -3,6 +3,7 @@ import { useClients, useCreateTask } from '../hooks/useData'
 import { Card, CardHeader, Btn, Loader } from '../components/ui'
 import { supabase } from '../lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
+import { useAuthStore } from '../store/authStore'
 
 // ── ESTEIRAS COM TAREFAS E CHECKLISTS COMPLETOS ────────────────
 const ESTEIRAS = [
@@ -187,6 +188,7 @@ const ESTEIRAS = [
 ]
 
 export default function EsteirasPage() {
+  const { empresa } = useAuthStore()
   const { data: clients = [] } = useClients()
   const createTask = useCreateTask()
   const qc = useQueryClient()
@@ -221,7 +223,7 @@ export default function EsteirasPage() {
     // trava, aplicar a etapa "Configuração do software" cria uma tarefa pra
     // CADA sistema (Omie, Conta Azul, Nibo...), mesmo o cliente só usando um.
     const cliente = clients.find(c => c.id === clienteId)
-    const softwareCliente = (cliente?.software_contabil || '').trim().toLowerCase()
+    const softwareCliente = (cliente?.software_erp || '').trim().toLowerCase()
     const temTarefaDeSoftware = tasks.some(t => t.software)
     const softwareClienteBateComAlguma = temTarefaDeSoftware && tasks.some(t => t.software && t.software.toLowerCase() === softwareCliente)
 
@@ -351,4 +353,23 @@ export default function EsteirasPage() {
               <div style={{ marginBottom:16 }}>
                 <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'.07em' }}>Selecionar cliente *</label>
                 <select value={applyClient} onChange={e=>setApplyClient(e.target.value)}
-                  style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F
+                  style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:13 }}>
+                  <option value="">Selecione um cliente...</option>
+                  {clients.map(c => (
+                    <option key={c.id} value={c.id}>{c.razao_social || c.fantasia}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+                <Btn variant="ghost" onClick={() => { setApplyModal(null); setApplyClient('') }}>Cancelar</Btn>
+                <Btn variant="primary" disabled={!applyClient || applying} onClick={() => aplicarEsteira(applyClient)}>
+                  {applying ? 'Aplicando…' : 'Aplicar tarefas'}
+                </Btn>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
