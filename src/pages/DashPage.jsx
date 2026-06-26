@@ -88,7 +88,7 @@ export default function DashPage() {
 
   // ── Dados GESTOR — empresa toda ──────────────────────────────────────
   const ativos     = useMemo(() => clients.filter(c=>c.status==='ativo'), [clients])
-  const onboarding = useMemo(() => clients.filter(c=>['onboarding','implantacao'].includes(c.status)), [clients])
+  const onboarding = useMemo(() => clients.filter(c=>['onboarding','implantacao'].includes(c.etapa)), [clients])
   const mrr        = useMemo(() => ativos.reduce((a,c)=>a+(c.valor_mrr||0),0), [ativos])
   const vencidas   = useMemo(() => tasks.filter(t=>isVencida(t.prazo,t.status)), [tasks])
   const abertas    = useMemo(() => tasks.filter(t=>!['concluida','cancelada'].includes(t.status)), [tasks])
@@ -460,4 +460,4 @@ export default function DashPage() {
 
     </div>
   )
-}
+}

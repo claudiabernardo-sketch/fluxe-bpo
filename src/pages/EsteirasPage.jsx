@@ -252,7 +252,7 @@ export default function EsteirasPage() {
           data_execucao: new Date().toLocaleDateString('en-CA'),
         })
         if (task.checklist?.length && created?.id) {
-          const items = task.checklist.map((texto, ordem) => ({ tarefa_id: created.id, texto, ordem }))
+          const items = task.checklist.map((texto, ordem) => ({ tarefa_id: created.id, texto, ordem, empresa_id: empresa?.id }))
           await supabase.from('tarefa_checklists').insert(items)
         }
       }
@@ -351,58 +351,4 @@ export default function EsteirasPage() {
               <div style={{ marginBottom:16 }}>
                 <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'.07em' }}>Selecionar cliente *</label>
                 <select value={applyClient} onChange={e=>setApplyClient(e.target.value)}
-                  style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, background:'#fff' }}>
-                  <option value="">— Selecione o cliente —</option>
-                  {clients.map(c=><option key={c.id} value={c.id}>{c.razao_social}</option>)}
-                </select>
-              </div>
-              <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
-                <Btn onClick={() => { setApplyModal(null); setApplyClient('') }}>Cancelar</Btn>
-                <Btn variant="primary" disabled={!applyClient || applying} onClick={() => {
-                  const tasks = applyModal.all
-                    ? todasTasksSelecionadas(est)
-                    : tasksDaEtapaSelecionadas(applyModal.etapa, applyModal.etIdx)
-                  aplicarTarefas(applyClient, tasks)
-                }}>
-                  {applying ? 'Criando tarefas...' : '⚡ Criar tarefas'}
-                </Btn>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  return (
-    <div>
-      <div style={{ fontSize:13, color:'#64748B', marginBottom:16 }}>
-        Selecione uma esteira para ver as tarefas e checklists. Use <strong>"Aplicar ao cliente"</strong> para criar todas as tarefas automaticamente.
-      </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:14 }}>
-        {ESTEIRAS.map(est => {
-          const totalTasks = est.etapas.reduce((a,e) => a + e.tasks.length, 0)
-          const totalChecks = est.etapas.reduce((a,e) => a + e.tasks.reduce((b,t) => b + t.checklist.length, 0), 0)
-          return (
-            <div key={est.id} onClick={() => setSelected(est.id)}
-              style={{ background:'#fff', border:'1px solid #E2E8F0', borderRadius:12, padding:16, cursor:'pointer', transition:'all .15s', borderTop:`3px solid ${est.color}` }}>
-              <div style={{ fontSize:22, marginBottom:6 }}>{est.icon}</div>
-              <div style={{ fontSize:14, fontWeight:700, color:'#0F172A', marginBottom:4 }}>{est.name}</div>
-              <div style={{ fontSize:11, color:'#64748B', marginBottom:12 }}>{est.etapas.length} etapas</div>
-              <div style={{ display:'flex', gap:16 }}>
-                <div style={{ textAlign:'center' }}>
-                  <div style={{ fontSize:18, fontWeight:700, color:est.color }}>{totalTasks}</div>
-                  <div style={{ fontSize:9, color:'#94A3B8', textTransform:'uppercase', letterSpacing:'.04em' }}>tarefas</div>
-                </div>
-                <div style={{ textAlign:'center' }}>
-                  <div style={{ fontSize:18, fontWeight:700, color:est.color }}>{totalChecks}</div>
-                  <div style={{ fontSize:9, color:'#94A3B8', textTransform:'uppercase', letterSpacing:'.04em' }}>checklists</div>
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
+                  style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F
