@@ -196,6 +196,18 @@ export default function ClientsPage() {
     setTaskForm({ titulo:'', prazo:'', status:'aberta', prioridade:'media' })
   }
 
+  async function desvincularEExcluir(cm) {
+    const temTarefa = tarefasCliente.some(t => t.modelo_id === cm.modelo_id && t.status !== 'concluida')
+    const msg = temTarefa
+      ? 'Remover este modelo do escopo? A tarefa aberta criada por ele também será excluída.'
+      : 'Remover este modelo do escopo?'
+    if (!confirm(msg)) return
+    // Soft-delete tarefas abertas geradas por este modelo para este cliente
+    const alvo = tarefasCliente.filter(t => t.modelo_id === cm.modelo_id && t.status !== 'concluida')
+    for (const t of alvo) await deleteTask.mutateAsync(t.id)
+    desvincularModelo.mutate({ id: cm.id, clienteId: modal?.id })
+  }
+
   async function vincularEAplicarModelo(modelo) {
     try {
       await vincularModelo.mutateAsync({ clienteId: modal?.id, modeloId: modelo.id })
@@ -312,17 +324,28 @@ export default function ClientsPage() {
     if (!form.razao_social) { alert('Razão social é obrigatória'); return }
     const mrrNum = parseFloat(String(form.valor_mrr||'0').replace(/\./g,'').replace(',','.')) || 0
     const vencDia = form.vencimento_dia ? parseInt(form.vencimento_dia, 10) || null : null
-    // Remove campos calculados/relacionais que não pertencem à tabela clientes
-    const { usuarios, empresas, id, criado_em, atualizado_em, deleted_at, ...cleanForm } = form
+    // Whitelist explícita — só colunas reais da tabela clientes
     const payload = {
-      ...cleanForm,
-      valor_mrr: mrrNum,
+      razao_social: form.razao_social || null,
+      fantasia:     form.fantasia     || null,
+      cnpj:         form.cnpj         || null,
+      email:        form.email        || null,
+      contato:      form.contato      || null,
+      whatsapp:     form.whatsapp     || null,
+      segmento:     form.segmento     || null,
+      logradouro:   form.logradouro   || null,
+      municipio:    form.municipio    || null,
+      uf:           form.uf           || null,
+      cep:          form.cep          || null,
+      status:       form.status       || 'ativo',
+      etapa:        form.etapa        || 'operacional',
+      escopo:       form.escopo       || null,
+      valor_mrr:    mrrNum,
       vencimento_dia: vencDia,
-      bancos: selectedBancos,
+      bancos:       selectedBancos,
       inicio_contrato: form.inicio_contrato || null,
-      software_erp: form.software_erp || null,
-      // UUIDs não podem ser string vazia — converte para null
-      responsavel_id: form.responsavel_id || null,
+      software_erp:    form.software_erp    || null,
+      responsavel_id:  form.responsavel_id  || null,
     }
     try {
       if (modal.mode === 'new') {
@@ -332,7 +355,7 @@ export default function ClientsPage() {
       }
       close()
     } catch (err) {
-      alert('Erro ao salvar cliente: ' + err.message)
+      alert('Erro ao salvar cliente: ' + (err?.message || JSON.stringify(err) || 'erro desconhecido'))
     }
   }
 
@@ -713,7 +736,7 @@ export default function ClientsPage() {
                                     style={{ border:'1px solid var(--bo)', background: isConfiguring ? '#EEF2FF' : 'transparent', color: isConfiguring ? '#6366F1' : 'var(--tx3)', borderRadius:5, cursor:'pointer', fontSize:11, padding:'3px 8px' }}>
                                     ⚙
                                   </button>
-                                  <button onClick={() => { if(confirm('Desvincular este modelo do cliente?')) desvincularModelo.mutate({ id: cm.id, clienteId: modal?.id }) }}
+                                  <button onClick={() => desvincularEExcluir(cm)}
                                     style={{ border:'none', background:'none', cursor:'pointer', color:'var(--tx3)', fontSize:18, lineHeight:1, padding:'4px' }}>×</button>
                                 </div>
 
@@ -899,33 +922,69 @@ export default function ClientsPage() {
                       ]}
                     />
 
-                    {/* Rotinas existentes */}
-                    {rotinas.length > 0 && (
-                      <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-                        <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em' }}>Rotinas cadastradas</div>
-                        {[...rotinas].sort((a,b) => (a.hora||'').localeCompare(b.hora||'')).map(r => (
-                          <div key={r.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--s2)' }}>
-                            <div style={{ width:46, flexShrink:0, textAlign:'center' }}>
-                              <div style={{ fontSize:13, fontWeight:700, color:'var(--br)' }}>{r.hora ? r.hora.slice(0,5) : '—'}</div>
+                    {/* Rotinas agrupadas por dia da semana */}
+                    {rotinas.length > 0 && (() => {
+                      const byHora = (a, b) => (a.hora||'').localeCompare(b.hora||'')
+                      const diarias  = [...rotinas].filter(r => r.tipo === 'diaria').sort(byHora)
+                      const mensais  = [...rotinas].filter(r => r.tipo === 'mensal').sort(byHora)
+                      const grupos   = DIAS_SEMANA_R.map((label, idx) => ({
+                        label, idx,
+                        rotinas: [...rotinas]
+                          .filter(r => r.tipo === 'semanal' && (r.dias_semana?.includes(idx) || r.dia_semana === idx))
+                          .sort(byHora),
+                      })).filter(g => g.rotinas.length > 0)
+
+                      function RotinaRow({ r }) {
+                        return (
+                          <div style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--sur)' }}>
+                            <div style={{ width:40, flexShrink:0, textAlign:'center', fontSize:13, fontWeight:700, color:'var(--br)' }}>
+                              {r.hora ? r.hora.slice(0,5) : '—'}
                             </div>
-                            <span style={{ fontSize:16 }}>{r.tipo === 'diaria' ? '🔁' : r.tipo === 'semanal' ? '📅' : '📆'}</span>
                             <div style={{ flex:1 }}>
                               <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{r.titulo}</div>
-                              <div style={{ fontSize:10, color:'var(--tx3)' }}>
-                                {r.tipo === 'diaria'
-                                  ? 'Todos os dias'
-                                  : r.tipo === 'semanal'
-                                    ? (r.dias_semana?.length ? r.dias_semana.map(d=>DIAS_SEMANA_R[d]?.slice(0,3)).filter(Boolean).join(', ') : (DIAS_SEMANA_R[r.dia_semana] || '—'))
-                                    : `Todo dia ${r.dia_mes}`}
-                                {r.observacao && <> · <em>{r.observacao}</em></>}
-                              </div>
+                              {r.observacao && <div style={{ fontSize:10, color:'var(--tx3)', fontStyle:'italic' }}>{r.observacao}</div>}
                             </div>
                             <button onClick={() => { if(confirm('Remover esta rotina?')) deleteRotina.mutate(r.id) }}
-                              style={{ border:'none', background:'none', cursor:'pointer', color:'var(--tx3)', fontSize:18, lineHeight:1 }}>×</button>
+                              style={{ border:'none', background:'none', cursor:'pointer', color:'var(--tx3)', fontSize:18, lineHeight:1, padding:'4px' }}>×</button>
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        )
+                      }
+
+                      function GrupoLabel({ icon, label }) {
+                        return (
+                          <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em', marginTop:10, marginBottom:4, display:'flex', alignItems:'center', gap:6 }}>
+                            <span>{icon}</span>{label}
+                          </div>
+                        )
+                      }
+
+                      return (
+                        <div style={{ display:'flex', flexDirection:'column' }}>
+                          {diarias.length > 0 && (<>
+                            <GrupoLabel icon="🔁" label="Todo dia" />
+                            {diarias.map(r => <RotinaRow key={r.id} r={r} />)}
+                          </>)}
+                          {grupos.map(g => (<div key={g.idx}>
+                            <GrupoLabel icon="📅" label={g.label} />
+                            {g.rotinas.map(r => <RotinaRow key={r.id} r={r} />)}
+                          </div>))}
+                          {mensais.length > 0 && (<>
+                            <GrupoLabel icon="📆" label="Mensal" />
+                            {mensais.map(r => (
+                              <div key={r.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--sur)' }}>
+                                <div style={{ width:40, flexShrink:0, textAlign:'center', fontSize:13, fontWeight:700, color:'var(--br)' }}>dia {r.dia_mes}</div>
+                                <div style={{ flex:1 }}>
+                                  <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{r.titulo}</div>
+                                  {r.observacao && <div style={{ fontSize:10, color:'var(--tx3)', fontStyle:'italic' }}>{r.observacao}</div>}
+                                </div>
+                                <button onClick={() => { if(confirm('Remover esta rotina?')) deleteRotina.mutate(r.id) }}
+                                  style={{ border:'none', background:'none', cursor:'pointer', color:'var(--tx3)', fontSize:18, lineHeight:1, padding:'4px' }}>×</button>
+                              </div>
+                            ))}
+                          </>)}
+                        </div>
+                      )
+                    })()}
 
                     {/* Form nova rotina */}
                     <div style={{ border:'1px solid var(--bo)', borderRadius:'var(--r)', padding:'14px', background:'var(--sur)' }}>
