@@ -222,10 +222,13 @@ export default function ClientsPage() {
           data_execucao: new Date().toLocaleDateString('en-CA'),
         })
         if (modelo.checklist_items?.length && tarefa?.id) {
-          const items = modelo.checklist_items.map((texto, ordem) => ({ tarefa_id: tarefa.id, texto, ordem }))
+          const items = modelo.checklist_items.map((texto, ordem) => ({
+            tarefa_id: tarefa.id, texto, ordem, empresa_id: empresa?.id
+          }))
           await supabase.from('tarefa_checklists').insert(items)
         }
       }
+      setShowAddModelo(false)
     } catch (err) {
       alert('Não foi possível vincular o modelo: ' + (err?.message || 'erro desconhecido'))
     }
