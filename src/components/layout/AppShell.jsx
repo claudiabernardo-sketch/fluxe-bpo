@@ -19,12 +19,12 @@ const CofrePage       = lazy(() => import('../../pages/CofrePage'))
 const CapPage         = lazy(() => import('../../pages/CapPage'))
 const AgendaPage      = lazy(() => import('../../pages/AgendaPage'))
 const RelatoriosPage  = lazy(() => import('../../pages/RelatoriosPage'))
-const PrecificacaoPage= lazy(() => import('../../pages/PrecificacaoPage'))
 const ConfigPage      = lazy(() => import('../../pages/ConfigPage'))
 const MensagensPage   = lazy(() => import('../../pages/MensagensPage'))
 const ModelosPage     = lazy(() => import('../../pages/ModelosPage'))
-const MeuPainelPage   = lazy(() => import('../../pages/MeuPainelPage'))
-const AjudaPage       = lazy(() => import('../../pages/AjudaPage'))
+const MeuPainelPage      = lazy(() => import('../../pages/MeuPainelPage'))
+const AjudaPage          = lazy(() => import('../../pages/AjudaPage'))
+const PrecificacaoPage   = lazy(() => import('../../pages/PrecificacaoPage'))
 
 const PageLoader = () => (
   <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'60vh' }}>
@@ -43,7 +43,7 @@ const NAV = [
   { path:'/avulsas',    icon:'fa-solid fa-file-pen',            label:'Avulsas'   },
   { grp:'COMERCIAL' },
   { path:'/crm',        icon:'fa-solid fa-chart-line',          label:'CRM'       },
-  { path:'/precificacao', icon:'fa-solid fa-tag',                 label:'Precif.'   },
+  { path:'/precificacao', icon:'fa-solid fa-tag',               label:'Precif.'   },
   { grp:'CLIENTES' },
   { path:'/clientes',   icon:'fa-solid fa-building',            label:'Clientes'  },
   { path:'/esteiras',   icon:'fa-solid fa-sitemap',             label:'Esteiras'  },
@@ -73,7 +73,7 @@ const TITLES = {
   '/rent':       'Rentabilidade',
   '/cap':        'Capacidade da Equipe',
   '/cofre':      'Cofre Digital',
-  '/crm':        'CRM Comercial',
+  '/crm':          'CRM Comercial',
   '/precificacao': 'Precificação',
   '/relatorios': 'Relatórios',
   '/config':     'Configurações',
@@ -238,8 +238,8 @@ export default function AppShell() {
               <Route path="/rent"       element={<RentPage />} />
               <Route path="/cap"        element={<CapPage />} />
               <Route path="/cofre"      element={<CofrePage />} />
-              <Route path="/crm"        element={<CRMPage />} />
-              <Route path="/precificacao"  element={<PrecificacaoPage />} />
+              <Route path="/crm"          element={<CRMPage />} />
+              <Route path="/precificacao" element={<PrecificacaoPage />} />
               <Route path="/mensagens"  element={<MensagensPage />} />
               <Route path="/relatorios" element={<RelatoriosPage />} />
               <Route path="/config"     element={<ConfigPage />} />
@@ -256,15 +256,4 @@ export default function AppShell() {
       {MOB_NAV.map(item => {
         const active = loc.pathname === item.path
         return (
-          <button key={item.path} className={`mob-nav-item${active ? ' on' : ''}`} onClick={() => nav(item.path)}>
-            <i className={item.icon}></i>
-            <span>{item.label}</span>
-          </button>
-        )
-      })}
-    </nav>
-
-    <TrialGuard />
-    </>
-  )
-}
+          <but
