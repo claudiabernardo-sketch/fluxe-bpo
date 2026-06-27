@@ -437,8 +437,6 @@ export function useSaveApontamento() {
 }
 
 // ── APROVAÇÕES ───────────────────────────────────────
-
-
 // ── USUÁRIOS DA EMPRESA ───────────────────────────────
 export function useUsuarios() {
   const { empresa } = useAuthStore()
@@ -519,18 +517,17 @@ export function useRotinas(clienteId) {
     queryFn: async () => {
       let q = supabase
         .from('rotinas')
-        .select('*')
+        .select('*, clientes(razao_social, fantasia)')
         .eq('empresa_id', empresa?.id)
-        .eq('ativo', true)
+        .eq('ativo', true) // soft delete — não exibe rotinas desativadas
         .order('titulo')
-        .limit(500)
       if (clienteId) q = q.eq('cliente_id', clienteId)
       const { data, error } = await q
       if (error) throw error
       return data ?? []
     },
-    enabled: !!empresa?.id,
     staleTime: 30_000,
+    enabled: !!empresa?.id,
   })
 }
 
@@ -539,12 +536,23 @@ export function useCreateRotina() {
   const { empresa } = useAuthStore()
   return useMutation({
     mutationFn: async (rotina) => {
-      // dias_semana é array do form mas a coluna é dia_semana (int) — remover do payload
-      const { dias_semana, ...payload } = rotina
       const { data, error } = await supabase
-        .from('rotinas')
-        .insert({ ...payload, empresa_id: empresa?.id })
-        .select()
+        .from('rotinas').insert({ ...rotina, empresa_id: empresa?.id }).select()
+      if (error) throw error
+      await logAudit('CREATE', 'rotinas', data?.[0]?.id, { titulo: rotina.titulo })
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['rotinas'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+export function useUpdateRotina() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ...updates }) => {
+      const { data, error } = await supabase
+        .from('rotinas').update(updates).eq('id', id).select()
       if (error) throw error
       return data?.[0]
     },
@@ -557,36 +565,32 @@ export function useDeleteRotina() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (id) => {
+      // Soft delete — desativa a rotina sem apagar histórico de execuções
       const { error } = await supabase
         .from('rotinas')
         .update({ ativo: false })
         .eq('id', id)
       if (error) throw error
+      await logAudit('DELETE', 'rotinas', id)
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['rotinas'] }),
     onError: (err) => console.error('[Fluxe]', err),
-  })
-}
-
-// ── CLIENTE_MODELOS ───────────────────────────────────
+  })}
+// ── CLIENTE MODELOS (vínculos) ────────────────────────────────────
 export function useClienteModelos(clienteId) {
-  const { empresa } = useAuthStore()
   return useQuery({
-    queryKey: ['cliente_modelos', empresa?.id, clienteId],
+    queryKey: ['cliente_modelos', clienteId],
     queryFn: async () => {
+      if (!clienteId) return []
       const { data, error } = await supabase
         .from('cliente_modelos')
-        .select('*, tarefa_modelos(id, titulo, descricao, categoria, etapa, prioridade, recorrencia)')
-        .eq('empresa_id', empresa?.id)
+        .select('*, tarefa_modelos(id, titulo, categoria, recorrencia, prioridade, dia_mes, checklist_items)')
         .eq('cliente_id', clienteId)
         .eq('ativo', true)
-        .order('criado_em')
-        .limit(200)
       if (error) throw error
       return data ?? []
     },
-    enabled: !!clienteId && !!empresa?.id,
-    staleTime: 30_000,
+    enabled: !!clienteId,
   })
 }
 
@@ -597,17 +601,17 @@ export function useVincularModelo() {
     mutationFn: async ({ clienteId, modeloId }) => {
       const { data, error } = await supabase
         .from('cliente_modelos')
-        .upsert(
-          { empresa_id: empresa?.id, cliente_id: clienteId, modelo_id: modeloId, ativo: true },
-          { onConflict: 'cliente_id,modelo_id', ignoreDuplicates: false }
-        )
+        .upsert({
+          cliente_id: clienteId,
+          modelo_id: modeloId,
+          empresa_id: empresa?.id,
+          ativo: true,
+        }, { onConflict: 'cliente_id,modelo_id' })
         .select()
       if (error) throw error
       return data?.[0]
     },
-    onSuccess: (_d, { clienteId }) => {
-      qc.invalidateQueries({ queryKey: ['cliente_modelos'] })
-    },
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['cliente_modelos', vars.clienteId] }),
     onError: (err) => console.error('[Fluxe]', err),
   })
 }
@@ -622,7 +626,7 @@ export function useDesvincularModelo() {
         .eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['cliente_modelos'] }),
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['cliente_modelos', vars.clienteId] }),
     onError: (err) => console.error('[Fluxe]', err),
   })
 }
@@ -635,14 +639,159 @@ export function useFeriados() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('feriados')
-        .select('data, descricao')
+        .select('*')
         .eq('empresa_id', empresa?.id)
         .order('data')
         .limit(500)
       if (error) throw error
       return data ?? []
     },
+    staleTime: 5 * 60_000, // muda raramente — cache mais longo
     enabled: !!empresa?.id,
-    staleTime: 60_000 * 60, // feriados mudam pouco — cache de 1h
+  })
+}
+
+export function useCreateFeriado() {
+  const qc = useQueryClient()
+  const { empresa } = useAuthStore()
+  return useMutation({
+    mutationFn: async ({ data, descricao }) => {
+      const { data: row, error } = await supabase
+        .from('feriados').insert({ data, descricao, empresa_id: empresa?.id }).select()
+      if (error) throw error
+      return row
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['feriados'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+export function useDeleteFeriado() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('feriados').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['feriados'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+// ── INTERAÇÕES DE LEAD (linha do tempo) ──────────────────────
+export function useLeadInteracoes(leadId) {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['lead_interacoes', leadId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lead_interacoes')
+        .select('*')
+        .eq('lead_id', leadId)
+        .order('criado_em', { ascending: false })
+        .limit(50)
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 30_000,
+    enabled: !!leadId && !!empresa?.id,
+  })
+}
+
+export function useCreateLeadInteracao() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ lead_id, tipo, nota, proximo_contato }) => {
+      const empresa_id = useAuthStore.getState().empresa?.id
+      if (!empresa_id) throw new Error('Sessão inválida')
+      const { data, error } = await supabase
+        .from('lead_interacoes')
+        .insert({ lead_id, tipo, nota, empresa_id })
+        .select()
+      if (error) throw error
+      // Atualiza próximo follow-up no lead se informado
+      if (proximo_contato) {
+        await supabase.from('leads').update({ proximo_contato }).eq('id', lead_id)
+        qc.invalidateQueries({ queryKey: ['leads'] })
+      }
+      return data
+    },
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['lead_interacoes', vars.lead_id] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+export function useDeleteLeadInteracao() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, lead_id }) => {
+      const { error } = await supabase.from('lead_interacoes').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['lead_interacoes', vars.lead_id] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+// ── TEMPLATES DE MENSAGEM CRM ─────────────────────────────────
+export function useCrmTemplates() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['crm_templates', empresa?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('crm_templates')
+        .select('*')
+        .eq('empresa_id', empresa?.id)
+        .order('etapa', { nullsFirst: true })
+        .order('titulo')
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!empresa?.id,
+  })
+}
+
+export function useCreateCrmTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ titulo, etapa, texto }) => {
+      const empresa_id = useAuthStore.getState().empresa?.id
+      const { data, error } = await supabase
+        .from('crm_templates')
+        .insert({ titulo, etapa: etapa || null, texto, empresa_id })
+        .select()
+      if (error) throw error
+      return data?.[0]
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['crm_templates'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+export function useUpdateCrmTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, titulo, etapa, texto }) => {
+      const { error } = await supabase
+        .from('crm_templates')
+        .update({ titulo, etapa: etapa || null, texto, atualizado_em: new Date().toISOString() })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['crm_templates'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+export function useDeleteCrmTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('crm_templates').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['crm_templates'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }

@@ -816,4 +816,231 @@ export default function ConfigPage() {
                 </div>
                 <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'.07em' }}>Código do app *</label>
                 <input type="text" inputMode="numeric" maxLength={7} value={mfaCode}
-                  onChange={e=>setMfaCode(e.target.
+                  onChange={e=>setMfaCode(e.target.value)} placeholder="000 000" autoFocus
+                  style={{ ...fi, fontFamily:'monospace', fontSize:20, letterSpacing:'0.3em', textAlign:'center', marginBottom:12 }} />
+                <div style={{ display:'flex', gap:8 }}>
+                  <Btn variant="primary" disabled={mfaLoading || mfaCode.replace(/\s/g,'').length < 6} onClick={handleVerifyEnroll}>
+                    {mfaLoading ? 'Verificando...' : '✓ Ativar 2FA'}
+                  </Btn>
+                  <Btn onClick={() => { setMfaEnrolling(null); setMfaCode('') }}>Cancelar</Btn>
+                </div>
+              </div>
+            ) : mfaFactors.length > 0 ? (
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px', background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:10, marginBottom:12 }}>
+                  <span style={{ fontSize:20 }}>✅</span>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:700, color:'#15803D' }}>2FA ativo</div>
+                    <div style={{ fontSize:11, color:'#16A34A' }}>Sua conta está protegida com verificação em duas etapas.</div>
+                  </div>
+                </div>
+                <Btn disabled={mfaLoading} onClick={() => handleUnenroll(mfaFactors[0].id)}>
+                  {mfaLoading ? 'Aguarde...' : '🗑 Desativar 2FA'}
+                </Btn>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px', background:'#FFFBEB', border:'1px solid #FDE68A', borderRadius:10, marginBottom:14 }}>
+                  <span style={{ fontSize:20 }}>⚠️</span>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:700, color:'#92400E' }}>2FA desativado</div>
+                    <div style={{ fontSize:11, color:'#B45309' }}>Recomendamos ativar para proteger o acesso ao cofre de senhas.</div>
+                  </div>
+                </div>
+                <Btn variant="primary" disabled={mfaLoading} onClick={handleEnroll}>
+                  {mfaLoading ? 'Aguarde...' : '🔐 Ativar verificação em duas etapas'}
+                </Btn>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {tab === 'proposta' && (
+        <Card>
+          <CardHeader title="Configurações da proposta comercial" icon="📊" />
+          <div style={{ padding:16, display:'flex', flexDirection:'column', gap:12 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              {[
+                { label:'Representante legal',  key:'representante', placeholder:'Cláudia Bernardo' },
+                { label:'Cargo',                key:'cargo',         placeholder:'Sócia-Diretora' },
+                { label:'CPF do representante', key:'cpf_rep',       placeholder:'000.000.000-00' },
+                { label:'Instagram',            key:'instagram',     placeholder:'@empreendabpo' },
+                { label:'Endereço',             key:'endereco',      placeholder:'Rua...' },
+                { label:'Cidade/UF',            key:'cidade',        placeholder:'Barueri/SP' },
+                { label:'Foro contratual',      key:'foro',          placeholder:'Barueri/SP' },
+              ].map(({ label, key, placeholder }) => (
+                <div key={key}>
+                  <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>{label}</label>
+                  <input style={fi} value={propForm[key]||''} onChange={e=>setPropForm(f=>({...f,[key]:e.target.value}))} placeholder={placeholder} />
+                </div>
+              ))}
+            </div>
+            <div>
+              <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Quem somos (texto da proposta)</label>
+              <textarea style={{ ...fi, height:80, resize:'vertical' }} value={propForm.quemSomos||''} onChange={e=>setPropForm(f=>({...f,quemSomos:e.target.value}))} placeholder="Descreva sua empresa..." />
+            </div>
+            <div style={{ fontWeight:700, fontSize:12, color:'#475569', paddingBottom:6, borderBottom:'1px solid #F1F5F9' }}>Números de impacto</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:10 }}>
+              {[1,2,3,4].map(n => (
+                <div key={n}>
+                  <input style={{ ...fi, marginBottom:6, textAlign:'center', fontWeight:700 }} value={propForm[`num${n}_valor`]||''} onChange={e=>setPropForm(f=>({...f,[`num${n}_valor`]:e.target.value}))} placeholder="+100" />
+                  <input style={{ ...fi, fontSize:11 }} value={propForm[`num${n}_label`]||''} onChange={e=>setPropForm(f=>({...f,[`num${n}_label`]:e.target.value}))} placeholder="Descrição" />
+                </div>
+              ))}
+            </div>
+            <div style={{ fontWeight:700, fontSize:12, color:'#475569', paddingBottom:6, borderBottom:'1px solid #F1F5F9' }}>Depoimentos (até 3)</div>
+            {[1,2,3].map(n => (
+              <div key={n} style={{ display:'grid', gridTemplateColumns:'200px 1fr', gap:10 }}>
+                <input style={fi} value={propForm[`dep${n}_nome`]||''} onChange={e=>setPropForm(f=>({...f,[`dep${n}_nome`]:e.target.value}))} placeholder={`Nome cliente ${n}`} />
+                <input style={fi} value={propForm[`dep${n}_texto`]||''} onChange={e=>setPropForm(f=>({...f,[`dep${n}_texto`]:e.target.value}))} placeholder="Depoimento..." />
+              </div>
+            ))}
+          </div>
+          <div style={{ padding:'12px 16px', borderTop:'1px solid #F1F5F9', display:'flex', justifyContent:'flex-end' }}>
+            <Btn variant="primary" onClick={salvarProposta}>Salvar configurações da proposta</Btn>
+          </div>
+        </Card>
+      )}
+
+      {/* ABA MEU PLANO — só admin */}
+      {tab === 'plano' && profile?.perfil === 'admin' && (() => {
+        const plano = empresa?.plano || 'trial'
+        const expira = empresa?.trial_expira_em ? new Date(empresa.trial_expira_em) : null
+        const diasRestantes = expira ? Math.max(0, Math.ceil((expira - new Date()) / (1000*60*60*24))) : 0
+        const paymentUrl = empresa?.asaas_payment_url
+        const PLANOS = [
+          { id:'essencial', nome:'Essencial', preco:'R$ 59/mês', desc:'Até 3 usuários · Tarefas, cofre, precificação · Suporte por e-mail' },
+          { id:'pro',       nome:'Pro',       preco:'R$ 97/mês', desc:'Usuários ilimitados · CRM · Relatórios · Suporte WhatsApp', destaque:true },
+        ]
+        return (
+          <Card>
+            <CardHeader title="Meu Plano" icon="💳" />
+            <div style={{ padding:20, display:'flex', flexDirection:'column', gap:20 }}>
+
+              {/* Status atual */}
+              <div style={{ background: plano==='trial'?'#F0F9FF':'#F0FDF4', border:`1px solid ${plano==='trial'?'#BAE6FD':'#BBF7D0'}`, borderRadius:10, padding:'14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:700, color:'#64748B', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:4 }}>Plano atual</div>
+                  <div style={{ fontSize:16, fontWeight:800, color:'#0F172A', textTransform:'capitalize' }}>
+                    {plano === 'trial' ? `Trial gratuito` : plano}
+                  </div>
+                  {plano === 'trial' && expira && (
+                    <div style={{ fontSize:12, color: diasRestantes<=2?'#EF4444':'#0369A1', marginTop:2 }}>
+                      {diasRestantes === 0 ? 'Expira hoje' : `${diasRestantes} dia${diasRestantes>1?'s':''} restante${diasRestantes>1?'s':''}`}
+                    </div>
+                  )}
+                  {plano !== 'trial' && <div style={{ fontSize:12, color:'#16A34A', marginTop:2 }}>✓ Ativo</div>}
+                </div>
+                {plano === 'trial' && (
+                  <div style={{ height:8, background:'#BAE6FD', borderRadius:99, width:120, overflow:'hidden', alignSelf:'center' }}>
+                    <div style={{ height:'100%', borderRadius:99, background:'#0EA5E9', width:`${Math.round(((7-diasRestantes)/7)*100)}%` }} />
+                  </div>
+                )}
+              </div>
+
+              {/* Planos */}
+              {plano === 'trial' && (
+                <>
+                  <div style={{ fontSize:13, fontWeight:700, color:'#0F172A' }}>Escolha seu plano</div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                    {PLANOS.map(p => {
+                      const sel = planSel === p.id
+                      return (
+                        <div key={p.id} onClick={()=>setPlanSel(p.id)} style={{ border:`2px solid ${sel?'#6366F1':'#E2E8F0'}`, borderRadius:12, padding:16, background: sel?'#F5F3FF':'#fff', position:'relative', cursor:'pointer', transition:'all .15s' }}>
+                          {p.destaque && <div style={{ position:'absolute', top:-11, left:'50%', transform:'translateX(-50%)', background:'#6366F1', color:'#fff', fontSize:10, fontWeight:700, padding:'2px 12px', borderRadius:99 }}>Mais popular</div>}
+                          {sel && <div style={{ position:'absolute', top:10, right:10, width:18, height:18, borderRadius:99, background:'#6366F1', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#fff' }}>✓</div>}
+                          <div style={{ fontSize:14, fontWeight:800, color:'#0F172A', marginBottom:4 }}>{p.nome}</div>
+                          <div style={{ fontSize:20, fontWeight:800, color:'#6366F1', marginBottom:6 }}>{p.preco}</div>
+                          <div style={{ fontSize:11, color:'#64748B', lineHeight:1.5 }}>{p.desc}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <button
+                    onClick={handleAssinar}
+                    disabled={assinando}
+                    style={{ display:'block', width:'100%', textAlign:'center', background: assinando ? '#A5B4FC' : 'linear-gradient(135deg,#6366F1,#8B5CF6)', color:'#fff', padding:'13px', borderRadius:10, fontSize:14, fontWeight:700, border:'none', cursor: assinando ? 'not-allowed' : 'pointer' }}>
+                    {assinando ? 'Gerando link...' : `Assinar plano ${planSel === 'pro' ? 'Pro' : 'Essencial'} →`}
+                  </button>
+                </>
+              )}
+
+              {/* Cancelar */}
+              <div style={{ borderTop:'1px solid #F1F5F9', paddingTop:16 }}>
+                <div style={{ fontSize:12, color:'#94A3B8', marginBottom:8 }}>Para cancelar sua assinatura, entre em contato com o suporte.</div>
+                <a
+                  href={`https://wa.me/5511917101173?text=Quero+cancelar+minha+assinatura+do+Fluxe+BPO+-+Empresa:+${encodeURIComponent(empresa?.nome||'')}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize:13, color:'#EF4444', textDecoration:'none', fontWeight:600 }}>
+                  Solicitar cancelamento →
+                </a>
+              </div>
+
+            </div>
+          </Card>
+        )
+      })()}
+
+      {/* MODAL EDITAR USUÁRIO */}
+      {editUser && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}>
+          <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:440, boxShadow:'0 25px 50px rgba(0,0,0,.15)' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px', borderBottom:'1px solid #F1F5F9' }}>
+              <span style={{ fontWeight:700, fontSize:14 }}>✏️ Editar usuário</span>
+              <button onClick={()=>setEditUser(null)} style={{ border:'none', background:'none', cursor:'pointer', fontSize:20, color:'#94A3B8' }}>×</button>
+            </div>
+            <div style={{ padding:18, display:'flex', flexDirection:'column', gap:10 }}>
+              <div>
+                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Nome</label>
+                <input style={fi} value={editUser.nome||''} onChange={e=>setEditUser(f=>({...f,nome:e.target.value}))} />
+              </div>
+              <div>
+                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Perfil</label>
+                <select style={fi} value={editUser.perfil||'operador'} onChange={e=>setEditUser(f=>({...f,perfil:e.target.value}))}>
+                  {PERFIS.map(p=><option key={p.v} value={p.v}>{p.l}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Custo/hora (R$)</label>
+                <input type="number" style={fi} value={editUser.custo_hora||0} onChange={e=>setEditUser(f=>({...f,custo_hora:+e.target.value}))} min={0} />
+              </div>
+              <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:13 }}>
+                <input type="checkbox" checked={!!editUser.ativo} onChange={e=>setEditUser(f=>({...f,ativo:e.target.checked}))} style={{ width:16, height:16, accentColor:'#6366F1' }} />
+                Usuário ativo
+              </label>
+            </div>
+            <div style={{ padding:'12px 18px', borderTop:'1px solid #F1F5F9', display:'flex', justifyContent:'flex-end', gap:8 }}>
+              <Btn onClick={()=>setEditUser(null)}>Cancelar</Btn>
+              <Btn variant="primary" onClick={()=>editarUser.mutate(editUser)} disabled={editarUser.isPending}>
+                {editarUser.isPending ? 'Salvando...' : 'Salvar alterações'}
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRMAR EXCLUSÃO */}
+      {deleteUser && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}>
+          <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:400, boxShadow:'0 25px 50px rgba(0,0,0,.15)' }}>
+            <div style={{ padding:24, textAlign:'center' }}>
+              <div style={{ fontSize:40, marginBottom:12 }}>🗑️</div>
+              <div style={{ fontWeight:700, fontSize:16, color:'#0F172A', marginBottom:8 }}>Excluir usuário?</div>
+              <div style={{ fontSize:13, color:'#64748B', marginBottom:20 }}>
+                <strong>{deleteUser.nome}</strong> será removido da equipe. Esta ação não pode ser desfeita.
+              </div>
+              <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
+                <Btn onClick={()=>setDeleteUser(null)}>Cancelar</Btn>
+                <Btn variant="danger" onClick={()=>excluirUser.mutate(deleteUser)} disabled={excluirUser.isPending}>
+                  {excluirUser.isPending ? 'Excluindo...' : 'Sim, excluir'}
+                </Btn>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  )
+}
