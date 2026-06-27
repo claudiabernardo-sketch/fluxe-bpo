@@ -15,8 +15,6 @@ export default defineConfig({
           if (id.includes('xlsx')) return 'xlsx'
           // Docx separado (só carrega quando gerar contrato)
           if (id.includes('docx')) return 'docx'
-          // React core junto
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) return 'react'
           // Demais libs vendor juntas
           if (id.includes('node_modules')) return 'vendor'
         }
