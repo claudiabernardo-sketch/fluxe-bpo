@@ -422,18 +422,18 @@ export default function PrecificacaoPage() {
         return {
           nome: lead.nome || '', fat: '', cnpjs: 1, funcs: 0,
           bancos: 1, capag: 0, carec: 0, mov: 0, nfs: 0, boletos: 0,
-          sistcob: 0, cartao: 0, plat: 0, agend: 0, folha: 0,
+          sistcob: 0, cartao: 0, plat: 0, agend: 0,
           contab: 0, relat: 0, reuniao: 0, consult: 0, lembrete: 0,
-          custoHora: 50, margem: 35, overhead: 600, regime: 6,
+          custoHora: '50', margem: 35, overhead: '600', regime: 6,
         }
       }
     } catch {}
     return {
       nome: '', fat: '', cnpjs: 1, funcs: 0,
       bancos: 1, capag: 0, carec: 0, mov: 0, nfs: 0, boletos: 0,
-      sistcob: 0, cartao: 0, plat: 0, agend: 0, folha: 0,
+      sistcob: 0, cartao: 0, plat: 0, agend: 0,
       contab: 0, relat: 0, reuniao: 0, consult: 0, lembrete: 0,
-      custoHora: 50, margem: 35, overhead: 600, regime: 6,
+      custoHora: '50', margem: 35, overhead: '600', regime: 6,
     }
   })
   const [custoHoraFonte, setCustoHoraFonte] = useState(null) // null | 'equipe' | 'propria'
@@ -450,7 +450,7 @@ export default function PrecificacaoPage() {
         if (!data || data.length === 0) return
         const media = Math.round(data.reduce((s, u) => s + (u.custo_hora || 0), 0) / data.length)
         if (media > 0) {
-          setD(prev => ({ ...prev, custoHora: media }))
+          setD(prev => ({ ...prev, custoHora: String(media) }))
           setCustoHoraFonte(data.length === 1 ? 'propria' : 'equipe')
         }
       })
@@ -466,6 +466,8 @@ export default function PrecificacaoPage() {
     const diag = {
       ...d,
       fat: parseBRL(d.fat),
+      custoHora: parseBRL(d.custoHora),
+      overhead: parseBRL(d.overhead),
       aliquota: parseFloat(d.regime) / 100,
       margem: parseFloat(d.margem) / 100,
     }
@@ -542,9 +544,9 @@ export default function PrecificacaoPage() {
                   <input className="prec-input" value={d.nome} onChange={e => set('nome', e.target.value)} placeholder="Ex: Comércio Silva Ltda" />
                 </Campo>
                 <Campo label="Faturamento mensal (R$)" hint="Receita bruta média do cliente. Se não souber exato, use uma estimativa. Impacta o nível de complexidade.">
-                  <input className="prec-input" type="text" inputMode="numeric"
+                  <input className="prec-input" type="text" inputMode="decimal"
                     value={d.fat} onChange={e => set('fat', e.target.value)}
-                    placeholder="Ex: 80.000" />
+                    placeholder="Ex: 80.000,00" />
                   {parseBRL(d.fat) >= 10000 && (
                     <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>
                       {fmtExtensoParcial(parseBRL(d.fat))}/mês
@@ -673,8 +675,8 @@ export default function PrecificacaoPage() {
                       <span style={{ fontWeight:400, color:'#94A3B8' }}>— você pode ajustar</span>
                     </div>
                   )}
-                  <input className="prec-input" type="number" value={d.custoHora}
-                    onChange={e => { num('custoHora')(e); setCustoHoraFonte(null) }} step="5" />
+                  <input className="prec-input" type="text" inputMode="decimal" value={d.custoHora}
+                    onChange={e => { set('custoHora', e.target.value); setCustoHoraFonte(null) }} placeholder="Ex: 50,00" />
                 </Campo>
                 <Campo label="Margem de lucro desejada" hint="BPOs saudáveis operam com 30–45% de margem. Abaixo de 20% o negócio fica frágil.">
                   <div className="prec-range-wrap">
@@ -683,7 +685,7 @@ export default function PrecificacaoPage() {
                   </div>
                 </Campo>
                 <Campo label="Overhead mensal (R$)" hint="Soma dos seus custos fixos mensais divididos pelo número de clientes. Ex: softwares (R$ 300) + internet (R$ 100) + escritório (R$ 400) = R$ 800 ÷ 10 clientes = R$ 80/cliente.">
-                  <input className="prec-input" type="number" value={d.overhead} onChange={num('overhead')} step="50" />
+                  <input className="prec-input" type="text" inputMode="decimal" value={d.overhead} onChange={e => set('overhead', e.target.value)} placeholder="Ex: 600,00" />
                 </Campo>
                 <Campo label="Regime tributário do seu BPO" hint="Alíquota de impostos sobre o seu faturamento como prestador de serviços.">
                   <select className="prec-select" value={d.regime} onChange={sel('regime')}>
