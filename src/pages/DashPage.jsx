@@ -445,7 +445,7 @@ export default function DashPage() {
                     {cl.fantasia||cl.razao_social}
                   </div>
                   <div style={{ fontSize:10, padding:'2px 8px', borderRadius:99, background:'#EDE9FE', color:'#6D28D9', fontWeight:600, display:'inline-block', marginBottom:6 }}>
-                    {cl.status}
+                    {cl.etapa}
                   </div>
                   <div style={{ fontSize:10, color:'#6D28D9', display:'flex', gap:8 }}>
                     <span>✅ {clTasks.length} tarefas</span>
