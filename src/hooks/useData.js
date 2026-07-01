@@ -586,7 +586,7 @@ export function useClienteModelos(clienteId) {
         .from('cliente_modelos')
         .select(`
           *,
-          tarefa_modelos(id, titulo, categoria, recorrencia, prioridade, dia_mes, dias_semana, dias_mes, checklist_items)
+          tarefa_modelos(id, titulo, categoria, recorrencia, prioridade, dia_mes, dias_semana, checklist_items)
         `)
         .eq('cliente_id', clienteId)
         .eq('ativo', true)
@@ -1019,3 +1019,4 @@ export function useUpdateProposta() {
     onError: (err) => console.error('[Fluxe]', err),
   })
 }
+          
