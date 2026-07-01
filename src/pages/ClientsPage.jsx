@@ -520,7 +520,7 @@ export default function ClientsPage() {
       {/* Modal */}
       {modal && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}>
-          <div style={{ background:'var(--sur)', borderRadius:'var(--rx)', width:'100%', maxWidth: tab === 'rotina' ? 1100 : 680, maxHeight:'90vh', display:'flex', flexDirection:'column', boxShadow:'var(--sh3)', transition:'max-width .2s' }}>
+          <div style={{ background:'var(--sur)', borderRadius:'var(--rx)', width:'100%', maxWidth: 680, maxHeight:'92vh', display:'flex', flexDirection:'column', boxShadow:'var(--sh3)' }}>
             {/* Modal header */}
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px', borderBottom:'1px solid var(--bo)' }}>
               <span style={{ fontWeight:700, fontSize:15, color:'var(--tx)' }}>
@@ -739,7 +739,7 @@ export default function ClientsPage() {
                 </div>
               )}
 
-              {/* ABA ESCOPO — tarefas vinculadas + avulsas */}
+              {/* ABA ESCOPO — serviços contratados + geração de tarefas */}
               {tab === 'tarefas' && (
                 <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
                   {modal?.mode === 'new' ? (
@@ -752,7 +752,7 @@ export default function ClientsPage() {
                       {tarefasCliente.length > 0 && (
                         <div style={{ display:'flex', flexDirection:'column', gap:4, maxHeight:200, overflowY:'auto', marginBottom:4 }}>
                           <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:4 }}>
-                            {tarefasCliente.length} tarefa{tarefasCliente.length!==1?'s':''} · detalhes em <strong>Tarefas</strong>
+                            {tarefasCliente.length} tarefa{tarefasCliente.length!==1?'s':''} gerada{tarefasCliente.length!==1?'s':''} · ver detalhes em <strong>Tarefas</strong>
                           </div>
                           {tarefasCliente.map(t => {
                             const concluida = t.status === 'concluida'
@@ -781,11 +781,15 @@ export default function ClientsPage() {
 
                       <div style={{ borderTop:'1px solid var(--bo)', paddingTop:12 }} />
 
-                      {/* Modelos vinculados */}
+                      {/* Serviços contratados */}
+                      <div style={{ fontSize:11, fontWeight:700, color:'var(--tx)', marginBottom:6 }}>
+                        📋 Serviços contratados
+                        <span style={{ fontWeight:400, fontSize:10, color:'var(--tx3)', marginLeft:6 }}>modelos que geram tarefas automaticamente</span>
+                      </div>
                       {clienteModelos.length > 0 ? (
                         <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                           <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em' }}>
-                            {clienteModelos.length} modelo(s) vinculado(s)
+                            {clienteModelos.length} serviço{clienteModelos.length!==1?'s':''} contratado{clienteModelos.length!==1?'s':''}
                           </div>
                           {clienteModelos.map(cm => {
                             const bancosConfig = cm.config?.bancos || []
@@ -849,28 +853,29 @@ export default function ClientsPage() {
                         </div>
                       )}
 
-                      {/* Gerar tarefas de hoje manualmente */}
-                      {clienteModelos.length > 0 && (
-                        <div style={{ padding:'12px 14px', background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:'var(--r)', display:'flex', alignItems:'center', gap:10 }}>
-                          <div style={{ flex:1 }}>
-                            <div style={{ fontSize:12, fontWeight:700, color:'#15803D' }}>▶ Gerar tarefas de hoje</div>
-                            <div style={{ fontSize:11, color:'#16A34A', marginTop:2 }}>Dispara a geração manual com base nos modelos vinculados.</div>
+                      {/* Gerar tarefas — sempre visível */}
+                      <div style={{ padding:'12px 14px', background: clienteModelos.length > 0 ? '#F0FDF4' : '#F8FAFC', border:`1px solid ${clienteModelos.length > 0 ? '#BBF7D0' : '#E2E8F0'}`, borderRadius:'var(--r)', display:'flex', alignItems:'center', gap:10 }}>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:12, fontWeight:700, color: clienteModelos.length > 0 ? '#15803D' : '#94A3B8' }}>▶ Gerar tarefas de hoje</div>
+                          <div style={{ fontSize:11, color: clienteModelos.length > 0 ? '#16A34A' : '#94A3B8', marginTop:2 }}>
+                            {clienteModelos.length > 0 ? 'Dispara a geração manual com base nos serviços contratados.' : 'Vincule pelo menos um serviço acima para gerar tarefas.'}
                           </div>
-                          <button
-                            onClick={async () => {
-                              try {
-                                const r = await gerarTarefas.mutateAsync({ clienteId: modal?.id, data: new Date().toISOString().slice(0,10) })
-                                alert('✓ ' + (r?.criadas ?? 0) + ' tarefa(s) gerada(s) para hoje!')
-                              } catch(e) {
-                                alert('Erro ao gerar: ' + (e?.message || 'tente novamente'))
-                              }
-                            }}
-                            disabled={gerarTarefas.isPending}
-                            style={{ padding:'8px 16px', background:'#16A34A', color:'#fff', border:'none', borderRadius:6, cursor:'pointer', fontSize:12, fontWeight:700, flexShrink:0, whiteSpace:'nowrap' }}>
-                            {gerarTarefas.isPending ? '⏳ Gerando...' : '▶ Gerar agora'}
-                          </button>
                         </div>
-                      )}
+                        <button
+                          onClick={async () => {
+                            if (clienteModelos.length === 0) { alert('Vincule pelo menos um serviço contratado primeiro.'); return }
+                            try {
+                              const r = await gerarTarefas.mutateAsync({ clienteId: modal?.id, data: new Date().toISOString().slice(0,10) })
+                              alert('✓ ' + (r?.criadas ?? 0) + ' tarefa(s) gerada(s) para hoje!')
+                            } catch(e) {
+                              alert('Erro ao gerar: ' + (e?.message || 'tente novamente'))
+                            }
+                          }}
+                          disabled={gerarTarefas.isPending || clienteModelos.length === 0}
+                          style={{ padding:'8px 16px', background: clienteModelos.length > 0 ? '#16A34A' : '#E2E8F0', color: clienteModelos.length > 0 ? '#fff' : '#94A3B8', border:'none', borderRadius:6, cursor: clienteModelos.length > 0 ? 'pointer' : 'not-allowed', fontSize:12, fontWeight:700, flexShrink:0, whiteSpace:'nowrap' }}>
+                          {gerarTarefas.isPending ? '⏳ Gerando...' : '▶ Gerar agora'}
+                        </button>
+                      </div>
 
                       {/* Importar escopo da proposta comercial */}
                       {!showAddModelo && !importPropostaOpen && (() => {
