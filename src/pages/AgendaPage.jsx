@@ -196,6 +196,28 @@ export default function AgendaPage() {
     return map
   }, [tasks, fCliente, fCategoria])
 
+  // Calendário: rotinas por dia (recorrências visuais)
+  const rotinasPorDia = useMemo(() => {
+    const map = {}
+    const hoje = new Date()
+    const ini  = startOfMonth(base), fim = endOfMonth(base)
+    for (let d = new Date(ini); d <= fim; d.setDate(d.getDate()+1)) {
+      const key    = fmtDate(d)
+      const jsDow  = d.getDay()
+      const dow    = jsDow === 0 ? 6 : jsDow - 1
+      const dom    = d.getDate()
+      const lista  = todasRotinas.filter(r => r.ativo &&
+        (!fCliente || r.cliente_id === fCliente) && (
+          r.tipo === 'diaria' ||
+          (r.tipo === 'semanal' && (r.dias_semana?.length ? r.dias_semana.includes(dow) : r.dia_semana === dow)) ||
+          (r.tipo === 'mensal'  && r.dia_mes === dom)
+        )
+      )
+      if (lista.length) map[key] = lista
+    }
+    return map
+  }, [todasRotinas, base, fCliente])
+
   const semanaBase = useMemo(() => startOfWeek(base), [base])
   const diasSemana = useMemo(() => Array.from({length:7},(_,i)=>addDays(semanaBase,i)), [semanaBase])
   const diasMes    = useMemo(() => {
@@ -651,6 +673,14 @@ export default function AgendaPage() {
                             color:'#334155', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.titulo}</div>
                         ))}
                         {dt.length>2 && <div style={{ fontSize:8, color:'#6366F1', fontWeight:700 }}>+{dt.length-2}</div>}
+                        {(rotinasPorDia[key]||[]).slice(0,2).map(r=>(
+                          <div key={r.id} style={{ fontSize:8, padding:'1px 4px', borderRadius:3, marginBottom:1,
+                            background:'#D1FAE5', borderLeft:'2px solid #16A34A',
+                            color:'#065F46', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                            🔁 {r.titulo}
+                          </div>
+                        ))}
+                        {(rotinasPorDia[key]||[]).length>2 && <div style={{ fontSize:8, color:'#16A34A', fontWeight:700 }}>+{(rotinasPorDia[key]||[]).length-2} rotina(s)</div>}
                       </div>
                     )
                   })}
@@ -680,8 +710,28 @@ export default function AgendaPage() {
                       </div>
                       <button onClick={()=>setDiaSelecionado(null)} style={{ border:'none', background:'none', cursor:'pointer', color:'#94A3B8', fontSize:18 }}>×</button>
                     </div>
+                    {/* Rotinas do dia selecionado */}
+                    {(rotinasPorDia[diaSelecionado]||[]).length > 0 && (
+                      <div style={{ marginBottom:10 }}>
+                        <div style={{ fontSize:9, fontWeight:700, color:'#15803D', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:5 }}>🔁 Rotinas do dia</div>
+                        {(rotinasPorDia[diaSelecionado]||[]).map(r => {
+                          const cl = clients.find(c=>c.id===r.cliente_id)
+                          return (
+                            <div key={r.id} style={{ background:'#F0FDF4', border:'1px solid #BBF7D0', borderLeft:'3px solid #16A34A', borderRadius:6, padding:'7px 10px', marginBottom:5 }}>
+                              <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+                                {r.hora && <span style={{ fontSize:10, fontWeight:700, color:'#16A34A' }}>{r.hora.slice(0,5)}</span>}
+                                <span style={{ fontSize:11, fontWeight:600, color:'#065F46' }}>{r.titulo}</span>
+                              </div>
+                              {cl && <div style={{ fontSize:9, color:'#6B7280', marginTop:2 }}>🏢 {cl.fantasia||cl.razao_social}</div>}
+                              {r.observacao && <div style={{ fontSize:9, color:'#6EE7B7', marginTop:2, fontStyle:'italic' }}>{r.observacao}</div>}
+                            </div>
+                          )
+                        })}
+                        <div style={{ borderTop:'1px solid #E2E8F0', margin:'8px 0' }} />
+                      </div>
+                    )}
                     {dt.length===0
-                      ? <div style={{ textAlign:'center', color:'#CBD5E1', fontSize:11, padding:'16px 0' }}>Nenhuma tarefa 🎉</div>
+                      ? <div style={{ textAlign:'center', color:'#CBD5E1', fontSize:11, padding:'8px 0' }}>Nenhuma tarefa 🎉</div>
                       : dt.map(t => {
                           const cl = clients.find(c=>c.id===t.cliente_id)
                           const dd = t.data_execucao||t.prazo
