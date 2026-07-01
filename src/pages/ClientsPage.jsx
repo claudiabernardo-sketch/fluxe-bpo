@@ -56,6 +56,7 @@ export default function ClientsPage() {
   const [tab, setTab] = useState('dados') // dados | financeiro | bancos | cofre | rotina | tarefas
   const [configModeloId, setConfigModeloId] = useState(null) // id do cm sendo configurado
   const [showAddModelo, setShowAddModelo] = useState(false)
+  const [compMes, setCompMes] = useState(() => new Date().toISOString().slice(0,7))
   const [importPropostaOpen, setImportPropostaOpen] = useState(false)
   const [importPropostaSel, setImportPropostaSel] = useState([])
 
@@ -799,10 +800,14 @@ export default function ClientsPage() {
                                 <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px' }}>
                                   <div style={{ flex:1 }}>
                                     <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{cm.tarefa_modelos?.titulo}</div>
-                                    <div style={{ fontSize:10, color:'var(--tx3)', marginTop:2 }}>
-                                      {cm.tarefa_modelos?.categoria} · {cm.tarefa_modelos?.recorrencia}
+                                    <div style={{ fontSize:10, color:'var(--tx3)', marginTop:2, display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
+                                      <span>{cm.tarefa_modelos?.categoria}</span>
+                                      <span>·</span>
+                                      <span style={{ fontWeight:600, color:'var(--tx2)' }}>
+                                        {({diaria:'~30×/mês', dias_uteis:'~22×/mês', semanal:'~4×/mês', quinzenal:'2×/mês', mensal:'1×/mês', bimestral:'a cada 2m', trimestral:'a cada 3m', unica:'pontual'})[cm.tarefa_modelos?.recorrencia] || cm.tarefa_modelos?.recorrencia}
+                                      </span>
                                       {bancosConfig.length > 0 && (
-                                        <span style={{ color:'#6366F1', fontWeight:600 }}> · 🏦 {bancosConfig.join(', ')}</span>
+                                        <span style={{ color:'#6366F1', fontWeight:600 }}>🏦 {bancosConfig.join(', ')}</span>
                                       )}
                                     </div>
                                   </div>
@@ -853,28 +858,41 @@ export default function ClientsPage() {
                         </div>
                       )}
 
-                      {/* Gerar tarefas — sempre visível */}
-                      <div style={{ padding:'12px 14px', background: clienteModelos.length > 0 ? '#F0FDF4' : '#F8FAFC', border:`1px solid ${clienteModelos.length > 0 ? '#BBF7D0' : '#E2E8F0'}`, borderRadius:'var(--r)', display:'flex', alignItems:'center', gap:10 }}>
-                        <div style={{ flex:1 }}>
-                          <div style={{ fontSize:12, fontWeight:700, color: clienteModelos.length > 0 ? '#15803D' : '#94A3B8' }}>▶ Gerar tarefas de hoje</div>
-                          <div style={{ fontSize:11, color: clienteModelos.length > 0 ? '#16A34A' : '#94A3B8', marginTop:2 }}>
-                            {clienteModelos.length > 0 ? 'Dispara a geração manual com base nos serviços contratados.' : 'Vincule pelo menos um serviço acima para gerar tarefas.'}
+                      {/* Gerar tarefas por competência */}
+                      <div style={{ padding:'12px 14px', background: clienteModelos.length > 0 ? '#F0FDF4' : '#F8FAFC', border:`1px solid ${clienteModelos.length > 0 ? '#BBF7D0' : '#E2E8F0'}`, borderRadius:'var(--r)' }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom: clienteModelos.length > 0 ? 10 : 0 }}>
+                          <div style={{ flex:1 }}>
+                            <div style={{ fontSize:12, fontWeight:700, color: clienteModelos.length > 0 ? '#15803D' : '#94A3B8' }}>▶ Gerar tarefas do mês</div>
+                            <div style={{ fontSize:11, color: clienteModelos.length > 0 ? '#16A34A' : '#94A3B8', marginTop:2 }}>
+                              {clienteModelos.length > 0 ? 'Gera todas as tarefas do mês de competência selecionado.' : 'Vincule pelo menos um serviço acima para gerar tarefas.'}
+                            </div>
                           </div>
                         </div>
-                        <button
-                          onClick={async () => {
-                            if (clienteModelos.length === 0) { alert('Vincule pelo menos um serviço contratado primeiro.'); return }
-                            try {
-                              const r = await gerarTarefas.mutateAsync({ clienteId: modal?.id, data: new Date().toISOString().slice(0,10) })
-                              alert('✓ ' + (r?.criadas ?? 0) + ' tarefa(s) gerada(s) para hoje!')
-                            } catch(e) {
-                              alert('Erro ao gerar: ' + (e?.message || 'tente novamente'))
-                            }
-                          }}
-                          disabled={gerarTarefas.isPending || clienteModelos.length === 0}
-                          style={{ padding:'8px 16px', background: clienteModelos.length > 0 ? '#16A34A' : '#E2E8F0', color: clienteModelos.length > 0 ? '#fff' : '#94A3B8', border:'none', borderRadius:6, cursor: clienteModelos.length > 0 ? 'pointer' : 'not-allowed', fontSize:12, fontWeight:700, flexShrink:0, whiteSpace:'nowrap' }}>
-                          {gerarTarefas.isPending ? '⏳ Gerando...' : '▶ Gerar agora'}
-                        </button>
+                        {clienteModelos.length > 0 && (
+                          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                            <div style={{ fontSize:11, color:'#15803D', fontWeight:600, flexShrink:0 }}>Competência:</div>
+                            <input type="month" value={compMes} onChange={e => setCompMes(e.target.value)}
+                              style={{ flex:1, padding:'5px 8px', border:'1px solid #BBF7D0', borderRadius:6, fontSize:12, fontFamily:'inherit', background:'#fff', color:'#0F172A', outline:'none' }} />
+                            <button
+                              onClick={async () => {
+                                if (!compMes) return
+                                const [ano, mes] = compMes.split('-').map(Number)
+                                const dataInicio = `${compMes}-01`
+                                const ultimoDia = new Date(ano, mes, 0).getDate()
+                                const dataFim = `${compMes}-${String(ultimoDia).padStart(2,'0')}`
+                                try {
+                                  const r = await gerarTarefas.mutateAsync({ clienteId: modal?.id, dataInicio, dataFim })
+                                  alert(`✓ ${r?.criadas ?? 0} tarefa(s) gerada(s) para ${mes.toString().padStart(2,'0')}/${ano}!`)
+                                } catch(e) {
+                                  alert('Erro ao gerar: ' + (e?.message || 'tente novamente'))
+                                }
+                              }}
+                              disabled={gerarTarefas.isPending}
+                              style={{ padding:'6px 14px', background:'#16A34A', color:'#fff', border:'none', borderRadius:6, cursor:'pointer', fontSize:12, fontWeight:700, flexShrink:0, whiteSpace:'nowrap' }}>
+                              {gerarTarefas.isPending ? '⏳ Gerando...' : '▶ Gerar'}
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {/* Importar escopo da proposta comercial */}
