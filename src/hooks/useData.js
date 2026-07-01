@@ -100,7 +100,8 @@ export function useTasks(filters = {}) {
         .select('*, clientes(razao_social, fantasia), usuarios!tarefas_responsavel_id_fkey(nome)')
         .eq('empresa_id', empresa?.id)
        .is('deleted_at', null)
-        .order('prazo', { ascending: true })
+        .order('data_execucao', { ascending: true, nullsFirst: false })
+        .order('prazo', { ascending: true, nullsFirst: false })
         .limit(500)
 
       if (filters.clientId) q = q.eq('cliente_id', filters.clientId)
@@ -1015,8 +1016,4 @@ export function useUpdateProposta() {
       if (error) throw error
       return data
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['propostas'] }),
-    onError: (err) => console.error('[Fluxe]', err),
-  })
-}
-          
+    onSuccess: () => qc.invalidateQueries({ queryKe
