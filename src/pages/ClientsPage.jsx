@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
-import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useUpdateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTarefaModelos, useClienteModelos, useVincularModelo, useDesvincularModelo, useAcessos, useSaveAcesso, useDeleteAcesso, useGerarTarefas, usePropostas } from '../hooks/useData'
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useUpdateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTarefaModelos, useAcessos, useSaveAcesso, useDeleteAcesso } from '../hooks/useData'
 import { useQueryClient } from '@tanstack/react-query'
 import { Card, CardHeader, Badge, Btn, Loader, EmptyState, fmt, fmtR } from '../components/ui'
 import { useAuthStore } from '../store/authStore'
@@ -53,12 +53,7 @@ export default function ClientsPage() {
   const [cnpjLoading, setCnpjLoading] = useState(false)
   const [cnpjError, setCnpjError] = useState('')
   const [selectedBancos, setSelectedBancos] = useState([])
-  const [tab, setTab] = useState('dados') // dados | financeiro | bancos | cofre | rotina | tarefas
-  const [configModeloId, setConfigModeloId] = useState(null) // id do cm sendo configurado
-  const [showAddModelo, setShowAddModelo] = useState(false)
-  const [compMes, setCompMes] = useState(() => new Date().toISOString().slice(0,7))
-  const [importPropostaOpen, setImportPropostaOpen] = useState(false)
-  const [importPropostaSel, setImportPropostaSel] = useState([])
+  const [tab, setTab] = useState('dados') // dados | financeiro | bancos | cofre | rotina
 
   // Contrato assinado — upload/download
   const [contratoUploading, setContratoUploading] = useState(false)
@@ -140,11 +135,7 @@ export default function ClientsPage() {
   const createRotina  = useCreateRotina()
   const updateRotina  = useUpdateRotina()
   const deleteRotina  = useDeleteRotina()
-  const { data: clienteModelos = [] } = useClienteModelos(modal?.mode === 'edit' ? modal?.id : null)
-  const vincularModelo    = useVincularModelo()
-  const desvincularModelo = useDesvincularModelo()
-  const { data: todosModelos = [] } = useTarefaModelos()
-  const { data: todasPropostas = [] } = usePropostas()
+
   const DIAS_SEMANA_R = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo']
   const [rotinaForm, setRotinaForm] = useState({ titulo:'', tipo:'semanal', dias_semana:[0], dia_mes:1, hora:'08:00', observacao:'' })
   const [rotinaErr,  setRotinaErr]  = useState('')
@@ -158,7 +149,6 @@ export default function ClientsPage() {
   const createTask = useCreateTask()
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
-  const gerarTarefas = useGerarTarefas()
   const queryClient = useQueryClient()
   const [taskForm, setTaskForm] = useState({ titulo:'', prazo:'', status:'aberta', prioridade:'media' })
   const [taskErr,  setTaskErr]  = useState('')
@@ -218,43 +208,6 @@ export default function ClientsPage() {
     setTaskForm({ titulo:'', prazo:'', status:'aberta', prioridade:'media' })
   }
 
-  async function desvincularEExcluir(cm) {
-    const temTarefa = tarefasCliente.some(t => t.modelo_id === cm.modelo_id && t.status !== 'concluida')
-    const msg = temTarefa
-      ? 'Remover este modelo do escopo? A tarefa aberta criada por ele também será excluída.'
-      : 'Remover este modelo do escopo?'
-    if (!confirm(msg)) return
-    // Soft-delete tarefas abertas geradas por este modelo para este cliente
-    const alvo = tarefasCliente.filter(t => t.modelo_id === cm.modelo_id && t.status !== 'concluida')
-    for (const t of alvo) await deleteTask.mutateAsync(t.id)
-    desvincularModelo.mutate({ id: cm.id, clienteId: modal?.id })
-  }
-
-  async function vincularEAplicarModelo(modelo) {
-    try {
-      await vincularModelo.mutateAsync({ clienteId: modal?.id, modeloId: modelo.id })
-      // Modelos "pontuais" (vindos de Esteira) não esperam o gerador diário —
-      // criam a tarefa de verdade já no momento do vínculo, com checklist,
-      // e com data_execucao = hoje pra já aparecer em "Meu Dia".
-      if (modelo.recorrencia === 'unica') {
-        const tarefa = await createTask.mutateAsync({
-          titulo: modelo.titulo, categoria: modelo.categoria || null,
-          prioridade: modelo.prioridade || 'media', status: 'aberta',
-          cliente_id: modal.id, modelo_id: modelo.id,
-          data_execucao: new Date().toLocaleDateString('en-CA'),
-        })
-        if (modelo.checklist_items?.length && tarefa?.id) {
-          const items = modelo.checklist_items.map((texto, ordem) => ({
-            tarefa_id: tarefa.id, texto, ordem, empresa_id: empresa?.id
-          }))
-          await supabase.from('tarefa_checklists').insert(items)
-        }
-      }
-      setShowAddModelo(false)
-    } catch (err) {
-      alert('Não foi possível vincular o modelo: ' + (err?.message || 'erro desconhecido'))
-    }
-  }
 
   async function salvarRotina() {
     if (!rotinaForm.titulo.trim()) { setRotinaErr('Informe o título da rotina'); return }
@@ -532,7 +485,7 @@ export default function ClientsPage() {
 
             {/* Tabs */}
             <div style={{ display:'flex', borderBottom:'1px solid var(--bo)', padding:'0 18px' }}>
-              {[['dados','📋 Dados'],['financeiro','💰 Financeiro'],['bancos','🏦 Bancos'],['cofre','🔐 Cofre'],['rotina','🔁 Rotina'],['tarefas','📦 Escopo']].map(([id, label]) => (
+              {[['dados','📋 Dados'],['financeiro','💰 Financeiro'],['bancos','🏦 Bancos'],['cofre','🔐 Cofre'],['rotina','🔁 Rotina']].map(([id, label]) => (
                 <button key={id} onClick={() => setTab(id)}
                   style={{ padding:'8px 14px', border:'none', background:'transparent', cursor:'pointer', fontSize:11, fontWeight:600,
                     color: tab===id?'var(--br)':'var(--tx3)', borderBottom: tab===id?'2px solid var(--br)':'2px solid transparent', marginBottom:-1 }}>
@@ -741,286 +694,6 @@ export default function ClientsPage() {
               )}
 
               {/* ABA ESCOPO — serviços contratados + geração de tarefas */}
-              {tab === 'tarefas' && (
-                <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-                  {modal?.mode === 'new' ? (
-                    <div style={{ padding:'28px 16px', textAlign:'center', color:'var(--tx3)', fontSize:13 }}>
-                      Salve o cliente primeiro para adicionar tarefas.
-                    </div>
-                  ) : (
-                    <>
-                      {/* Tarefas abertas do cliente */}
-                      {tarefasCliente.length > 0 && (
-                        <div style={{ display:'flex', flexDirection:'column', gap:4, maxHeight:200, overflowY:'auto', marginBottom:4 }}>
-                          <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:4 }}>
-                            {tarefasCliente.length} tarefa{tarefasCliente.length!==1?'s':''} gerada{tarefasCliente.length!==1?'s':''} · ver detalhes em <strong>Tarefas</strong>
-                          </div>
-                          {tarefasCliente.map(t => {
-                            const concluida = t.status === 'concluida'
-                            return (
-                              <div key={t.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--s2)', opacity: concluida ? .5 : 1 }}>
-                                <div style={{ width:7, height:7, borderRadius:'50%', background: concluida ? '#22C55E' : '#6366F1', flexShrink:0 }} />
-                                <div style={{ flex:1, fontSize:12, color:'var(--tx)', textDecoration: concluida ? 'line-through' : 'none' }}>{t.titulo}</div>
-                                <button onClick={() => { if(confirm('Remover esta tarefa do escopo?')) deleteTask.mutate(t.id) }}
-                                  style={{ border:'none', background:'none', cursor:'pointer', color:'#CBD5E1', fontSize:16, lineHeight:1, flexShrink:0 }}>×</button>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-
-                      {/* Adicionar tarefa avulsa */}
-                      <div style={{ display:'flex', gap:8, marginBottom:12 }}>
-                        <input value={taskForm.titulo} onChange={e=>setTaskForm(f=>({...f,titulo:e.target.value}))}
-                          onKeyDown={e => e.key==='Enter' && salvarTarefa()}
-                          className="fi" placeholder="+ Nova tarefa avulsa..." style={{ flex:1 }} />
-                        <button className="btn bp bsm" onClick={salvarTarefa} disabled={createTask.isPending}>
-                          {createTask.isPending ? '…' : 'Add'}
-                        </button>
-                      </div>
-                      {taskErr && <div style={{ fontSize:11, color:'var(--rdt)', marginBottom:8 }}>{taskErr}</div>}
-
-                      <div style={{ borderTop:'1px solid var(--bo)', paddingTop:12 }} />
-
-                      {/* Serviços contratados */}
-                      <div style={{ fontSize:11, fontWeight:700, color:'var(--tx)', marginBottom:6 }}>
-                        📋 Serviços contratados
-                        <span style={{ fontWeight:400, fontSize:10, color:'var(--tx3)', marginLeft:6 }}>modelos que geram tarefas automaticamente</span>
-                      </div>
-                      {clienteModelos.length > 0 ? (
-                        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-                          <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em' }}>
-                            {clienteModelos.length} serviço{clienteModelos.length!==1?'s':''} contratado{clienteModelos.length!==1?'s':''}
-                          </div>
-                          {clienteModelos.map(cm => {
-                            const bancosConfig = cm.config?.bancos || []
-                            const isConfiguring = configModeloId === cm.id
-                            return (
-                              <div key={cm.id} style={{ border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--s2)' }}>
-                                <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px' }}>
-                                  <div style={{ flex:1 }}>
-                                    <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{cm.tarefa_modelos?.titulo}</div>
-                                    <div style={{ fontSize:10, color:'var(--tx3)', marginTop:2, display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
-                                      <span>{cm.tarefa_modelos?.categoria}</span>
-                                      <span>·</span>
-                                      <span style={{ fontWeight:600, color:'var(--tx2)' }}>
-                                        {({diaria:'~30×/mês', dias_uteis:'~22×/mês', semanal:'~4×/mês', quinzenal:'2×/mês', mensal:'1×/mês', bimestral:'a cada 2m', trimestral:'a cada 3m', unica:'pontual'})[cm.tarefa_modelos?.recorrencia] || cm.tarefa_modelos?.recorrencia}
-                                      </span>
-                                      {bancosConfig.length > 0 && (
-                                        <span style={{ color:'#6366F1', fontWeight:600 }}>🏦 {bancosConfig.join(', ')}</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <button onClick={() => setConfigModeloId(isConfiguring ? null : cm.id)}
-                                    title="Configurar bancos"
-                                    style={{ border:'1px solid var(--bo)', background: isConfiguring ? '#EEF2FF' : 'transparent', color: isConfiguring ? '#6366F1' : 'var(--tx3)', borderRadius:5, cursor:'pointer', fontSize:11, padding:'3px 8px' }}>
-                                    ⚙
-                                  </button>
-                                  <button onClick={() => desvincularEExcluir(cm)}
-                                    style={{ border:'none', background:'none', cursor:'pointer', color:'var(--tx3)', fontSize:18, lineHeight:1, padding:'4px' }}>×</button>
-                                </div>
-
-                                {isConfiguring && (
-                                  <div style={{ padding:'10px 12px', borderTop:'1px solid var(--bo)', background:'#F8FAFC' }}>
-                                    <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', marginBottom:8, textTransform:'uppercase', letterSpacing:'.06em' }}>
-                                      🏦 Selecione os bancos para este modelo
-                                    </div>
-                                    {(clients.find(c => c.id === modal?.id)?.bancos || []).length === 0 ? (
-                                      <div style={{ fontSize:11, color:'#94A3B8' }}>Nenhum banco cadastrado para este cliente. Adicione na aba Bancos.</div>
-                                    ) : (
-                                      <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                                        {(clients.find(c => c.id === modal?.id)?.bancos || []).map(banco => {
-                                          const sel = bancosConfig.includes(banco)
-                                          return (
-                                            <button key={banco} onClick={async () => {
-                                              const novos = sel ? bancosConfig.filter(b => b !== banco) : [...bancosConfig, banco]
-                                              await supabase.from('cliente_modelos').update({ config: { ...cm.config, bancos: novos } }).eq('id', cm.id)
-                                              queryClient.invalidateQueries({ queryKey: ['cliente_modelos', modal?.id] })
-                                            }}
-                                              style={{ padding:'4px 10px', borderRadius:99, fontSize:11, cursor:'pointer', fontWeight:600, border:'none',
-                                                background: sel ? '#6366F1' : '#E2E8F0',
-                                                color: sel ? '#fff' : '#475569' }}>
-                                              {sel ? '✓ ' : ''}{banco}
-                                            </button>
-                                          )
-                                        })}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      ) : (
-                        <div style={{ padding:'20px', textAlign:'center', color:'var(--tx3)', fontSize:12, border:'1px dashed var(--bo)', borderRadius:'var(--r)' }}>
-                          Nenhum modelo vinculado ainda.
-                        </div>
-                      )}
-
-                      {/* Gerar tarefas por competência */}
-                      <div style={{ padding:'12px 14px', background: clienteModelos.length > 0 ? '#F0FDF4' : '#F8FAFC', border:`1px solid ${clienteModelos.length > 0 ? '#BBF7D0' : '#E2E8F0'}`, borderRadius:'var(--r)' }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom: clienteModelos.length > 0 ? 10 : 0 }}>
-                          <div style={{ flex:1 }}>
-                            <div style={{ fontSize:12, fontWeight:700, color: clienteModelos.length > 0 ? '#15803D' : '#94A3B8' }}>▶ Gerar tarefas do mês</div>
-                            <div style={{ fontSize:11, color: clienteModelos.length > 0 ? '#16A34A' : '#94A3B8', marginTop:2 }}>
-                              {clienteModelos.length > 0 ? 'Gera todas as tarefas do mês de competência selecionado.' : 'Vincule pelo menos um serviço acima para gerar tarefas.'}
-                            </div>
-                          </div>
-                        </div>
-                        {clienteModelos.length > 0 && (
-                          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                            <div style={{ fontSize:11, color:'#15803D', fontWeight:600, flexShrink:0 }}>Competência:</div>
-                            <input type="month" value={compMes} onChange={e => setCompMes(e.target.value)}
-                              style={{ flex:1, padding:'5px 8px', border:'1px solid #BBF7D0', borderRadius:6, fontSize:12, fontFamily:'inherit', background:'#fff', color:'#0F172A', outline:'none' }} />
-                            <button
-                              onClick={async () => {
-                                if (!compMes) return
-                                const [ano, mes] = compMes.split('-').map(Number)
-                                const dataInicio = `${compMes}-01`
-                                const ultimoDia = new Date(ano, mes, 0).getDate()
-                                const dataFim = `${compMes}-${String(ultimoDia).padStart(2,'0')}`
-                                try {
-                                  const r = await gerarTarefas.mutateAsync({ clienteId: modal?.id, dataInicio, dataFim })
-                                  alert(`✓ ${r?.criadas ?? 0} tarefa(s) gerada(s) para ${mes.toString().padStart(2,'0')}/${ano}!`)
-                                } catch(e) {
-                                  alert('Erro ao gerar: ' + (e?.message || 'tente novamente'))
-                                }
-                              }}
-                              disabled={gerarTarefas.isPending}
-                              style={{ padding:'6px 14px', background:'#16A34A', color:'#fff', border:'none', borderRadius:6, cursor:'pointer', fontSize:12, fontWeight:700, flexShrink:0, whiteSpace:'nowrap' }}>
-                              {gerarTarefas.isPending ? '⏳ Gerando...' : '▶ Gerar'}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Importar escopo da proposta comercial */}
-                      {!showAddModelo && !importPropostaOpen && (() => {
-                        const cnpjLimpo = (form.cnpj||'').replace(/\D/g,'')
-                        const propostaMatch = [...todasPropostas]
-                          .filter(p => p.dados_cliente?.cnpj?.replace(/\D/g,'') === cnpjLimpo && cnpjLimpo)
-                          .sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0))[0]
-                        if (!propostaMatch) return null
-                        const itens = propostaMatch.dados_calculo?.calc?.items?.filter(it => !it.nome.includes('Ajuste de porte')) || []
-                        if (!itens.length) return null
-                        return (
-                          <div style={{ padding:'12px 14px', background:'#EFF6FF', border:'1px solid #BFDBFE', borderRadius:'var(--r)', display:'flex', alignItems:'center', gap:10 }}>
-                            <div style={{ flex:1 }}>
-                              <div style={{ fontSize:12, fontWeight:700, color:'#1D4ED8' }}>📋 Escopo da proposta disponível</div>
-                              <div style={{ fontSize:11, color:'#3B82F6', marginTop:2 }}>{itens.length} serviço(s) na proposta — vincule ao Escopo com um clique.</div>
-                            </div>
-                            <button
-                              onClick={() => {
-                                const candidatos = itens.map(it => {
-                                  const nLower = it.nome.toLowerCase()
-                                  const modelo = todosModelos.find(m => {
-                                    const mLower = m.titulo.toLowerCase()
-                                    const words = nLower.split(' ').slice(0,2).join(' ')
-                                    return mLower.includes(words) || nLower.includes(mLower.split(' ').slice(0,2).join(' '))
-                                  })
-                                  const jaVinculado = clienteModelos.some(cm => cm.modelo_id === modelo?.id)
-                                  return { servico: it.nome, modelo, jaVinculado }
-                                })
-                                setImportPropostaSel(candidatos.filter(c => c.modelo && !c.jaVinculado).map(c => c.modelo.id))
-                                setImportPropostaOpen({ itens: candidatos, propostaId: propostaMatch.id })
-                              }}
-                              style={{ padding:'7px 14px', background:'#2563EB', color:'#fff', border:'none', borderRadius:6, cursor:'pointer', fontSize:12, fontWeight:700, flexShrink:0, whiteSpace:'nowrap' }}>
-                              Ver e importar
-                            </button>
-                          </div>
-                        )
-                      })()}
-
-                      {/* Modal importar da proposta */}
-                      {importPropostaOpen && (
-                        <div style={{ border:'1px solid #BFDBFE', borderRadius:'var(--r)', background:'#EFF6FF', padding:'14px' }}>
-                          <div style={{ fontSize:11, fontWeight:700, color:'#1D4ED8', marginBottom:10, textTransform:'uppercase', letterSpacing:'.06em' }}>📋 Serviços da proposta</div>
-                          <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:12 }}>
-                            {importPropostaOpen.itens.map((c, i) => (
-                              <label key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:'var(--r)', border:'1px solid var(--bo)', background: c.jaVinculado ? 'var(--s2)' : 'var(--sur)', cursor: c.jaVinculado || !c.modelo ? 'default' : 'pointer', opacity: c.jaVinculado ? .5 : 1 }}>
-                                <input type="checkbox"
-                                  disabled={c.jaVinculado || !c.modelo}
-                                  checked={importPropostaSel.includes(c.modelo?.id)}
-                                  onChange={() => {
-                                    if (!c.modelo) return
-                                    setImportPropostaSel(s => s.includes(c.modelo.id) ? s.filter(x=>x!==c.modelo.id) : [...s, c.modelo.id])
-                                  }}
-                                  style={{ width:14, height:14, accentColor:'var(--br)', flexShrink:0 }} />
-                                <div style={{ flex:1 }}>
-                                  <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{c.servico}</div>
-                                  {c.modelo
-                                    ? <div style={{ fontSize:10, color: c.jaVinculado ? '#15803D' : '#6366F1' }}>{c.jaVinculado ? '✓ já vinculado' : `→ modelo: ${c.modelo.titulo}`}</div>
-                                    : <div style={{ fontSize:10, color:'#94A3B8' }}>Nenhum modelo correspondente encontrado</div>
-                                  }
-                                </div>
-                              </label>
-                            ))}
-                          </div>
-                          <div style={{ display:'flex', gap:8 }}>
-                            <button
-                              disabled={importPropostaSel.length === 0 || vincularModelo.isPending}
-                              onClick={async () => {
-                                for (const mid of importPropostaSel) {
-                                  const m = todosModelos.find(x => x.id === mid)
-                                  if (m) await vincularEAplicarModelo(m)
-                                }
-                                setImportPropostaOpen(false)
-                                setImportPropostaSel([])
-                              }}
-                              style={{ padding:'8px 16px', background:'#2563EB', color:'#fff', border:'none', borderRadius:6, cursor:'pointer', fontSize:12, fontWeight:700 }}>
-                              {vincularModelo.isPending ? 'Vinculando...' : `✓ Vincular ${importPropostaSel.length} modelo(s)`}
-                            </button>
-                            <button onClick={() => { setImportPropostaOpen(false); setImportPropostaSel([]) }}
-                              style={{ padding:'8px 14px', border:'1px solid var(--bo)', background:'transparent', borderRadius:6, cursor:'pointer', fontSize:12, color:'var(--tx3)' }}>
-                              Cancelar
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Adicionar modelo */}
-                      {!showAddModelo ? (
-                        <button onClick={() => setShowAddModelo(true)}
-                          style={{ padding:'9px 16px', borderRadius:'var(--r)', border:'1px dashed var(--bo)', background:'transparent', cursor:'pointer', fontSize:12, fontWeight:600, color:'var(--br)', width:'100%' }}>
-                          + Vincular modelo de tarefa
-                        </button>
-                      ) : (
-                        <div style={{ border:'1px solid var(--bo)', borderRadius:'var(--r)', padding:'14px', background:'var(--sur)' }}>
-                          <div style={{ fontSize:11, fontWeight:700, color:'var(--tx3)', marginBottom:10, textTransform:'uppercase' }}>Selecionar modelo</div>
-                          <div style={{ display:'flex', flexDirection:'column', gap:6, maxHeight:300, overflowY:'auto' }}>
-                            {(() => {
-                              const disponiveis = todosModelos.filter(m => m.ativo && !clienteModelos.find(cm => cm.modelo_id === m.id))
-                              if (disponiveis.length === 0) return (
-                                <div style={{ fontSize:12, color:'var(--tx3)', textAlign:'center', padding:'12px' }}>Todos os modelos já estão vinculados.</div>
-                              )
-                              return disponiveis.map(m => (
-                                <button key={m.id}
-                                  onClick={() => vincularEAplicarModelo(m)}
-                                  style={{ padding:'10px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', cursor:'pointer', background:'var(--s2)', textAlign:'left', width:'100%' }}
-                                  onMouseEnter={e => e.currentTarget.style.background='var(--s3)'}
-                                  onMouseLeave={e => e.currentTarget.style.background='var(--s2)'}>
-                                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                                    <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)', flex:1 }}>{m.titulo}</div>
-                                    {m.software_alvo && <span style={{ fontSize:9, padding:'1px 6px', borderRadius:99, background:'#EEF2FF', color:'#6366F1', fontWeight:700, flexShrink:0 }}>{m.software_alvo}</span>}
-                                  </div>
-                                  <div style={{ fontSize:10, color:'var(--tx3)', marginTop:2 }}>
-                                    {m.categoria} · {m.recorrencia === 'unica' ? '⚡ pontual (cria tarefa na hora)' : m.recorrencia}
-                                  </div>
-                                </button>
-                              ))
-                            })()}
-                          </div>
-                          <button onClick={() => setShowAddModelo(false)}
-                            style={{ marginTop:10, padding:'6px 14px', borderRadius:'var(--r)', border:'1px solid var(--bo)', background:'transparent', cursor:'pointer', fontSize:11, color:'var(--tx3)' }}>
-                            Fechar
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
 
               {/* ABA COFRE */}
               {tab === 'cofre' && (
