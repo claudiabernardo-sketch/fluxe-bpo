@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
-import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useUpdateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTarefaModelos, useClienteModelos, useVincularModelo, useDesvincularModelo, useAcessos, useSaveAcesso, useDeleteAcesso, useGerarTarefas } from '../hooks/useData'
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useUpdateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTarefaModelos, useClienteModelos, useVincularModelo, useDesvincularModelo, useAcessos, useSaveAcesso, useDeleteAcesso, useGerarTarefas, usePropostas } from '../hooks/useData'
 import { useQueryClient } from '@tanstack/react-query'
 import { Card, CardHeader, Badge, Btn, Loader, EmptyState, fmt, fmtR } from '../components/ui'
 import { useAuthStore } from '../store/authStore'
@@ -56,6 +56,8 @@ export default function ClientsPage() {
   const [tab, setTab] = useState('dados') // dados | financeiro | bancos | cofre | rotina | tarefas
   const [configModeloId, setConfigModeloId] = useState(null) // id do cm sendo configurado
   const [showAddModelo, setShowAddModelo] = useState(false)
+  const [importPropostaOpen, setImportPropostaOpen] = useState(false)
+  const [importPropostaSel, setImportPropostaSel] = useState([])
 
   // Contrato assinado — upload/download
   const [contratoUploading, setContratoUploading] = useState(false)
@@ -141,6 +143,7 @@ export default function ClientsPage() {
   const vincularModelo    = useVincularModelo()
   const desvincularModelo = useDesvincularModelo()
   const { data: todosModelos = [] } = useTarefaModelos()
+  const { data: todasPropostas = [] } = usePropostas()
   const DIAS_SEMANA_R = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo']
   const [rotinaForm, setRotinaForm] = useState({ titulo:'', tipo:'semanal', dias_semana:[0], dia_mes:1, hora:'08:00', observacao:'' })
   const [rotinaErr,  setRotinaErr]  = useState('')
@@ -866,6 +869,90 @@ export default function ClientsPage() {
                             style={{ padding:'8px 16px', background:'#16A34A', color:'#fff', border:'none', borderRadius:6, cursor:'pointer', fontSize:12, fontWeight:700, flexShrink:0, whiteSpace:'nowrap' }}>
                             {gerarTarefas.isPending ? '⏳ Gerando...' : '▶ Gerar agora'}
                           </button>
+                        </div>
+                      )}
+
+                      {/* Importar escopo da proposta comercial */}
+                      {!showAddModelo && !importPropostaOpen && (() => {
+                        const cnpjLimpo = (form.cnpj||'').replace(/\D/g,'')
+                        const propostaMatch = [...todasPropostas]
+                          .filter(p => p.dados_cliente?.cnpj?.replace(/\D/g,'') === cnpjLimpo && cnpjLimpo)
+                          .sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0))[0]
+                        if (!propostaMatch) return null
+                        const itens = propostaMatch.dados_calculo?.calc?.items?.filter(it => !it.nome.includes('Ajuste de porte')) || []
+                        if (!itens.length) return null
+                        return (
+                          <div style={{ padding:'12px 14px', background:'#EFF6FF', border:'1px solid #BFDBFE', borderRadius:'var(--r)', display:'flex', alignItems:'center', gap:10 }}>
+                            <div style={{ flex:1 }}>
+                              <div style={{ fontSize:12, fontWeight:700, color:'#1D4ED8' }}>📋 Escopo da proposta disponível</div>
+                              <div style={{ fontSize:11, color:'#3B82F6', marginTop:2 }}>{itens.length} serviço(s) na proposta — vincule ao Escopo com um clique.</div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                const candidatos = itens.map(it => {
+                                  const nLower = it.nome.toLowerCase()
+                                  const modelo = todosModelos.find(m => {
+                                    const mLower = m.titulo.toLowerCase()
+                                    const words = nLower.split(' ').slice(0,2).join(' ')
+                                    return mLower.includes(words) || nLower.includes(mLower.split(' ').slice(0,2).join(' '))
+                                  })
+                                  const jaVinculado = clienteModelos.some(cm => cm.modelo_id === modelo?.id)
+                                  return { servico: it.nome, modelo, jaVinculado }
+                                })
+                                setImportPropostaSel(candidatos.filter(c => c.modelo && !c.jaVinculado).map(c => c.modelo.id))
+                                setImportPropostaOpen({ itens: candidatos, propostaId: propostaMatch.id })
+                              }}
+                              style={{ padding:'7px 14px', background:'#2563EB', color:'#fff', border:'none', borderRadius:6, cursor:'pointer', fontSize:12, fontWeight:700, flexShrink:0, whiteSpace:'nowrap' }}>
+                              Ver e importar
+                            </button>
+                          </div>
+                        )
+                      })()}
+
+                      {/* Modal importar da proposta */}
+                      {importPropostaOpen && (
+                        <div style={{ border:'1px solid #BFDBFE', borderRadius:'var(--r)', background:'#EFF6FF', padding:'14px' }}>
+                          <div style={{ fontSize:11, fontWeight:700, color:'#1D4ED8', marginBottom:10, textTransform:'uppercase', letterSpacing:'.06em' }}>📋 Serviços da proposta</div>
+                          <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:12 }}>
+                            {importPropostaOpen.itens.map((c, i) => (
+                              <label key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:'var(--r)', border:'1px solid var(--bo)', background: c.jaVinculado ? 'var(--s2)' : 'var(--sur)', cursor: c.jaVinculado || !c.modelo ? 'default' : 'pointer', opacity: c.jaVinculado ? .5 : 1 }}>
+                                <input type="checkbox"
+                                  disabled={c.jaVinculado || !c.modelo}
+                                  checked={importPropostaSel.includes(c.modelo?.id)}
+                                  onChange={() => {
+                                    if (!c.modelo) return
+                                    setImportPropostaSel(s => s.includes(c.modelo.id) ? s.filter(x=>x!==c.modelo.id) : [...s, c.modelo.id])
+                                  }}
+                                  style={{ width:14, height:14, accentColor:'var(--br)', flexShrink:0 }} />
+                                <div style={{ flex:1 }}>
+                                  <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{c.servico}</div>
+                                  {c.modelo
+                                    ? <div style={{ fontSize:10, color: c.jaVinculado ? '#15803D' : '#6366F1' }}>{c.jaVinculado ? '✓ já vinculado' : `→ modelo: ${c.modelo.titulo}`}</div>
+                                    : <div style={{ fontSize:10, color:'#94A3B8' }}>Nenhum modelo correspondente encontrado</div>
+                                  }
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                          <div style={{ display:'flex', gap:8 }}>
+                            <button
+                              disabled={importPropostaSel.length === 0 || vincularModelo.isPending}
+                              onClick={async () => {
+                                for (const mid of importPropostaSel) {
+                                  const m = todosModelos.find(x => x.id === mid)
+                                  if (m) await vincularEAplicarModelo(m)
+                                }
+                                setImportPropostaOpen(false)
+                                setImportPropostaSel([])
+                              }}
+                              style={{ padding:'8px 16px', background:'#2563EB', color:'#fff', border:'none', borderRadius:6, cursor:'pointer', fontSize:12, fontWeight:700 }}>
+                              {vincularModelo.isPending ? 'Vinculando...' : `✓ Vincular ${importPropostaSel.length} modelo(s)`}
+                            </button>
+                            <button onClick={() => { setImportPropostaOpen(false); setImportPropostaSel([]) }}
+                              style={{ padding:'8px 14px', border:'1px solid var(--bo)', background:'transparent', borderRadius:6, cursor:'pointer', fontSize:12, color:'var(--tx3)' }}>
+                              Cancelar
+                            </button>
+                          </div>
                         </div>
                       )}
 
