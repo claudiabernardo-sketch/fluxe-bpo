@@ -1,28 +1,28 @@
 import { useState } from 'react'
-import { useTarefaModelos, useCreateModelo, useUpdateModelo, useDeleteModelo, useClients } from '../hooks/useData'
-import { Card, CardHeader, Btn, Loader } from '../components/ui'
+import { useTarefaModelos, useCreateModelo, useUpdateModelo, useDeleteModelo, useClients,
+         useClienteModelos, useVincularModelo, useDesvincularModelo, useGerarTarefas } from '../hooks/useData'
+import { Card, Btn, Loader } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
+import { supabase } from '../lib/supabase'
 
 const CATEGORIAS = ['Contas a Pagar','Contas a Receber','Conciliação Bancária','Emissão de NF','Emissão de Boletos','Cobrança / Inadimplência','Fluxo de Caixa','Pagamentos','DRE Gerencial / Relatórios','Implantação','Onboarding','Estratégico','Relacionamento','Outro']
-const PRIORIDADES = [{ v:'baixa', label:'Baixa', color:'#16A34A' }, { v:'media', label:'Média', color:'#D97706' }, { v:'alta', label:'Alta', color:'#DC2626' }]
+const PRIORIDADES = [{ v:'baixa', label:'Baixa' }, { v:'media', label:'Média' }, { v:'alta', label:'Alta' }]
 const RECORRENCIAS = [
-  { v:'diaria',          label:'Diária',                desc:'Todo dia, incluindo fins de semana' },
-  { v:'dias_uteis',      label:'Dias úteis',            desc:'Segunda a sexta-feira' },
-  { v:'semanal',         label:'Semanal',               desc:'Dias específicos da semana' },
-  { v:'quinzenal',       label:'Quinzenal',             desc:'A cada 15 dias' },
-  { v:'mensal',          label:'Mensal',                desc:'Um dia fixo do mês' },
-  { v:'dias_especificos',label:'Dias específicos',      desc:'Múltiplos dias do mês' },
-  { v:'bimestral',       label:'Bimestral',             desc:'A cada 2 meses' },
-  { v:'trimestral',      label:'Trimestral',            desc:'A cada 3 meses (Jan/Abr/Jul/Out)' },
-  { v:'semestral',       label:'Semestral',             desc:'A cada 6 meses (Jan/Jul)' },
-  { v:'anual',           label:'Anual',                 desc:'Uma vez por ano' },
+  { v:'diaria',          label:'Diária',           desc:'Todo dia, incluindo fins de semana' },
+  { v:'dias_uteis',      label:'Dias úteis',        desc:'Segunda a sexta-feira' },
+  { v:'semanal',         label:'Semanal',           desc:'Dias específicos da semana' },
+  { v:'quinzenal',       label:'Quinzenal',         desc:'A cada 15 dias' },
+  { v:'mensal',          label:'Mensal',            desc:'Um dia fixo do mês' },
+  { v:'dias_especificos',label:'Dias específicos',  desc:'Múltiplos dias do mês' },
+  { v:'bimestral',       label:'Bimestral',         desc:'A cada 2 meses' },
+  { v:'trimestral',      label:'Trimestral',        desc:'A cada 3 meses (Jan/Abr/Jul/Out)' },
+  { v:'semestral',       label:'Semestral',         desc:'A cada 6 meses (Jan/Jul)' },
+  { v:'anual',           label:'Anual',             desc:'Uma vez por ano' },
 ]
 const DIAS_SEMANA = [
   { v:1, label:'Seg' }, { v:2, label:'Ter' }, { v:3, label:'Qua' },
   { v:4, label:'Qui' }, { v:5, label:'Sex' }, { v:6, label:'Sáb' }, { v:0, label:'Dom' },
 ]
-
-const fi = { width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:13, fontFamily:'inherit', background:'#fff', outline:'none' }
 const ETAPAS_MODELO = [
   { v:'',               label:'— Todas as etapas —' },
   { v:'comercial',      label:'Comercial' },
@@ -34,7 +34,16 @@ const ETAPAS_MODELO = [
   { v:'acompanhamento', label:'Acompanhamento' },
   { v:'encerramento',   label:'Encerramento' },
 ]
-const EMPTY_FORM = { titulo:'', descricao:'', categoria:'', etapa:'', prioridade:'media', recorrencia:'dias_uteis', dias_semana:[], dia_mes:5, dias_mes:[], checklist_items:[], cliente_id:'', ativo:true }
+const EMPTY_FORM = { titulo:'', descricao:'', categoria:'', etapa:'', prioridade:'media', recorrencia:'dias_uteis', dias_semana:[], dia_mes:5, dias_mes:[], checklist_items:[], ativo:true }
+
+const fi = { width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:13, fontFamily:'inherit', background:'#fff', outline:'none' }
+const recLabel = { unica:'⚡ Pontual', diaria:'Diária', dias_uteis:'Dias úteis', semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal', dias_especificos:'Dias espec.', bimestral:'Bimestral', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual' }
+const prioColor = { baixa:'#16A34A', media:'#D97706', alta:'#DC2626' }
+
+function lastDayOfMonth() {
+  const d = new Date()
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0).toLocaleDateString('en-CA')
+}
 
 export default function ModelosPage() {
   const { data: modelos = [], isLoading } = useTarefaModelos()
@@ -43,27 +52,38 @@ export default function ModelosPage() {
   const updateModelo = useUpdateModelo()
   const deleteModelo = useDeleteModelo()
 
-  const [modal, setModal]   = useState(null) // null | 'new' | 'edit'
-  const [form, setForm]     = useState(EMPTY_FORM)
-  const [newCk, setNewCk]   = useState('')
   const [fCliente, setFCliente] = useState('')
-  const [fEtapa, setFEtapa] = useState('')
+  const [fEtapa,   setFEtapa]   = useState('')
+
+  // Hooks de vínculo — só ativam quando há cliente específico
+  const isSpecificClient = !!(fCliente && fCliente !== '__geral')
+  const { data: clienteModelos = [], isLoading: cmLoading } = useClienteModelos(isSpecificClient ? fCliente : null)
+  const vincularModelo    = useVincularModelo()
+  const desvincularModelo = useDesvincularModelo()
+  const gerarTarefas      = useGerarTarefas()
+
+  // Geração
+  const [dataInicio, setDataInicio] = useState(() => new Date().toLocaleDateString('en-CA'))
+  const [geracaoMsg, setGeracaoMsg] = useState(null) // { ok, texto }
+  const [removerConfirm, setRemoverConfirm] = useState(false)
+  const [removendo,      setRemovendo]      = useState(false)
+  const [removerMsg,     setRemoverMsg]     = useState(null)
+
+  // Modal CRUD modelos
+  const [modal, setModal]   = useState(null)
+  const [form,  setForm]    = useState(EMPTY_FORM)
+  const [newCk, setNewCk]   = useState('')
   const [confirmDel, setConfirmDel] = useState(null)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  function abrirNovo() {
-    setForm(EMPTY_FORM)
-    setNewCk('')
-    setModal('new')
-  }
-
+  function abrirNovo()    { setForm(EMPTY_FORM); setNewCk(''); setModal('new') }
   function abrirEditar(m) {
     setForm({
-      titulo: m.titulo, descricao: m.descricao || '', categoria: m.categoria || '', etapa: m.etapa || '',
-      prioridade: m.prioridade, recorrencia: m.recorrencia, dias_semana: m.dias_semana || [],
-      dia_mes: m.dia_mes || 5, dias_mes: m.dias_mes || [],
-      checklist_items: m.checklist_items || [], cliente_id: m.cliente_id || '',
+      titulo: m.titulo, descricao: m.descricao || '', categoria: m.categoria || '',
+      etapa: m.etapa || '', prioridade: m.prioridade, recorrencia: m.recorrencia,
+      dias_semana: m.dias_semana || [], dia_mes: m.dia_mes || 5,
+      dias_mes: m.dias_mes || [], checklist_items: m.checklist_items || [],
       ativo: m.ativo, _id: m.id,
     })
     setNewCk('')
@@ -73,35 +93,22 @@ export default function ModelosPage() {
   async function salvar() {
     if (!form.titulo.trim()) return alert('Informe o título do modelo.')
     const payload = {
-      titulo: form.titulo.trim(),
-      descricao: form.descricao?.trim() || null,
-      categoria: form.categoria || null,
-      etapa: form.etapa || null,
-      prioridade: form.prioridade,
-      recorrencia: form.recorrencia,
+      titulo: form.titulo.trim(), descricao: form.descricao?.trim() || null,
+      categoria: form.categoria || null, etapa: form.etapa || null,
+      prioridade: form.prioridade, recorrencia: form.recorrencia,
       dias_semana: form.recorrencia === 'semanal' ? form.dias_semana : null,
       dia_mes: ['mensal','quinzenal','bimestral','trimestral','semestral','anual'].includes(form.recorrencia) ? form.dia_mes : null,
       dias_mes: form.recorrencia === 'dias_especificos' ? form.dias_mes : null,
-      checklist_items: form.checklist_items,
-      cliente_id: form.cliente_id || null,
-      ativo: form.ativo,
+      checklist_items: form.checklist_items, ativo: form.ativo,
     }
     try {
-      if (modal === 'edit') {
-        await updateModelo.mutateAsync({ id: form._id, ...payload })
-      } else {
-        await createModelo.mutateAsync(payload)
-      }
+      if (modal === 'edit') { await updateModelo.mutateAsync({ id: form._id, ...payload }) }
+      else                  { await createModelo.mutateAsync(payload) }
       setModal(null)
-    } catch (err) {
-      alert('Erro ao salvar modelo: ' + err.message)
-    }
+    } catch (err) { alert('Erro ao salvar modelo: ' + err.message) }
   }
 
-  async function confirmarDelete() {
-    await deleteModelo.mutateAsync(confirmDel)
-    setConfirmDel(null)
-  }
+  async function confirmarDelete() { await deleteModelo.mutateAsync(confirmDel); setConfirmDel(null) }
 
   function addChecklist() {
     const txt = newCk.trim()
@@ -111,26 +118,85 @@ export default function ModelosPage() {
   }
 
   function toggleDia(v) {
-    const arr = form.dias_semana.includes(v)
-      ? form.dias_semana.filter(d => d !== v)
-      : [...form.dias_semana, v]
+    const arr = form.dias_semana.includes(v) ? form.dias_semana.filter(d => d !== v) : [...form.dias_semana, v]
     set('dias_semana', arr)
   }
 
   function toggleDiaMes(v) {
-    const arr = form.dias_mes.includes(v)
-      ? form.dias_mes.filter(d => d !== v)
-      : [...form.dias_mes, v]
+    const arr = form.dias_mes.includes(v) ? form.dias_mes.filter(d => d !== v) : [...form.dias_mes, v]
     set('dias_mes', arr.sort((a, b) => a - b))
   }
 
-  const recLabel = { unica:'⚡ Pontual', diaria:'Diária', dias_uteis:'Dias úteis', semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal', dias_especificos:'Dias espec.', bimestral:'Bimestral', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual' }
-  const prioColor = { baixa:'#16A34A', media:'#D97706', alta:'#DC2626' }
+  async function handleVincular(modeloId) {
+    try {
+      await vincularModelo.mutateAsync({ clienteId: fCliente, modeloId })
+    } catch (err) { alert('Erro ao vincular: ' + err.message) }
+  }
 
-  const modelosFiltrados = (fCliente
-    ? modelos.filter(m => m.cliente_id === fCliente || (!m.cliente_id && fCliente === '__geral'))
-    : modelos
-  ).filter(m => !fEtapa || m.etapa === fEtapa)
+  async function handleDesvincular(cm) {
+    if (!confirm(`Desvincular "${cm.tarefa_modelos?.titulo || 'modelo'}"? As tarefas abertas futuras deste modelo serão removidas.`)) return
+    // Remove tarefas abertas futuras deste modelo para este cliente
+    const hoje = new Date().toLocaleDateString('en-CA')
+    await supabase.from('tarefas')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('cliente_id', fCliente)
+      .eq('modelo_id', cm.modelo_id)
+      .neq('status', 'concluida')
+      .gte('data_execucao', hoje)
+      .is('deleted_at', null)
+    desvincularModelo.mutate({ id: cm.id, clienteId: fCliente })
+  }
+
+  async function handleGerar() {
+    setGeracaoMsg(null)
+    try {
+      const resultado = await gerarTarefas.mutateAsync({
+        clienteId: fCliente,
+        dataInicio,
+        dataFim: lastDayOfMonth(),
+      })
+      const criadas = resultado?.criadas ?? resultado?.total_criadas ?? '?'
+      setGeracaoMsg({ ok: true, texto: `${criadas} tarefa(s) gerada(s) com sucesso!` })
+    } catch (err) {
+      setGeracaoMsg({ ok: false, texto: 'Erro: ' + (err.message || 'falha ao gerar') })
+    }
+  }
+
+  async function handleRemoverTarefas() {
+    setRemovendo(true)
+    setRemoverMsg(null)
+    const hoje = new Date().toLocaleDateString('en-CA')
+    const { error } = await supabase.from('tarefas')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('cliente_id', fCliente)
+      .neq('status', 'concluida')
+      .gte('data_execucao', hoje)
+      .is('deleted_at', null)
+    setRemovendo(false)
+    setRemoverConfirm(false)
+    setRemoverMsg(error
+      ? { ok: false, texto: 'Erro ao remover: ' + error.message }
+      : { ok: true, texto: 'Tarefas abertas futuras removidas.' }
+    )
+  }
+
+  // Dados calculados
+  const linkedModelIds = new Set(clienteModelos.map(cm => cm.modelo_id))
+  const clienteNome = isSpecificClient
+    ? (clients.find(c => c.id === fCliente)?.fantasia || clients.find(c => c.id === fCliente)?.razao_social || '')
+    : ''
+
+  const modelosFiltrados = modelos
+    .filter(m => {
+      if (!fCliente) return true
+      if (fCliente === '__geral') return !m.cliente_id
+      return true // quando cliente específico, mostra tudo na seção de vincular
+    })
+    .filter(m => !fEtapa || m.etapa === fEtapa)
+
+  const modelosDisponiveis = modelos
+    .filter(m => !linkedModelIds.has(m.id))
+    .filter(m => !fEtapa || m.etapa === fEtapa)
 
   if (isLoading) return <Loader />
 
@@ -143,7 +209,7 @@ export default function ModelosPage() {
         color="#F59E0B"
         tips={[
           'Configure uma tarefa recorrente uma vez — o sistema gera automaticamente todo mês.',
-          'Ideal para: folha de pagamento, DRE, conciliação bancária, emissão de NF.',
+          'Filtre por cliente para vincular/desvincular modelos e gerar tarefas.',
           'Defina a recorrência (diária, semanal, mensal) e o dia de execução.',
           'As tarefas geradas aparecem automaticamente na página de Tarefas.',
         ]}
@@ -151,27 +217,23 @@ export default function ModelosPage() {
 
       {/* HEADER */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-        <div>
-          <div style={{ fontSize:13, color:'#64748B', marginTop:2 }}>
-            Configure tarefas recorrentes por cliente — o sistema gera automaticamente conforme a recorrência.
-          </div>
+        <div style={{ fontSize:13, color:'#64748B' }}>
+          Configure tarefas recorrentes — o sistema gera automaticamente conforme a recorrência.
         </div>
         <Btn variant="primary" onClick={abrirNovo}>+ Novo modelo</Btn>
       </div>
 
-      {/* FILTRO CLIENTE + ETAPA */}
-      <div style={{ marginBottom:16, maxWidth:520, display:'flex', gap:8 }}>
-        <select value={fCliente} onChange={e => setFCliente(e.target.value)}
-          style={{ flex:1, padding:'9px 12px', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer',
+      {/* FILTROS */}
+      <div style={{ marginBottom:20, display:'flex', gap:8 }}>
+        <select value={fCliente} onChange={e => { setFCliente(e.target.value); setGeracaoMsg(null); setRemoverMsg(null) }}
+          style={{ flex:1.5, padding:'9px 12px', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer',
             border:'1px solid #E2E8F0', background:'#fff', color:'#334155' }}>
           <option value="">Todos os clientes</option>
           <option value="__geral">Geral (sem cliente)</option>
           {clients
             .slice()
             .sort((a,b) => (a.fantasia||a.razao_social||'').localeCompare(b.fantasia||b.razao_social||''))
-            .map(c => (
-              <option key={c.id} value={c.id}>{c.fantasia || c.razao_social}</option>
-            ))}
+            .map(c => <option key={c.id} value={c.id}>{c.fantasia || c.razao_social}</option>)}
         </select>
         <select value={fEtapa} onChange={e => setFEtapa(e.target.value)}
           style={{ flex:1, padding:'9px 12px', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer',
@@ -181,48 +243,220 @@ export default function ModelosPage() {
         </select>
       </div>
 
-      {/* LISTA */}
-      {modelosFiltrados.length === 0 ? (
-        <Card>
-          <div style={{ padding:'40px 20px', textAlign:'center', color:'#94A3B8', fontSize:13 }}>
-            Nenhum modelo cadastrado. Clique em <strong>+ Novo modelo</strong> para começar.
-          </div>
-        </Card>
-      ) : (
-        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-          {modelosFiltrados.map(m => {
-            const cliente = clients.find(c => c.id === m.cliente_id)
-            return (
-              <div key={m.id} style={{ background:'#fff', border:'1px solid #E2E8F0', borderRadius:10, padding:'14px 16px',
-                display:'flex', alignItems:'center', gap:12, opacity: m.ativo ? 1 : 0.5 }}>
-                <div style={{ width:8, height:8, borderRadius:'50%', background: prioColor[m.prioridade], flexShrink:0 }} />
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:13, fontWeight:600, color:'#0F172A' }}>{m.titulo}</div>
-                  <div style={{ fontSize:11, color:'#94A3B8', marginTop:2, display:'flex', gap:8, flexWrap:'wrap' }}>
-                    {m.etapa && <span>🔖 {ETAPAS_MODELO.find(e=>e.v===m.etapa)?.label || m.etapa}</span>}
-                    {m.categoria && <span>📂 {m.categoria}</span>}
-                    {cliente && <span>🏢 {cliente.fantasia || cliente.razao_social}</span>}
-                    {!m.cliente_id && <span>🌐 Geral</span>}
-                    {m.software_alvo && <span>💻 {m.software_alvo}</span>}
-                    {m.origem === 'esteira' && <span style={{ color:'#7C3AED' }}>🛤 Esteira</span>}
-                    {m.checklist_items?.length > 0 && <span>✓ {m.checklist_items.length} itens</span>}
-                  </div>
+      {/* ── VISÃO CLIENTE ESPECÍFICO ── */}
+      {isSpecificClient ? (
+        <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+
+          {/* MODELOS VINCULADOS */}
+          <div>
+            <div style={{ fontSize:13, fontWeight:700, color:'#0F172A', marginBottom:10 }}>
+              Modelos vinculados a <span style={{ color:'#6366F1' }}>{clienteNome}</span>
+            </div>
+            {cmLoading ? <Loader /> : clienteModelos.length === 0 ? (
+              <Card>
+                <div style={{ padding:'24px 20px', textAlign:'center', color:'#94A3B8', fontSize:13 }}>
+                  Nenhum modelo vinculado. Vincule abaixo para começar a gerar tarefas.
                 </div>
-                <span style={{ fontSize:11, padding:'3px 10px', borderRadius:99, background:'#EFF6FF', color:'#1D4ED8', fontWeight:600, whiteSpace:'nowrap' }}>
-                  {recLabel[m.recorrencia] || m.recorrencia}
-                </span>
-                {!m.ativo && <span style={{ fontSize:10, color:'#94A3B8', fontWeight:600 }}>INATIVO</span>}
-                <div style={{ display:'flex', gap:4, flexShrink:0 }}>
-                  <button onClick={() => abrirEditar(m)} style={{ padding:'5px 8px', borderRadius:6, border:'1px solid #E2E8F0', background:'#fff', cursor:'pointer', fontSize:11 }}>✏</button>
-                  <button onClick={() => setConfirmDel(m.id)} style={{ padding:'5px 8px', borderRadius:6, border:'1px solid #FECDD3', background:'#FEF2F2', color:'#991B1B', cursor:'pointer', fontSize:11 }}>🗑</button>
-                </div>
+              </Card>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                {clienteModelos.map(cm => {
+                  const m = cm.tarefa_modelos
+                  if (!m) return null
+                  return (
+                    <div key={cm.id} style={{ background:'#fff', border:'1px solid #E2E8F0', borderRadius:10,
+                      padding:'12px 16px', display:'flex', alignItems:'center', gap:12 }}>
+                      <div style={{ width:8, height:8, borderRadius:'50%', background: prioColor[m.prioridade] || '#94A3B8', flexShrink:0 }} />
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:13, fontWeight:600, color:'#0F172A' }}>{m.titulo}</div>
+                        <div style={{ fontSize:11, color:'#94A3B8', marginTop:2, display:'flex', gap:8, flexWrap:'wrap' }}>
+                          {m.categoria && <span>📂 {m.categoria}</span>}
+                          {m.checklist_items?.length > 0 && <span>✓ {m.checklist_items.length} itens</span>}
+                        </div>
+                      </div>
+                      <span style={{ fontSize:11, padding:'3px 10px', borderRadius:99, background:'#EFF6FF', color:'#1D4ED8', fontWeight:600, whiteSpace:'nowrap' }}>
+                        {recLabel[m.recorrencia] || m.recorrencia}
+                      </span>
+                      <button
+                        onClick={() => handleDesvincular(cm)}
+                        disabled={desvincularModelo.isPending}
+                        style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #FECDD3', background:'#FEF2F2',
+                          color:'#991B1B', cursor:'pointer', fontSize:11, fontWeight:600, whiteSpace:'nowrap' }}>
+                        Desvincular
+                      </button>
+                    </div>
+                  )
+                })}
               </div>
-            )
-          })}
+            )}
+          </div>
+
+          {/* VINCULAR MODELO */}
+          <div>
+            <div style={{ fontSize:13, fontWeight:700, color:'#0F172A', marginBottom:10 }}>
+              Vincular modelo ao cliente
+            </div>
+            {modelosDisponiveis.length === 0 ? (
+              <Card>
+                <div style={{ padding:'16px 20px', textAlign:'center', color:'#94A3B8', fontSize:13 }}>
+                  {fEtapa ? 'Nenhum modelo disponível para esta etapa.' : 'Todos os modelos já estão vinculados.'}
+                </div>
+              </Card>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                {modelosDisponiveis.map(m => (
+                  <div key={m.id} style={{ background:'#F8FAFC', border:'1px solid #E2E8F0', borderRadius:10,
+                    padding:'12px 16px', display:'flex', alignItems:'center', gap:12 }}>
+                    <div style={{ width:8, height:8, borderRadius:'50%', background: prioColor[m.prioridade] || '#94A3B8', flexShrink:0 }} />
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:600, color:'#334155' }}>{m.titulo}</div>
+                      <div style={{ fontSize:11, color:'#94A3B8', marginTop:2, display:'flex', gap:8, flexWrap:'wrap' }}>
+                        {m.etapa && <span>🔖 {ETAPAS_MODELO.find(e=>e.v===m.etapa)?.label || m.etapa}</span>}
+                        {m.categoria && <span>📂 {m.categoria}</span>}
+                        {!m.cliente_id && <span>🌐 Geral</span>}
+                        {m.checklist_items?.length > 0 && <span>✓ {m.checklist_items.length} itens</span>}
+                      </div>
+                    </div>
+                    <span style={{ fontSize:11, padding:'3px 10px', borderRadius:99, background:'#F1F5F9', color:'#475569', fontWeight:600, whiteSpace:'nowrap' }}>
+                      {recLabel[m.recorrencia] || m.recorrencia}
+                    </span>
+                    <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                      <button onClick={() => abrirEditar(m)}
+                        style={{ padding:'5px 8px', borderRadius:6, border:'1px solid #E2E8F0', background:'#fff', cursor:'pointer', fontSize:11 }}>✏</button>
+                      <button
+                        onClick={() => handleVincular(m.id)}
+                        disabled={vincularModelo.isPending}
+                        style={{ padding:'5px 14px', borderRadius:8, border:'none', background:'#6366F1',
+                          color:'#fff', cursor:'pointer', fontSize:11, fontWeight:600, whiteSpace:'nowrap' }}>
+                        Vincular
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* GERAÇÃO */}
+          <div style={{ background:'#fff', border:'1px solid #E2E8F0', borderRadius:12, padding:20 }}>
+            <div style={{ fontSize:14, fontWeight:700, color:'#0F172A', marginBottom:4 }}>Geração de tarefas</div>
+            <div style={{ fontSize:12, color:'#64748B', marginBottom:16 }}>
+              Gera todas as tarefas do(s) modelo(s) vinculado(s) a partir da data escolhida até o fim do mês.
+              Após isso, o sistema continua gerando automaticamente a cada dia.
+            </div>
+
+            <div style={{ display:'flex', alignItems:'flex-end', gap:10, marginBottom:geracaoMsg ? 12 : 0 }}>
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:'#64748B', marginBottom:4 }}>DATA DE INÍCIO</div>
+                <input
+                  type="date"
+                  value={dataInicio}
+                  onChange={e => { setDataInicio(e.target.value); setGeracaoMsg(null) }}
+                  style={{ ...fi, width:160 }}
+                />
+              </div>
+              <Btn variant="primary" onClick={handleGerar} disabled={gerarTarefas.isPending || !fCliente}>
+                {gerarTarefas.isPending ? 'Gerando...' : 'Gerar tarefas'}
+              </Btn>
+            </div>
+
+            {geracaoMsg && (
+              <div style={{ fontSize:12, padding:'8px 12px', borderRadius:8, marginBottom:8,
+                background: geracaoMsg.ok ? '#F0FDF4' : '#FEF2F2',
+                color: geracaoMsg.ok ? '#15803D' : '#991B1B',
+                border: `1px solid ${geracaoMsg.ok ? '#BBF7D0' : '#FECDD3'}` }}>
+                {geracaoMsg.ok ? '✅ ' : '⚠️ '}{geracaoMsg.texto}
+              </div>
+            )}
+
+            {/* ÁREA DE RISCO */}
+            <div style={{ marginTop:16, padding:16, background:'#FEF2F2', borderRadius:10, border:'1px solid #FECDD3' }}>
+              <div style={{ fontSize:12, fontWeight:700, color:'#991B1B', marginBottom:4 }}>⚠️ Área de risco</div>
+              <div style={{ fontSize:12, color:'#7F1D1D', marginBottom:12 }}>
+                Remove todas as tarefas abertas futuras deste cliente, ignorando qualquer interação registrada.
+                Esta ação não pode ser desfeita.
+              </div>
+              {removerMsg && (
+                <div style={{ fontSize:12, padding:'8px 10px', borderRadius:8, marginBottom:10,
+                  background: removerMsg.ok ? '#F0FDF4' : '#fff3cd',
+                  color: removerMsg.ok ? '#15803D' : '#856404',
+                  border: `1px solid ${removerMsg.ok ? '#BBF7D0' : '#ffc107'}` }}>
+                  {removerMsg.texto}
+                </div>
+              )}
+              {!removerConfirm ? (
+                <button
+                  onClick={() => { setRemoverConfirm(true); setRemoverMsg(null) }}
+                  style={{ padding:'7px 16px', borderRadius:8, border:'1px solid #FECDD3',
+                    background:'#fff', color:'#991B1B', cursor:'pointer', fontSize:12, fontWeight:600 }}>
+                  Remover tarefas abertas
+                </button>
+              ) : (
+                <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+                  <span style={{ fontSize:12, color:'#7F1D1D', fontWeight:600 }}>Tem certeza? Esta ação é irreversível.</span>
+                  <button
+                    onClick={handleRemoverTarefas}
+                    disabled={removendo}
+                    style={{ padding:'7px 16px', borderRadius:8, border:'none',
+                      background:'#DC2626', color:'#fff', cursor:'pointer', fontSize:12, fontWeight:700 }}>
+                    {removendo ? 'Removendo...' : 'Confirmar remoção'}
+                  </button>
+                  <button
+                    onClick={() => setRemoverConfirm(false)}
+                    style={{ padding:'7px 14px', borderRadius:8, border:'1px solid #E2E8F0',
+                      background:'#fff', color:'#64748B', cursor:'pointer', fontSize:12 }}>
+                    Cancelar
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
+
+      ) : (
+        /* ── VISÃO GERAL / TODOS OS CLIENTES ── */
+        <>
+          {modelosFiltrados.length === 0 ? (
+            <Card>
+              <div style={{ padding:'40px 20px', textAlign:'center', color:'#94A3B8', fontSize:13 }}>
+                Nenhum modelo cadastrado. Clique em <strong>+ Novo modelo</strong> para começar.
+              </div>
+            </Card>
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {modelosFiltrados.map(m => {
+                const cliente = clients.find(c => c.id === m.cliente_id)
+                return (
+                  <div key={m.id} style={{ background:'#fff', border:'1px solid #E2E8F0', borderRadius:10,
+                    padding:'14px 16px', display:'flex', alignItems:'center', gap:12, opacity: m.ativo ? 1 : 0.5 }}>
+                    <div style={{ width:8, height:8, borderRadius:'50%', background: prioColor[m.prioridade], flexShrink:0 }} />
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:600, color:'#0F172A' }}>{m.titulo}</div>
+                      <div style={{ fontSize:11, color:'#94A3B8', marginTop:2, display:'flex', gap:8, flexWrap:'wrap' }}>
+                        {m.etapa && <span>🔖 {ETAPAS_MODELO.find(e=>e.v===m.etapa)?.label || m.etapa}</span>}
+                        {m.categoria && <span>📂 {m.categoria}</span>}
+                        {cliente && <span>🏢 {cliente.fantasia || cliente.razao_social}</span>}
+                        {!m.cliente_id && <span>🌐 Geral</span>}
+                        {m.checklist_items?.length > 0 && <span>✓ {m.checklist_items.length} itens</span>}
+                      </div>
+                    </div>
+                    <span style={{ fontSize:11, padding:'3px 10px', borderRadius:99, background:'#EFF6FF', color:'#1D4ED8', fontWeight:600, whiteSpace:'nowrap' }}>
+                      {recLabel[m.recorrencia] || m.recorrencia}
+                    </span>
+                    {!m.ativo && <span style={{ fontSize:10, color:'#94A3B8', fontWeight:600 }}>INATIVO</span>}
+                    <div style={{ display:'flex', gap:4, flexShrink:0 }}>
+                      <button onClick={() => abrirEditar(m)} style={{ padding:'5px 8px', borderRadius:6, border:'1px solid #E2E8F0', background:'#fff', cursor:'pointer', fontSize:11 }}>✏</button>
+                      <button onClick={() => setConfirmDel(m.id)} style={{ padding:'5px 8px', borderRadius:6, border:'1px solid #FECDD3', background:'#FEF2F2', color:'#991B1B', cursor:'pointer', fontSize:11 }}>🗑</button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </>
       )}
 
-      {/* MODAL FORM */}
+      {/* MODAL CRUD MODELO */}
       {(modal === 'new' || modal === 'edit') && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
           <div style={{ background:'#fff', borderRadius:14, width:'100%', maxWidth:560, maxHeight:'90vh', overflowY:'auto', padding:24 }}>
@@ -231,28 +465,16 @@ export default function ModelosPage() {
               <button onClick={() => setModal(null)} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'#64748B' }}>×</button>
             </div>
 
-            {/* Título */}
             <div style={{ marginBottom:12 }}>
               <label style={{ fontSize:11, fontWeight:700, color:'#64748B', display:'block', marginBottom:4, textTransform:'uppercase' }}>Título *</label>
               <input style={fi} value={form.titulo} onChange={e => set('titulo', e.target.value)} placeholder="Ex: Conferência Bancária Matinal" />
             </div>
 
-            {/* Descrição operacional */}
             <div style={{ marginBottom:12 }}>
               <label style={{ fontSize:11, fontWeight:700, color:'#64748B', display:'block', marginBottom:4, textTransform:'uppercase' }}>Descrição operacional</label>
               <textarea style={{ ...fi, minHeight:70, resize:'vertical' }} value={form.descricao || ''} onChange={e => set('descricao', e.target.value)} placeholder="Descreva o que deve ser feito, ferramentas usadas, cuidados importantes..." />
             </div>
 
-            {/* Cliente */}
-            <div style={{ marginBottom:12 }}>
-              <label style={{ fontSize:11, fontWeight:700, color:'#64748B', display:'block', marginBottom:4, textTransform:'uppercase' }}>Cliente (opcional)</label>
-              <select style={fi} value={form.cliente_id} onChange={e => set('cliente_id', e.target.value)}>
-                <option value="">Geral — todos os clientes</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.fantasia || c.razao_social}</option>)}
-              </select>
-            </div>
-
-            {/* Etapa + Categoria + Prioridade */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10, marginBottom:12 }}>
               <div>
                 <label style={{ fontSize:11, fontWeight:700, color:'#64748B', display:'block', marginBottom:4, textTransform:'uppercase' }}>Etapa BPO</label>
@@ -275,12 +497,13 @@ export default function ModelosPage() {
               </div>
             </div>
 
-            {/* Recorrência */}
             <div style={{ marginBottom:12 }}>
               <label style={{ fontSize:11, fontWeight:700, color:'#64748B', display:'block', marginBottom:6, textTransform:'uppercase' }}>Recorrência</label>
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                 {RECORRENCIAS.map(r => (
-                  <label key={r.v} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', border:`1px solid ${form.recorrencia === r.v ? '#6366F1' : '#E2E8F0'}`, borderRadius:8, cursor:'pointer', background: form.recorrencia === r.v ? '#EEF2FF' : '#fff' }}>
+                  <label key={r.v} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px',
+                    border:`1px solid ${form.recorrencia === r.v ? '#6366F1' : '#E2E8F0'}`,
+                    borderRadius:8, cursor:'pointer', background: form.recorrencia === r.v ? '#EEF2FF' : '#fff' }}>
                     <input type="radio" name="rec" value={r.v} checked={form.recorrencia === r.v} onChange={() => set('recorrencia', r.v)} />
                     <div>
                       <div style={{ fontSize:13, fontWeight:600, color:'#0F172A' }}>{r.label}</div>
@@ -291,7 +514,6 @@ export default function ModelosPage() {
               </div>
             </div>
 
-            {/* Dias da semana (semanal) */}
             {form.recorrencia === 'semanal' && (
               <div style={{ marginBottom:12 }}>
                 <label style={{ fontSize:11, fontWeight:700, color:'#64748B', display:'block', marginBottom:6, textTransform:'uppercase' }}>Dias da semana</label>
@@ -308,7 +530,6 @@ export default function ModelosPage() {
               </div>
             )}
 
-            {/* Dia do mês (mensal, quinzenal, bimestral, trimestral, semestral, anual) */}
             {['mensal','quinzenal','bimestral','trimestral','semestral','anual'].includes(form.recorrencia) && (
               <div style={{ marginBottom:12 }}>
                 <label style={{ fontSize:11, fontWeight:700, color:'#64748B', display:'block', marginBottom:4, textTransform:'uppercase' }}>Dia do mês (1–28)</label>
@@ -316,7 +537,6 @@ export default function ModelosPage() {
               </div>
             )}
 
-            {/* Dias específicos do mês */}
             {form.recorrencia === 'dias_especificos' && (
               <div style={{ marginBottom:12 }}>
                 <label style={{ fontSize:11, fontWeight:700, color:'#64748B', display:'block', marginBottom:6, textTransform:'uppercase' }}>Dias do mês</label>
@@ -333,7 +553,6 @@ export default function ModelosPage() {
               </div>
             )}
 
-            {/* Checklist */}
             <div style={{ marginBottom:12 }}>
               <label style={{ fontSize:11, fontWeight:700, color:'#64748B', display:'block', marginBottom:6, textTransform:'uppercase' }}>Checklist padrão</label>
               {form.checklist_items.map((item, i) => (
@@ -352,7 +571,6 @@ export default function ModelosPage() {
               </div>
             </div>
 
-            {/* Ativo */}
             <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, color:'#475569', marginBottom:20, cursor:'pointer' }}>
               <input type="checkbox" checked={form.ativo} onChange={e => set('ativo', e.target.checked)} />
               Modelo ativo (gera tarefas automaticamente)
@@ -368,7 +586,7 @@ export default function ModelosPage() {
         </div>
       )}
 
-      {/* CONFIRM DELETE */}
+      {/* CONFIRM DELETE MODELO */}
       {confirmDel && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
           <div style={{ background:'#fff', borderRadius:12, padding:24, maxWidth:360, width:'100%', textAlign:'center' }}>
