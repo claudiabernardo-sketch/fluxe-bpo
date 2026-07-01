@@ -584,7 +584,10 @@ export function useClienteModelos(clienteId) {
       if (!clienteId) return []
       const { data, error } = await supabase
         .from('cliente_modelos')
-        .select('*, tarefa_modelos(id, titulo, categoria, recorrencia, prioridade, dia_mes, checklist_items)')
+        .select(`
+          *,
+          tarefa_modelos(id, titulo, categoria, recorrencia, prioridade, dia_mes, dias_semana, dias_mes, checklist_items)
+        `)
         .eq('cliente_id', clienteId)
         .eq('ativo', true)
       if (error) throw error
@@ -627,6 +630,152 @@ export function useDesvincularModelo() {
       if (error) throw error
     },
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['cliente_modelos', vars.clienteId] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+// Atualizar campos de override do vínculo (sem alterar o modelo original)
+export function useUpdateClienteModelo() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, clienteId, ...updates }) => {
+      const { data, error } = await supabase
+        .from('cliente_modelos')
+        .update(updates)
+        .eq('id', id)
+        .select()
+      if (error) throw error
+      await logAudit('UPDATE', 'cliente_modelos', id, { campos: Object.keys(updates) })
+      return data?.[0]
+    },
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['cliente_modelos', vars.clienteId] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+// Pausar / reativar um modelo vinculado
+export function useTogglePauseModelo() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, clienteId, pausado }) => {
+      const { data, error } = await supabase
+        .from('cliente_modelos')
+        .update({ pausado, pausado_em: pausado ? new Date().toISOString() : null })
+        .eq('id', id)
+        .select()
+      if (error) throw error
+      await logAudit('UPDATE', 'cliente_modelos', id, { pausado })
+      return data?.[0]
+    },
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['cliente_modelos', vars.clienteId] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+// ── STATUS OPERACIONAL DO CLIENTE ─────────────────────
+export function useUpdateClienteStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, status_operacional }) => {
+      const { data, error } = await supabase
+        .from('clientes')
+        .update({ status_operacional })
+        .eq('id', id)
+        .select()
+      if (error) throw error
+      await logAudit('UPDATE', 'clientes', id, { status_operacional })
+      return data?.[0]
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+// Iniciar operação: define data de início, muda status para operacional
+// e dispara geração das tarefas a partir da data escolhida
+export function useIniciarOperacao() {
+  const qc = useQueryClient()
+  const { empresa } = useAuthStore()
+  return useMutation({
+    mutationFn: async ({ clienteId, dataInicio }) => {
+      // 1. Atualizar cliente
+      const { error: errCli } = await supabase
+        .from('clientes')
+        .update({
+          status_operacional: 'operacional',
+          operacao_iniciada_em: dataInicio,
+        })
+        .eq('id', clienteId)
+      if (errCli) throw errCli
+
+      await logAudit('UPDATE', 'clientes', clienteId, {
+        status_operacional: 'operacional',
+        operacao_iniciada_em: dataInicio,
+      })
+
+      // 2. Chamar Edge Function para gerar tarefas do período
+      const hoje = new Date().toISOString().slice(0, 10)
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gerar-tarefas`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            cliente_id:   clienteId,
+            empresa_id:   empresa?.id,
+            data_inicio:  dataInicio,
+            data_fim:     hoje,
+          }),
+        }
+      )
+      const resultado = await res.json()
+      return resultado
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['clients'] })
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+    },
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+// ── GERENCIAR GERAÇÃO DE TAREFAS ──────────────────────
+// Chama a Edge Function manualmente com parâmetros flexíveis
+export function useGerarTarefas() {
+  const qc = useQueryClient()
+  const { empresa } = useAuthStore()
+  return useMutation({
+    mutationFn: async ({ clienteId, dataInicio, dataFim, data, dryRun } = {}) => {
+      const body = { empresa_id: empresa?.id }
+      if (clienteId)  body.cliente_id  = clienteId
+      if (dryRun)     body.dry_run     = true
+      if (data)       body.data        = data
+      if (dataInicio) body.data_inicio = dataInicio
+      if (dataFim)    body.data_fim    = dataFim
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gerar-tarefas`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify(body),
+        }
+      )
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err?.error ?? `HTTP ${res.status}`)
+      }
+      return res.json()
+    },
+    onSuccess: (_, vars) => {
+      if (!vars?.dryRun) qc.invalidateQueries({ queryKey: ['tasks'] })
+    },
     onError: (err) => console.error('[Fluxe]', err),
   })
 }
@@ -792,6 +941,81 @@ export function useDeleteCrmTemplate() {
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['crm_templates'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+// ── Propostas ────────────────────────────────────────────────────────────────
+export function usePropostas() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['propostas', empresa?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('propostas')
+        .select('*')
+        .eq('empresa_id', empresa?.id)
+        .order('created_at', { ascending: false })
+        .limit(200)
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!empresa?.id,
+    staleTime: 60_000,
+  })
+}
+
+export function usePropostasByLead(leadId) {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['propostas', 'lead', leadId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('propostas')
+        .select('*')
+        .eq('empresa_id', empresa?.id)
+        .eq('lead_id', leadId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!empresa?.id && !!leadId,
+    staleTime: 30_000,
+  })
+}
+
+export function useCreateProposta() {
+  const qc = useQueryClient()
+  const { empresa } = useAuthStore()
+  return useMutation({
+    mutationFn: async (payload) => {
+      const { data, error } = await supabase
+        .from('propostas')
+        .insert({ ...payload, empresa_id: empresa?.id })
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['propostas'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+export function useUpdateProposta() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ...updates }) => {
+      const { data, error } = await supabase
+        .from('propostas')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['propostas'] }),
     onError: (err) => console.error('[Fluxe]', err),
   })
 }
