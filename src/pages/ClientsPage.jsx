@@ -1210,7 +1210,7 @@ export default function ClientsPage() {
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
                 <div>
                   <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Categoria</label>
-                  >({...f,categoria:e.target.value}))} className="fi">
+                  <select value={cofreForm.categoria||'outro'} onChange={e=>setCofreForm(f=>({...f,categoria:e.target.value}))} className="fi">
                     {CATEGORIAS_COFRE.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
                   </select>
                 </div>
