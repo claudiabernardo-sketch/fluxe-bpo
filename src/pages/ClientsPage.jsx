@@ -1,5 +1,5 @@
-import { useState, lazy, Suspense } from 'react'
-import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTarefaModelos, useClienteModelos, useVincularModelo, useDesvincularModelo, useAcessos, useSaveAcesso, useDeleteAcesso } from '../hooks/useData'
+import { useState, useEffect, lazy, Suspense } from 'react'
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useUpdateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTarefaModelos, useClienteModelos, useVincularModelo, useDesvincularModelo, useAcessos, useSaveAcesso, useDeleteAcesso } from '../hooks/useData'
 import { useQueryClient } from '@tanstack/react-query'
 import { Card, CardHeader, Badge, Btn, Loader, EmptyState, fmt, fmtR } from '../components/ui'
 import { useAuthStore } from '../store/authStore'
@@ -56,6 +56,19 @@ export default function ClientsPage() {
   const [tab, setTab] = useState('dados') // dados | financeiro | bancos | cofre | rotina | tarefas
   const [configModeloId, setConfigModeloId] = useState(null) // id do cm sendo configurado
   const [showAddModelo, setShowAddModelo] = useState(false)
+
+  // Contrato assinado — upload/download
+  const [contratoUploading, setContratoUploading] = useState(false)
+  const [contratoErr, setContratoErr] = useState('')
+  const [contratoSignedUrl, setContratoSignedUrl] = useState(null)
+
+  // Gera URL assinada (30 dias) toda vez que o path do contrato muda
+  useEffect(() => {
+    setContratoSignedUrl(null)
+    if (!form.contrato_url) return
+    supabase.storage.from('documentos').createSignedUrl(form.contrato_url, 60 * 60 * 24 * 30)
+      .then(({ data }) => { if (data?.signedUrl) setContratoSignedUrl(data.signedUrl) })
+  }, [form.contrato_url])
 
   // Cofre (acessos) — escopado ao cliente aberto
   const canSeeSenhas = temPermissao('ver_senhas')
@@ -122,6 +135,7 @@ export default function ClientsPage() {
   // Rotinas
   const { data: rotinas = [] } = useRotinas(modal?.id)
   const createRotina  = useCreateRotina()
+  const updateRotina  = useUpdateRotina()
   const deleteRotina  = useDeleteRotina()
   const { data: clienteModelos = [] } = useClienteModelos(modal?.mode === 'edit' ? modal?.id : null)
   const vincularModelo    = useVincularModelo()
@@ -130,6 +144,9 @@ export default function ClientsPage() {
   const DIAS_SEMANA_R = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo']
   const [rotinaForm, setRotinaForm] = useState({ titulo:'', tipo:'semanal', dias_semana:[0], dia_mes:1, hora:'08:00', observacao:'' })
   const [rotinaErr,  setRotinaErr]  = useState('')
+  const [editandoRotina, setEditandoRotina] = useState(null)
+  const [rotinaEditForm, setRotinaEditForm] = useState({})
+  const [rotinaEditErr,  setRotinaEditErr]  = useState('')
 
   // Tarefas do cliente
   const { data: tarefasCliente = [] } = useTasks({ clientId: modal?.id })
@@ -253,6 +270,23 @@ export default function ClientsPage() {
     }
   }
 
+  async function salvarEdicaoRotina() {
+    if (!rotinaEditForm.titulo?.trim()) { setRotinaEditErr('Informe o título'); return }
+    setRotinaEditErr('')
+    try {
+      await updateRotina.mutateAsync({
+        id: editandoRotina,
+        titulo: rotinaEditForm.titulo,
+        hora: rotinaEditForm.hora,
+        observacao: rotinaEditForm.observacao || null,
+      })
+      setEditandoRotina(null)
+      setRotinaEditForm({})
+    } catch (err) {
+      setRotinaEditErr('Erro: ' + (err?.message || 'tente novamente'))
+    }
+  }
+
   function toggleDiaSemana(i) {
     setRotinaForm(f => ({
       ...f,
@@ -286,7 +320,25 @@ export default function ClientsPage() {
     setCnpjError('')
   }
 
-  function close() { setModal(null); setForm({}); setSelectedBancos([]) }
+  function close() { setModal(null); setForm({}); setSelectedBancos([]); setContratoErr(''); setContratoSignedUrl(null) }
+
+  async function uploadContrato(file) {
+    if (!file || !modal?.id) return
+    setContratoUploading(true)
+    setContratoErr('')
+    try {
+      const ext = file.name.split('.').pop().toLowerCase()
+      const path = `${empresa?.id}/${modal.id}/contrato_${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('documentos').upload(path, file, { upsert: true })
+      if (upErr) throw upErr
+      await updateClient.mutateAsync({ id: modal.id, contrato_url: path })
+      setForm(f => ({ ...f, contrato_url: path }))
+    } catch (e) {
+      setContratoErr(e?.message || 'Erro ao fazer upload do contrato.')
+    } finally {
+      setContratoUploading(false)
+    }
+  }
 
   // Busca CNPJ na BrasilAPI
   async function buscarCNPJ() {
@@ -349,6 +401,7 @@ export default function ClientsPage() {
       inicio_contrato: form.inicio_contrato || null,
       software_erp:    form.software_erp    || null,
       responsavel_id:  form.responsavel_id  || null,
+      contrato_url:    form.contrato_url    || null,
     }
     try {
       if (modal.mode === 'new') {
@@ -446,7 +499,7 @@ export default function ClientsPage() {
       {/* Modal */}
       {modal && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}>
-          <div style={{ background:'var(--sur)', borderRadius:'var(--rx)', width:'100%', maxWidth:640, maxHeight:'90vh', display:'flex', flexDirection:'column', boxShadow:'var(--sh3)' }}>
+          <div style={{ background:'var(--sur)', borderRadius:'var(--rx)', width:'100%', maxWidth: tab === 'rotina' ? 1100 : 680, maxHeight:'90vh', display:'flex', flexDirection:'column', boxShadow:'var(--sh3)', transition:'max-width .2s' }}>
             {/* Modal header */}
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px', borderBottom:'1px solid var(--bo)' }}>
               <span style={{ fontWeight:700, fontSize:15, color:'var(--tx)' }}>
@@ -524,6 +577,41 @@ export default function ClientsPage() {
                     <div style={{ background:'var(--s2)', borderRadius:'var(--r)', padding:'10px 12px', fontSize:11, color:'var(--tx2)' }}>
                       <i className="fa-solid fa-location-dot" style={{ color:'var(--br)', marginRight:6 }}></i>
                       {form.logradouro && `${form.logradouro}, `}{form.municipio} — {form.uf} · CEP {form.cep}
+                    </div>
+                  )}
+
+                  {/* ── CONTRATO ASSINADO ── só em modo edição */}
+                  {modal?.mode === 'edit' && (
+                    <div style={{ borderTop:'1px solid var(--bo)', paddingTop:14, marginTop:2 }}>
+                      <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:8, textTransform:'uppercase', letterSpacing:'.07em' }}>📄 Contrato Assinado</label>
+                      {form.contrato_url ? (
+                        <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+                          {contratoSignedUrl
+                            ? <a href={contratoSignedUrl} target="_blank" rel="noreferrer"
+                                style={{ fontSize:12, color:'var(--br)', fontWeight:600, textDecoration:'none', display:'flex', alignItems:'center', gap:5, padding:'6px 12px', border:'1px solid var(--br)', borderRadius:'var(--r)', background:'var(--brl)' }}>
+                                📄 Visualizar / baixar contrato
+                              </a>
+                            : <span style={{ fontSize:12, color:'var(--tx3)' }}>Gerando link…</span>
+                          }
+                          <button className="btn bo" style={{ fontSize:11, padding:'5px 12px' }}
+                            onClick={() => document.getElementById('contrato-upload-input').click()}
+                            disabled={contratoUploading}>
+                            {contratoUploading ? '⏳ Enviando…' : '🔄 Substituir'}
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                          <button className="btn bo" style={{ fontSize:11, padding:'6px 14px' }}
+                            onClick={() => document.getElementById('contrato-upload-input').click()}
+                            disabled={contratoUploading}>
+                            {contratoUploading ? '⏳ Enviando…' : '📎 Anexar contrato assinado'}
+                          </button>
+                          <span style={{ fontSize:11, color:'var(--tx3)' }}>PDF ou imagem • máx. 10 MB</span>
+                        </div>
+                      )}
+                      <input id="contrato-upload-input" type="file" accept=".pdf,image/*" style={{ display:'none' }}
+                        onChange={e => { const f = e.target.files?.[0]; if (f) uploadContrato(f); e.target.value = '' }} />
+                      {contratoErr && <div style={{ fontSize:11, color:'var(--rdt)', marginTop:6 }}>{contratoErr}</div>}
                     </div>
                   )}
                 </div>
@@ -885,44 +973,77 @@ export default function ClientsPage() {
                     />
 
                     {/* Rotinas em colunas por dia da semana */}
-                    {rotinas.length > 0 && (() => {
+                    {(() => {
                       const byHora = (a, b) => (a.hora||'').localeCompare(b.hora||'')
                       const diarias = [...rotinas].filter(r => r.tipo === 'diaria').sort(byHora)
                       const mensais = [...rotinas].filter(r => r.tipo === 'mensal').sort(byHora)
-                      const diasComRotina = DIAS_SEMANA_R.map((label, idx) => ({
+                      // Todos os 7 dias sempre visíveis em sequência
+                      const todosDias = DIAS_SEMANA_R.map((label, idx) => ({
                         label,
                         rotinas: [...rotinas]
                           .filter(r => r.tipo === 'semanal' && (r.dias_semana?.includes(idx) || r.dia_semana === idx))
                           .sort(byHora),
-                      })).filter(g => g.rotinas.length > 0)
+                      }))
 
-                      const colStyle = { flex:'1 1 130px', minWidth:0 }
                       const diaHeader = { fontSize:10, fontWeight:800, color:'var(--br)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:6, paddingBottom:4, borderBottom:'2px solid var(--br)' }
-                      const rotinaItem = (r) => (
-                        <div key={r.id} style={{ display:'flex', alignItems:'flex-start', gap:6, padding:'5px 0', borderBottom:'1px solid var(--bo)' }}>
-                          <div style={{ fontSize:11, fontWeight:700, color:'var(--br)', flexShrink:0, minWidth:36 }}>{r.hora ? r.hora.slice(0,5) : '—'}</div>
-                          <div style={{ flex:1, fontSize:11, color:'var(--tx)', lineHeight:1.4 }}>
-                            {r.titulo}
-                            {r.observacao && <div style={{ fontSize:9, color:'var(--tx3)', fontStyle:'italic' }}>{r.observacao}</div>}
+
+                      const rotinaItem = (r) => {
+                        const isEditing = editandoRotina === r.id
+                        return (
+                          <div key={r.id}>
+                            {isEditing ? (
+                              <div style={{ background:'#EEF2FF', border:'1px solid #C7D2FE', borderRadius:6, padding:'8px', marginBottom:4 }}>
+                                <input value={rotinaEditForm.titulo||''} onChange={e=>setRotinaEditForm(f=>({...f,titulo:e.target.value}))}
+                                  className="fi" style={{ marginBottom:5, fontSize:11, padding:'4px 8px' }} autoFocus />
+                                <input type="time" value={rotinaEditForm.hora||'08:00'} onChange={e=>setRotinaEditForm(f=>({...f,hora:e.target.value}))}
+                                  className="fi" style={{ marginBottom:5, fontSize:11, padding:'4px 8px' }} />
+                                <input value={rotinaEditForm.observacao||''} onChange={e=>setRotinaEditForm(f=>({...f,observacao:e.target.value}))}
+                                  className="fi" placeholder="Observação..." style={{ marginBottom:5, fontSize:11, padding:'4px 8px' }} />
+                                {rotinaEditErr && <div style={{ fontSize:10, color:'var(--rdt)', marginBottom:4 }}>{rotinaEditErr}</div>}
+                                <div style={{ display:'flex', gap:5 }}>
+                                  <button className="btn bp" onClick={salvarEdicaoRotina} disabled={updateRotina.isPending}
+                                    style={{ fontSize:10, padding:'3px 10px' }}>
+                                    {updateRotina.isPending ? '…' : '✓ Salvar'}
+                                  </button>
+                                  <button onClick={() => { setEditandoRotina(null); setRotinaEditForm({}); setRotinaEditErr('') }}
+                                    style={{ fontSize:10, padding:'3px 8px', border:'1px solid var(--bo)', background:'transparent', borderRadius:4, cursor:'pointer', color:'var(--tx3)' }}>
+                                    Cancelar
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ display:'flex', alignItems:'flex-start', gap:4, padding:'5px 0', borderBottom:'1px solid var(--bo)' }}>
+                                <div style={{ fontSize:11, fontWeight:700, color:'var(--br)', flexShrink:0, minWidth:34 }}>{r.hora ? r.hora.slice(0,5) : '—'}</div>
+                                <div style={{ flex:1, fontSize:11, color:'var(--tx)', lineHeight:1.4, minWidth:0 }}>
+                                  {r.titulo}
+                                  {r.observacao && <div style={{ fontSize:9, color:'var(--tx3)', fontStyle:'italic' }}>{r.observacao}</div>}
+                                </div>
+                                <button
+                                  title="Editar"
+                                  onClick={() => { setEditandoRotina(r.id); setRotinaEditForm({ titulo:r.titulo, hora:r.hora||'08:00', observacao:r.observacao||'' }); setRotinaEditErr('') }}
+                                  style={{ border:'none', background:'none', cursor:'pointer', color:'#A5B4FC', fontSize:11, lineHeight:1, flexShrink:0, padding:'0 2px' }}>✏</button>
+                                <button onClick={() => { if(confirm('Remover esta rotina?')) deleteRotina.mutate(r.id) }}
+                                  style={{ border:'none', background:'none', cursor:'pointer', color:'#CBD5E1', fontSize:14, lineHeight:1, flexShrink:0, padding:0 }}>×</button>
+                              </div>
+                            )}
                           </div>
-                          <button onClick={() => { if(confirm('Remover?')) deleteRotina.mutate(r.id) }}
-                            style={{ border:'none', background:'none', cursor:'pointer', color:'#CBD5E1', fontSize:14, lineHeight:1, flexShrink:0, padding:0 }}>×</button>
-                        </div>
-                      )
+                        )
+                      }
 
                       return (
                         <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-                          {/* Dias da semana em colunas */}
-                          {diasComRotina.length > 0 && (
-                            <div style={{ display:'flex', gap:10, flexWrap:'wrap', alignItems:'flex-start' }}>
-                              {diasComRotina.map(g => (
-                                <div key={g.label} style={colStyle}>
-                                  <div style={diaHeader}>{g.label}</div>
-                                  {g.rotinas.map(rotinaItem)}
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                          {/* 7 dias em grid fixo, com scroll horizontal se necessário */}
+                          <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:8, overflowX:'auto', minWidth:0 }}>
+                            {todosDias.map(g => (
+                              <div key={g.label} style={{ minWidth:110 }}>
+                                <div style={diaHeader}>{g.label}</div>
+                                {g.rotinas.length === 0
+                                  ? <div style={{ fontSize:10, color:'var(--tx3)', fontStyle:'italic', padding:'4px 0' }}>—</div>
+                                  : g.rotinas.map(rotinaItem)
+                                }
+                              </div>
+                            ))}
+                          </div>
                           {/* Todo dia */}
                           {diarias.length > 0 && (
                             <div>
@@ -938,7 +1059,7 @@ export default function ClientsPage() {
                                 <div key={r.id} style={{ display:'flex', alignItems:'flex-start', gap:6, padding:'5px 0', borderBottom:'1px solid var(--bo)' }}>
                                   <div style={{ fontSize:11, fontWeight:700, color:'var(--br)', flexShrink:0, minWidth:36 }}>dia {r.dia_mes}</div>
                                   <div style={{ flex:1, fontSize:11, color:'var(--tx)' }}>{r.titulo}</div>
-                                  <button onClick={() => { if(confirm('Remover?')) deleteRotina.mutate(r.id) }}
+                                  <button onClick={() => { if(confirm('Remover esta rotina?')) deleteRotina.mutate(r.id) }}
                                     style={{ border:'none', background:'none', cursor:'pointer', color:'#CBD5E1', fontSize:14, lineHeight:1, flexShrink:0 }}>×</button>
                                 </div>
                               ))}
@@ -1089,7 +1210,7 @@ export default function ClientsPage() {
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
                 <div>
                   <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Categoria</label>
-                  <select value={cofreForm.categoria||'outro'} onChange={e=>setCofreForm(f=>({...f,categoria:e.target.value}))} className="fi">
+                  >({...f,categoria:e.target.value}))} className="fi">
                     {CATEGORIAS_COFRE.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
                   </select>
                 </div>
