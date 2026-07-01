@@ -971,28 +971,27 @@ export default function ClientsPage() {
                         <div style={{ border:'1px solid var(--bo)', borderRadius:'var(--r)', padding:'14px', background:'var(--sur)' }}>
                           <div style={{ fontSize:11, fontWeight:700, color:'var(--tx3)', marginBottom:10, textTransform:'uppercase' }}>Selecionar modelo</div>
                           <div style={{ display:'flex', flexDirection:'column', gap:6, maxHeight:300, overflowY:'auto' }}>
-                            {todosModelos
-                              .filter(m => m.ativo && !clienteModelos.find(cm => cm.modelo_id === m.id))
-                              .filter(m => {
-                                if (!m.software_alvo) return true
-                                const softwareCliente = (clients.find(c=>c.id===modal?.id)?.software_contabil || '').trim().toLowerCase()
-                                return m.software_alvo.toLowerCase() === softwareCliente
-                              })
-                              .map(m => (
+                            {(() => {
+                              const disponiveis = todosModelos.filter(m => m.ativo && !clienteModelos.find(cm => cm.modelo_id === m.id))
+                              if (disponiveis.length === 0) return (
+                                <div style={{ fontSize:12, color:'var(--tx3)', textAlign:'center', padding:'12px' }}>Todos os modelos já estão vinculados.</div>
+                              )
+                              return disponiveis.map(m => (
                                 <button key={m.id}
                                   onClick={() => vincularEAplicarModelo(m)}
                                   style={{ padding:'10px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', cursor:'pointer', background:'var(--s2)', textAlign:'left', width:'100%' }}
                                   onMouseEnter={e => e.currentTarget.style.background='var(--s3)'}
                                   onMouseLeave={e => e.currentTarget.style.background='var(--s2)'}>
-                                  <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{m.titulo}</div>
+                                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                                    <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)', flex:1 }}>{m.titulo}</div>
+                                    {m.software_alvo && <span style={{ fontSize:9, padding:'1px 6px', borderRadius:99, background:'#EEF2FF', color:'#6366F1', fontWeight:700, flexShrink:0 }}>{m.software_alvo}</span>}
+                                  </div>
                                   <div style={{ fontSize:10, color:'var(--tx3)', marginTop:2 }}>
                                     {m.categoria} · {m.recorrencia === 'unica' ? '⚡ pontual (cria tarefa na hora)' : m.recorrencia}
                                   </div>
                                 </button>
-                              ))}
-                            {todosModelos.filter(m => m.ativo && !clienteModelos.find(cm => cm.modelo_id === m.id)).length === 0 && (
-                              <div style={{ fontSize:12, color:'var(--tx3)', textAlign:'center', padding:'12px' }}>Todos os modelos já estão vinculados.</div>
-                            )}
+                              ))
+                            })()}
                           </div>
                           <button onClick={() => setShowAddModelo(false)}
                             style={{ marginTop:10, padding:'6px 14px', borderRadius:'var(--r)', border:'1px solid var(--bo)', background:'transparent', cursor:'pointer', fontSize:11, color:'var(--tx3)' }}>
