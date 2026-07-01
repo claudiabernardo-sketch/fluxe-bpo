@@ -1108,7 +1108,7 @@ export default function ClientsPage() {
                     {(() => {
                       const byHora = (a, b) => (a.hora||'').localeCompare(b.hora||'')
                       const diarias = [...rotinas].filter(r => r.tipo === 'diaria').sort(byHora)
-                      const mensais = [...rotinas].filter(r => r.tipo === 'mensal').sort(byHora)
+                      const mensais = [...rotinas].filter(r => r.tipo === 'mensal').sort((a,b) => (a.dia_mes||1) - (b.dia_mes||1) || (a.hora||'').localeCompare(b.hora||''))
                       // Todos os 7 dias sempre visíveis em sequência
                       const todosDias = DIAS_SEMANA_R.map((label, idx) => ({
                         label,
