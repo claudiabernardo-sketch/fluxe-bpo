@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
-import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useUpdateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTarefaModelos, useClienteModelos, useVincularModelo, useDesvincularModelo, useAcessos, useSaveAcesso, useDeleteAcesso } from '../hooks/useData'
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useUpdateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTarefaModelos, useClienteModelos, useVincularModelo, useDesvincularModelo, useAcessos, useSaveAcesso, useDeleteAcesso, useGerarTarefas } from '../hooks/useData'
 import { useQueryClient } from '@tanstack/react-query'
 import { Card, CardHeader, Badge, Btn, Loader, EmptyState, fmt, fmtR } from '../components/ui'
 import { useAuthStore } from '../store/authStore'
@@ -154,6 +154,7 @@ export default function ClientsPage() {
   const createTask = useCreateTask()
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
+  const gerarTarefas = useGerarTarefas()
   const queryClient = useQueryClient()
   const [taskForm, setTaskForm] = useState({ titulo:'', prazo:'', status:'aberta', prioridade:'media' })
   const [taskErr,  setTaskErr]  = useState('')
@@ -267,6 +268,23 @@ export default function ClientsPage() {
       setRotinaForm({ titulo:'', tipo:'semanal', dias_semana:[0], dia_mes:1, hora:'08:00', observacao:'' })
     } catch (err) {
       setRotinaErr('Erro ao salvar: ' + (err?.message || 'erro desconhecido'))
+    }
+  }
+
+  async function salvarEdicaoRotina() {
+    if (!rotinaEditForm.titulo?.trim()) { setRotinaEditErr('Informe o título'); return }
+    setRotinaEditErr('')
+    try {
+      await updateRotina.mutateAsync({
+        id: editandoRotina,
+        titulo: rotinaEditForm.titulo,
+        hora: rotinaEditForm.hora,
+        observacao: rotinaEditForm.observacao || null,
+      })
+      setEditandoRotina(null)
+      setRotinaEditForm({})
+    } catch (err) {
+      setRotinaEditErr('Erro: ' + (err?.message || 'tente novamente'))
     }
   }
 
@@ -825,6 +843,29 @@ export default function ClientsPage() {
                       ) : (
                         <div style={{ padding:'20px', textAlign:'center', color:'var(--tx3)', fontSize:12, border:'1px dashed var(--bo)', borderRadius:'var(--r)' }}>
                           Nenhum modelo vinculado ainda.
+                        </div>
+                      )}
+
+                      {/* Gerar tarefas de hoje manualmente */}
+                      {clienteModelos.length > 0 && (
+                        <div style={{ padding:'12px 14px', background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:'var(--r)', display:'flex', alignItems:'center', gap:10 }}>
+                          <div style={{ flex:1 }}>
+                            <div style={{ fontSize:12, fontWeight:700, color:'#15803D' }}>▶ Gerar tarefas de hoje</div>
+                            <div style={{ fontSize:11, color:'#16A34A', marginTop:2 }}>Dispara a geração manual com base nos modelos vinculados.</div>
+                          </div>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const r = await gerarTarefas.mutateAsync({ clienteId: modal?.id, data: new Date().toISOString().slice(0,10) })
+                                alert('✓ ' + (r?.criadas ?? 0) + ' tarefa(s) gerada(s) para hoje!')
+                              } catch(e) {
+                                alert('Erro ao gerar: ' + (e?.message || 'tente novamente'))
+                              }
+                            }}
+                            disabled={gerarTarefas.isPending}
+                            style={{ padding:'8px 16px', background:'#16A34A', color:'#fff', border:'none', borderRadius:6, cursor:'pointer', fontSize:12, fontWeight:700, flexShrink:0, whiteSpace:'nowrap' }}>
+                            {gerarTarefas.isPending ? '⏳ Gerando...' : '▶ Gerar agora'}
+                          </button>
                         </div>
                       )}
 
