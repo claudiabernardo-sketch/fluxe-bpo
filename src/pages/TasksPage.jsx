@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, lazy, Suspense } from 'react'
-import { useTasks, useCreateTask, useUpdateTask, useDeleteTask, useClients, useUsuarios, useTarefaModelos, useFeriados } from '../hooks/useData'
+import { useState, useRef, lazy, Suspense } from 'react'
+import { useTasks, useCreateTask, useUpdateTask, useDeleteTask, useClients, useUsuarios, useTarefaModelos } from '../hooks/useData'
 import { Card, Btn, Loader, EmptyState, PrioBadge, StatusBadge, fmt, isVencida } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 const ImportModal = lazy(() => import('../components/ui/ImportModal'))
@@ -46,112 +46,11 @@ export default function TasksPage() {
   const qc = useQueryClient()
   const fileInputRef = useRef(null)
   const { data: modelos = [] } = useTarefaModelos()
-  const { data: feriados = [] } = useFeriados()
   const { empresa } = useAuthStore()
-  const geradoRef = useRef(false)
 
-  // ── Auto-geração de tarefas recorrentes ────────────────────────────
-  // Usa localStorage pra garantir que roda 1x por dia — se o browser
-  // ficar aberto da véspera sem recarregar, o useRef seria true mas a
-  // geração de hoje nunca teria acontecido.
-  useEffect(() => {
-    if (geradoRef.current || modelos.length === 0 || !empresa?.id) return
-    const hoje = new Date().toISOString().slice(0, 10)
-    const chave = `fluxe_gerado_${empresa.id}_${hoje}`
-    if (localStorage.getItem(chave)) return // já gerou hoje
-    geradoRef.current = true
-    gerarTarefasRecorrentes().then(() => localStorage.setItem(chave, '1'))
-  }, [modelos, empresa]) // eslint-disable-line
-
-  async function gerarTarefasRecorrentes() {
-    const feriadosSet = new Set(feriados.map(f => f.data))
-    const hoje = new Date()
-    const datas = []
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(hoje)
-      d.setDate(d.getDate() - i)
-      datas.push(d.toLocaleDateString('en-CA')) // fuso local, não UTC
-    }
-    const modelosAtivos = modelos.filter(m => m.ativo)
-    if (modelosAtivos.length === 0) return
-
-    // Modelos "Geral" (sem cliente_id fixo) podem estar vinculados a clientes
-    // específicos via cliente_modelos (aba Tarefas do cadastro do cliente).
-    // Sem isso, vincular um modelo geral a um cliente não tinha efeito nenhum
-    // na geração de tarefas — só ficava salvo sem servir pra nada.
-    const { data: vinculos } = await supabase
-      .from('cliente_modelos')
-      .select('cliente_id, modelo_id')
-      .eq('empresa_id', empresa.id)
-      .eq('ativo', true)
-    const vinculosPorModelo = {}
-    ;(vinculos || []).forEach(v => {
-      if (!vinculosPorModelo[v.modelo_id]) vinculosPorModelo[v.modelo_id] = []
-      vinculosPorModelo[v.modelo_id].push(v.cliente_id)
-    })
-
-    const { data: existentes } = await supabase
-      .from('tarefas')
-      .select('modelo_id, data_execucao, cliente_id')
-      .eq('empresa_id', empresa.id)
-      .in('modelo_id', modelosAtivos.map(m => m.id))
-      .gte('data_execucao', datas[0])
-      .lte('data_execucao', datas[datas.length - 1])
-
-    const existSet = new Set((existentes || []).map(t => `${t.modelo_id}::${t.data_execucao}::${t.cliente_id || 'null'}`))
-
-    const toInsert = []
-    for (const modelo of modelosAtivos) {
-      // clientes-alvo desse modelo: o próprio cliente_id fixo (se houver),
-      // senão os clientes vinculados via cliente_modelos, senão "geral" (null)
-      const clientesAlvo = modelo.cliente_id
-        ? [modelo.cliente_id]
-        : (vinculosPorModelo[modelo.id]?.length ? vinculosPorModelo[modelo.id] : [null])
-
-      for (const data of datas) {
-        if (!deveGerarNaData(modelo, data, feriadosSet)) continue
-        for (const clienteId of clientesAlvo) {
-          const key = `${modelo.id}::${data}::${clienteId || 'null'}`
-          if (existSet.has(key)) continue
-          toInsert.push({
-            empresa_id: empresa.id, modelo_id: modelo.id,
-            cliente_id: clienteId, titulo: modelo.titulo,
-            categoria: modelo.categoria || null, prioridade: modelo.prioridade,
-            status: 'aberta', data_execucao: data,
-          })
-        }
-      }
-    }
-
-    if (toInsert.length === 0) return
-    for (let i = 0; i < toInsert.length; i += 50) {
-      const { error } = await supabase.from('tarefas').insert(toInsert.slice(i, i + 50))
-      if (error) console.error('Erro ao gerar tarefas:', error.message)
-    }
-    qc.invalidateQueries({ queryKey: ['tasks'] })
-  }
-
-  function deveGerarNaData(modelo, dateStr, feriadosSet = new Set()) {
-    const d = new Date(dateStr + 'T12:00:00')
-    const dow = d.getDay()   // 0=Dom,1=Seg...6=Sab
-    const dom = d.getDate()
-    const mes = d.getMonth() // 0–11
-    const diaAlvo = modelo.dia_mes || 1
-
-    switch (modelo.recorrencia) {
-      case 'diaria':          return true
-      case 'dias_uteis':      return dow >= 1 && dow <= 5 && !feriadosSet.has(dateStr)
-      case 'semanal':         return (modelo.dias_semana || []).includes(dow)
-      case 'quinzenal':       return dom === diaAlvo || dom === Math.min(diaAlvo + 15, 28)
-      case 'mensal':          return dom === diaAlvo
-      case 'dias_especificos':return (modelo.dias_mes || []).includes(dom)
-      case 'bimestral':       return dom === diaAlvo && mes % 2 === 0  // Jan,Mar,Mai,Jul,Set,Nov
-      case 'trimestral':      return dom === diaAlvo && [0, 3, 6, 9].includes(mes)  // Jan,Abr,Jul,Out
-      case 'semestral':       return dom === diaAlvo && [0, 6].includes(mes)  // Jan,Jul
-      case 'anual':           return dom === diaAlvo && mes === 0  // Janeiro
-      default:                return false
-    }
-  }
+  // ── Geração de tarefas: migrada para Edge Function server-side ─────────────
+  // Tarefas são geradas todo dia às 00:00 BRT via pg_cron → gerar-tarefas
+  // Não há mais geração client-side nesta página.
 
   const [view, setView] = useState('meudia')
   const [concluídasOpen, setConcluídasOpen] = useState(false)
@@ -474,9 +373,9 @@ export default function TasksPage() {
         <div style={{ flex:1, overflow:'auto' }}>
           {view === 'meudia' ? (() => {
             const hojeStr   = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
-            const pendentes = tasks.filter(t => t.data_execucao && t.data_execucao < today && t.status !== 'concluida' && (!search || t.titulo?.toLowerCase().includes(search.toLowerCase())))
-            const deHoje    = tasks.filter(t => t.data_execucao === today && t.status !== 'concluida' && (!search || t.titulo?.toLowerCase().includes(search.toLowerCase())))
-            const conclHoje = tasks.filter(t => t.status === 'concluida' && (t.data_execucao === today || t.prazo === today) && (!search || t.titulo?.toLowerCase().includes(search.toLowerCase())))
+            const pendentes = tasks.filter(t => t.data_execucao && t.data_execucao < today && t.status !== 'concluida' && (!fClient || t.cliente_id === fClient) && (!search || t.titulo?.toLowerCase().includes(search.toLowerCase())))
+            const deHoje    = tasks.filter(t => t.data_execucao === today && t.status !== 'concluida' && (!fClient || t.cliente_id === fClient) && (!search || t.titulo?.toLowerCase().includes(search.toLowerCase())))
+            const conclHoje = tasks.filter(t => t.status === 'concluida' && (t.data_execucao === today || t.prazo === today) && (!fClient || t.cliente_id === fClient) && (!search || t.titulo?.toLowerCase().includes(search.toLowerCase())))
             return (
               <div style={{ maxWidth: selectedTask ? '100%' : 680 }}>
                 {/* Cabeçalho do dia */}
@@ -967,7 +866,15 @@ function TaskRow({ t, selTask, setSelTask, openEdit, deleteTask, quickStatus, se
         {/* Ações */}
         <div style={{ display:'flex', gap:4, flexShrink:0 }}>
           <button onClick={e => { e.stopPropagation(); openEdit(t) }} style={{ padding:'2px 6px', borderRadius:5, border:'1px solid #E2E8F0', background:'#fff', color:'#475569', cursor:'pointer', fontSize:10 }}>✎</button>
-          <button onClick={e => { e.stopPropagation(); if (confirm('Excluir?')) deleteTask.mutate(t.id) }} style={{ padding:'2px 6px', borderRadius:5, border:'1px solid #FECDD3', background:'#FEF2F2', color:'#991B1B', cursor:'pointer', fontSize:10 }}>×</button>
+          <button onClick={e => {
+            e.stopPropagation()
+            if (t.modelo_id) {
+              const ok = confirm('Excluir só esta ocorrência?\n\n✓ OK = exclui apenas esta tarefa de hoje\n✗ Cancelar = não faz nada\n\nPara parar de gerar esta tarefa, desative o modelo em Modelos.')
+              if (ok) deleteTask.mutate(t.id)
+            } else {
+              if (confirm('Excluir tarefa?')) deleteTask.mutate(t.id)
+            }
+          }} style={{ padding:'2px 6px', borderRadius:5, border:'1px solid #FECDD3', background:'#FEF2F2', color:'#991B1B', cursor:'pointer', fontSize:10 }}>×</button>
         </div>
       </div>
 

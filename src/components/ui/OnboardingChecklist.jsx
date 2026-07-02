@@ -50,7 +50,7 @@ export default function OnboardingChecklist() {
       icon: '🧮',
       title: 'Configure o custo da sua equipe',
       desc: 'Informe o custo/hora de cada analista para calcular a rentabilidade real dos seus clientes.',
-      action: () => nav('/capacidade'),
+      action: () => nav('/cap'),
       cta: 'Configurar equipe',
     },
     {

@@ -22,6 +22,7 @@ const RelatoriosPage  = lazy(() => import('../../pages/RelatoriosPage'))
 const ConfigPage      = lazy(() => import('../../pages/ConfigPage'))
 const MensagensPage   = lazy(() => import('../../pages/MensagensPage'))
 const ModelosPage     = lazy(() => import('../../pages/ModelosPage'))
+const ClientePage     = lazy(() => import('../../pages/ClientePage'))
 const MeuPainelPage      = lazy(() => import('../../pages/MeuPainelPage'))
 const AjudaPage          = lazy(() => import('../../pages/AjudaPage'))
 const PrecificacaoPage   = lazy(() => import('../../pages/PrecificacaoPage'))
@@ -38,7 +39,7 @@ const PageLoader = () => (
 const NAV = [
   { path:'/',           icon:'fa-solid fa-house',               label:'Início'    },
   { path:'/tasks',      icon:'fa-solid fa-list-check',          label:'Tarefas'   },
-  { path:'/modelos',    icon:'fa-solid fa-rotate',              label:'Rotinas'   },
+  { path:'/modelos',    icon:'fa-solid fa-rotate',              label:'Modelos'   },
   { path:'/pendencias', icon:'fa-solid fa-circle-exclamation',  label:'Pendências'},
   { path:'/avulsas',    icon:'fa-solid fa-file-pen',            label:'Avulsas'   },
   { grp:'COMERCIAL' },
@@ -68,6 +69,7 @@ const TITLES = {
   '/avulsas':    'Tarefas Avulsas',
   '/esteiras':   'Esteiras Operacionais',
   '/clientes':   'Clientes',
+  '/clientes/:id': 'Cliente',
   '/pendencias': 'Pendências',
   '/agenda':     'Central Operacional',
   '/rent':       'Rentabilidade',
@@ -78,7 +80,7 @@ const TITLES = {
   '/relatorios': 'Relatórios',
   '/config':     'Configurações',
   '/mensagens':  'Mensagens WhatsApp',
-  '/modelos':    'Rotinas',
+  '/modelos':    'Modelos',
   '/meu-painel': 'Meu Painel',
   '/ajuda':      'Central de Ajuda',
 }
@@ -233,6 +235,7 @@ export default function AppShell() {
               <Route path="/modelos"    element={<ModelosPage />} />
               <Route path="/esteiras"   element={<EsteirasPage />} />
               <Route path="/clientes"   element={<ClientsPage />} />
+              <Route path="/clientes/:id" element={<ClientePage />} />
               <Route path="/pendencias" element={<PendenciasPage />} />
               <Route path="/agenda"     element={<AgendaPage />} />
               <Route path="/rent"       element={<RentPage />} />

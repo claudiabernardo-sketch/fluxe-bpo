@@ -13,8 +13,8 @@ const CATS = [
   {
     id:'clientes', icon:'fa-solid fa-building', cor:'#0EA5E9', bg:'#F0F9FF',
     titulo:'Clientes', artigos:[
-      { titulo:'Cadastrar e editar clientes', tempo:'3 min', conteudo:'No módulo Clientes, clique em "Novo Cliente". Após salvar, associe esteiras operacionais ao cliente para que as tarefas recorrentes sejam geradas automaticamente a cada período.' },
-      { titulo:'Associar esteiras a um cliente', tempo:'2 min', conteudo:'Dentro do cadastro do cliente, acesse a aba "Esteiras". Escolha as esteiras contratadas. Isso determina quais rotinas serão criadas automaticamente para esse cliente.' },
+      { titulo:'Cadastrar e editar clientes', tempo:'3 min', conteudo:'No módulo Clientes, clique em "Novo Cliente". Após salvar, configure o Escopo vinculando modelos de tarefa ao cliente e clique em "Iniciar Operação" para ativar a geração automática.' },
+      { titulo:'Vincular modelos ao cliente', tempo:'2 min', conteudo:'Dentro do cadastro do cliente, acesse a aba "Escopo". Vincule os modelos contratados. Cada modelo pode ter configurações específicas para aquele cliente sem alterar o template original.' },
       { titulo:'Score de saúde do cliente', tempo:'3 min', conteudo:'O score (0–100) reflete a situação operacional de cada cliente. É calculado pela quantidade de tarefas em atraso e pendências sem justificativa. Verde ≥ 80, amarelo ≥ 60, vermelho < 60.' },
       { titulo:'Arquivar e reativar clientes', tempo:'2 min', conteudo:'Clientes inativos podem ser arquivados para não poluir a lista. O histórico de tarefas é preservado. Para reativar, acesse Clientes > Arquivados.' },
     ]
@@ -30,7 +30,7 @@ const CATS = [
   {
     id:'tarefas', icon:'fa-solid fa-list-check', cor:'#10B981', bg:'#ECFDF5',
     titulo:'Tarefas', artigos:[
-      { titulo:'Tipos de tarefas no Fluxe', tempo:'3 min', conteudo:'Existem dois tipos: Rotinas (geradas automaticamente pelas esteiras) e Avulsas (criadas manualmente para atividades eventuais). Ambas aparecem na Central Operacional e podem ser atribuídas a operadores.' },
+      { titulo:'Tipos de tarefas no Fluxe', tempo:'3 min', conteudo:'Existem dois tipos: Recorrentes (geradas automaticamente pelos Modelos vinculados ao Escopo do cliente) e Avulsas (criadas manualmente para atividades eventuais). Ambas aparecem na Central Operacional e podem ser atribuídas a operadores.' },
       { titulo:'Status de uma tarefa', tempo:'2 min', conteudo:'A Fazer → Em Andamento → Aguardando Cliente → Concluída. Também existe "Impedimento" para tarefas travadas por bloqueio externo. O status pode ser alterado pelo Kanban (arrastar) ou no detalhe da tarefa.' },
       { titulo:'Registrar uma pendência', tempo:'2 min', conteudo:'Quando uma tarefa não pode ser concluída, registre o motivo no campo "Motivo da pendência". Isso alimenta o relatório de pendências e o score de saúde do cliente.' },
       { titulo:'Apontamento de horas', tempo:'3 min', conteudo:'Use o Timer na barra superior para registrar o tempo dedicado a cada tarefa. O apontamento é vinculado à tarefa e ao operador, alimentando relatórios de horas e rentabilidade.' },
@@ -39,10 +39,10 @@ const CATS = [
   },
   {
     id:'rotinas', icon:'fa-solid fa-rotate', cor:'#F59E0B', bg:'#FFFBEB',
-    titulo:'Rotinas', artigos:[
-      { titulo:'Como funcionam as rotinas', tempo:'3 min', conteudo:'Rotinas são modelos de tarefas recorrentes vinculadas a esteiras. Quando um período começa, o sistema gera automaticamente as tarefas para todos os clientes com aquela esteira ativa.' },
-      { titulo:'Criar e editar modelos', tempo:'4 min', conteudo:'No módulo Rotinas, crie modelos que definem título, descrição, prazo relativo e periodicidade. Cada modelo pode ser vinculado a uma ou mais esteiras.' },
-      { titulo:'Geração automática de tarefas', tempo:'2 min', conteudo:'A geração ocorre ao visitar o módulo Tarefas. O sistema verifica se já foram criadas as tarefas do período atual e, se não, cria automaticamente — garantindo que o backlog esteja sempre populado.' },
+    titulo:'Modelos', artigos:[
+      { titulo:'Como funcionam os modelos de tarefa', tempo:'3 min', conteudo:'Modelos são templates de tarefas recorrentes vinculados a clientes. O sistema gera automaticamente as tarefas de cada cliente com base nos modelos do seu escopo e na recorrência configurada.' },
+      { titulo:'Criar e editar modelos', tempo:'4 min', conteudo:'No módulo Modelos, crie templates que definem título, categoria, recorrência e prioridade. Cada modelo pode ser vinculado a um ou mais clientes, com configurações específicas por cliente.' },
+      { titulo:'Geração automática de tarefas', tempo:'2 min', conteudo:'A geração ocorre automaticamente todo dia à meia-noite via servidor. Não é necessário abrir nenhuma tela — o sistema gera as tarefas do dia para todos os clientes operacionais, registra logs e evita duplicatas.' },
     ]
   },
   {

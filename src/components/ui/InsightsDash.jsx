@@ -84,7 +84,7 @@ export default function InsightsDash() {
         bg: '#FFFBEB',
         title: `Equipe com ${ocupacao.toFixed(0)}% de capacidade`,
         desc: 'Cuidado ao aceitar novos clientes — risco de atrasos e queda de qualidade.',
-        action: '/capacidade',
+        action: '/cap',
         cta: 'Ver capacidade',
       })
     } else if (totalHoras > 0 && ocupacao < 40 && clients.length > 0) {
@@ -96,7 +96,7 @@ export default function InsightsDash() {
         bg: '#F0FDF4',
         title: `${horasLivres.toFixed(0)}h disponíveis este mês`,
         desc: 'Sua equipe tem capacidade para mais clientes sem comprometer a operação.',
-        action: '/capacidade',
+        action: '/cap',
         cta: 'Ver capacidade',
       })
     }
@@ -175,7 +175,7 @@ export default function InsightsDash() {
         bg: '#FFFBEB',
         title: `${semCusto.length} analista${semCusto.length > 1 ? 's' : ''} sem custo/hora`,
         desc: 'Sem esse dado, o cálculo de margem e rentabilidade não é preciso.',
-        action: '/capacidade',
+        action: '/cap',
         cta: 'Configurar',
       })
     }

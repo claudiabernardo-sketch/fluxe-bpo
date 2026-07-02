@@ -194,7 +194,7 @@ serve(async (req) => {
         // ── 3. Clientes operacionais desta empresa ─────────────────────────
         let queryClientes = supabase
           .from('clientes')
-          .select('id, razao_social, status_operacional, operacao_iniciada_em, bancos, responsavel_id')
+          .select('id, razao_social, status_operacional, operacao_iniciada_em, bancos')
           .eq('empresa_id', empId)
           .eq('status_operacional', 'operacional')
           .not('operacao_iniciada_em', 'is', null)
@@ -334,7 +334,7 @@ serve(async (req) => {
                 prioridade:    modelo.prioridade,
                 status:        'aberta',
                 data_execucao: dataAlvo,
-                ...((() => { const rid = vinculo.responsavel_id ?? clientesMap[clienteId]?.responsavel_id ?? null; return rid ? { responsavel_id: rid } : {} })()),
+                ...(vinculo.responsavel_id ? { responsavel_id: vinculo.responsavel_id } : {}),
               })
               if (clienteId) clientesNaData.add(clienteId)
             }
@@ -410,8 +410,9 @@ serve(async (req) => {
       if (logId && detalhes.length) {
         for (let i = 0; i < detalhes.length; i += 100) {
           const lote = detalhes.slice(i, i + 100).map(d => ({ ...d, log_id: logId }))
-          const { error: errDet } = await supabase.from('task_generation_details').insert(lote)
-          if (errDet) erros.push(`details lote ${i}: ${errDet.message}`)
+          await supabase.from('task_generation_details').insert(lote).catch((e: any) => {
+            erros.push(`details lote ${i}: ${e.message}`)
+          })
         }
       }
     }
@@ -454,7 +455,7 @@ serve(async (req) => {
         tarefas_geradas:      0,
         erros,
         origem:               'error',
-      })
+      }).catch(() => {})
     }
 
     return new Response(JSON.stringify({ ok: false, error: msg, erros }), {

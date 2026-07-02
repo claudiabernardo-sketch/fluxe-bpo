@@ -1,8 +1,61 @@
-import { useLeads, useCreateLead, useUpdateLead, useConvertLeadToClient, useLeadInteracoes, useCreateLeadInteracao, useDeleteLeadInteracao } from '../hooks/useData'
+import { useLeads, useCreateLead, useUpdateLead, useConvertLeadToClient, useLeadInteracoes, useCreateLeadInteracao, useDeleteLeadInteracao, usePropostasByLead, useUpdateProposta } from '../hooks/useData'
 import { Card, Loader, EmptyState, Btn, fmtR } from '../components/ui'
 import { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+
+// ── Aba Documentos Comerciais (propostas do lead) ──────────────────────────
+const STATUS_PROP = {
+  rascunho:      { label:'Rascunho',       color:'#94A3B8', bg:'#F8FAFC' },
+  enviada:       { label:'Enviada',        color:'#6366F1', bg:'#EEF2FF' },
+  em_negociacao: { label:'Em negociação',  color:'#F59E0B', bg:'#FFFBEB' },
+  aprovada:      { label:'Aprovada',       color:'#22C55E', bg:'#F0FDF4' },
+  rejeitada:     { label:'Rejeitada',      color:'#EF4444', bg:'#FEF2F2' },
+  expirada:      { label:'Expirada',       color:'#94A3B8', bg:'#F1F5F9' },
+  cancelada:     { label:'Cancelada',      color:'#DC2626', bg:'#FFF1F2' },
+}
+function DocsComerciaisTab({ leadId }) {
+  const { data: propostas = [], isLoading } = usePropostasByLead(leadId)
+  const upd = useUpdateProposta()
+  const fmtD = (d) => d ? new Date(d).toLocaleDateString('pt-BR') : '—'
+  const fmtV = (v) => v != null ? Number(v).toLocaleString('pt-BR', { style:'currency', currency:'BRL' }) : '—'
+  if (isLoading) return <div style={{ padding:'20px 0', textAlign:'center', color:'#94A3B8', fontSize:12 }}>Carregando…</div>
+  if (!propostas.length) return (
+    <div style={{ padding:'32px 0', textAlign:'center', color:'#94A3B8', fontSize:12 }}>
+      Nenhuma proposta gerada para este lead ainda.<br />
+      <span style={{ fontSize:11 }}>Use o botão 💰 Proposta para criar uma.</span>
+    </div>
+  )
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+      {propostas.map(p => {
+        const st = STATUS_PROP[p.status] || STATUS_PROP.rascunho
+        return (
+          <div key={p.id} style={{ border:'1px solid #E2E8F0', borderRadius:10, padding:'12px 14px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+              <span style={{ fontFamily:'monospace', fontSize:10, color:'#94A3B8' }}>#{String(p.numero).padStart(6,'0')}</span>
+              <span style={{ flex:1, fontWeight:600, fontSize:13, color:'#0F172A' }}>{p.dados_cliente?.nome || '—'}</span>
+              <span style={{ fontSize:12, fontWeight:700, color:'#15803D' }}>{fmtV(p.valor_mensal)}/mês</span>
+              <span style={{ padding:'2px 8px', borderRadius:99, fontSize:10, fontWeight:700, background:st.bg, color:st.color }}>{st.label}</span>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <span style={{ fontSize:11, color:'#94A3B8' }}>Criada {fmtD(p.criado_em)}</span>
+              <div style={{ flex:1 }} />
+              <select
+                value={p.status}
+                disabled={upd.isPending}
+                onChange={async e => { await upd.mutateAsync({ id:p.id, status:e.target.value }) }}
+                style={{ fontSize:11, padding:'3px 8px', border:'1px solid #E2E8F0', borderRadius:6, cursor:'pointer' }}
+              >
+                {Object.entries(STATUS_PROP).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 const getXLSX = () => import('xlsx')
 
@@ -386,6 +439,7 @@ export default function CRMPage() {
 
 
   const [modal, setModal]             = useState(false)
+  const [modalAba, setModalAba]       = useState('dados') // 'dados' | 'docs'
   const [form, setForm]               = useState({})
   const [editId, setEditId]           = useState(null)
   const [erro, setErro]               = useState('')
@@ -465,11 +519,11 @@ export default function CRMPage() {
       etapa: lead.etapa || 'novo', obs: lead.obs || '',
       proximo_contato: lead.proximo_contato || '',
     })
-    setErro(''); setCnpjErro(''); setModal('edit')
+    setErro(''); setCnpjErro(''); setModalAba('dados'); setModal('edit')
   }
 
   function closeModal() {
-    setModal(false); setForm({}); setEditId(null); setErro(''); setCnpjErro('')
+    setModal(false); setForm({}); setEditId(null); setErro(''); setCnpjErro(''); setModalAba('dados')
   }
 
   async function buscarCNPJ() {
@@ -523,10 +577,20 @@ export default function CRMPage() {
     }
   }
 
-  function tentarAvancar(lead, nextEtapa) {
+  async function tentarAvancar(lead, nextEtapa) {
     if (nextEtapa === 'perdido') {
       setPerdaForm({ motivo: '', obs: '' })
       setPerdaModal({ id: lead.id, nome: lead.nome })
+    } else if (nextEtapa === 'fechado') {
+      await update.mutateAsync({ id: lead.id, etapa: 'fechado' })
+      if (window.confirm(`"${lead.nome}" marcado como fechado! ✅\nDeseja converter para cliente agora?`)) {
+        try {
+          await convert.mutateAsync(lead)
+          window.location.href = '/clientes'
+        } catch (e) {
+          setConvertErro(e?.message || 'Erro ao converter.')
+        }
+      }
     } else {
       update.mutate({ id: lead.id, etapa: nextEtapa })
     }
@@ -557,7 +621,13 @@ export default function CRMPage() {
 
   function abrirPrecificacao(lead) {
     sessionStorage.setItem('crm_lead_precif', JSON.stringify({
+      id: lead.id,
       nome: lead.fantasia || lead.nome || '',
+      fantasia: lead.fantasia || '',
+      cnpj: lead.cnpj || '',
+      contato: lead.contato || '',
+      email: lead.email || '',
+      whatsapp: lead.whatsapp || '',
       segmento: lead.segmento || '',
       valor_estimado: lead.valor_estimado || 0,
     }))
@@ -836,85 +906,114 @@ export default function CRMPage() {
       {modal && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }}>
           <div style={{ background:'#fff', borderRadius:16, width:500, padding:24, maxHeight:'90vh', overflowY:'auto' }}>
-            <div style={{ fontWeight:700, fontSize:15, marginBottom:4 }}>
-              {modal === 'edit' ? 'Editar lead' : 'Novo lead'}
-            </div>
-            <div style={{ fontSize:11, color:'#94A3B8', marginBottom:20 }}>
-              {modal === 'edit' ? 'Atualize os dados.' : 'Informe o CNPJ para buscar automaticamente, ou preencha manualmente.'}
-            </div>
-
-            <div style={{ marginBottom:14 }}>
-              <label style={labelStyle}>CNPJ</label>
-              <div style={{ display:'flex', gap:8 }}>
-                <input value={form.cnpj || ''} onChange={e => { setCnpjErro(''); setF('cnpj', formatCNPJ(e.target.value)) }}
-                  onKeyDown={e => e.key === 'Enter' && buscarCNPJ()}
-                  placeholder="00.000.000/0001-00" style={{ ...inputStyle, flex:1, fontFamily:'monospace' }} />
-                <button onClick={buscarCNPJ} disabled={cnpjBusy}
-                  style={{ padding:'8px 14px', borderRadius:8, border:'none', cursor:cnpjBusy?'not-allowed':'pointer',
-                    background:cnpjBusy?'#E2E8F0':'#6366F1', color:'#fff', fontSize:12, fontWeight:700, whiteSpace:'nowrap', flexShrink:0 }}>
-                  {cnpjBusy ? 'Buscando…' : '🔍 Buscar'}
-                </button>
-              </div>
-              {cnpjErro && <div style={{ fontSize:11, color:'#EF4444', marginTop:4 }}>{cnpjErro}</div>}
-            </div>
-
-            <div style={{ height:1, background:'#F1F5F9', margin:'4px 0 14px' }} />
-
-            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-              {[
-                ['nome',     'Razão Social / Nome *'],
-                ['fantasia', 'Nome Fantasia'],
-                ['contato',  'Nome do Contato'],
-                ['whatsapp', 'WhatsApp'],
-                ['segmento', 'Segmento / Atividade'],
-              ].map(([k, l]) => (
-                <div key={k}>
-                  <label style={labelStyle}>{l}</label>
-                  <input value={form[k] || ''} onChange={e => setF(k, e.target.value)} style={inputStyle} />
-                </div>
-              ))}
-
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                <div>
-                  <label style={labelStyle}>Valor mensal estimado (R$)</label>
-                  <input type="number" value={form.valor_estimado || ''} onChange={e => setF('valor_estimado', e.target.value)}
-                    placeholder="0" style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>📅 Próximo follow-up</label>
-                  <input type="date" value={form.proximo_contato || ''} onChange={e => setF('proximo_contato', e.target.value)} style={inputStyle} />
-                </div>
-              </div>
-
+            <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:12 }}>
               <div>
-                <label style={labelStyle}>📝 Observações</label>
-                <textarea value={form.obs || ''} onChange={e => setF('obs', e.target.value)}
-                  placeholder="O que foi falado? Dores do cliente, próximos passos..."
-                  style={{ ...inputStyle, height:80, resize:'vertical' }} />
-              </div>
-
-              {modal === 'edit' && (
-                <div>
-                  <label style={labelStyle}>Etapa</label>
-                  <select value={form.etapa || 'novo'} onChange={e => setF('etapa', e.target.value)} style={inputStyle}>
-                    {ETAPAS.map(et => <option key={et.id} value={et.id}>{et.icon} {et.label}</option>)}
-                  </select>
+                <div style={{ fontWeight:700, fontSize:15, marginBottom:2 }}>
+                  {modal === 'edit' ? 'Editar lead' : 'Novo lead'}
                 </div>
-              )}
+                <div style={{ fontSize:11, color:'#94A3B8' }}>
+                  {modal === 'edit' ? 'Atualize os dados.' : 'Informe o CNPJ para buscar automaticamente, ou preencha manualmente.'}
+                </div>
+              </div>
+              <button onClick={closeModal} style={{ border:'none', background:'none', cursor:'pointer', fontSize:16, color:'#94A3B8', lineHeight:1, padding:4 }}>✕</button>
             </div>
 
-            {erro && (
-              <div style={{ marginTop:12, padding:'8px 12px', background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:8, fontSize:12, color:'#DC2626' }}>
-                {erro}
+            {/* Tabs — só no modo editar */}
+            {modal === 'edit' && (
+              <div style={{ display:'flex', gap:0, borderBottom:'1px solid #E2E8F0', marginBottom:16 }}>
+                {[['dados','📋 Dados'],['docs','📄 Documentos']].map(([k,l]) => (
+                  <button key={k} onClick={() => setModalAba(k)}
+                    style={{ padding:'6px 14px', border:'none', borderBottom:`2px solid ${modalAba===k?'#6366F1':'transparent'}`,
+                      background:'none', cursor:'pointer', fontSize:12, fontWeight:600,
+                      color: modalAba===k ? '#6366F1' : '#94A3B8' }}>
+                    {l}
+                  </button>
+                ))}
               </div>
             )}
 
-            <div style={{ display:'flex', gap:8, marginTop:16, justifyContent:'flex-end' }}>
-              <Btn onClick={closeModal}>Cancelar</Btn>
-              <Btn variant="primary" onClick={save} disabled={isSaving}>
-                {isSaving ? 'Salvando…' : modal === 'edit' ? 'Salvar' : 'Criar lead'}
-              </Btn>
-            </div>
+            {/* ── ABA DADOS ── */}
+            {modalAba === 'dados' && (
+              <>
+                <div style={{ marginBottom:14 }}>
+                  <label style={labelStyle}>CNPJ</label>
+                  <div style={{ display:'flex', gap:8 }}>
+                    <input value={form.cnpj || ''} onChange={e => { setCnpjErro(''); setF('cnpj', formatCNPJ(e.target.value)) }}
+                      onKeyDown={e => e.key === 'Enter' && buscarCNPJ()}
+                      placeholder="00.000.000/0001-00" style={{ ...inputStyle, flex:1, fontFamily:'monospace' }} />
+                    <button onClick={buscarCNPJ} disabled={cnpjBusy}
+                      style={{ padding:'8px 14px', borderRadius:8, border:'none', cursor:cnpjBusy?'not-allowed':'pointer',
+                        background:cnpjBusy?'#E2E8F0':'#6366F1', color:'#fff', fontSize:12, fontWeight:700, whiteSpace:'nowrap', flexShrink:0 }}>
+                      {cnpjBusy ? 'Buscando…' : '🔍 Buscar'}
+                    </button>
+                  </div>
+                  {cnpjErro && <div style={{ fontSize:11, color:'#EF4444', marginTop:4 }}>{cnpjErro}</div>}
+                </div>
+
+                <div style={{ height:1, background:'#F1F5F9', margin:'4px 0 14px' }} />
+
+                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                  {[
+                    ['nome',     'Razão Social / Nome *'],
+                    ['fantasia', 'Nome Fantasia'],
+                    ['contato',  'Nome do Contato'],
+                    ['whatsapp', 'WhatsApp'],
+                    ['segmento', 'Segmento / Atividade'],
+                  ].map(([k, l]) => (
+                    <div key={k}>
+                      <label style style={labelStyle}>{l}</label>
+                      <input value={form[k] || ''} onChange={e => setF(k, e.target.value)} style={inputStyle} />
+                    </div>
+                  ))}
+
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                    <div>
+                      <label style={labelStyle}>Valor mensal estimado (R$)</label>
+                      <input type="number" value={form.valor_estimado || ''} onChange={e => setF('valor_estimado', e.target.value)}
+                        placeholder="0" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>📅 Próximo follow-up</label>
+                      <input type="date" value={form.proximo_contato || ''} onChange={e => setF('proximo_contato', e.target.value)} style={inputStyle} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>📝 Observações</label>
+                    <textarea value={form.obs || ''} onChange={e => setF('obs', e.target.value)}
+                      placeholder="O que foi falado? Dores do cliente, próximos passos..."
+                      style={{ ...inputStyle, height:80, resize:'vertical' }} />
+                  </div>
+
+                  {modal === 'edit' && (
+                    <div>
+                      <label style={labelStyle}>Etapa</label>
+                      <select value={form.etapa || 'novo'} onChange={e => setF('etapa', e.target.value)} style={inputStyle}>
+                        {ETAPAS.map(et => <option key={et.id} value={et.id}>{et.icon} {et.label}</option>)}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                {erro && (
+                  <div style={{ marginTop:12, padding:'8px 12px', background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:8, fontSize:12, color:'#DC2626' }}>
+                    {erro}
+                  </div>
+                )}
+
+                <div style={{ display:'flex', gap:8, marginTop:16, justifyContent:'flex-end' }}>
+                  <Btn onClick={closeModal}>Cancelar</Btn>
+                  <Btn variant="primary" onClick={save} disabled={isSaving}>
+                    {isSaving ? 'Salvando…' : modal === 'edit' ? 'Salvar' : 'Criar lead'}
+                  </Btn>
+                </div>
+              </>
+            )}
+
+            {/* ── ABA DOCUMENTOS COMERCIAIS ── */}
+            {modalAba === 'docs' && (
+              <DocsComerciaisTab leadId={editId} />
+            )}
           </div>
         </div>
       )}

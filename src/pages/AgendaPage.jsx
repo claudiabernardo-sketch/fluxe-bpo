@@ -72,6 +72,8 @@ export default function AgendaPage() {
   const [fOperador,  setFOperador]  = useState('')
   const [fCategoria, setFCategoria] = useState('')
   const [fPrio,      setFPrio]      = useState('hoje') // 'hoje'|'atrasadas'|'aguardando'|'impedimento'
+  const [rotinasDone, setRotinasDone] = useState(new Set())
+  const toggleRotina = id => setRotinasDone(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
 
   // ── Filtros Kanban ────────────────────────────────────────────────────────
   const [kanbanPeriodo, setKanbanPeriodo] = useState('semana')
@@ -196,6 +198,28 @@ export default function AgendaPage() {
     return map
   }, [tasks, fCliente, fCategoria])
 
+  // Calendário: rotinas por dia (recorrências visuais)
+  const rotinasPorDia = useMemo(() => {
+    const map = {}
+    const hoje = new Date()
+    const ini  = startOfMonth(base), fim = endOfMonth(base)
+    for (let d = new Date(ini); d <= fim; d.setDate(d.getDate()+1)) {
+      const key    = fmtDate(d)
+      const jsDow  = d.getDay()
+      const dow    = jsDow === 0 ? 6 : jsDow - 1
+      const dom    = d.getDate()
+      const lista  = todasRotinas.filter(r => r.ativo &&
+        (!fCliente || r.cliente_id === fCliente) && (
+          r.tipo === 'diaria' ||
+          (r.tipo === 'semanal' && (r.dias_semana?.length ? r.dias_semana.includes(dow) : r.dia_semana === dow)) ||
+          (r.tipo === 'mensal'  && r.dia_mes === dom)
+        )
+      )
+      if (lista.length) map[key] = lista
+    }
+    return map
+  }, [todasRotinas, base, fCliente])
+
   const semanaBase = useMemo(() => startOfWeek(base), [base])
   const diasSemana = useMemo(() => Array.from({length:7},(_,i)=>addDays(semanaBase,i)), [semanaBase])
   const diasMes    = useMemo(() => {
@@ -304,27 +328,66 @@ export default function AgendaPage() {
           {/* ── ROTINAS DE HOJE ── */}
           {rotinasHoje.length > 0 && (
             <section style={{ background:'#F0FDF4', borderRadius:12, border:'1px solid #BBF7D0', overflow:'hidden', flexShrink:0 }}>
-              <div style={{ padding:'11px 16px', borderBottom:'1px solid #D1FAE5', display:'flex', alignItems:'center', gap:8 }}>
-                <span style={{ fontSize:14 }}>🔁</span>
-                <span style={{ fontSize:13, fontWeight:700, color:'#065F46', flex:1 }}>
+              <div style={{ padding:'10px 16px', display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ fontSize:13 }}>🔁</span>
+                <span style={{ fontSize:12, fontWeight:700, color:'#065F46', flex:1 }}>
                   Rotinas de Hoje
-                  <span style={{ marginLeft:6, fontSize:11, color:'#6EE7B7', fontWeight:400 }}>({rotinasHoje.length})</span>
+                  <span style={{ marginLeft:6, fontSize:11, color:'#6EE7B7', fontWeight:400 }}>
+                    {rotinasDone.size}/{rotinasHoje.length}
+                  </span>
                 </span>
-                <span style={{ fontSize:10, color:'#6EE7B7', fontWeight:600 }}>Recorrências automáticas</span>
+                {rotinasDone.size > 0 && (
+                  <button onClick={() => setRotinasDone(new Set())}
+                    style={{ fontSize:10, color:'#6EE7B7', background:'none', border:'none', cursor:'pointer', padding:'2px 6px' }}>
+                    limpar ✕
+                  </button>
+                )}
               </div>
-              <div style={{ padding:'10px 16px', display:'flex', flexWrap:'wrap', gap:8 }}>
+              {/* Barra de progresso */}
+              <div style={{ height:3, background:'#D1FAE5', margin:'0 0 0 0' }}>
+                <div style={{ height:'100%', background:'#16A34A', borderRadius:2,
+                  width: rotinasHoje.length ? `${Math.round(rotinasDone.size/rotinasHoje.length*100)}%` : '0%',
+                  transition:'width .3s' }} />
+              </div>
+              {/* Linha do tempo horizontal com scroll */}
+              <div style={{ overflowX:'auto', padding:'10px 16px', display:'flex', gap:8, alignItems:'center',
+                scrollbarWidth:'thin', scrollbarColor:'#BBF7D0 transparent' }}>
                 {rotinasHoje.map(r => {
                   const cl = clients.find(c => c.id === r.cliente_id)
                   const nomeCliente = cl ? (cl.fantasia || cl.razao_social) : '—'
+                  const nomeResp = cl?.usuarios?.nome
+                  const iniciais = nomeResp ? nomeResp.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase() : null
+                  const done = rotinasDone.has(r.id)
                   return (
-                    <div key={r.id} style={{ background:'#fff', border:'1px solid #BBF7D0', borderRadius:10, padding:'10px 14px', minWidth:200, flex:'1 1 200px' }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:2 }}>
-                        {r.hora && <span style={{ fontSize:11, fontWeight:700, color:'#16A34A' }}>{r.hora.slice(0,5)}</span>}
-                        <div style={{ fontSize:12, fontWeight:700, color:'#065F46' }}>{r.titulo}</div>
-                      </div>
-                      <div style={{ fontSize:11, color:'#047857', fontWeight:600 }}>{nomeCliente}</div>
-                      {r.observacao && <div style={{ fontSize:10, color:'#6EE7B7', marginTop:4 }}>{r.observacao}</div>}
-                    </div>
+                    <button key={r.id} onClick={() => toggleRotina(r.id)}
+                      title={`${nomeCliente}${nomeResp ? ' · ' + nomeResp : ''}${r.observacao ? '\n' + r.observacao : ''}`}
+                      style={{
+                        flexShrink:0, display:'flex', alignItems:'center', gap:6,
+                        background: done ? '#DCFCE7' : '#fff',
+                        border: done ? '1.5px solid #16A34A' : '1px solid #BBF7D0',
+                        borderRadius:20, padding:'5px 12px 5px 8px',
+                        cursor:'pointer', transition:'all .15s', whiteSpace:'nowrap',
+                        opacity: done ? 0.7 : 1,
+                      }}>
+                      <span style={{
+                        width:16, height:16, borderRadius:'50%', flexShrink:0,
+                        border: done ? 'none' : '1.5px solid #BBF7D0',
+                        background: done ? '#16A34A' : 'transparent',
+                        display:'flex', alignItems:'center', justifyContent:'center',
+                        fontSize:9, color:'#fff', fontWeight:700,
+                      }}>{done ? '✓' : ''}</span>
+                      {r.hora && <span style={{ fontSize:10, fontWeight:700, color:'#16A34A' }}>{r.hora.slice(0,5)}</span>}
+                      <span style={{ fontSize:11, fontWeight:600, color:'#065F46',
+                        textDecoration: done ? 'line-through' : 'none' }}>{r.titulo}</span>
+                      <span style={{ fontSize:10, color:'#6EE7B7', fontWeight:500 }}>· {nomeCliente}</span>
+                      {iniciais && (
+                        <span style={{
+                          width:18, height:18, borderRadius:'50%', background:'#6366F1',
+                          display:'flex', alignItems:'center', justifyContent:'center',
+                          fontSize:8, color:'#fff', fontWeight:700, flexShrink:0,
+                        }}>{iniciais}</span>
+                      )}
+                    </button>
                   )
                 })}
               </div>
@@ -651,6 +714,14 @@ export default function AgendaPage() {
                             color:'#334155', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.titulo}</div>
                         ))}
                         {dt.length>2 && <div style={{ fontSize:8, color:'#6366F1', fontWeight:700 }}>+{dt.length-2}</div>}
+                        {(rotinasPorDia[key]||[]).slice(0,2).map(r=>(
+                          <div key={r.id} style={{ fontSize:8, padding:'1px 4px', borderRadius:3, marginBottom:1,
+                            background:'#D1FAE5', borderLeft:'2px solid #16A34A',
+                            color:'#065F46', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                            🔁 {r.titulo}
+                          </div>
+                        ))}
+                        {(rotinasPorDia[key]||[]).length>2 && <div style={{ fontSize:8, color:'#16A34A', fontWeight:700 }}>+{(rotinasPorDia[key]||[]).length-2} rotina(s)</div>}
                       </div>
                     )
                   })}
@@ -680,8 +751,28 @@ export default function AgendaPage() {
                       </div>
                       <button onClick={()=>setDiaSelecionado(null)} style={{ border:'none', background:'none', cursor:'pointer', color:'#94A3B8', fontSize:18 }}>×</button>
                     </div>
+                    {/* Rotinas do dia selecionado */}
+                    {(rotinasPorDia[diaSelecionado]||[]).length > 0 && (
+                      <div style={{ marginBottom:10 }}>
+                        <div style={{ fontSize:9, fontWeight:700, color:'#15803D', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:5 }}>🔁 Rotinas do dia</div>
+                        {(rotinasPorDia[diaSelecionado]||[]).map(r => {
+                          const cl = clients.find(c=>c.id===r.cliente_id)
+                          return (
+                            <div key={r.id} style={{ background:'#F0FDF4', border:'1px solid #BBF7D0', borderLeft:'3px solid #16A34A', borderRadius:6, padding:'7px 10px', marginBottom:5 }}>
+                              <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+                                {r.hora && <span style={{ fontSize:10, fontWeight:700, color:'#16A34A' }}>{r.hora.slice(0,5)}</span>}
+                                <span style={{ fontSize:11, fontWeight:600, color:'#065F46' }}>{r.titulo}</span>
+                              </div>
+                              {cl && <div style={{ fontSize:9, color:'#6B7280', marginTop:2 }}>🏢 {cl.fantasia||cl.razao_social}</div>}
+                              {r.observacao && <div style={{ fontSize:9, color:'#6EE7B7', marginTop:2, fontStyle:'italic' }}>{r.observacao}</div>}
+                            </div>
+                          )
+                        })}
+                        <div style={{ borderTop:'1px solid #E2E8F0', margin:'8px 0' }} />
+                      </div>
+                    )}
                     {dt.length===0
-                      ? <div style={{ textAlign:'center', color:'#CBD5E1', fontSize:11, padding:'16px 0' }}>Nenhuma tarefa 🎉</div>
+                      ? <div style={{ textAlign:'center', color:'#CBD5E1', fontSize:11, padding:'8px 0' }}>Nenhuma tarefa 🎉</div>
                       : dt.map(t => {
                           const cl = clients.find(c=>c.id===t.cliente_id)
                           const dd = t.data_execucao||t.prazo

@@ -1,5 +1,5 @@
-import { useState, lazy, Suspense } from 'react'
-import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTarefaModelos, useClienteModelos, useVincularModelo, useDesvincularModelo, useAcessos, useSaveAcesso, useDeleteAcesso } from '../hooks/useData'
+import { useState, useEffect, lazy, Suspense } from 'react'
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useUpdateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTarefaModelos, useAcessos, useSaveAcesso, useDeleteAcesso, useUsuarios } from '../hooks/useData'
 import { useQueryClient } from '@tanstack/react-query'
 import { Card, CardHeader, Badge, Btn, Loader, EmptyState, fmt, fmtR } from '../components/ui'
 import { useAuthStore } from '../store/authStore'
@@ -40,6 +40,7 @@ function fmtCNPJ(v) {
 
 export default function ClientsPage() {
   const { data: clients = [], isLoading } = useClients()
+  const { data: usuarios = [] } = useUsuarios()
   const createClient = useCreateClient()
   const updateClient = useUpdateClient()
   const deleteClient = useDeleteClient()
@@ -53,9 +54,20 @@ export default function ClientsPage() {
   const [cnpjLoading, setCnpjLoading] = useState(false)
   const [cnpjError, setCnpjError] = useState('')
   const [selectedBancos, setSelectedBancos] = useState([])
-  const [tab, setTab] = useState('dados') // dados | financeiro | bancos | cofre | rotina | tarefas
-  const [configModeloId, setConfigModeloId] = useState(null) // id do cm sendo configurado
-  const [showAddModelo, setShowAddModelo] = useState(false)
+  const [tab, setTab] = useState('dados') // dados | financeiro | bancos | cofre | rotina
+
+  // Contrato assinado — upload/download
+  const [contratoUploading, setContratoUploading] = useState(false)
+  const [contratoErr, setContratoErr] = useState('')
+  const [contratoSignedUrl, setContratoSignedUrl] = useState(null)
+
+  // Gera URL assinada (30 dias) toda vez que o path do contrato muda
+  useEffect(() => {
+    setContratoSignedUrl(null)
+    if (!form.contrato_url) return
+    supabase.storage.from('documentos').createSignedUrl(form.contrato_url, 60 * 60 * 24 * 30)
+      .then(({ data }) => { if (data?.signedUrl) setContratoSignedUrl(data.signedUrl) })
+  }, [form.contrato_url])
 
   // Cofre (acessos) — escopado ao cliente aberto
   const canSeeSenhas = temPermissao('ver_senhas')
@@ -122,14 +134,15 @@ export default function ClientsPage() {
   // Rotinas
   const { data: rotinas = [] } = useRotinas(modal?.id)
   const createRotina  = useCreateRotina()
+  const updateRotina  = useUpdateRotina()
   const deleteRotina  = useDeleteRotina()
-  const { data: clienteModelos = [] } = useClienteModelos(modal?.mode === 'edit' ? modal?.id : null)
-  const vincularModelo    = useVincularModelo()
-  const desvincularModelo = useDesvincularModelo()
-  const { data: todosModelos = [] } = useTarefaModelos()
+
   const DIAS_SEMANA_R = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo']
   const [rotinaForm, setRotinaForm] = useState({ titulo:'', tipo:'semanal', dias_semana:[0], dia_mes:1, hora:'08:00', observacao:'' })
   const [rotinaErr,  setRotinaErr]  = useState('')
+  const [editandoRotina, setEditandoRotina] = useState(null)
+  const [rotinaEditForm, setRotinaEditForm] = useState({})
+  const [rotinaEditErr,  setRotinaEditErr]  = useState('')
 
   // Tarefas do cliente
   const { data: tarefasCliente = [] } = useTasks({ clientId: modal?.id })
@@ -196,43 +209,6 @@ export default function ClientsPage() {
     setTaskForm({ titulo:'', prazo:'', status:'aberta', prioridade:'media' })
   }
 
-  async function desvincularEExcluir(cm) {
-    const temTarefa = tarefasCliente.some(t => t.modelo_id === cm.modelo_id && t.status !== 'concluida')
-    const msg = temTarefa
-      ? 'Remover este modelo do escopo? A tarefa aberta criada por ele também será excluída.'
-      : 'Remover este modelo do escopo?'
-    if (!confirm(msg)) return
-    // Soft-delete tarefas abertas geradas por este modelo para este cliente
-    const alvo = tarefasCliente.filter(t => t.modelo_id === cm.modelo_id && t.status !== 'concluida')
-    for (const t of alvo) await deleteTask.mutateAsync(t.id)
-    desvincularModelo.mutate({ id: cm.id, clienteId: modal?.id })
-  }
-
-  async function vincularEAplicarModelo(modelo) {
-    try {
-      await vincularModelo.mutateAsync({ clienteId: modal?.id, modeloId: modelo.id })
-      // Modelos "pontuais" (vindos de Esteira) não esperam o gerador diário —
-      // criam a tarefa de verdade já no momento do vínculo, com checklist,
-      // e com data_execucao = hoje pra já aparecer em "Meu Dia".
-      if (modelo.recorrencia === 'unica') {
-        const tarefa = await createTask.mutateAsync({
-          titulo: modelo.titulo, categoria: modelo.categoria || null,
-          prioridade: modelo.prioridade || 'media', status: 'aberta',
-          cliente_id: modal.id, modelo_id: modelo.id,
-          data_execucao: new Date().toLocaleDateString('en-CA'),
-        })
-        if (modelo.checklist_items?.length && tarefa?.id) {
-          const items = modelo.checklist_items.map((texto, ordem) => ({
-            tarefa_id: tarefa.id, texto, ordem, empresa_id: empresa?.id
-          }))
-          await supabase.from('tarefa_checklists').insert(items)
-        }
-      }
-      setShowAddModelo(false)
-    } catch (err) {
-      alert('Não foi possível vincular o modelo: ' + (err?.message || 'erro desconhecido'))
-    }
-  }
 
   async function salvarRotina() {
     if (!rotinaForm.titulo.trim()) { setRotinaErr('Informe o título da rotina'); return }
@@ -250,6 +226,40 @@ export default function ClientsPage() {
       setRotinaForm({ titulo:'', tipo:'semanal', dias_semana:[0], dia_mes:1, hora:'08:00', observacao:'' })
     } catch (err) {
       setRotinaErr('Erro ao salvar: ' + (err?.message || 'erro desconhecido'))
+    }
+  }
+
+  async function salvarEdicaoRotina() {
+    if (!rotinaEditForm.titulo?.trim()) { setRotinaEditErr('Informe o título'); return }
+    setRotinaEditErr('')
+    try {
+      await updateRotina.mutateAsync({
+        id: editandoRotina,
+        titulo: rotinaEditForm.titulo,
+        hora: rotinaEditForm.hora,
+        observacao: rotinaEditForm.observacao || null,
+      })
+      setEditandoRotina(null)
+      setRotinaEditForm({})
+    } catch (err) {
+      setRotinaEditErr('Erro: ' + (err?.message || 'tente novamente'))
+    }
+  }
+
+  async function salvarEdicaoRotina() {
+    if (!rotinaEditForm.titulo?.trim()) { setRotinaEditErr('Informe o título'); return }
+    setRotinaEditErr('')
+    try {
+      await updateRotina.mutateAsync({
+        id: editandoRotina,
+        titulo: rotinaEditForm.titulo,
+        hora: rotinaEditForm.hora,
+        observacao: rotinaEditForm.observacao || null,
+      })
+      setEditandoRotina(null)
+      setRotinaEditForm({})
+    } catch (err) {
+      setRotinaEditErr('Erro: ' + (err?.message || 'tente novamente'))
     }
   }
 
@@ -286,7 +296,25 @@ export default function ClientsPage() {
     setCnpjError('')
   }
 
-  function close() { setModal(null); setForm({}); setSelectedBancos([]) }
+  function close() { setModal(null); setForm({}); setSelectedBancos([]); setContratoErr(''); setContratoSignedUrl(null) }
+
+  async function uploadContrato(file) {
+    if (!file || !modal?.id) return
+    setContratoUploading(true)
+    setContratoErr('')
+    try {
+      const ext = file.name.split('.').pop().toLowerCase()
+      const path = `${empresa?.id}/${modal.id}/contrato_${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('documentos').upload(path, file, { upsert: true })
+      if (upErr) throw upErr
+      await updateClient.mutateAsync({ id: modal.id, contrato_url: path })
+      setForm(f => ({ ...f, contrato_url: path }))
+    } catch (e) {
+      setContratoErr(e?.message || 'Erro ao fazer upload do contrato.')
+    } finally {
+      setContratoUploading(false)
+    }
+  }
 
   // Busca CNPJ na BrasilAPI
   async function buscarCNPJ() {
@@ -349,6 +377,9 @@ export default function ClientsPage() {
       inicio_contrato: form.inicio_contrato || null,
       software_erp:    form.software_erp    || null,
       responsavel_id:  form.responsavel_id  || null,
+      contrato_url:    form.contrato_url    || null,
+      status_operacional:   form.status_operacional   || 'em_configuracao',
+      operacao_iniciada_em: form.operacao_iniciada_em || null,
     }
     try {
       if (modal.mode === 'new') {
@@ -445,29 +476,31 @@ export default function ClientsPage() {
 
       {/* Modal */}
       {modal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}>
-          <div style={{ background:'var(--sur)', borderRadius:'var(--rx)', width:'100%', maxWidth:640, maxHeight:'90vh', display:'flex', flexDirection:'column', boxShadow:'var(--sh3)' }}>
-            {/* Modal header */}
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px', borderBottom:'1px solid var(--bo)' }}>
-              <span style={{ fontWeight:700, fontSize:15, color:'var(--tx)' }}>
-                {modal.mode==='new' ? 'Novo cliente' : 'Editar cliente'}
+        <div style={{ position:'fixed', inset:0, background:'var(--bg)', zIndex:1000, overflowY:'auto' }}>
+          <div style={{ maxWidth:980, margin:'0 auto', padding:'24px 24px 80px' }}>
+            {/* Page header */}
+            <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:24 }}>
+              <button onClick={close} style={{ border:'none', background:'none', cursor:'pointer', color:'var(--tx3)', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', gap:4, padding:'6px 10px', borderRadius:8, background:'var(--sur)' }}>
+                ← Voltar
+              </button>
+              <span style={{ fontWeight:800, fontSize:32, color:'var(--tx)', letterSpacing:'-1px' }}>
+                {modal.mode==='new' ? 'Novo cliente' : (form.fantasia || form.razao_social || 'Editar cliente')}
               </span>
-              <button onClick={close} style={{ border:'none', background:'none', cursor:'pointer', fontSize:20, color:'var(--tx3)' }}>×</button>
             </div>
 
             {/* Tabs */}
-            <div style={{ display:'flex', borderBottom:'1px solid var(--bo)', padding:'0 18px' }}>
-              {[['dados','📋 Dados'],['financeiro','💰 Financeiro'],['bancos','🏦 Bancos'],['cofre','🔐 Cofre'],['rotina','🔁 Rotina'],['tarefas','📦 Escopo']].map(([id, label]) => (
+            <div style={{ display:'flex', borderBottom:'1px solid var(--bo)', marginBottom:0 }}>
+              {[['dados','📋 Dados'],['financeiro','💰 Financeiro'],['bancos','🏦 Bancos'],['cofre','🔐 Cofre'],['rotina','🔁 Rotina']].map(([id, label]) => (
                 <button key={id} onClick={() => setTab(id)}
-                  style={{ padding:'8px 14px', border:'none', background:'transparent', cursor:'pointer', fontSize:11, fontWeight:600,
+                  style={{ padding:'10px 18px', border:'none', background:'transparent', cursor:'pointer', fontSize:14, fontWeight:600,
                     color: tab===id?'var(--br)':'var(--tx3)', borderBottom: tab===id?'2px solid var(--br)':'2px solid transparent', marginBottom:-1 }}>
                   {label}
                 </button>
               ))}
             </div>
 
-            {/* Modal body */}
-            <div style={{ padding:18, overflowY:'auto', flex:1 }}>
+            {/* Body */}
+            <div style={{ paddingTop:20 }}>
 
               {/* ABA DADOS */}
               {tab === 'dados' && (
@@ -517,6 +550,13 @@ export default function ClientsPage() {
                       <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>WhatsApp</label>
                       <input value={form.whatsapp||''} onChange={e=>setForm(f=>({...f,whatsapp:e.target.value}))} className="fi" placeholder="(11) 99999-0000" />
                     </div>
+                    <div>
+                      <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Responsável (equipe)</label>
+                      <select value={form.responsavel_id||''} onChange={e=>setForm(f=>({...f,responsavel_id:e.target.value||null}))} className="fi">
+                        <option value="">— Sem responsável —</option>
+                        {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome || u.email}</option>)}
+                      </select>
+                    </div>
                   </div>
 
                   {/* Endereço se buscou CNPJ */}
@@ -524,6 +564,62 @@ export default function ClientsPage() {
                     <div style={{ background:'var(--s2)', borderRadius:'var(--r)', padding:'10px 12px', fontSize:11, color:'var(--tx2)' }}>
                       <i className="fa-solid fa-location-dot" style={{ color:'var(--br)', marginRight:6 }}></i>
                       {form.logradouro && `${form.logradouro}, `}{form.municipio} — {form.uf} · CEP {form.cep}
+                    </div>
+                  )}
+
+                  {/* ── STATUS OPERACIONAL ── só em modo edição */}
+                  {modal?.mode === 'edit' && (
+                    <div style={{ borderTop:'1px solid var(--bo)', paddingTop:14, marginTop:2, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em' }}>Status operacional:</div>
+                      {form.status_operacional === 'operacional'
+                        ? <span style={{ fontSize:11, fontWeight:700, color:'#166534', background:'#DCFCE7', border:'1px solid #BBF7D0', borderRadius:6, padding:'3px 10px' }}>
+                            ✅ Operacional desde {form.operacao_iniciada_em || '—'}
+                          </span>
+                        : <>
+                            <span style={{ fontSize:11, color:'#92400E', background:'#FEF3C7', border:'1px solid #FDE68A', borderRadius:6, padding:'3px 10px', fontWeight:600 }}>
+                              ⚙️ {form.status_operacional === 'em_configuracao' ? 'Em configuração' : form.status_operacional}
+                            </span>
+                            <button className="btn gr" style={{ fontSize:11, padding:'4px 14px' }}
+                              onClick={() => setForm(f => ({ ...f, status_operacional:'operacional', operacao_iniciada_em: new Date().toISOString().slice(0,10) }))}>
+                              🚀 Iniciar Operação
+                            </button>
+                          </>
+                      }
+                    </div>
+                  )}
+
+                  {/* ── CONTRATO ASSINADO ── só em modo edição */}
+                  {modal?.mode === 'edit' && (
+                    <div style={{ borderTop:'1px solid var(--bo)', paddingTop:14, marginTop:2 }}>
+                      <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:8, textTransform:'uppercase', letterSpacing:'.07em' }}>📄 Contrato Assinado</label>
+                      {form.contrato_url ? (
+                        <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+                          {contratoSignedUrl
+                            ? <a href={contratoSignedUrl} target="_blank" rel="noreferrer"
+                                style={{ fontSize:12, color:'var(--br)', fontWeight:600, textDecoration:'none', display:'flex', alignItems:'center', gap:5, padding:'6px 12px', border:'1px solid var(--br)', borderRadius:'var(--r)', background:'var(--brl)' }}>
+                                📄 Visualizar / baixar contrato
+                              </a>
+                            : <span style={{ fontSize:12, color:'var(--tx3)' }}>Gerando link…</span>
+                          }
+                          <button className="btn bo" style={{ fontSize:11, padding:'5px 12px' }}
+                            onClick={() => document.getElementById('contrato-upload-input').click()}
+                            disabled={contratoUploading}>
+                            {contratoUploading ? '⏳ Enviando…' : '🔄 Substituir'}
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                          <button className="btn bo" style={{ fontSize:11, padding:'6px 14px' }}
+                            onClick={() => document.getElementById('contrato-upload-input').click()}
+                            disabled={contratoUploading}>
+                            {contratoUploading ? '⏳ Enviando…' : '📎 Anexar contrato assinado'}
+                          </button>
+                          <span style={{ fontSize:11, color:'var(--tx3)' }}>PDF ou imagem • máx. 10 MB</span>
+                        </div>
+                      )}
+                      <input id="contrato-upload-input" type="file" accept=".pdf,image/*" style={{ display:'none' }}
+                        onChange={e => { const f = e.target.files?.[0]; if (f) uploadContrato(f); e.target.value = '' }} />
+                      {contratoErr && <div style={{ fontSize:11, color:'var(--rdt)', marginTop:6 }}>{contratoErr}</div>}
                     </div>
                   )}
                 </div>
@@ -630,159 +726,7 @@ export default function ClientsPage() {
                 </div>
               )}
 
-              {/* ABA ESCOPO — tarefas vinculadas + avulsas */}
-              {tab === 'tarefas' && (
-                <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-                  {modal?.mode === 'new' ? (
-                    <div style={{ padding:'28px 16px', textAlign:'center', color:'var(--tx3)', fontSize:13 }}>
-                      Salve o cliente primeiro para adicionar tarefas.
-                    </div>
-                  ) : (
-                    <>
-                      {/* Tarefas abertas do cliente */}
-                      {tarefasCliente.length > 0 && (
-                        <div style={{ display:'flex', flexDirection:'column', gap:4, maxHeight:200, overflowY:'auto', marginBottom:4 }}>
-                          <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:4 }}>
-                            {tarefasCliente.length} tarefa{tarefasCliente.length!==1?'s':''} · detalhes em <strong>Tarefas</strong>
-                          </div>
-                          {tarefasCliente.map(t => {
-                            const concluida = t.status === 'concluida'
-                            return (
-                              <div key={t.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--s2)', opacity: concluida ? .5 : 1 }}>
-                                <div style={{ width:7, height:7, borderRadius:'50%', background: concluida ? '#22C55E' : '#6366F1', flexShrink:0 }} />
-                                <div style={{ flex:1, fontSize:12, color:'var(--tx)', textDecoration: concluida ? 'line-through' : 'none' }}>{t.titulo}</div>
-                                <button onClick={() => { if(confirm('Remover esta tarefa do escopo?')) deleteTask.mutate(t.id) }}
-                                  style={{ border:'none', background:'none', cursor:'pointer', color:'#CBD5E1', fontSize:16, lineHeight:1, flexShrink:0 }}>×</button>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-
-                      {/* Adicionar tarefa avulsa */}
-                      <div style={{ display:'flex', gap:8, marginBottom:12 }}>
-                        <input value={taskForm.titulo} onChange={e=>setTaskForm(f=>({...f,titulo:e.target.value}))}
-                          onKeyDown={e => e.key==='Enter' && salvarTarefa()}
-                          className="fi" placeholder="+ Nova tarefa avulsa..." style={{ flex:1 }} />
-                        <button className="btn bp bsm" onClick={salvarTarefa} disabled={createTask.isPending}>
-                          {createTask.isPending ? '…' : 'Add'}
-                        </button>
-                      </div>
-                      {taskErr && <div style={{ fontSize:11, color:'var(--rdt)', marginBottom:8 }}>{taskErr}</div>}
-
-                      <div style={{ borderTop:'1px solid var(--bo)', paddingTop:12 }} />
-
-                      {/* Modelos vinculados */}
-                      {clienteModelos.length > 0 ? (
-                        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-                          <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em' }}>
-                            {clienteModelos.length} modelo(s) vinculado(s)
-                          </div>
-                          {clienteModelos.map(cm => {
-                            const bancosConfig = cm.config?.bancos || []
-                            const isConfiguring = configModeloId === cm.id
-                            return (
-                              <div key={cm.id} style={{ border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--s2)' }}>
-                                <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px' }}>
-                                  <div style={{ flex:1 }}>
-                                    <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{cm.tarefa_modelos?.titulo}</div>
-                                    <div style={{ fontSize:10, color:'var(--tx3)', marginTop:2 }}>
-                                      {cm.tarefa_modelos?.categoria} · {cm.tarefa_modelos?.recorrencia}
-                                      {bancosConfig.length > 0 && (
-                                        <span style={{ color:'#6366F1', fontWeight:600 }}> · 🏦 {bancosConfig.join(', ')}</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <button onClick={() => setConfigModeloId(isConfiguring ? null : cm.id)}
-                                    title="Configurar bancos"
-                                    style={{ border:'1px solid var(--bo)', background: isConfiguring ? '#EEF2FF' : 'transparent', color: isConfiguring ? '#6366F1' : 'var(--tx3)', borderRadius:5, cursor:'pointer', fontSize:11, padding:'3px 8px' }}>
-                                    ⚙
-                                  </button>
-                                  <button onClick={() => desvincularEExcluir(cm)}
-                                    style={{ border:'none', background:'none', cursor:'pointer', color:'var(--tx3)', fontSize:18, lineHeight:1, padding:'4px' }}>×</button>
-                                </div>
-
-                                {isConfiguring && (
-                                  <div style={{ padding:'10px 12px', borderTop:'1px solid var(--bo)', background:'#F8FAFC' }}>
-                                    <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', marginBottom:8, textTransform:'uppercase', letterSpacing:'.06em' }}>
-                                      🏦 Selecione os bancos para este modelo
-                                    </div>
-                                    {(clients.find(c => c.id === modal?.id)?.bancos || []).length === 0 ? (
-                                      <div style={{ fontSize:11, color:'#94A3B8' }}>Nenhum banco cadastrado para este cliente. Adicione na aba Bancos.</div>
-                                    ) : (
-                                      <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                                        {(clients.find(c => c.id === modal?.id)?.bancos || []).map(banco => {
-                                          const sel = bancosConfig.includes(banco)
-                                          return (
-                                            <button key={banco} onClick={async () => {
-                                              const novos = sel ? bancosConfig.filter(b => b !== banco) : [...bancosConfig, banco]
-                                              await supabase.from('cliente_modelos').update({ config: { ...cm.config, bancos: novos } }).eq('id', cm.id)
-                                              queryClient.invalidateQueries({ queryKey: ['cliente_modelos', modal?.id] })
-                                            }}
-                                              style={{ padding:'4px 10px', borderRadius:99, fontSize:11, cursor:'pointer', fontWeight:600, border:'none',
-                                                background: sel ? '#6366F1' : '#E2E8F0',
-                                                color: sel ? '#fff' : '#475569' }}>
-                                              {sel ? '✓ ' : ''}{banco}
-                                            </button>
-                                          )
-                                        })}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      ) : (
-                        <div style={{ padding:'20px', textAlign:'center', color:'var(--tx3)', fontSize:12, border:'1px dashed var(--bo)', borderRadius:'var(--r)' }}>
-                          Nenhum modelo vinculado ainda.
-                        </div>
-                      )}
-
-                      {/* Adicionar modelo */}
-                      {!showAddModelo ? (
-                        <button onClick={() => setShowAddModelo(true)}
-                          style={{ padding:'9px 16px', borderRadius:'var(--r)', border:'1px dashed var(--bo)', background:'transparent', cursor:'pointer', fontSize:12, fontWeight:600, color:'var(--br)', width:'100%' }}>
-                          + Vincular modelo de tarefa
-                        </button>
-                      ) : (
-                        <div style={{ border:'1px solid var(--bo)', borderRadius:'var(--r)', padding:'14px', background:'var(--sur)' }}>
-                          <div style={{ fontSize:11, fontWeight:700, color:'var(--tx3)', marginBottom:10, textTransform:'uppercase' }}>Selecionar modelo</div>
-                          <div style={{ display:'flex', flexDirection:'column', gap:6, maxHeight:300, overflowY:'auto' }}>
-                            {todosModelos
-                              .filter(m => m.ativo && !clienteModelos.find(cm => cm.modelo_id === m.id))
-                              .filter(m => {
-                                if (!m.software_alvo) return true
-                                const softwareCliente = (clients.find(c=>c.id===modal?.id)?.software_contabil || '').trim().toLowerCase()
-                                return m.software_alvo.toLowerCase() === softwareCliente
-                              })
-                              .map(m => (
-                                <button key={m.id}
-                                  onClick={() => vincularEAplicarModelo(m)}
-                                  style={{ padding:'10px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', cursor:'pointer', background:'var(--s2)', textAlign:'left', width:'100%' }}
-                                  onMouseEnter={e => e.currentTarget.style.background='var(--s3)'}
-                                  onMouseLeave={e => e.currentTarget.style.background='var(--s2)'}>
-                                  <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{m.titulo}</div>
-                                  <div style={{ fontSize:10, color:'var(--tx3)', marginTop:2 }}>
-                                    {m.categoria} · {m.recorrencia === 'unica' ? '⚡ pontual (cria tarefa na hora)' : m.recorrencia}
-                                  </div>
-                                </button>
-                              ))}
-                            {todosModelos.filter(m => m.ativo && !clienteModelos.find(cm => cm.modelo_id === m.id)).length === 0 && (
-                              <div style={{ fontSize:12, color:'var(--tx3)', textAlign:'center', padding:'12px' }}>Todos os modelos já estão vinculados.</div>
-                            )}
-                          </div>
-                          <button onClick={() => setShowAddModelo(false)}
-                            style={{ marginTop:10, padding:'6px 14px', borderRadius:'var(--r)', border:'1px solid var(--bo)', background:'transparent', cursor:'pointer', fontSize:11, color:'var(--tx3)' }}>
-                            Fechar
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
+              {/* ABA ESCOPO — serviços contratados + geração de tarefas */}
 
               {/* ABA COFRE */}
               {tab === 'cofre' && (
@@ -885,44 +829,77 @@ export default function ClientsPage() {
                     />
 
                     {/* Rotinas em colunas por dia da semana */}
-                    {rotinas.length > 0 && (() => {
+                    {(() => {
                       const byHora = (a, b) => (a.hora||'').localeCompare(b.hora||'')
                       const diarias = [...rotinas].filter(r => r.tipo === 'diaria').sort(byHora)
-                      const mensais = [...rotinas].filter(r => r.tipo === 'mensal').sort(byHora)
-                      const diasComRotina = DIAS_SEMANA_R.map((label, idx) => ({
+                      const mensais = [...rotinas].filter(r => r.tipo === 'mensal').sort((a,b) => (a.dia_mes||1) - (b.dia_mes||1) || (a.hora||'').localeCompare(b.hora||''))
+                      // Todos os 7 dias sempre visíveis em sequência
+                      const todosDias = DIAS_SEMANA_R.map((label, idx) => ({
                         label,
                         rotinas: [...rotinas]
                           .filter(r => r.tipo === 'semanal' && (r.dias_semana?.includes(idx) || r.dia_semana === idx))
                           .sort(byHora),
-                      })).filter(g => g.rotinas.length > 0)
+                      }))
 
-                      const colStyle = { flex:'1 1 130px', minWidth:0 }
                       const diaHeader = { fontSize:10, fontWeight:800, color:'var(--br)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:6, paddingBottom:4, borderBottom:'2px solid var(--br)' }
-                      const rotinaItem = (r) => (
-                        <div key={r.id} style={{ display:'flex', alignItems:'flex-start', gap:6, padding:'5px 0', borderBottom:'1px solid var(--bo)' }}>
-                          <div style={{ fontSize:11, fontWeight:700, color:'var(--br)', flexShrink:0, minWidth:36 }}>{r.hora ? r.hora.slice(0,5) : '—'}</div>
-                          <div style={{ flex:1, fontSize:11, color:'var(--tx)', lineHeight:1.4 }}>
-                            {r.titulo}
-                            {r.observacao && <div style={{ fontSize:9, color:'var(--tx3)', fontStyle:'italic' }}>{r.observacao}</div>}
+
+                      const rotinaItem = (r) => {
+                        const isEditing = editandoRotina === r.id
+                        return (
+                          <div key={r.id}>
+                            {isEditing ? (
+                              <div style={{ background:'#EEF2FF', border:'1px solid #C7D2FE', borderRadius:6, padding:'8px', marginBottom:4 }}>
+                                <input value={rotinaEditForm.titulo||''} onChange={e=>setRotinaEditForm(f=>({...f,titulo:e.target.value}))}
+                                  className="fi" style={{ marginBottom:5, fontSize:11, padding:'4px 8px' }} autoFocus />
+                                <input type="time" value={rotinaEditForm.hora||'08:00'} onChange={e=>setRotinaEditForm(f=>({...f,hora:e.target.value}))}
+                                  className="fi" style={{ marginBottom:5, fontSize:11, padding:'4px 8px' }} />
+                                <input value={rotinaEditForm.observacao||''} onChange={e=>setRotinaEditForm(f=>({...f,observacao:e.target.value}))}
+                                  className="fi" placeholder="Observação..." style={{ marginBottom:5, fontSize:11, padding:'4px 8px' }} />
+                                {rotinaEditErr && <div style={{ fontSize:10, color:'var(--rdt)', marginBottom:4 }}>{rotinaEditErr}</div>}
+                                <div style={{ display:'flex', gap:5 }}>
+                                  <button className="btn bp" onClick={salvarEdicaoRotina} disabled={updateRotina.isPending}
+                                    style={{ fontSize:10, padding:'3px 10px' }}>
+                                    {updateRotina.isPending ? '…' : '✓ Salvar'}
+                                  </button>
+                                  <button onClick={() => { setEditandoRotina(null); setRotinaEditForm({}); setRotinaEditErr('') }}
+                                    style={{ fontSize:10, padding:'3px 8px', border:'1px solid var(--bo)', background:'transparent', borderRadius:4, cursor:'pointer', color:'var(--tx3)' }}>
+                                    Cancelar
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ display:'flex', alignItems:'flex-start', gap:4, padding:'5px 0', borderBottom:'1px solid var(--bo)' }}>
+                                <div style={{ fontSize:11, fontWeight:700, color:'var(--br)', flexShrink:0, minWidth:34 }}>{r.hora ? r.hora.slice(0,5) : '—'}</div>
+                                <div style={{ flex:1, fontSize:11, color:'var(--tx)', lineHeight:1.4, minWidth:0 }}>
+                                  {r.titulo}
+                                  {r.observacao && <div style={{ fontSize:9, color:'var(--tx3)', fontStyle:'italic' }}>{r.observacao}</div>}
+                                </div>
+                                <button
+                                  title="Editar"
+                                  onClick={() => { setEditandoRotina(r.id); setRotinaEditForm({ titulo:r.titulo, hora:r.hora||'08:00', observacao:r.observacao||'' }); setRotinaEditErr('') }}
+                                  style={{ border:'none', background:'none', cursor:'pointer', color:'#A5B4FC', fontSize:11, lineHeight:1, flexShrink:0, padding:'0 2px' }}>✏</button>
+                                <button onClick={() => { if(confirm('Remover esta rotina?')) deleteRotina.mutate(r.id) }}
+                                  style={{ border:'none', background:'none', cursor:'pointer', color:'#CBD5E1', fontSize:14, lineHeight:1, flexShrink:0, padding:0 }}>×</button>
+                              </div>
+                            )}
                           </div>
-                          <button onClick={() => { if(confirm('Remover?')) deleteRotina.mutate(r.id) }}
-                            style={{ border:'none', background:'none', cursor:'pointer', color:'#CBD5E1', fontSize:14, lineHeight:1, flexShrink:0, padding:0 }}>×</button>
-                        </div>
-                      )
+                        )
+                      }
 
                       return (
                         <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-                          {/* Dias da semana em colunas */}
-                          {diasComRotina.length > 0 && (
-                            <div style={{ display:'flex', gap:10, flexWrap:'wrap', alignItems:'flex-start' }}>
-                              {diasComRotina.map(g => (
-                                <div key={g.label} style={colStyle}>
-                                  <div style={diaHeader}>{g.label}</div>
-                                  {g.rotinas.map(rotinaItem)}
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                          {/* 7 dias em grid fixo, com scroll horizontal se necessário */}
+                          <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:8, overflowX:'auto', minWidth:0 }}>
+                            {todosDias.map(g => (
+                              <div key={g.label} style={{ minWidth:110 }}>
+                                <div style={diaHeader}>{g.label}</div>
+                                {g.rotinas.length === 0
+                                  ? <div style={{ fontSize:10, color:'var(--tx3)', fontStyle:'italic', padding:'4px 0' }}>—</div>
+                                  : g.rotinas.map(rotinaItem)
+                                }
+                              </div>
+                            ))}
+                          </div>
                           {/* Todo dia */}
                           {diarias.length > 0 && (
                             <div>
@@ -938,7 +915,7 @@ export default function ClientsPage() {
                                 <div key={r.id} style={{ display:'flex', alignItems:'flex-start', gap:6, padding:'5px 0', borderBottom:'1px solid var(--bo)' }}>
                                   <div style={{ fontSize:11, fontWeight:700, color:'var(--br)', flexShrink:0, minWidth:36 }}>dia {r.dia_mes}</div>
                                   <div style={{ flex:1, fontSize:11, color:'var(--tx)' }}>{r.titulo}</div>
-                                  <button onClick={() => { if(confirm('Remover?')) deleteRotina.mutate(r.id) }}
+                                  <button onClick={() => { if(confirm('Remover esta rotina?')) deleteRotina.mutate(r.id) }}
                                     style={{ border:'none', background:'none', cursor:'pointer', color:'#CBD5E1', fontSize:14, lineHeight:1, flexShrink:0 }}>×</button>
                                 </div>
                               ))}
@@ -1014,7 +991,7 @@ export default function ClientsPage() {
             </div>
 
             {/* Footer */}
-            <div style={{ padding:'12px 18px', borderTop:'1px solid var(--bo)', display:'flex', justifyContent:'flex-end', gap:8 }}>
+            <div style={{ position:'fixed', bottom:0, left:0, right:0, background:'var(--sur)', borderTop:'1px solid var(--bo)', padding:'12px 24px', display:'flex', justifyContent:'flex-end', gap:8, zIndex:10 }}>
               <button className="btn bo" onClick={close}>Fechar</button>
               {tab !== 'tarefas' && tab !== 'rotina' && tab !== 'cofre' && (
                 <button className="btn bp" onClick={save} disabled={createClient.isPending||updateClient.isPending}>

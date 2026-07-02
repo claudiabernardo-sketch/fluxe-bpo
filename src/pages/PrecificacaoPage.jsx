@@ -1,6 +1,7 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
+import { useCreateProposta, useUpdateProposta, usePropostas } from '../hooks/useData'
 
 // contratoDocx importa a lib 'docx' que é pesada — lazy pra não bloquear o carregamento
 const getContratoDocx = () => import('../utils/contratoDocx')
@@ -412,6 +413,18 @@ export default function PrecificacaoPage() {
   })
   const { empresa, profile } = useAuthStore()
 
+  // Proposta persistida
+  const createProposta   = useCreateProposta()
+  const updateProposta   = useUpdateProposta()
+  const { data: todasPropostas = [] } = usePropostas()
+  const propostaIdRef    = useRef(null)  // id da proposta salva nesta sessão
+  const leadIdRef        = useRef(null)  // lead_id vindo do CRM
+
+  // Modal de importação de proposta existente
+  const [importModal, setImportModal]     = useState(false)
+  const [importSearch, setImportSearch]   = useState('')
+  const [importStatus, setImportStatus]   = useState('')
+
   // FORM STATE
   const [d, setD] = useState(() => {
     // Se veio do CRM (botão Proposta), pré-preenche com dados do lead
@@ -419,12 +432,21 @@ export default function PrecificacaoPage() {
       const lead = JSON.parse(sessionStorage.getItem('crm_lead_precif') || 'null')
       if (lead) {
         sessionStorage.removeItem('crm_lead_precif')
+        // Captura lead_id para vincular a proposta
+        if (lead.id) leadIdRef.current = lead.id
         return {
-          nome: lead.nome || '', fat: '', cnpjs: 1, funcs: 0,
+          nome: lead.nome || lead.fantasia || '', fat: '', cnpjs: 1, funcs: 0,
           bancos: 1, capag: 0, carec: 0, mov: 0, nfs: 0, boletos: 0,
           sistcob: 0, cartao: 0, plat: 0, agend: 0,
           contab: 0, relat: 0, reuniao: 0, consult: 0, lembrete: 0,
           custoHora: '50', margem: 35, overhead: '600', regime: 6,
+          // Dados do cliente pré-preenchidos
+          _clienteNome: lead.nome || lead.fantasia || '',
+          _clienteCnpj: lead.cnpj || '',
+          _clienteContato: lead.contato || '',
+          _clienteEmail: lead.email || '',
+          _clienteWhatsapp: lead.whatsapp || '',
+          _clienteSegmento: lead.segmento || '',
         }
       }
     } catch {}
@@ -476,12 +498,48 @@ export default function PrecificacaoPage() {
     irPara(2)
   }, [d])
 
-  const irParaEscopo = () => {
+  const irParaEscopo = async () => {
     if (!valorProposta || parseFloat(valorProposta) <= 0) {
       alert('Informe o valor da proposta antes de gerar o escopo.')
       return
     }
+    // Salva proposta no banco na primeira vez que chega no passo 5
+    if (!propostaIdRef.current) {
+      try {
+        const proposta = await createProposta.mutateAsync({
+          lead_id: leadIdRef.current || undefined,
+          status: 'rascunho',
+          valor_mensal: parseFloat(valorProposta),
+          dados_cliente: {
+            nome: d._clienteNome || d.nome || '',
+            cnpj: d._clienteCnpj || '',
+            contato: d._clienteContato || '',
+            email: d._clienteEmail || '',
+            whatsapp: d._clienteWhatsapp || '',
+            segmento: d._clienteSegmento || '',
+          },
+          dados_calculo: { d, calc, valorProposta },
+        })
+        propostaIdRef.current = proposta.id
+      } catch (e) {
+        console.error('Erro ao salvar proposta:', e)
+        // Não bloqueia o fluxo — continua mesmo sem salvar
+      }
+    }
     irPara(5)
+  }
+
+  // Importa dados de uma proposta existente → restaura form e vai pro passo 4
+  const importarDeProposta = (proposta) => {
+    const dc = proposta.dados_calculo || {}
+    if (dc.d) setD(dc.d)
+    if (dc.calc) setCalc(dc.calc)
+    if (dc.valorProposta) setValorProposta(String(dc.valorProposta))
+    propostaIdRef.current = null  // cria nova proposta ao salvar (não sobrescreve)
+    setImportModal(false)
+    setImportSearch('')
+    setImportStatus('')
+    irPara(dc.calc ? 4 : 1)  // pula para Decisão se já tiver cálculo
   }
 
   const avaliarProposta = (v) => {
@@ -532,6 +590,20 @@ export default function PrecificacaoPage() {
         {/* ══ ETAPA 1: DIAGNÓSTICO ══ */}
         {etapa === 1 && (
           <div>
+            {/* Banner: importar proposta existente */}
+            {todasPropostas.length > 0 && (
+              <div style={{ background:'#EEF2FF', border:'1px solid #C7D2FE', borderRadius:10, padding:'10px 16px', marginBottom:16, display:'flex', alignItems:'center', gap:12 }}>
+                <span style={{ fontSize:13 }}>📋</span>
+                <div style={{ flex:1, fontSize:12, color:'#3730A3' }}>
+                  Você tem <strong>{todasPropostas.length}</strong> proposta{todasPropostas.length > 1 ? 's' : ''} salva{todasPropostas.length > 1 ? 's' : ''}. Quer reutilizar dados de uma existente?
+                </div>
+                <button onClick={() => setImportModal(true)}
+                  style={{ padding:'5px 14px', border:'1px solid #6366F1', borderRadius:7, background:'#6366F1', color:'#fff', fontSize:11, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
+                  Importar proposta
+                </button>
+              </div>
+            )}
+
             <div className="prec-card">
               <div className="prec-card-num">Etapa 01</div>
               <div className="prec-card-title">Diagnóstico do cliente</div>
@@ -1071,7 +1143,16 @@ export default function PrecificacaoPage() {
                 ].filter(l => l !== undefined).join('\n')
                 navigator.clipboard.writeText(dados).then(() => alert('✓ Dados copiados! Cole no seu template do Canva.'))
               }}>🎨 Abrir no Canva</button>
-              <button className="prec-btn prec-btn-primary" onClick={() => irPara(6)}>Gerar contrato →</button>
+              <button className="prec-btn prec-btn-primary" onClick={() => {
+                // Pré-preenche dados do cliente no formulário de contrato
+                setContratoForm(f => ({
+                  ...f,
+                  clienteNome: f.clienteNome || d._clienteNome || calc.d.nome || '',
+                  clienteCnpj: f.clienteCnpj || d._clienteCnpj || '',
+                  clienteRep: f.clienteRep || d._clienteContato || '',
+                }))
+                irPara(6)
+              }}>Gerar contrato →</button>
             </div>
           </div>
         )}
@@ -1193,7 +1274,21 @@ export default function PrecificacaoPage() {
 
                 <div className="prec-btn-row">
                   <button className="prec-btn prec-btn-ghost" onClick={() => irPara(5)}>← Voltar</button>
-                  <button className="prec-btn prec-btn-primary" onClick={() => setContratoGerado(true)}>Gerar contrato →</button>
+                  <button className="prec-btn prec-btn-primary" onClick={async () => {
+                    setContratoGerado(true)
+                    // Persiste dados do contrato na proposta salva
+                    if (propostaIdRef.current) {
+                      try {
+                        await updateProposta.mutateAsync({
+                          id: propostaIdRef.current,
+                          contrato_dados: contratoForm,
+                          status: 'enviada',
+                        })
+                      } catch (e) {
+                        console.error('Erro ao atualizar proposta com contrato:', e)
+                      }
+                    }
+                  }}>Gerar contrato →</button>
                 </div>
               </div>
             )
@@ -1322,7 +1417,7 @@ export default function PrecificacaoPage() {
                 <div className="ctr-assin">
                   <div className="ctr-assin-bl">
                     <div style={{fontWeight:600,fontSize:12}}>{repEmp}</div>
-                    <div style={{fontSize:11,color:'#6A6760'}}>{cargoRep} — CPF: {cpfRep}</div>
+                    <div style={{fontSize:11,color:'#6A6760'}}>{cargoRep} · CPF: {cpfRep}</div>
                     <div style={{fontSize:11,color:'#6A6760'}}>{nomeEmp} — CONTRATADA</div>
                   </div>
                   <div className="ctr-assin-bl">
@@ -1392,6 +1487,73 @@ export default function PrecificacaoPage() {
         })()}
 
       </div>
+
+      {/* ══ MODAL: IMPORTAR PROPOSTA EXISTENTE ══ */}
+      {importModal && (() => {
+        const fmtV = (v) => v != null ? Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}) : '—'
+        const fmtD = (d) => d ? new Date(d).toLocaleDateString('pt-BR') : '—'
+        const STATUS_LABEL = {
+          rascunho:'Rascunho', enviada:'Enviada', em_negociacao:'Em negociação',
+          aprovada:'Aprovada', rejeitada:'Rejeitada', expirada:'Expirada', cancelada:'Cancelada'
+        }
+        const filtradas = todasPropostas.filter(p => {
+          const s = importSearch.toLowerCase()
+          const matchBusca = !s ||
+            (p.dados_cliente?.nome || '').toLowerCase().includes(s) ||
+            (p.dados_cliente?.cnpj || '').includes(s) ||
+            String(p.numero).includes(s)
+          const matchStatus = !importStatus || p.status === importStatus
+          return matchBusca && matchStatus
+        })
+        return (
+          <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:2000, padding:16 }}>
+            <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:580, maxHeight:'85vh', display:'flex', flexDirection:'column', padding:24 }}>
+              <div style={{ display:'flex', alignItems:'center', marginBottom:16 }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:700, fontSize:15 }}>Importar proposta existente</div>
+                  <div style={{ fontSize:11, color:'var(--ptext3)', marginTop:2 }}>Selecione uma proposta para pré-carregar os dados no formulário.</div>
+                </div>
+                <button onClick={() => setImportModal(false)} style={{ border:'none', background:'none', cursor:'pointer', fontSize:18, color:'var(--ptext3)', padding:4 }}>✕</button>
+              </div>
+              <div style={{ display:'flex', gap:8, marginBottom:14 }}>
+                <input value={importSearch} onChange={e => setImportSearch(e.target.value)}
+                  placeholder="Buscar por empresa, CNPJ ou número..." className="prec-input" style={{ flex:1 }} />
+                <select value={importStatus} onChange={e => setImportStatus(e.target.value)} className="prec-select" style={{ width:150 }}>
+                  <option value="">Todos os status</option>
+                  {Object.entries(STATUS_LABEL).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </div>
+              <div style={{ flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:8 }}>
+                {filtradas.length === 0 && (
+                  <div style={{ textAlign:'center', padding:'32px 0', color:'var(--ptext3)', fontSize:13 }}>Nenhuma proposta encontrada.</div>
+                )}
+                {filtradas.map(p => {
+                  const st = { rascunho:'#94A3B8', enviada:'#6366F1', em_negociacao:'#F59E0B', aprovada:'#22C55E', rejeitada:'#EF4444', expirada:'#94A3B8', cancelada:'#DC2626' }[p.status] || '#94A3B8'
+                  return (
+                    <div key={p.id} style={{ border:'1px solid var(--pborder)', borderRadius:10, padding:'12px 14px', display:'flex', alignItems:'center', gap:10 }}>
+                      <span style={{ fontFamily:'DM Mono,monospace', fontSize:10, color:'var(--ptext3)', flexShrink:0 }}>#{String(p.numero).padStart(6,'0')}</span>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontWeight:600, fontSize:13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                          {p.dados_cliente?.nome || '(sem nome)'}
+                        </div>
+                        <div style={{ fontSize:11, color:'var(--ptext3)' }}>{fmtD(p.criado_em)} · {fmtV(p.valor_mensal)}/mês</div>
+                      </div>
+                      <span style={{ padding:'2px 8px', borderRadius:99, fontSize:10, fontWeight:700, background:st+'22', color:st, flexShrink:0 }}>
+                        {STATUS_LABEL[p.status] || p.status}
+                      </span>
+                      <button onClick={() => importarDeProposta(p)}
+                        style={{ padding:'5px 14px', border:'none', borderRadius:7, background:'var(--pg)', color:'#fff', fontSize:11, fontWeight:700, cursor:'pointer', flexShrink:0 }}>
+                        Selecionar
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
     </>
   )
 }
