@@ -247,7 +247,7 @@ export default function ConfigPage() {
   const [saveError, setSaveError] = useState('')
   const [tab, setTab] = useState('empresa')
 
-  const [empForm, setEmpForm] = useState({ nome:'', email:'', telefone:'', cnpj:'', site:'', slogan:'', cor_primaria:'#6366F1', cor_secundaria:'#8B5CF6', fonte:'Inter', logo_url:'' })
+  const [empForm, setEmpForm] = useState({ nome:'', email:'', telefone:'', cnpj:'', site:'', slogan:'', cor_primaria:'#6366F1', cor_secundaria:'#8B5CF6', fonte:'Inter', logo_url:'', autentique_token:'' })
   const [opForm, setOpForm] = useState({ custoHora:35, fechamentoDia:5, nfDia:1, reuniaoDia:10 })
   const { data: feriados = [] } = useFeriados()
   const createFeriado = useCreateFeriado()
@@ -446,7 +446,7 @@ export default function ConfigPage() {
 
   useEffect(() => {
     if (empresa) {
-      setEmpForm({ nome: empresa.nome||'', email: empresa.email||'', telefone: empresa.telefone||'', cnpj: empresa.cnpj||'', site: empresa.site||'', slogan: empresa.slogan||'', cor_primaria: empresa.cor_primaria||'#6366F1', cor_secundaria: empresa.cor_secundaria||'#8B5CF6', fonte: empresa.fonte||'Inter', logo_url: empresa.logo_url||'' })
+      setEmpForm({ nome: empresa.nome||'', email: empresa.email||'', telefone: empresa.telefone||'', cnpj: empresa.cnpj||'', site: empresa.site||'', slogan: empresa.slogan||'', cor_primaria: empresa.cor_primaria||'#6366F1', cor_secundaria: empresa.cor_secundaria||'#8B5CF6', fonte: empresa.fonte||'Inter', logo_url: empresa.logo_url||'', autentique_token: empresa.autentique_token||'' })
       if (empresa.config) {
         try { setOpForm(o => ({ ...o, ...empresa.config })) } catch{}
         try { if (empresa.config.proposta) setPropForm(o => ({ ...o, ...empresa.config.proposta })) } catch{}
@@ -465,6 +465,7 @@ export default function ConfigPage() {
         cor_secundaria: empForm.cor_secundaria || '#8B5CF6',
         fonte: empForm.fonte || 'Inter',
         logo_url: empForm.logo_url || null,
+        autentique_token: empForm.autentique_token || null,
       }).eq('id', empresa.id)
       if (error) throw error
       setSaved(true); setTimeout(() => setSaved(false), 2000)
@@ -509,7 +510,7 @@ export default function ConfigPage() {
 
       {/* Tabs */}
       <div style={{ display:'flex', gap:4, marginBottom:18, borderBottom:'1px solid #E2E8F0', paddingBottom:0 }}>
-        {[['empresa','🏢 Empresa'],['equipe','👥 Equipe'],['custoHora','💰 Custo/Hora'],['operacional','⚙️ Operacional'],['seguranca','🔐 Segurança'],...(profile?.perfil==='admin'?[['plano','💳 Meu Plano']]:[]  )].map(([id, label]) => (
+        {[['empresa','🏢 Empresa'],['equipe','👥 Equipe'],['custoHora','💰 Custo/Hora'],['operacional','⚙️ Operacional'],['integracoes','🔗 Integrações'],['seguranca','🔐 Segurança'],...(profile?.perfil==='admin'?[['plano','💳 Meu Plano']]:[]  )].map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{ padding:'8px 16px', border:'none', background:'transparent', cursor:'pointer', fontSize:12, fontWeight:600, color: tab===id?'#6366F1':'#94A3B8', borderBottom: tab===id?'2px solid #6366F1':'2px solid transparent', marginBottom:-1 }}>
             {label}
           </button>
@@ -904,6 +905,45 @@ export default function ConfigPage() {
       )}
 
       {/* ABA MEU PLANO — só admin */}
+      {tab === 'integracoes' && (
+        <div style={{ maxWidth:600 }}>
+          <div style={{ fontWeight:700, fontSize:15, marginBottom:4 }}>🔗 Integrações</div>
+          <div style={{ fontSize:12, color:'#64748B', marginBottom:20 }}>Conecte serviços externos ao Fluxe BPO.</div>
+
+          {/* Autentique */}
+          <div style={{ border:'1px solid #E2E8F0', borderRadius:12, padding:20, marginBottom:16 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+              <span style={{ fontSize:20 }}>✍️</span>
+              <div>
+                <div style={{ fontWeight:700, fontSize:13 }}>Autentique — Assinatura Digital</div>
+                <div style={{ fontSize:11, color:'#64748B' }}>Envie contratos para assinatura eletrônica diretamente pelo Fluxe</div>
+              </div>
+              {empForm.autentique_token
+                ? <span style={{ marginLeft:'auto', background:'#DCFCE7', color:'#16A34A', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20 }}>✓ Conectado</span>
+                : <span style={{ marginLeft:'auto', background:'#FEF3C7', color:'#D97706', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20 }}>Não configurado</span>
+              }
+            </div>
+            <div style={{ fontSize:11, color:'#64748B', marginBottom:12, lineHeight:1.6, background:'#F8FAFC', borderRadius:8, padding:'10px 12px' }}>
+              <strong>Como configurar:</strong><br/>
+              1. Acesse <a href="https://autentique.com.br" target="_blank" rel="noopener noreferrer" style={{ color:'#6366F1' }}>autentique.com.br</a> e crie uma conta gratuita<br/>
+              2. No painel do Autentique, vá em <strong>Configurações → Integrações → API</strong><br/>
+              3. Copie o token e cole no campo abaixo<br/>
+              4. Clique em <strong>Salvar dados</strong>
+            </div>
+            <label style={{ fontSize:11, fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>Token da API</label>
+            <input
+              type="password"
+              value={empForm.autentique_token||''}
+              onChange={e => setEmpForm(f => ({ ...f, autentique_token: e.target.value }))}
+              placeholder="Cole aqui o token do Autentique..."
+              style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box' }}
+            />
+          </div>
+
+          <Btn variant="primary" onClick={salvarEmpresa}>Salvar dados</Btn>
+        </div>
+      )}
+
       {tab === 'plano' && profile?.perfil === 'admin' && (() => {
         const plano = empresa?.plano || 'trial'
         const expira = empresa?.trial_expira_em ? new Date(empresa.trial_expira_em) : null

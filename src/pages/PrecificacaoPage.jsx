@@ -404,6 +404,14 @@ export default function PrecificacaoPage() {
   const [acadAberto, setAcadAberto] = useState(null)
   const [contratoGerado, setContratoGerado] = useState(false)
   const [baixandoDocx, setBaixandoDocx] = useState(false)
+  const [enviandoAssinatura, setEnviandoAssinatura] = useState(false)
+  const [assinaturaEnviada, setAssinaturaEnviada] = useState(null) // { link_bpo, link_cliente }
+  const [emailCliente, setEmailCliente] = useState('')
+  const [setupModal, setSetupModal] = useState(false)
+  const [setupToken, setSetupToken] = useState('')
+  const [setupStep, setSetupStep] = useState(1)
+  const [setupTesting, setSetupTesting] = useState(false)
+  const [setupStatus, setSetupStatus] = useState(null) // { ok, msg }
   const [contratoForm, setContratoForm] = useState({
     indiceReajuste: 'IGPM/FGV',
     diaVencimento: '05',
@@ -536,6 +544,7 @@ export default function PrecificacaoPage() {
     if (dc.calc) setCalc(dc.calc)
     if (dc.valorProposta) setValorProposta(String(dc.valorProposta))
     propostaIdRef.current = null  // cria nova proposta ao salvar (não sobrescreve)
+    if (proposta.dados_calculo?.d?._clienteEmail) setEmailCliente(proposta.dados_calculo.d._clienteEmail)
     setImportModal(false)
     setImportSearch('')
     setImportStatus('')
@@ -563,10 +572,104 @@ export default function PrecificacaoPage() {
 
   const hoje = new Date().toLocaleDateString('pt-BR')
 
+  // Salvar token do Autentique direto do modal
+  async function salvarTokenAutentique() {
+    if (!setupToken.trim()) return
+    setSetupTesting(true)
+    setSetupStatus(null)
+    try {
+      const { error } = await supabase.from('empresas').update({ autentique_token: setupToken.trim() }).eq('id', empresa.id)
+      if (error) throw error
+      const resp = await supabase.functions.invoke('autentique-sign', { body: { action: 'test' } })
+      if (resp.data?.error) throw new Error(resp.data.error)
+      setSetupStatus({ ok: true, msg: `✅ Conectado! Conta: ${resp.data?.conta || 'OK'}` })
+      setTimeout(() => { setSetupModal(false); window.location.reload() }, 1800)
+    } catch(e) {
+      setSetupStatus({ ok: false, msg: '❌ ' + e.message })
+    } finally {
+      setSetupTesting(false)
+    }
+  }
+
   // ── RENDER ──────────────────────────────────────────────────
   return (
     <>
       <style>{CSS}</style>
+
+      {/* Modal de setup do Autentique */}
+      {setupModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+          <div style={{ background:'#fff', borderRadius:16, padding:28, maxWidth:480, width:'100%', boxShadow:'0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+              <div>
+                <div style={{ fontWeight:800, fontSize:16 }}>✍️ Configurar Assinatura Digital</div>
+                <div style={{ fontSize:12, color:'#64748B', marginTop:2 }}>Autentique — gratuito até 5 contratos/mês</div>
+              </div>
+              <button onClick={() => setSetupModal(false)} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'#94A3B8' }}>✕</button>
+            </div>
+            <div style={{ display:'flex', gap:6, marginBottom:20 }}>
+              {[1,2,3].map(s => (
+                <div key={s} style={{ flex:1, height:4, borderRadius:4, background: s <= setupStep ? '#6366F1' : '#E2E8F0', cursor:'pointer', transition:'background .2s' }} onClick={() => setSetupStep(s)} />
+              ))}
+            </div>
+            {setupStep === 1 && (
+              <div>
+                <div style={{ fontWeight:700, marginBottom:8 }}>Passo 1 — Crie sua conta</div>
+                <div style={{ fontSize:13, color:'#475569', lineHeight:1.7, marginBottom:16 }}>
+                  Acesse <strong>autentique.com.br</strong> e crie uma conta gratuita com o e-mail da sua empresa.
+                </div>
+                <a href="https://autentique.com.br" target="_blank" rel="noopener noreferrer"
+                  style={{ display:'block', textAlign:'center', padding:'10px', background:'#6366F1', color:'#fff', borderRadius:8, fontWeight:700, fontSize:13, textDecoration:'none', marginBottom:12 }}>
+                  Abrir Autentique →
+                </a>
+                <button onClick={() => setSetupStep(2)} style={{ width:'100%', padding:'10px', background:'#F1F5F9', border:'none', borderRadius:8, fontWeight:600, fontSize:13, cursor:'pointer' }}>
+                  Já tenho conta → Próximo
+                </button>
+              </div>
+            )}
+            {setupStep === 2 && (
+              <div>
+                <div style={{ fontWeight:700, marginBottom:8 }}>Passo 2 — Copie seu token</div>
+                <div style={{ fontSize:13, color:'#475569', lineHeight:1.7, marginBottom:12 }}>
+                  No painel do Autentique:<br/>
+                  <strong>Configurações → Desenvolvedor → Acesso a API</strong><br/><br/>
+                  Copie o token que aparece na tela.
+                </div>
+                <div style={{ background:'#F8FAFC', borderRadius:8, padding:'10px 14px', fontSize:12, color:'#64748B', marginBottom:16, border:'1px solid #E2E8F0' }}>
+                  💡 O token tem cerca de 64 caracteres.
+                </div>
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={() => setSetupStep(1)} style={{ flex:1, padding:'10px', background:'#F1F5F9', border:'none', borderRadius:8, fontWeight:600, fontSize:13, cursor:'pointer' }}>← Voltar</button>
+                  <button onClick={() => setSetupStep(3)} style={{ flex:2, padding:'10px', background:'#6366F1', color:'#fff', border:'none', borderRadius:8, fontWeight:700, fontSize:13, cursor:'pointer' }}>Tenho o token →</button>
+                </div>
+              </div>
+            )}
+            {setupStep === 3 && (
+              <div>
+                <div style={{ fontWeight:700, marginBottom:8 }}>Passo 3 — Cole e ative</div>
+                <div style={{ fontSize:13, color:'#475569', marginBottom:10 }}>Cole o token do Autentique abaixo:</div>
+                <input type="text" value={setupToken} onChange={e => { setSetupToken(e.target.value); setSetupStatus(null) }}
+                  placeholder="Cole aqui o token..."
+                  style={{ width:'100%', padding:'10px 12px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', marginBottom:10, boxSizing:'border-box' }}
+                />
+                {setupStatus && (
+                  <div style={{ padding:'8px 12px', borderRadius:8, fontSize:12, marginBottom:10, background: setupStatus.ok ? '#F0FDF4' : '#FEF2F2', color: setupStatus.ok ? '#16A34A' : '#DC2626' }}>
+                    {setupStatus.msg}
+                  </div>
+                )}
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={() => setSetupStep(2)} style={{ flex:1, padding:'10px', background:'#F1F5F9', border:'none', borderRadius:8, fontWeight:600, fontSize:13, cursor:'pointer' }}>← Voltar</button>
+                  <button onClick={salvarTokenAutentique} disabled={setupTesting || !setupToken.trim()}
+                    style={{ flex:2, padding:'10px', background: setupToken.trim() ? '#6366F1' : '#E2E8F0', color: setupToken.trim() ? '#fff' : '#94A3B8', border:'none', borderRadius:8, fontWeight:700, fontSize:13, cursor: setupToken.trim() ? 'pointer' : 'not-allowed' }}>
+                    {setupTesting ? '⏳ Verificando...' : '✅ Salvar e ativar'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="prec-root">
 
         {/* PAGE TITLE */}
@@ -1445,6 +1548,68 @@ export default function PrecificacaoPage() {
                     }
                   }}
                 >{baixandoDocx ? '⏳ Gerando...' : '⬇ Baixar Word'}</button>
+
+                {/* Botão Autentique */}
+                {!assinaturaEnviada ? (
+                  <div style={{ display:'flex', flexDirection:'column', gap:6, minWidth:240 }}>
+                    <input
+                      type="email"
+                      value={emailCliente}
+                      onChange={e => setEmailCliente(e.target.value)}
+                      placeholder="E-mail do cliente para assinar..."
+                      style={{ padding:'7px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'inherit' }}
+                    />
+                    <button
+                      className="prec-btn prec-btn-primary"
+                      disabled={enviandoAssinatura || !emailCliente}
+                      onClick={async () => {
+                        if (!emailCliente) return alert('Informe o e-mail do cliente.')
+                        // Verifica se token está configurado
+                        if (!empresa?.autentique_token) {
+                          setSetupModal(true)
+                          setSetupStep(1)
+                          setSetupStatus(null)
+                          return
+                        }
+                        setEnviandoAssinatura(true)
+                        try {
+                          const { gerarContratoDocx } = await getContratoDocx()
+                          const blob = await gerarContratoDocx({ calc, contratoForm, empresa, valorProposta })
+                          const arrayBuffer = await blob.arrayBuffer()
+                          const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+                          const { data: { session } } = await supabase.auth.getSession()
+                          const resp = await supabase.functions.invoke('autentique-sign', {
+                            body: {
+                              docx_base64: base64,
+                              filename: `Contrato_${calc?.d?.nome || 'cliente'}.docx`,
+                              cliente_nome: contratoForm.clienteNome || calc?.d?.nome || '',
+                              cliente_email: emailCliente,
+                              proposta_id: propostaIdRef.current || null,
+                            },
+                          })
+                          if (resp.error) throw new Error(resp.error.message)
+                          if (resp.data?.error) throw new Error(resp.data.error)
+                          setAssinaturaEnviada(resp.data)
+                        } catch (e) {
+                          alert('Erro ao enviar: ' + e.message)
+                        } finally {
+                          setEnviandoAssinatura(false)
+                        }
+                      }}
+                    >{enviandoAssinatura ? '⏳ Enviando...' : '✍️ Enviar para assinatura'}</button>
+                  </div>
+                ) : (
+                  <div style={{ background:'#F0FDF4', border:'1px solid #86EFAC', borderRadius:8, padding:'10px 14px', fontSize:12 }}>
+                    <div style={{ fontWeight:700, color:'#16A34A', marginBottom:6 }}>✅ Enviado para assinatura!</div>
+                    <div style={{ color:'#166534', marginBottom:4 }}>Você receberá um e-mail para assinar.</div>
+                    {assinaturaEnviada.link_cliente && (
+                      <div style={{ color:'#166534' }}>
+                        Link do cliente: <a href={assinaturaEnviada.link_cliente} target="_blank" rel="noopener noreferrer" style={{ color:'#6366F1', wordBreak:'break-all' }}>{assinaturaEnviada.link_cliente}</a>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <button className="prec-btn prec-btn-primary" onClick={() => window.print()}>🖨 Imprimir / PDF</button>
                 <button className="prec-btn" onClick={() => {
                   window.open('https://canva.link/e0kovr95i9qfsza', '_blank')

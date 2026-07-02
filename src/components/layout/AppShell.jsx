@@ -1,9 +1,33 @@
-import { useState, useRef, useEffect, lazy, Suspense } from 'react'
+import { useState, useRef, useEffect, lazy, Suspense, Component } from 'react'
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import LOGO_SRC from '../../assets/logo-fluxe.png'
 import TimerBar from './TimerBar'
 import TrialGuard from '../ui/TrialGuard'
+
+
+// Captura erros de render em páginas lazy — evita tela em branco
+class PageErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { hasError: false } }
+  static getDerivedStateFromError() { return { hasError: true } }
+  componentDidCatch(err) { console.error('[Fluxe] Erro ao renderizar página:', err) }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+          height:'100%', gap:12, color:'var(--tx2)', padding:32 }}>
+          <span style={{ fontSize:32 }}>!</span>
+          <p style={{ margin:0, fontWeight:600 }}>Algo deu errado nesta página.</p>
+          <button
+            onClick={() => { this.setState({ hasError: false }); window.location.reload() }}
+            style={{ padding:'8px 20px', borderRadius:8, border:'none', background:'var(--accent)', color:'#fff', cursor:'pointer' }}
+          >Recarregar</button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 // Lazy load — cada página vira chunk separado, carrega só quando o usuário navega
 const DashPage        = lazy(() => import('../../pages/DashPage'))
@@ -226,30 +250,32 @@ export default function AppShell() {
 
         {/* Páginas */}
         <div className="pgs fade-in" style={{ flex:1, overflow:'auto', padding:'16px', width:'100%', minWidth:0 }}>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/"           element={<DashPage />} />
-              <Route path="/exec"       element={<ExecPage />} />
-              <Route path="/tasks"      element={<TasksPage />} />
-              <Route path="/avulsas"    element={<AvulsasPage />} />
-              <Route path="/modelos"    element={<ModelosPage />} />
-              <Route path="/esteiras"   element={<EsteirasPage />} />
-              <Route path="/clientes"   element={<ClientsPage />} />
-              <Route path="/clientes/:id" element={<ClientePage />} />
-              <Route path="/pendencias" element={<PendenciasPage />} />
-              <Route path="/agenda"     element={<AgendaPage />} />
-              <Route path="/rent"       element={<RentPage />} />
-              <Route path="/cap"        element={<CapPage />} />
-              <Route path="/cofre"      element={<CofrePage />} />
-              <Route path="/crm"          element={<CRMPage />} />
-              <Route path="/precificacao" element={<PrecificacaoPage />} />
-              <Route path="/mensagens"  element={<MensagensPage />} />
-              <Route path="/relatorios" element={<RelatoriosPage />} />
-              <Route path="/config"     element={<ConfigPage />} />
-              <Route path="/meu-painel" element={<MeuPainelPage />} />
-              <Route path="/ajuda"      element={<AjudaPage />} />
-            </Routes>
-          </Suspense>
+          <PageErrorBoundary>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/"           element={<DashPage />} />
+                <Route path="/exec"       element={<ExecPage />} />
+                <Route path="/tasks"      element={<TasksPage />} />
+                <Route path="/avulsas"    element={<AvulsasPage />} />
+                <Route path="/modelos"    element={<ModelosPage />} />
+                <Route path="/esteiras"   element={<EsteirasPage />} />
+                <Route path="/clientes"   element={<ClientsPage />} />
+                <Route path="/clientes/:id" element={<ClientePage />} />
+                <Route path="/pendencias" element={<PendenciasPage />} />
+                <Route path="/agenda"     element={<AgendaPage />} />
+                <Route path="/rent"       element={<RentPage />} />
+                <Route path="/cap"        element={<CapPage />} />
+                <Route path="/cofre"      element={<CofrePage />} />
+                <Route path="/crm"          element={<CRMPage />} />
+                <Route path="/precificacao" element={<PrecificacaoPage />} />
+                <Route path="/mensagens"  element={<MensagensPage />} />
+                <Route path="/relatorios" element={<RelatoriosPage />} />
+                <Route path="/config"     element={<ConfigPage />} />
+                <Route path="/meu-painel" element={<MeuPainelPage />} />
+                <Route path="/ajuda"      element={<AjudaPage />} />
+              </Routes>
+            </Suspense>
+          </PageErrorBoundary>
         </div>
       </div>
     </div>
