@@ -480,7 +480,7 @@ export default function ClientsPage() {
               <button onClick={close} style={{ border:'none', background:'none', cursor:'pointer', color:'var(--tx3)', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', gap:4, padding:'6px 10px', borderRadius:8, background:'var(--sur)' }}>
                 ← Voltar
               </button>
-              <span style={{ fontWeight:700, fontSize:18, color:'var(--tx)' }}>
+              <span style={{ fontWeight:800, fontSize:24, color:'var(--tx)', letterSpacing:'-0.5px' }}>
                 {modal.mode==='new' ? 'Novo cliente' : (form.fantasia || form.razao_social || 'Editar cliente')}
               </span>
             </div>
