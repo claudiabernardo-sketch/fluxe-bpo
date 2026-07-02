@@ -489,7 +489,7 @@ export default function ClientsPage() {
             <div style={{ display:'flex', borderBottom:'1px solid var(--bo)', marginBottom:0 }}>
               {[['dados','📋 Dados'],['financeiro','💰 Financeiro'],['bancos','🏦 Bancos'],['cofre','🔐 Cofre'],['rotina','🔁 Rotina']].map(([id, label]) => (
                 <button key={id} onClick={() => setTab(id)}
-                  style={{ padding:'8px 14px', border:'none', background:'transparent', cursor:'pointer', fontSize:11, fontWeight:600,
+                  style={{ padding:'10px 18px', border:'none', background:'transparent', cursor:'pointer', fontSize:14, fontWeight:600,
                     color: tab===id?'var(--br)':'var(--tx3)', borderBottom: tab===id?'2px solid var(--br)':'2px solid transparent', marginBottom:-1 }}>
                   {label}
                 </button>
