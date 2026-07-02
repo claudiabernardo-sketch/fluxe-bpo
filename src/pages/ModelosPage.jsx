@@ -40,7 +40,7 @@ const EMPTY_FORM = { titulo:'', descricao:'', categoria:'', etapa:'', prioridade
 const fi = { width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:13, fontFamily:'inherit', background:'#fff', outline:'none' }
 const recLabel = { unica:'⚡ Pontual', diaria:'Diária', dias_uteis:'Dias úteis', semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal', dias_especificos:'Dias espec.', bimestral:'Bimestral', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual' }
 const prioColor = { baixa:'#16A34A', media:'#D97706', alta:'#DC2626' }
-const diasLabel = { 0:'Dom', 1:'Seg', 2:'Ter', 3:'Qua', 4:'Qui', 5:'Sex', 6:'Sáb' }
+const diasLabel = { 0:'Seg', 1:'Ter', 2:'Qua', 3:'Qui', 4:'Sex', 5:'Sáb', 6:'Dom' }
 
 function lastDayOfMonth() {
   const d = new Date()
