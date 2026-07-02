@@ -580,7 +580,12 @@ export default function PrecificacaoPage() {
     try {
       const { error } = await supabase.from('empresas').update({ autentique_token: setupToken.trim() }).eq('id', empresa.id)
       if (error) throw error
-      const resp = await supabase.functions.invoke('autentique-sign', { body: { action: 'test' } })
+      const { data: { session: sess } } = await supabase.auth.getSession()
+      const testFetch = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/autentique-sign`,
+        { method: 'POST', headers: { 'Authorization': `Bearer ${sess.access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'test' }) }
+      )
+      const resp = { data: await testFetch.json(), error: testFetch.ok ? null : { message: 'Erro ' + testFetch.status } }
       if (resp.data?.error) throw new Error(resp.data.error)
       setSetupStatus({ ok: true, msg: `✅ Conectado! Conta: ${resp.data?.conta || 'OK'}` })
       setTimeout(() => { setSetupModal(false); window.location.reload() }, 1800)
@@ -1578,18 +1583,26 @@ export default function PrecificacaoPage() {
                           const arrayBuffer = await blob.arrayBuffer()
                           const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
                           const { data: { session } } = await supabase.auth.getSession()
-                          const resp = await supabase.functions.invoke('autentique-sign', {
-                            body: {
-                              docx_base64: base64,
-                              filename: `Contrato_${calc?.d?.nome || 'cliente'}.docx`,
-                              cliente_nome: contratoForm.clienteNome || calc?.d?.nome || '',
-                              cliente_email: emailCliente,
-                              proposta_id: propostaIdRef.current || null,
-                            },
-                          })
-                          if (resp.error) throw new Error(resp.error.message)
-                          if (resp.data?.error) throw new Error(resp.data.error)
-                          setAssinaturaEnviada(resp.data)
+                          const fnResp = await fetch(
+                            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/autentique-sign`,
+                            {
+                              method: 'POST',
+                              headers: {
+                                'Authorization': `Bearer ${session.access_token}`,
+                                'Content-Type': 'application/json',
+                              },
+                              body: JSON.stringify({
+                                docx_base64: base64,
+                                filename: `Contrato_${calc?.d?.nome || 'cliente'}.docx`,
+                                cliente_nome: contratoForm.clienteNome || calc?.d?.nome || '',
+                                cliente_email: emailCliente,
+                                proposta_id: propostaIdRef.current || null,
+                              }),
+                            }
+                          )
+                          const respData = await fnResp.json()
+                          if (!fnResp.ok || respData.error) throw new Error(respData.error || `Erro ${fnResp.status}`)
+                          setAssinaturaEnviada(respData)
                         } catch (e) {
                           alert('Erro ao enviar: ' + e.message)
                         } finally {
