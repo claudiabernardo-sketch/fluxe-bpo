@@ -1581,7 +1581,17 @@ export default function PrecificacaoPage() {
                           const { gerarContratoDocx } = await getContratoDocx()
                           const blob = await gerarContratoDocx({ calc, contratoForm, empresa, valorProposta })
                           const arrayBuffer = await blob.arrayBuffer()
-                          const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+                          // btoa seguro para arquivos grandes (spread quebra acima de ~250KB)
+                          const bytes = new Uint8Array(arrayBuffer)
+                          let binary = ''
+                          for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
+                          const base64Safe = btoa(binary)
+
+                          const nomeCliente = contratoForm.clienteNome || calc?.d?.nome || ''
+                          if (!base64Safe) throw new Error('Falha ao gerar o arquivo do contrato. Tente novamente.')
+                          if (!nomeCliente) throw new Error('Nome do cliente não encontrado. Volte ao passo 1 e preencha o nome do cliente.')
+                          if (!emailCliente) throw new Error('E-mail do cliente é obrigatório.')
+
                           const { data: { session } } = await supabase.auth.getSession()
                           const fnResp = await fetch(
                             `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/autentique-sign`,
@@ -1592,9 +1602,9 @@ export default function PrecificacaoPage() {
                                 'Content-Type': 'application/json',
                               },
                               body: JSON.stringify({
-                                docx_base64: base64,
-                                filename: `Contrato_${calc?.d?.nome || 'cliente'}.docx`,
-                                cliente_nome: contratoForm.clienteNome || calc?.d?.nome || '',
+                                docx_base64: base64Safe,
+                                filename: `Contrato_${nomeCliente}.docx`,
+                                cliente_nome: nomeCliente,
                                 cliente_email: emailCliente,
                                 proposta_id: propostaIdRef.current || null,
                               }),
