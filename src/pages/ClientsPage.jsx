@@ -473,18 +473,20 @@ export default function ClientsPage() {
 
       {/* Modal */}
       {modal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}>
-          <div style={{ background:'var(--sur)', borderRadius:'var(--rx)', width:'100%', maxWidth: 680, maxHeight:'92vh', display:'flex', flexDirection:'column', boxShadow:'var(--sh3)' }}>
-            {/* Modal header */}
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px', borderBottom:'1px solid var(--bo)' }}>
-              <span style={{ fontWeight:700, fontSize:15, color:'var(--tx)' }}>
-                {modal.mode==='new' ? 'Novo cliente' : 'Editar cliente'}
+        <div style={{ position:'fixed', inset:0, background:'var(--bg)', zIndex:1000, overflowY:'auto' }}>
+          <div style={{ maxWidth:980, margin:'0 auto', padding:'24px 24px 80px' }}>
+            {/* Page header */}
+            <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:24 }}>
+              <button onClick={close} style={{ border:'none', background:'none', cursor:'pointer', color:'var(--tx3)', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', gap:4, padding:'6px 10px', borderRadius:8, background:'var(--sur)' }}>
+                ← Voltar
+              </button>
+              <span style={{ fontWeight:700, fontSize:18, color:'var(--tx)' }}>
+                {modal.mode==='new' ? 'Novo cliente' : (form.fantasia || form.razao_social || 'Editar cliente')}
               </span>
-              <button onClick={close} style={{ border:'none', background:'none', cursor:'pointer', fontSize:20, color:'var(--tx3)' }}>×</button>
             </div>
 
             {/* Tabs */}
-            <div style={{ display:'flex', borderBottom:'1px solid var(--bo)', padding:'0 18px' }}>
+            <div style={{ display:'flex', borderBottom:'1px solid var(--bo)', marginBottom:0 }}>
               {[['dados','📋 Dados'],['financeiro','💰 Financeiro'],['bancos','🏦 Bancos'],['cofre','🔐 Cofre'],['rotina','🔁 Rotina']].map(([id, label]) => (
                 <button key={id} onClick={() => setTab(id)}
                   style={{ padding:'8px 14px', border:'none', background:'transparent', cursor:'pointer', fontSize:11, fontWeight:600,
@@ -494,8 +496,8 @@ export default function ClientsPage() {
               ))}
             </div>
 
-            {/* Modal body */}
-            <div style={{ padding:18, overflowY:'auto', flex:1 }}>
+            {/* Body */}
+            <div style={{ paddingTop:20 }}>
 
               {/* ABA DADOS */}
               {tab === 'dados' && (
@@ -958,7 +960,7 @@ export default function ClientsPage() {
             </div>
 
             {/* Footer */}
-            <div style={{ padding:'12px 18px', borderTop:'1px solid var(--bo)', display:'flex', justifyContent:'flex-end', gap:8 }}>
+            <div style={{ position:'fixed', bottom:0, left:0, right:0, background:'var(--sur)', borderTop:'1px solid var(--bo)', padding:'12px 24px', display:'flex', justifyContent:'flex-end', gap:8, zIndex:10 }}>
               <button className="btn bo" onClick={close}>Fechar</button>
               {tab !== 'tarefas' && tab !== 'rotina' && tab !== 'cofre' && (
                 <button className="btn bp" onClick={save} disabled={createClient.isPending||updateClient.isPending}>
