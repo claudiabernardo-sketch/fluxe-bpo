@@ -259,6 +259,17 @@ export default function TasksPage() {
     }
   }
 
+  async function concluirTodasAnteriores(pendentes) {
+    if (!pendentes.length) return
+    if (!window.confirm(`Concluir todas as ${pendentes.length} tarefas pendentes de dias anteriores?`)) return
+    try {
+      await Promise.all(pendentes.map(t => updateTask.mutateAsync({ id: t.id, status: 'concluida' })))
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+    } catch (err) {
+      alert('Erro ao concluir tarefas: ' + (err?.message || 'erro'))
+    }
+  }
+
   async function saveMotivo(id, motivo_pendencia) {
     await supabase.from('tarefas').update({ motivo_pendencia }).eq('id', id)
     qc.invalidateQueries({ queryKey: ['tasks'] })
@@ -392,6 +403,10 @@ export default function TasksPage() {
                     <div style={{ fontSize:11, fontWeight:700, color:'#991B1B', marginBottom:8, display:'flex', alignItems:'center', gap:6 }}>
                       <span style={{ width:8, height:8, borderRadius:'50%', background:'#EF4444', display:'inline-block' }} />
                       PENDENTES DE DIAS ANTERIORES ({pendentes.length})
+                      <button
+                        onClick={() => concluirTodasAnteriores(pendentes)}
+                        style={{ marginLeft:'auto', fontSize:10, fontWeight:600, color:'#fff', background:'#EF4444', border:'none', borderRadius:6, padding:'3px 10px', cursor:'pointer' }}
+                      >Concluir todas</button>
                     </div>
                     <Card style={{ overflow:'hidden' }}>
                       {pendentes.map(t => <TaskRow key={t.id} t={t} selTask={selTask} setSelTask={setSelTask} openEdit={openEdit} deleteTask={deleteTask} quickStatus={quickStatus} selectedTask={selectedTask} today={today} onSaveMotivo={saveMotivo} />)}
