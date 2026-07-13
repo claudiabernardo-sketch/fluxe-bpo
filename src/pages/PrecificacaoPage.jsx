@@ -266,7 +266,8 @@ function calcularMetodologia(d) {
     `Follow-up sobre ${d.carec} cobranças manuais`)
 
   if (d.sistcob) add('Gestão sistema de cobrança', 0.5, 'baixo', 'Asaas, Iugu ou similar')
-  if (d.cartao) add('Conciliação cartão de crédito', 1.0, 'médio', 'Conciliação fatura + classificação')
+  if (d.cartao > 0) add('Conciliação de cartões de crédito', 0.3 + d.cartao * 1.0, calcPeso(0.3 + d.cartao * 1.0, 5),
+    `${d.cartao} cartão${d.cartao > 1 ? 'ões' : ''} × 1h (fatura + classificação de despesas)`)
 
   if (d.plat > 0) add('Conciliação outras plataformas', d.plat * 1.2, 'médio',
     `${d.plat} plataforma${d.plat > 1 ? 's' : ''} (PagSeguro, Mercado Pago…)`)
@@ -325,13 +326,20 @@ function calcularMetodologia(d) {
 
   const percCap = Math.min(totalHoras / 160, 1)
   const overheadCliente = d.overhead * percCap
-  const custoReal = totalHoras * d.custoHora + overheadCliente
+
+  // Licença do ERP: só entra no custo se for paga pelo BPO e embutida no preço.
+  // Repasse NÃO é custo nem receita — é reembolso, exibido separadamente.
+  const licencaValor = d.licencaValor || 0
+  const licencaEmbutida = d.licencaModalidade === 'bpo_embutida' ? licencaValor : 0
+  const licencaRepasse  = d.licencaModalidade === 'repasse' ? licencaValor : 0
+
+  const custoReal = totalHoras * d.custoHora + overheadCliente + licencaEmbutida
 
   const vMinimo = custoReal / (1 - d.aliquota)
   const vRecomendado = custoReal / ((1 - d.aliquota) * (1 - d.margem))
   const vPremium = vRecomendado * 1.30
 
-  return { items, totalHoras, complexidade, complexLabel, complexColor, riscoLabel, risco, custoReal, overheadCliente, vMinimo, vRecomendado, vPremium, d }
+  return { items, totalHoras, complexidade, complexLabel, complexColor, riscoLabel, risco, custoReal, overheadCliente, licencaEmbutida, licencaRepasse, vMinimo, vRecomendado, vPremium, d }
 }
 
 // ─── ACADEMIA ───────────────────────────────────────────────
@@ -447,6 +455,7 @@ export default function PrecificacaoPage() {
           bancos: 1, capag: 0, carec: 0, mov: 0, nfs: 0, boletos: 0,
           sistcob: 0, cartao: 0, plat: 0, agend: 0,
           contab: 0, relat: 0, reuniao: 0, consult: 0, lembrete: 0,
+          erp: '', erpOutro: '', licencaModalidade: 'cliente_direto', licencaValor: '',
           custoHora: '50', margem: 35, overhead: '600', regime: 6,
           // Dados do cliente pré-preenchidos
           _clienteNome: lead.nome || lead.fantasia || '',
@@ -463,10 +472,39 @@ export default function PrecificacaoPage() {
       bancos: 1, capag: 0, carec: 0, mov: 0, nfs: 0, boletos: 0,
       sistcob: 0, cartao: 0, plat: 0, agend: 0,
       contab: 0, relat: 0, reuniao: 0, consult: 0, lembrete: 0,
+      erp: '', erpOutro: '', licencaModalidade: 'cliente_direto', licencaValor: '',
       custoHora: '50', margem: 35, overhead: '600', regime: 6,
     }
   })
   const [custoHoraFonte, setCustoHoraFonte] = useState(null) // null | 'equipe' | 'propria'
+  const propostaStatusRef = useRef(null) // status da proposta importada (evita rebaixar 'aprovada' para 'enviada')
+
+  // Vindo do CRM com proposta APROVADA → restaura snapshot congelado e abre direto na etapa de contrato
+  useEffect(() => {
+    try {
+      const p = JSON.parse(sessionStorage.getItem('proposta_gerar_contrato') || 'null')
+      if (!p) return
+      sessionStorage.removeItem('proposta_gerar_contrato')
+      const dc = p.dados_calculo || {}
+      if (dc.d) setD(dc.d)
+      if (dc.calc) setCalc(dc.calc)
+      if (dc.valorProposta) setValorProposta(String(dc.valorProposta))
+      if (dc.escopo) setEscopo(dc.escopo)
+      const cli = p.dados_cliente || {}
+      setContratoForm(f => ({
+        ...f,
+        ...(p.contrato_dados && Object.keys(p.contrato_dados).length ? p.contrato_dados : {}),
+        clienteNome: p.contrato_dados?.clienteNome || cli.nome || '',
+        clienteCnpj: p.contrato_dados?.clienteCnpj || cli.cnpj || '',
+        clienteRep:  p.contrato_dados?.clienteRep  || cli.contato || '',
+        clienteEmail: p.contrato_dados?.clienteEmail || cli.email || '',
+      }))
+      propostaIdRef.current = p.id
+      propostaStatusRef.current = p.status
+      if (p.lead_id) leadIdRef.current = p.lead_id
+      if (dc.calc) setEtapa(6)
+    } catch {}
+  }, [])
 
   // Carrega custo-hora automaticamente da calculadora (Config)
   useEffect(() => {
@@ -486,6 +524,12 @@ export default function PrecificacaoPage() {
       })
   }, [profile?.empresa_id])
 
+  // Carrega overhead por cliente calculado em Config → Custo da Operação
+  useEffect(() => {
+    const oh = empresa?.config?.custosOperacao?.overheadPorCliente
+    if (oh > 0) setD(prev => ({ ...prev, overhead: String(Math.round(oh)) }))
+  }, [empresa?.config?.custosOperacao?.overheadPorCliente])
+
   const set = (k, v) => setD(prev => ({ ...prev, [k]: v }))
   const num = (k) => (e) => set(k, parseFloat(e.target.value) || 0)
   const sel = (k) => (e) => set(k, parseFloat(e.target.value) || 0)
@@ -498,6 +542,7 @@ export default function PrecificacaoPage() {
       fat: parseBRL(d.fat),
       custoHora: parseBRL(d.custoHora),
       overhead: parseBRL(d.overhead),
+      licencaValor: parseBRL(d.licencaValor),
       aliquota: parseFloat(d.regime) / 100,
       margem: parseFloat(d.margem) / 100,
     }
@@ -506,11 +551,59 @@ export default function PrecificacaoPage() {
     irPara(2)
   }, [d])
 
+  // Escopo editável (Responsabilidades / Limites / SLA) — padrão da empresa + edição por proposta
+  const [escopo, setEscopo] = useState(null)
+  const [escopoEdit, setEscopoEdit] = useState(null) // bloco em edição: 'resp' | 'limites' | 'sla'
+
+  const montarEscopoPadrao = (c) => {
+    const padrao = empresa?.config?.escopoPadrao
+    if (padrao?.resp?.length || padrao?.limites?.length || padrao?.sla?.length) {
+      return { resp: padrao.resp || [], limites: padrao.limites || [], sla: padrao.sla || [] }
+    }
+    return {
+      resp: [
+        'Enviar documentos até o dia 5 de cada mês',
+        'Responder solicitações em até 48h úteis',
+        'Manter acessos bancários e sistemas atualizados',
+        'Confirmar informações para conciliação quando solicitado',
+        c.d.agend ? 'Manter saldo suficiente para agendamentos' : null,
+        c.d.nfs > 0 ? 'Fornecer dados completos para emissão de NFs' : null,
+      ].filter(Boolean),
+      limites: [
+        'Serviços limitados ao escopo descrito acima',
+        'Inclusão de novos CNPJs requer revisão de contrato',
+        c.d.capag > 0 ? `Volume de contas a pagar: até ${Math.ceil(c.d.capag * 1.5)} títulos/mês` : null,
+        c.d.nfs > 0 ? `Volume de NFs: até ${Math.ceil(c.d.nfs * 1.5)} notas/mês` : null,
+        c.d.boletos > 0 ? `Volume de boletos: até ${Math.ceil(c.d.boletos * 1.5)}/mês` : null,
+        c.d.cartao > 0 ? `Cartões de crédito conciliados: ${c.d.cartao}` : null,
+        'Horas adicionais ao escopo serão orçadas separadamente',
+      ].filter(Boolean),
+      sla: [
+        'Relatórios entregues até o dia 10 de cada mês',
+        'Atendimento via WhatsApp em horário comercial (resposta em até 24h úteis)',
+        'Urgências tratadas com prioridade',
+        c.d.reuniao > 0 ? 'Reunião mensal agendada até o dia 20 de cada mês' : null,
+      ].filter(Boolean),
+    }
+  }
+
+  const salvarEscopoComoPadrao = async () => {
+    if (!empresa || !escopo) return
+    try {
+      const novoConfig = { ...(empresa.config || {}), escopoPadrao: escopo }
+      const { error } = await supabase.from('empresas').update({ config: novoConfig }).eq('id', empresa.id)
+      if (error) throw error
+      useAuthStore.getState().updateEmpresa?.({ config: novoConfig })
+      alert('✓ Escopo salvo como padrão da sua empresa. As próximas propostas já nascem com ele.')
+    } catch (e) { alert('Erro ao salvar padrão: ' + e.message) }
+  }
+
   const irParaEscopo = async () => {
     if (!valorProposta || parseFloat(valorProposta) <= 0) {
       alert('Informe o valor da proposta antes de gerar o escopo.')
       return
     }
+    if (!escopo) setEscopo(montarEscopoPadrao(calc))
     // Salva proposta no banco na primeira vez que chega no passo 5
     if (!propostaIdRef.current) {
       try {
@@ -526,7 +619,7 @@ export default function PrecificacaoPage() {
             whatsapp: d._clienteWhatsapp || '',
             segmento: d._clienteSegmento || '',
           },
-          dados_calculo: { d, calc, valorProposta },
+          dados_calculo: { d, calc, valorProposta, escopo: escopo || montarEscopoPadrao(calc) },
         })
         propostaIdRef.current = proposta.id
       } catch (e) {
@@ -543,6 +636,7 @@ export default function PrecificacaoPage() {
     if (dc.d) setD(dc.d)
     if (dc.calc) setCalc(dc.calc)
     if (dc.valorProposta) setValorProposta(String(dc.valorProposta))
+    setEscopo(dc.escopo || null)
     propostaIdRef.current = null  // cria nova proposta ao salvar (não sobrescreve)
     if (proposta.dados_calculo?.d?._clienteEmail) setEmailCliente(proposta.dados_calculo.d._clienteEmail)
     setImportModal(false)
@@ -787,11 +881,9 @@ export default function PrecificacaoPage() {
                     </div>
                   )}
                 </Campo>
-                <Campo label="Usa maquininha / cartão de crédito?" hint="Se o cliente recebe por maquininha, você precisará conciliar as vendas com o banco.">
-                  <select className="prec-select" value={d.cartao} onChange={sel('cartao')}>
-                    <option value="0">Não</option>
-                    <option value="1">Sim — precisa de conciliação</option>
-                  </select>
+                <Campo label="Cartões de crédito a pagar (faturas) / mês" hint="Quantos cartões de crédito o cliente usa para pagar despesas. Cada cartão = fatura para conciliar e despesas para classificar todo mês. Vendas por maquininha NÃO entram aqui — vão em 'Plataformas digitais' abaixo.">
+                  <input className="prec-input" type="number" value={d.cartao} onChange={num('cartao')} min="0" />
+                  {d.cartao > 0 && <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>≈ {(0.3 + d.cartao * 1.0).toFixed(1)}h/mês (fatura + classificação)</div>}
                 </Campo>
                 <Campo label="Usa sistema de cobrança automática?" hint="Ex: Asaas, Iugu, Receba Fácil. Gera boletos automaticamente e precisa de conciliação.">
                   <select className="prec-select" value={d.sistcob} onChange={sel('sistcob')}>
@@ -841,6 +933,43 @@ export default function PrecificacaoPage() {
                 </Campo>
               </div>
 
+              {/* BLOCO: SISTEMA FINANCEIRO (ERP) */}
+              <div className="prec-sec">🖥️ Sistema financeiro (ERP)</div>
+              <div className="prec-fgrid">
+                <Campo label="Qual sistema será usado?" hint="ERP financeiro onde a gestão do cliente será feita.">
+                  <select className="prec-select" value={d.erp || ''} onChange={e => set('erp', e.target.value)}>
+                    <option value="">Ainda não definido</option>
+                    <option value="Conta Azul">Conta Azul</option>
+                    <option value="Omie">Omie</option>
+                    <option value="Nibo">Nibo</option>
+                    <option value="Outro">Outro</option>
+                  </select>
+                  {d.erp === 'Outro' && (
+                    <input className="prec-input" style={{ marginTop:6 }} value={d.erpOutro || ''} onChange={e => set('erpOutro', e.target.value)} placeholder="Nome do sistema" />
+                  )}
+                </Campo>
+                {d.erp && (
+                  <Campo label="Quem paga a licença do sistema?" hint="Define como a licença entra na conta. Repasse = você recebe do cliente e paga a plataforma (não é receita sua). Embutida = você paga e o custo entra no preço.">
+                    <select className="prec-select" value={d.licencaModalidade || 'cliente_direto'} onChange={e => set('licencaModalidade', e.target.value)}>
+                      <option value="cliente_direto">Cliente contrata e paga direto</option>
+                      <option value="bpo_embutida">Eu pago — embutida na mensalidade</option>
+                      <option value="repasse">Repasse — recebo do cliente e pago</option>
+                      <option value="contabilidade">Contabilidade paga a licença</option>
+                    </select>
+                    {d.licencaModalidade === 'contabilidade' && (
+                      <div style={{ fontSize:10, color:'#D97706', marginTop:4 }}>
+                        ⚠ Atenção: se o cliente trocar de contador, a licença pode ser cancelada e você perde o acesso. Considere esse risco.
+                      </div>
+                    )}
+                  </Campo>
+                )}
+                {d.erp && (d.licencaModalidade === 'bpo_embutida' || d.licencaModalidade === 'repasse') && (
+                  <Campo label="Valor mensal da licença (R$)" hint={d.licencaModalidade === 'repasse' ? 'Será exibido separadamente na proposta e no contrato como repasse — não entra na sua margem.' : 'Entra como custo deste cliente no cálculo do preço.'}>
+                    <input className="prec-input" type="text" inputMode="decimal" value={d.licencaValor || ''} onChange={e => set('licencaValor', e.target.value)} placeholder="Ex: 189,90" />
+                  </Campo>
+                )}
+              </div>
+
               {/* BLOCO 3: SEUS NÚMEROS */}
               <div className="prec-sec">💰 Seus custos (base do cálculo)</div>
               <div className="prec-alert prec-alert-info">
@@ -864,7 +993,12 @@ export default function PrecificacaoPage() {
                     <span className="prec-range-val">{d.margem}%</span>
                   </div>
                 </Campo>
-                <Campo label="Overhead mensal (R$)" hint="Soma dos seus custos fixos mensais divididos pelo número de clientes. Ex: softwares (R$ 300) + internet (R$ 100) + escritório (R$ 400) = R$ 800 ÷ 10 clientes = R$ 80/cliente.">
+                <Campo label="Overhead mensal (R$)" hint="Custos fixos da sua operação divididos pelo número de clientes. Calcule com precisão em Config → Custo da Operação e o valor será preenchido automaticamente.">
+                  {empresa?.config?.custosOperacao?.overheadPorCliente > 0 && (
+                    <div style={{ fontSize:10, color:'#6366F1', fontWeight:700, marginBottom:5 }}>
+                      ✓ Calculado em Config → Custo da Operação <span style={{ fontWeight:400, color:'#94A3B8' }}>— você pode ajustar</span>
+                    </div>
+                  )}
                   <input className="prec-input" type="text" inputMode="decimal" value={d.overhead} onChange={e => set('overhead', e.target.value)} placeholder="Ex: 600,00" />
                 </Campo>
                 <Campo label="Regime tributário do seu BPO" hint="Alíquota de impostos sobre o seu faturamento como prestador de serviços.">
@@ -1108,7 +1242,7 @@ export default function PrecificacaoPage() {
                     'Emissão de notas fiscais':      d.nfs > 0 ? `até ${d.nfs} NFs/mês` : null,
                     'Emissão de boletos':            d.boletos > 0 ? `até ${d.boletos} boletos/mês` : null,
                     'Conciliação sistema de cobrança': d.sistcob > 0 ? 'Asaas / Iugu ou similar' : null,
-                    'Conciliação maquininha/cartão': d.cartao > 0 ? 'conciliação mensal' : null,
+                    'Conciliação de cartões de crédito': d.cartao > 0 ? `${d.cartao} cartão${d.cartao>1?'ões':''} de crédito` : null,
                     'Conciliação outras plataformas': d.plat > 0 ? `${d.plat} plataforma${d.plat>1?'s':''}` : null,
                     'Envio de documentos à contabilidade': 'organização e envio mensal',
                     'Relatórios gerenciais': d.relat == 2 ? 'DRE + Fluxo de Caixa + Indicadores' : 'DRE + Fluxo de Caixa',
@@ -1123,42 +1257,57 @@ export default function PrecificacaoPage() {
                     </div>
                   )
                 })}
+                {calc.d.erp && (
+                  <div className="prec-scope-item">
+                    Sistema financeiro: {calc.d.erp === 'Outro' ? (calc.d.erpOutro || 'Outro') : calc.d.erp} — licença {{
+                      cliente_direto: 'contratada e paga diretamente pelo cliente',
+                      bpo_embutida: 'inclusa na mensalidade',
+                      repasse: `repassada mensalmente (${fmt(calc.licencaRepasse || 0)}/mês, reajustada conforme a plataforma)`,
+                      contabilidade: 'fornecida pela contabilidade do cliente',
+                    }[calc.d.licencaModalidade] || ''}
+                  </div>
+                )}
               </div>
 
-              {/* Responsabilidades */}
-              <div className="prec-scope-block">
-                <div className="prec-scope-title"><span>🤝</span> Responsabilidades do cliente</div>
-                {[
-                  'Enviar documentos até o dia 5 de cada mês',
-                  'Responder solicitações em até 48h úteis',
-                  'Manter acessos bancários e sistemas atualizados',
-                  'Confirmar informações para conciliação quando solicitado',
-                  calc.d.agend && 'Manter saldo suficiente para agendamentos',
-                  calc.d.nfs > 0 && 'Fornecer dados completos para emissão de NFs',
-                ].filter(Boolean).map((r, i) => <div key={i} className="prec-scope-item">{r}</div>)}
-              </div>
-
-              {/* Limites */}
-              <div className="prec-scope-block">
-                <div className="prec-scope-title"><span>⚠️</span> Limites operacionais</div>
-                {[
-                  'Serviços limitados ao escopo descrito acima',
-                  'Inclusão de novos CNPJs requer revisão de contrato',
-                  calc.d.capag > 0 && `Volume de contas a pagar: até ${Math.ceil(calc.d.capag * 1.5)} títulos/mês`,
-                  calc.d.nfs > 0 && `Volume de NFs: até ${Math.ceil(calc.d.nfs * 1.5)} notas/mês`,
-                  calc.d.boletos > 0 && `Volume de boletos: até ${Math.ceil(calc.d.boletos * 1.5)}/mês`,
-                  'Horas adicionais ao escopo serão orçadas separadamente',
-                ].filter(Boolean).map((l, i) => <div key={i} className="prec-scope-item">{l}</div>)}
-              </div>
-
-              {/* SLA */}
-              <div className="prec-scope-block">
-                <div className="prec-scope-title"><span>📅</span> SLA e entregáveis</div>
-                <div className="prec-scope-item">Relatórios entregues até o dia 10 de cada mês</div>
-                <div className="prec-scope-item">Atendimento via WhatsApp em horário comercial (resposta em até 4h)</div>
-                <div className="prec-scope-item">Urgências com resposta em até 24h úteis</div>
-                {calc.d.reuniao > 0 && <div className="prec-scope-item">Reunião mensal agendada até o dia 20 de cada mês</div>}
-              </div>
+              {/* Blocos editáveis: Responsabilidades / Limites / SLA */}
+              {(() => {
+                const esc = escopo || montarEscopoPadrao(calc)
+                const BLOCOS = [
+                  ['resp',    '🤝', 'Responsabilidades do cliente'],
+                  ['limites', '⚠️', 'Limites operacionais'],
+                  ['sla',     '📅', 'SLA e entregáveis'],
+                ]
+                return (
+                  <>
+                    {BLOCOS.map(([key, icon, titulo]) => (
+                      <div key={key} className="prec-scope-block">
+                        <div className="prec-scope-title" style={{ display:'flex', alignItems:'center' }}>
+                          <span>{icon}</span> {titulo}
+                          <button
+                            onClick={() => { if (!escopo) setEscopo(esc); setEscopoEdit(escopoEdit === key ? null : key) }}
+                            style={{ marginLeft:'auto', border:'none', background:'transparent', color:'#6366F1', fontSize:11, fontWeight:700, cursor:'pointer' }}
+                          >{escopoEdit === key ? '✓ Concluir' : '✏️ Editar'}</button>
+                        </div>
+                        {escopoEdit === key ? (
+                          <textarea
+                            value={(escopo?.[key] || esc[key]).join('\n')}
+                            onChange={e => setEscopo(s => ({ ...(s || esc), [key]: e.target.value.split('\n') }))}
+                            onBlur={e => setEscopo(s => ({ ...(s || esc), [key]: e.target.value.split('\n').map(l => l.trim()).filter(Boolean) }))}
+                            style={{ width:'100%', minHeight:110, fontSize:12, fontFamily:'inherit', border:'1px solid #C7D2FE', borderRadius:8, padding:10, lineHeight:1.7 }}
+                            placeholder="Um item por linha"
+                          />
+                        ) : (
+                          esc[key].map((r, i) => <div key={i} className="prec-scope-item">{r}</div>)
+                        )}
+                      </div>
+                    ))}
+                    <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
+                      <button onClick={() => setEscopo(null)} style={{ border:'1px solid #E2E8F0', background:'#fff', color:'#64748B', borderRadius:7, padding:'5px 12px', fontSize:11, fontWeight:600, cursor:'pointer' }}>↺ Restaurar padrão</button>
+                      <button onClick={salvarEscopoComoPadrao} style={{ border:'1px solid #6366F1', background:'#EEF2FF', color:'#4338CA', borderRadius:7, padding:'5px 12px', fontSize:11, fontWeight:700, cursor:'pointer' }}>💾 Salvar como padrão da empresa</button>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
 
             {/* PROPOSTA */}
@@ -1189,6 +1338,11 @@ export default function PrecificacaoPage() {
                 <div style={{ fontSize:11, color:empresa?.cor_primaria||'#6366F1', fontWeight:600, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:6 }}>Investimento mensal</div>
                 <div style={{ fontFamily:"'DM Mono',monospace", fontSize:40, fontWeight:500, color:empresa?.cor_primaria||'#6366F1', letterSpacing:'-.02em' }}>{fmt(parseFloat(valorProposta))}</div>
                 <div style={{ fontSize:11, color:'var(--ptext3)', marginTop:4 }}>por mês · primeiro pagamento no fechamento desta proposta</div>
+                {calc.licencaRepasse > 0 && (
+                  <div style={{ fontSize:12, color:'var(--ptext2)', marginTop:8, paddingTop:8, borderTop:'1px dashed '+(empresa?.cor_primaria||'#6366F1')+'44' }}>
+                    + {fmt(calc.licencaRepasse)}/mês — licença {calc.d.erp === 'Outro' ? (calc.d.erpOutro || 'do sistema') : calc.d.erp} (repasse, reajustado conforme a plataforma)
+                  </div>
+                )}
               </div>
 
               <div style={{ marginBottom:20 }}>
@@ -1311,16 +1465,19 @@ export default function PrecificacaoPage() {
                     <Campo label="Razão Social *">
                       <input className="prec-input" value={contratoForm.clienteNome || calc.d.nome || ''} onChange={setCF('clienteNome')} placeholder="Razão Social do cliente" />
                     </Campo>
-                    <Campo label="CNPJ / CPF">
+                    <Campo label="CNPJ / CPF *">
                       <input className="prec-input" value={contratoForm.clienteCnpj || ''} onChange={setCF('clienteCnpj')} placeholder="00.000.000/0001-00" />
                     </Campo>
-                    <Campo label="Representante legal">
+                    <Campo label="Representante legal *">
                       <input className="prec-input" value={contratoForm.clienteRep || ''} onChange={setCF('clienteRep')} placeholder="Nome completo" />
                     </Campo>
-                    <Campo label="CPF do representante">
+                    <Campo label="CPF do representante *">
                       <input className="prec-input" value={contratoForm.clienteCpf || ''} onChange={setCF('clienteCpf')} placeholder="000.000.000-00" />
                     </Campo>
-                    <Campo label="Endereço completo" hint="Rua, número, cidade/UF">
+                    <Campo label="E-mail do cliente">
+                      <input className="prec-input" type="email" value={contratoForm.clienteEmail || d._clienteEmail || ''} onChange={setCF('clienteEmail')} placeholder="email@cliente.com.br" />
+                    </Campo>
+                    <Campo label="Endereço completo *" hint="Rua, número, cidade/UF">
                       <input className="prec-input" value={contratoForm.clienteEndereco || ''} onChange={setCF('clienteEndereco')} placeholder="Rua X, 123 — São Paulo/SP" />
                     </Campo>
                   </div>
@@ -1383,18 +1540,44 @@ export default function PrecificacaoPage() {
                 <div className="prec-btn-row">
                   <button className="prec-btn prec-btn-ghost" onClick={() => irPara(5)}>← Voltar</button>
                   <button className="prec-btn prec-btn-primary" onClick={async () => {
+                    // Validação: contrato não pode sair com campos em branco
+                    const faltando = []
+                    if (!(contratoForm.clienteNome || calc.d.nome)) faltando.push('Razão Social do cliente')
+                    if (!contratoForm.clienteCnpj) faltando.push('CNPJ/CPF do cliente')
+                    if (!contratoForm.clienteRep) faltando.push('Representante legal do cliente')
+                    if (!contratoForm.clienteCpf) faltando.push('CPF do representante')
+                    if (!contratoForm.clienteEndereco) faltando.push('Endereço do cliente')
+                    if (faltando.length > 0) {
+                      alert('Complete os dados do contratante antes de gerar o contrato:\n\n• ' + faltando.join('\n• '))
+                      return
+                    }
+                    if (dadosIncompletos) {
+                      alert('Complete os dados da sua empresa (CONTRATADA) em Configurações → abas Empresa e Proposta.\nO contrato não pode sair com campos em branco para o cliente assinar.')
+                      return
+                    }
                     setContratoGerado(true)
                     // Persiste dados do contrato na proposta salva
                     if (propostaIdRef.current) {
                       try {
-                        await updateProposta.mutateAsync({
-                          id: propostaIdRef.current,
-                          contrato_dados: contratoForm,
-                          status: 'enviada',
-                        })
+                        const upd = { id: propostaIdRef.current, contrato_dados: contratoForm }
+                        // Não rebaixa proposta já aprovada para 'enviada'
+                        if (propostaStatusRef.current !== 'aprovada') upd.status = 'enviada'
+                        // Persiste o escopo editado no snapshot
+                        if (escopo) upd.dados_calculo = { d, calc, valorProposta, escopo }
+                        await updateProposta.mutateAsync(upd)
                       } catch (e) {
                         console.error('Erro ao atualizar proposta com contrato:', e)
                       }
+                    }
+                    // Salva os dados no cadastro do lead — o contrato consome dados, o cadastro é o dono deles
+                    if (leadIdRef.current) {
+                      try {
+                        await supabase.from('leads').update({
+                          cnpj: contratoForm.clienteCnpj || undefined,
+                          contato: contratoForm.clienteRep || undefined,
+                          email: contratoForm.clienteEmail || undefined,
+                        }).eq('id', leadIdRef.current)
+                      } catch (e) { console.error('Erro ao atualizar lead:', e) }
                     }
                   }}>Gerar contrato →</button>
                 </div>
@@ -1448,13 +1631,10 @@ export default function PrecificacaoPage() {
 
                 <div className="ctr-sec">I — Das Partes</div>
                 <p className="ctr-p"><strong>CONTRATANTE:</strong></p>
-                <p className="ctr-p">Razão Social: <strong>{contratoForm.clienteNome || calc.d.nome || '___________________________'}</strong></p>
-                <p className="ctr-p">CNPJ/CPF: <strong>{contratoForm.clienteCnpj || '___________________________'}</strong></p>
-                {contratoForm.clienteEndereco && <p className="ctr-p">Endereço: {contratoForm.clienteEndereco}</p>}
-                <p className="ctr-p">Representante: <strong>{contratoForm.clienteRep || '___________________________'}</strong> · CPF: {contratoForm.clienteCpf || '___.___.___-__'}</p>
-                <p className="ctr-p">CNPJ: ___________________________ | E-mail: ___________________________</p>
-                <p className="ctr-p">Endereço: ___________________________________________________________________</p>
-                <p className="ctr-p">Representado(a) por: ___________________________________ CPF: _______________</p>
+                <p className="ctr-p">Razão Social: <strong>{contratoForm.clienteNome || calc.d.nome}</strong></p>
+                <p className="ctr-p">CNPJ/CPF: <strong>{contratoForm.clienteCnpj}</strong>{contratoForm.clienteEmail ? <> | E-mail: {contratoForm.clienteEmail}</> : null}</p>
+                <p className="ctr-p">Endereço: {contratoForm.clienteEndereco}</p>
+                <p className="ctr-p">Representada por: <strong>{contratoForm.clienteRep}</strong> · CPF: {contratoForm.clienteCpf}</p>
                 <p className="ctr-p" style={{marginTop:12}}><strong>CONTRATADA:</strong></p>
                 <p className="ctr-p">Razão Social: <strong>{nomeEmp}</strong> | CNPJ: {cnpjEmp}</p>
                 {enderecoEmp && <p className="ctr-p">Endereço: {enderecoEmp}</p>}
@@ -1476,11 +1656,13 @@ export default function PrecificacaoPage() {
                 <p className="ctr-cl">CLÁUSULA 2ª — Do Horário e Entregas</p>
                 <p className="ctr-p">Os serviços serão prestados remotamente, de segunda a sexta-feira, das 09h00 às 17h00 (horário de Brasília). Os relatórios mensais serão entregues até o 10º dia útil do mês subsequente, desde que a CONTRATANTE envie os documentos até o dia 5.</p>
                 <p className="ctr-cl">CLÁUSULA 3ª — Das Responsabilidades da CONTRATANTE</p>
-                <div className="ctr-li">Fornecer documentos e acessos até o dia 5 de cada mês</div>
-                <div className="ctr-li">Responder às solicitações em até 48 horas úteis</div>
-                <div className="ctr-li">Manter atualizados os acessos às plataformas utilizadas</div>
-                {calc.d.agend > 0 && <div className="ctr-li">Manter saldo bancário suficiente para os agendamentos</div>}
-                {calc.d.nfs > 0 && <div className="ctr-li">Fornecer dados completos para emissão de notas fiscais</div>}
+                {(escopo?.resp?.length ? escopo.resp : [
+                  'Fornecer documentos e acessos até o dia 5 de cada mês',
+                  'Responder às solicitações em até 48 horas úteis',
+                  'Manter atualizados os acessos às plataformas utilizadas',
+                  calc.d.agend > 0 && 'Manter saldo bancário suficiente para os agendamentos',
+                  calc.d.nfs > 0 && 'Fornecer dados completos para emissão de notas fiscais',
+                ].filter(Boolean)).map((r, i) => <div key={i} className="ctr-li">{r}</div>)}
                 <p className="ctr-cl">CLÁUSULA 4ª — Das Vedações à CONTRATADA</p>
                 <p className="ctr-p">Não integram o escopo: negociação com terceiros em nome da CONTRATANTE; tomada de decisões gerenciais; cobranças a clientes; controle de caixa físico; obrigações fiscais acessórias (SPED, EFD, DCTF), salvo se expressamente previsto.</p>
 
@@ -1492,6 +1674,15 @@ export default function PrecificacaoPage() {
                   <div style={{fontSize:11,color:'#2D7A5A',marginTop:4}}>Pagamento até o dia {contratoForm.diaVencimento} de cada mês via {contratoForm.formaPagamento}</div>
                 </div>
                 <p className="ctr-p">O primeiro honorário será pago no ato da assinatura. Os demais serão pagos até o dia {contratoForm.diaVencimento} de cada mês via {contratoForm.formaPagamento}.</p>
+                {calc.licencaRepasse > 0 && (
+                  <p className="ctr-p"><strong>Parágrafo Primeiro:</strong> Além da mensalidade, a CONTRATANTE reembolsará mensalmente à CONTRATADA o valor de {fmt2(calc.licencaRepasse)} referente à licença do sistema {calc.d.erp === 'Outro' ? (calc.d.erpOutro || 'de gestão financeira') : calc.d.erp}, a título de repasse. Eventuais reajustes de preço praticados pela plataforma serão automaticamente repassados à CONTRATANTE, mediante comunicação prévia.</p>
+                )}
+                {calc.licencaEmbutida > 0 && (
+                  <p className="ctr-p"><strong>Parágrafo Primeiro:</strong> A mensalidade contratada inclui a licença do sistema {calc.d.erp === 'Outro' ? (calc.d.erpOutro || 'de gestão financeira') : calc.d.erp}, contratada e mantida pela CONTRATADA.</p>
+                )}
+                {calc.d.licencaModalidade === 'contabilidade' && calc.d.erp && (
+                  <p className="ctr-p"><strong>Parágrafo Primeiro:</strong> A licença do sistema {calc.d.erp === 'Outro' ? (calc.d.erpOutro || 'de gestão financeira') : calc.d.erp} é fornecida pela contabilidade da CONTRATANTE. A eventual descontinuidade desse fornecimento não é de responsabilidade da CONTRATADA, e a nova contratação da licença deverá ser acordada entre as partes.</p>
+                )}
                 <p className="ctr-cl">CLÁUSULA 6ª — Do Volume de Serviços</p>
                 <div className="ctr-tb-wrap">
                 <table className="ctr-tb">
@@ -1544,7 +1735,7 @@ export default function PrecificacaoPage() {
                     setBaixandoDocx(true)
                     try {
                       const { gerarContratoDocx, downloadContratoDocx } = await getContratoDocx()
-                      const blob = await gerarContratoDocx({ calc, contratoForm, empresa, valorProposta })
+                      const blob = await gerarContratoDocx({ calc, contratoForm, empresa, valorProposta, escopo })
                       downloadContratoDocx(blob, calc?.d?.nome)
                     } catch (e) {
                       alert('Erro ao gerar Word: ' + e.message)

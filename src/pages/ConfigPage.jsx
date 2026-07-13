@@ -240,8 +240,20 @@ function CalculadoraCustoHora({ usuarios = [], editarUser }) {
   )
 }
 
+// Fontes disponíveis no Brand Kit — carregadas dinamicamente para o preview funcionar
+const BRAND_FONTS = ['Inter','Poppins','Montserrat','Lato','Open Sans','Raleway','Playfair Display','DM Sans']
+function ensureBrandFontsLoaded() {
+  if (document.getElementById('brand-fonts-preview')) return
+  const families = BRAND_FONTS.map(f => `family=${f.replace(/ /g, '+')}:wght@400;600;700`).join('&')
+  const link = document.createElement('link')
+  link.id = 'brand-fonts-preview'
+  link.rel = 'stylesheet'
+  link.href = `https://fonts.googleapis.com/css2?${families}&display=swap`
+  document.head.appendChild(link)
+}
+
 export default function ConfigPage() {
-  const { empresa, profile } = useAuthStore()
+  const { empresa, profile, updateEmpresa } = useAuthStore()
   const qc = useQueryClient()
   const [saved, setSaved] = useState(false)
   const [saveError, setSaveError] = useState('')
@@ -249,6 +261,7 @@ export default function ConfigPage() {
 
   const [empForm, setEmpForm] = useState({ nome:'', email:'', telefone:'', cnpj:'', site:'', slogan:'', cor_primaria:'#6366F1', cor_secundaria:'#8B5CF6', fonte:'Inter', logo_url:'', autentique_token:'' })
   const [opForm, setOpForm] = useState({ custoHora:35, fechamentoDia:5, nfDia:1, reuniaoDia:10 })
+  const [custosOp, setCustosOp] = useState({ itens: [], clientesAtivos: '' })
   const { data: feriados = [] } = useFeriados()
   const createFeriado = useCreateFeriado()
   const deleteFeriado = useDeleteFeriado()
@@ -264,6 +277,7 @@ export default function ConfigPage() {
 
   useEffect(() => {
     mfaListFactors().then(({ factors }) => setMfaFactors(factors))
+    ensureBrandFontsLoaded()
   }, [])
 
   async function handleEnroll() {
@@ -450,6 +464,7 @@ export default function ConfigPage() {
       if (empresa.config) {
         try { setOpForm(o => ({ ...o, ...empresa.config })) } catch{}
         try { if (empresa.config.proposta) setPropForm(o => ({ ...o, ...empresa.config.proposta })) } catch{}
+        try { if (empresa.config.custosOperacao) setCustosOp(o => ({ ...o, itens: empresa.config.custosOperacao.itens || [], clientesAtivos: empresa.config.custosOperacao.clientesAtivos || '' })) } catch{}
       }
     }
   }, [empresa])
@@ -457,8 +472,8 @@ export default function ConfigPage() {
   async function salvarEmpresa() {
     if (!empresa) return
     try {
-      const { error } = await supabase.from('empresas').update({ 
-        nome: empForm.nome, email: empForm.email, cnpj: empForm.cnpj, 
+      const payload = {
+        nome: empForm.nome, email: empForm.email, cnpj: empForm.cnpj,
         telefone: empForm.telefone, site: empForm.site,
         slogan: empForm.slogan || null,
         cor_primaria: empForm.cor_primaria || '#6366F1',
@@ -466,8 +481,10 @@ export default function ConfigPage() {
         fonte: empForm.fonte || 'Inter',
         logo_url: empForm.logo_url || null,
         autentique_token: empForm.autentique_token || null,
-      }).eq('id', empresa.id)
+      }
+      const { error } = await supabase.from('empresas').update(payload).eq('id', empresa.id)
       if (error) throw error
+      updateEmpresa(payload)
       setSaved(true); setTimeout(() => setSaved(false), 2000)
     } catch (e) { setSaveError(e.message || 'Erro ao salvar'); setTimeout(() => setSaveError(''), 3000) }
   }
@@ -477,6 +494,27 @@ export default function ConfigPage() {
     try {
       const { error } = await supabase.from('empresas').update({ config: opForm }).eq('id', empresa.id)
       if (error) throw error
+      updateEmpresa({ config: opForm })
+      setSaved(true); setTimeout(() => setSaved(false), 2000)
+    } catch (e) { setSaveError(e.message || 'Erro ao salvar'); setTimeout(() => setSaveError(''), 3000) }
+  }
+
+  async function salvarCustosOp() {
+    if (!empresa) return
+    try {
+      const total = custosOp.itens.reduce((s, i) => s + (parseFloat(i.valor) || 0), 0)
+      const nClientes = parseInt(custosOp.clientesAtivos) || 0
+      const payload = {
+        itens: custosOp.itens,
+        clientesAtivos: custosOp.clientesAtivos,
+        total,
+        overheadPorCliente: nClientes > 0 ? total / nClientes : 0,
+        atualizadoEm: new Date().toISOString(),
+      }
+      const novoConfig = { ...(empresa.config || {}), custosOperacao: payload }
+      const { error } = await supabase.from('empresas').update({ config: novoConfig }).eq('id', empresa.id)
+      if (error) throw error
+      updateEmpresa({ config: novoConfig })
       setSaved(true); setTimeout(() => setSaved(false), 2000)
     } catch (e) { setSaveError(e.message || 'Erro ao salvar'); setTimeout(() => setSaveError(''), 3000) }
   }
@@ -485,8 +523,10 @@ export default function ConfigPage() {
     if (!empresa) return
     try {
       const configAtual = empresa.config || {}
-      const { error } = await supabase.from('empresas').update({ config: { ...configAtual, proposta: propForm } }).eq('id', empresa.id)
+      const novoConfig = { ...configAtual, proposta: propForm }
+      const { error } = await supabase.from('empresas').update({ config: novoConfig }).eq('id', empresa.id)
       if (error) throw error
+      updateEmpresa({ config: novoConfig })
       setSaved(true); setTimeout(() => setSaved(false), 2000)
     } catch (e) { setSaveError(e.message || 'Erro ao salvar'); setTimeout(() => setSaveError(''), 3000) }
   }
@@ -510,7 +550,7 @@ export default function ConfigPage() {
 
       {/* Tabs */}
       <div style={{ display:'flex', gap:4, marginBottom:18, borderBottom:'1px solid #E2E8F0', paddingBottom:0 }}>
-        {[['empresa','🏢 Empresa'],['equipe','👥 Equipe'],['custoHora','💰 Custo/Hora'],['operacional','⚙️ Operacional'],['integracoes','🔗 Integrações'],['seguranca','🔐 Segurança'],...(profile?.perfil==='admin'?[['plano','💳 Meu Plano']]:[]  )].map(([id, label]) => (
+        {[['empresa','🏢 Empresa'],['equipe','👥 Equipe'],['custoHora','💰 Custo/Hora'],['custosOp','📊 Custo da Operação'],['operacional','⚙️ Operacional'],['integracoes','🔗 Integrações'],['seguranca','🔐 Segurança'],...(profile?.perfil==='admin'?[['plano','💳 Meu Plano']]:[]  )].map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{ padding:'8px 16px', border:'none', background:'transparent', cursor:'pointer', fontSize:12, fontWeight:600, color: tab===id?'#6366F1':'#94A3B8', borderBottom: tab===id?'2px solid #6366F1':'2px solid transparent', marginBottom:-1 }}>
             {label}
           </button>
@@ -711,6 +751,94 @@ export default function ConfigPage() {
 
       {/* ABA CUSTO/HORA */}
       {tab === 'custoHora' && <CalculadoraCustoHora usuarios={usuarios} editarUser={editarUser} />}
+
+      {/* ABA CUSTO DA OPERAÇÃO (OVERHEAD) */}
+      {tab === 'custosOp' && (() => {
+        const CATEGORIAS = [
+          { v:'ferramentas',   l:'🖥️ Ferramentas e sistemas', ex:'ERP, Fluxe, Google Workspace, WhatsApp API' },
+          { v:'contabilidade', l:'📑 Contabilidade e jurídico', ex:'Contador do seu BPO, advogado' },
+          { v:'estrutura',     l:'🏠 Estrutura', ex:'Aluguel, energia, internet (ou % do home office)' },
+          { v:'marketing',     l:'📣 Marketing e comercial', ex:'Tráfego, CRM, site, materiais' },
+          { v:'financeiro',    l:'🏦 Financeiro', ex:'Tarifas bancárias, taxas de máquina' },
+          { v:'outros',        l:'📦 Outros', ex:'Cursos, mentorias, associações' },
+        ]
+        const total = custosOp.itens.reduce((s, i) => s + (parseFloat(i.valor) || 0), 0)
+        const nClientes = parseInt(custosOp.clientesAtivos) || 0
+        const porCliente = nClientes > 0 ? total / nClientes : 0
+        const fmtR = (v) => (v || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' })
+        const setItem = (idx, k, v) => setCustosOp(c => ({ ...c, itens: c.itens.map((it, i) => i === idx ? { ...it, [k]: v } : it) }))
+        const addItem = (cat) => setCustosOp(c => ({ ...c, itens: [...c.itens, { categoria: cat, descricao: '', valor: '' }] }))
+        const rmItem = (idx) => setCustosOp(c => ({ ...c, itens: c.itens.filter((_, i) => i !== idx) }))
+        const atualizadoEm = empresa?.config?.custosOperacao?.atualizadoEm
+
+        return (
+          <Card>
+            <CardHeader title="Custo da Operação (Overhead mensal)" icon="📊" />
+            <div style={{ padding:16 }}>
+              <div style={{ fontSize:12, color:'#64748B', marginBottom:14, lineHeight:1.6 }}>
+                Tudo que a sua operação paga para existir, independente de quantos clientes você tem.
+                Esse valor entra automaticamente na <strong>Precificação</strong> como overhead por cliente.
+                {atualizadoEm && <span style={{ display:'block', marginTop:4, fontSize:11, color:'#94A3B8' }}>Última atualização: {new Date(atualizadoEm).toLocaleDateString('pt-BR')} — revise a cada 3 a 6 meses.</span>}
+              </div>
+
+              {CATEGORIAS.map(cat => {
+                const itensCat = custosOp.itens.map((it, idx) => ({ ...it, _idx: idx })).filter(it => it.categoria === cat.v)
+                const subtotal = itensCat.reduce((s, i) => s + (parseFloat(i.valor) || 0), 0)
+                return (
+                  <div key={cat.v} style={{ marginBottom:14, border:'1px solid #F1F5F9', borderRadius:10, padding:'10px 14px' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                      <div>
+                        <span style={{ fontSize:12, fontWeight:700, color:'#334155' }}>{cat.l}</span>
+                        <span style={{ fontSize:10, color:'#94A3B8', marginLeft:8 }}>{cat.ex}</span>
+                      </div>
+                      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                        {subtotal > 0 && <span style={{ fontSize:11, fontWeight:700, color:'#6366F1' }}>{fmtR(subtotal)}</span>}
+                        <button onClick={() => addItem(cat.v)} style={{ border:'1px dashed #C7D2FE', background:'#EEF2FF', color:'#4338CA', borderRadius:6, padding:'3px 10px', fontSize:11, fontWeight:700, cursor:'pointer' }}>+ item</button>
+                      </div>
+                    </div>
+                    {itensCat.map(it => (
+                      <div key={it._idx} style={{ display:'grid', gridTemplateColumns:'1fr 130px 28px', gap:8, marginBottom:6 }}>
+                        <input style={fi} value={it.descricao} onChange={e => setItem(it._idx, 'descricao', e.target.value)} placeholder="Descrição (ex: Conta Azul — 8 licenças)" />
+                        <input style={fi} type="number" min="0" step="0.01" value={it.valor} onChange={e => setItem(it._idx, 'valor', e.target.value)} placeholder="R$ /mês" />
+                        <button onClick={() => rmItem(it._idx)} title="Remover" style={{ border:'none', background:'transparent', color:'#DC2626', cursor:'pointer', fontSize:14 }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
+
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginTop:16 }}>
+                <div style={{ background:'#F8FAFC', borderRadius:10, padding:14, textAlign:'center' }}>
+                  <div style={{ fontSize:10, color:'#64748B', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:4 }}>Overhead total /mês</div>
+                  <div style={{ fontSize:22, fontWeight:800, color:'#0F172A' }}>{fmtR(total)}</div>
+                </div>
+                <div style={{ background:'#F8FAFC', borderRadius:10, padding:14, textAlign:'center' }}>
+                  <div style={{ fontSize:10, color:'#64748B', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:4 }}>Clientes ativos</div>
+                  <input style={{ ...fi, textAlign:'center', fontSize:18, fontWeight:700 }} type="number" min="0" value={custosOp.clientesAtivos} onChange={e => setCustosOp(c => ({ ...c, clientesAtivos: e.target.value }))} placeholder="0" />
+                </div>
+                <div style={{ background:'linear-gradient(135deg,#6366F1,#8B5CF6)', borderRadius:10, padding:14, textAlign:'center', color:'#fff' }}>
+                  <div style={{ fontSize:10, opacity:.85, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:4 }}>Overhead por cliente</div>
+                  <div style={{ fontSize:22, fontWeight:800 }}>{fmtR(porCliente)}</div>
+                </div>
+              </div>
+
+              {total > 0 && nClientes === 0 && (
+                <div style={{ marginTop:10, fontSize:11, color:'#D97706', background:'#FFFBEB', border:'1px solid #FDE68A', borderRadius:8, padding:'8px 12px' }}>
+                  ⚠ Informe o número de clientes ativos para calcular o overhead por cliente usado na precificação.
+                </div>
+              )}
+              {total === 0 && (
+                <div style={{ marginTop:10, fontSize:11, color:'#D97706', background:'#FFFBEB', border:'1px solid #FDE68A', borderRadius:8, padding:'8px 12px' }}>
+                  ⚠ Overhead zerado = precificação subestimada. Toda operação tem custo fixo — comece pelas ferramentas e contabilidade.
+                </div>
+              )}
+            </div>
+            <div style={{ padding:'12px 16px', borderTop:'1px solid #F1F5F9', display:'flex', justifyContent:'flex-end' }}>
+              <Btn variant="primary" onClick={salvarCustosOp}>Salvar custos</Btn>
+            </div>
+          </Card>
+        )
+      })()}
 
       {/* ABA OPERACIONAL */}
       {tab === 'operacional' && (

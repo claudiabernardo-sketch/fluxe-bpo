@@ -205,7 +205,7 @@ function assinaturas(nomeEmp, repEmp, cargoRep, nomeCliente, cidadeEmp, dataFmt)
   ]
 }
 
-export async function gerarContratoDocx({ calc, contratoForm, empresa, valorProposta }) {
+export async function gerarContratoDocx({ calc, contratoForm, empresa, valorProposta, escopo }) {
   const emp = empresa || {}
   const prop = emp.config?.proposta || {}
 
@@ -241,6 +241,7 @@ export async function gerarContratoDocx({ calc, contratoForm, empresa, valorProp
     calc.d.carec  > 0 && [`Contas a receber`, `Até ${Math.ceil(calc.d.carec * 1.5)} recebíveis/mês`],
     calc.d.nfs    > 0 && [`Emissão de notas fiscais`, `Até ${Math.ceil(calc.d.nfs * 1.5)} NFs/mês`],
     calc.d.boletos > 0 && [`Emissão de boletos`, `Até ${Math.ceil(calc.d.boletos * 1.5)} boletos/mês`],
+    calc.d.cartao > 0 && [`Cartões de crédito conciliados`, `${calc.d.cartao} cartão${calc.d.cartao > 1 ? 'ões' : ''}`],
   ].filter(Boolean)
 
   const doc = new Document({
@@ -299,10 +300,10 @@ export async function gerarContratoDocx({ calc, contratoForm, empresa, valorProp
         // I — DAS PARTES
         secao('I', 'DAS PARTES'),
         paragrafo([B('CONTRATANTE:')]),
-        paragrafo([B('Razão Social: '), R(calc.d.nome || '___________________________')]),
-        paragrafo([B('CNPJ: '), R('___________________________  '), B('E-mail: '), R('___________________________')]),
-        paragrafo([B('Endereço: '), R('___________________________________________________________________')]),
-        paragrafo([B('Representado(a) por: '), R('_________________________________  '), B('CPF: '), R('_______________')]),
+        paragrafo([B('Razão Social: '), R(contratoForm.clienteNome || calc.d.nome || '___________________________')]),
+        paragrafo([B('CNPJ/CPF: '), R(contratoForm.clienteCnpj || '___________________________'), ...(contratoForm.clienteEmail ? [R('  |  '), B('E-mail: '), R(contratoForm.clienteEmail)] : [])]),
+        paragrafo([B('Endereço: '), R(contratoForm.clienteEndereco || '___________________________________________________________________')]),
+        paragrafo([B('Representado(a) por: '), R(contratoForm.clienteRep || '_________________________________'), R('  '), B('CPF: '), R(contratoForm.clienteCpf || '_______________')]),
         spacer(120),
         paragrafo([B('CONTRATADA:')]),
         paragrafo([B('Razão Social: '), B(nomeEmp), R('  |  '), B('CNPJ: '), R(cnpjEmp)]),
@@ -325,11 +326,13 @@ export async function gerarContratoDocx({ calc, contratoForm, empresa, valorProp
         paragrafo('Os serviços serão prestados remotamente, de segunda a sexta-feira, das 09h00 às 17h00 (horário de Brasília). Os relatórios mensais serão entregues até o 10º dia útil do mês subsequente, desde que a CONTRATANTE envie os documentos até o dia 5.'),
 
         clausula('3', 'Das Responsabilidades da CONTRATANTE'),
-        item('Fornecer documentos e acessos até o dia 5 de cada mês'),
-        item('Responder às solicitações em até 48 horas úteis'),
-        item('Manter atualizados os acessos às plataformas utilizadas'),
-        calc.d.agend > 0 ? item('Manter saldo bancário suficiente para os agendamentos de pagamentos') : null,
-        calc.d.nfs > 0 ? item('Fornecer dados completos para emissão de notas fiscais') : null,
+        ...(escopo?.resp?.length ? escopo.resp.map(r => item(r)) : [
+          item('Fornecer documentos e acessos até o dia 5 de cada mês'),
+          item('Responder às solicitações em até 48 horas úteis'),
+          item('Manter atualizados os acessos às plataformas utilizadas'),
+          calc.d.agend > 0 ? item('Manter saldo bancário suficiente para os agendamentos de pagamentos') : null,
+          calc.d.nfs > 0 ? item('Fornecer dados completos para emissão de notas fiscais') : null,
+        ].filter(Boolean)),
 
         clausula('4', 'Das Vedações à CONTRATADA'),
         paragrafo('Não integram o escopo: negociação com terceiros em nome da CONTRATANTE; tomada de decisões gerenciais; cobranças a clientes; controle de caixa físico; obrigações fiscais acessórias (SPED, EFD, DCTF), salvo se expressamente previsto em aditivo contratual.'),
@@ -341,6 +344,13 @@ export async function gerarContratoDocx({ calc, contratoForm, empresa, valorProp
         blocoValor(val, contratoForm.diaVencimento, contratoForm.formaPagamento),
         spacer(80),
         paragrafo(`O primeiro honorário será pago no ato da assinatura deste instrumento. Os demais serão pagos até o dia ${contratoForm.diaVencimento} de cada mês via ${contratoForm.formaPagamento}.`),
+        ...(() => {
+          const erpNome = calc.d?.erp === 'Outro' ? (calc.d?.erpOutro || 'de gestão financeira') : calc.d?.erp
+          if (calc.licencaRepasse > 0) return [paragrafo([B('Parágrafo Primeiro: '), R(`Além da mensalidade, a CONTRATANTE reembolsará mensalmente à CONTRATADA o valor de ${fmtVal(calc.licencaRepasse)} referente à licença do sistema ${erpNome}, a título de repasse. Eventuais reajustes de preço praticados pela plataforma serão automaticamente repassados à CONTRATANTE, mediante comunicação prévia.`)])]
+          if (calc.licencaEmbutida > 0) return [paragrafo([B('Parágrafo Primeiro: '), R(`A mensalidade contratada inclui a licença do sistema ${erpNome}, contratada e mantida pela CONTRATADA.`)])]
+          if (calc.d?.licencaModalidade === 'contabilidade' && calc.d?.erp) return [paragrafo([B('Parágrafo Primeiro: '), R(`A licença do sistema ${erpNome} é fornecida pela contabilidade da CONTRATANTE. A eventual descontinuidade desse fornecimento não é de responsabilidade da CONTRATADA, e a nova contratação da licença deverá ser acordada entre as partes.`)])]
+          return []
+        })(),
 
         clausula('6', 'Do Volume de Serviços'),
         paragrafo('Os serviços estão limitados aos volumes abaixo. Ultrapassados estes limites, horas adicionais serão orçadas separadamente.'),
@@ -394,7 +404,7 @@ export async function gerarContratoDocx({ calc, contratoForm, empresa, valorProp
         spacer(80),
         paragrafo(`E, por estarem assim justas e contratadas, as partes assinam o presente instrumento em 2 (duas) vias de igual teor e forma.`),
 
-        ...assinaturas(nomeEmp, repEmp, cargoRep, calc.d.nome, cidadeEmp, dataHoje),
+        ...assinaturas(nomeEmp, repEmp, cargoRep, contratoForm.clienteNome || calc.d.nome, cidadeEmp, dataHoje),
       ].filter(Boolean)
     }]
   })

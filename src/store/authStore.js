@@ -55,6 +55,9 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  // Atualiza a empresa no store local após salvar (evita dados desatualizados até o próximo login)
+  updateEmpresa: (fields) => set(s => ({ empresa: s.empresa ? { ...s.empresa, ...fields } : s.empresa })),
+
   signIn: async (email, password) => {
     set({ error: null })
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })

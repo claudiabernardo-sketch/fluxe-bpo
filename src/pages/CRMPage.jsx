@@ -17,6 +17,7 @@ const STATUS_PROP = {
 function DocsComerciaisTab({ leadId }) {
   const { data: propostas = [], isLoading } = usePropostasByLead(leadId)
   const upd = useUpdateProposta()
+  const nav = useNavigate()
   const fmtD = (d) => d ? new Date(d).toLocaleDateString('pt-BR') : '—'
   const fmtV = (v) => v != null ? Number(v).toLocaleString('pt-BR', { style:'currency', currency:'BRL' }) : '—'
   if (isLoading) return <div style={{ padding:'20px 0', textAlign:'center', color:'#94A3B8', fontSize:12 }}>Carregando…</div>
@@ -39,12 +40,30 @@ function DocsComerciaisTab({ leadId }) {
               <span style={{ padding:'2px 8px', borderRadius:99, fontSize:10, fontWeight:700, background:st.bg, color:st.color }}>{st.label}</span>
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <span style={{ fontSize:11, color:'#94A3B8' }}>Criada {fmtD(p.criado_em)}</span>
+              <span style={{ fontSize:11, color:'#94A3B8' }}>
+                Criada {fmtD(p.criado_em)}
+                {p.aprovada_em && <span style={{ color:'#15803D', fontWeight:600 }}> · Aprovada {fmtD(p.aprovada_em)}</span>}
+              </span>
               <div style={{ flex:1 }} />
+              {p.status === 'aprovada' && (
+                <button
+                  onClick={() => {
+                    sessionStorage.setItem('proposta_gerar_contrato', JSON.stringify(p))
+                    nav('/precificacao')
+                  }}
+                  style={{ fontSize:11, fontWeight:700, padding:'4px 12px', border:'1px solid #22C55E', borderRadius:6, background:'#F0FDF4', color:'#15803D', cursor:'pointer' }}
+                >📝 Gerar contrato</button>
+              )}
               <select
                 value={p.status}
                 disabled={upd.isPending}
-                onChange={async e => { await upd.mutateAsync({ id:p.id, status:e.target.value }) }}
+                onChange={async e => {
+                  const novo = e.target.value
+                  const extras = {}
+                  if (novo === 'enviada'  && !p.enviada_em)  extras.enviada_em  = new Date().toISOString()
+                  if (novo === 'aprovada' && !p.aprovada_em) extras.aprovada_em = new Date().toISOString()
+                  await upd.mutateAsync({ id:p.id, status:novo, ...extras })
+                }}
                 style={{ fontSize:11, padding:'3px 8px', border:'1px solid #E2E8F0', borderRadius:6, cursor:'pointer' }}
               >
                 {Object.entries(STATUS_PROP).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
@@ -961,7 +980,7 @@ export default function CRMPage() {
                     ['segmento', 'Segmento / Atividade'],
                   ].map(([k, l]) => (
                     <div key={k}>
-                      <label style style={labelStyle}>{l}</label>
+                      <label style={labelStyle}>{l}</label>
                       <input value={form[k] || ''} onChange={e => setF(k, e.target.value)} style={inputStyle} />
                     </div>
                   ))}
