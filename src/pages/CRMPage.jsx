@@ -408,6 +408,16 @@ export default function CRMPage() {
     XLSX.writeFile(wb, `Fluxe_Leads_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.xlsx`)
   }
 
+  // Baixa a planilha modelo (arquivo estático em /public, com identidade visual do Fluxe)
+  function baixarModeloImportacao() {
+    const a = document.createElement('a')
+    a.href = '/modelo-importacao-leads-fluxe.xlsx'
+    a.download = 'Modelo_Importacao_Leads_Fluxe.xlsx'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
   async function importarLeads(e) {
     const file = e.target.files[0]
     if (!file) return
@@ -700,6 +710,10 @@ export default function CRMPage() {
         </div>
         <div style={{ flex:1 }} />
         <input ref={importRef} type="file" accept=".xlsx,.xls" style={{ display:'none' }} onChange={importarLeads} />
+        <button onClick={baixarModeloImportacao} title="Baixa a planilha modelo para preencher e importar"
+          style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #E2E8F0', background:'#fff', cursor:'pointer', fontSize:11, fontWeight:600, color:'#475569' }}>
+          📋 Modelo
+        </button>
         <button onClick={() => importRef.current?.click()}
           style={{ padding:'6px 14px', borderRadius:8, border:'1px solid #E2E8F0', background:'#fff', cursor:'pointer', fontSize:11, fontWeight:600, color:'#475569' }}>
           ⬆ Importar
