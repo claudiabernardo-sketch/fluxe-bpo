@@ -445,8 +445,9 @@ export default function PrecificacaoPage() {
   const [d, setD] = useState(() => {
     // Se veio do CRM (botão Proposta), pré-preenche com dados do lead
     try {
-      const lead = JSON.parse(sessionStorage.getItem('crm_lead_precif') || 'null')
+      const lead = JSON.parse(localStorage.getItem('crm_lead_precif') || sessionStorage.getItem('crm_lead_precif') || 'null')
       if (lead) {
+        localStorage.removeItem('crm_lead_precif')
         sessionStorage.removeItem('crm_lead_precif')
         // Captura lead_id para vincular a proposta
         if (lead.id) leadIdRef.current = lead.id

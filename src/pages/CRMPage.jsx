@@ -649,7 +649,8 @@ export default function CRMPage() {
   }
 
   function abrirPrecificacao(lead) {
-    sessionStorage.setItem('crm_lead_precif', JSON.stringify({
+    // localStorage (não sessionStorage): window.open abre nova aba e sessionStorage não atravessa
+    localStorage.setItem('crm_lead_precif', JSON.stringify({
       id: lead.id,
       nome: lead.fantasia || lead.nome || '',
       fantasia: lead.fantasia || '',
