@@ -446,9 +446,10 @@ export default function PrecificacaoPage() {
     // Se veio do CRM (botão Proposta), pré-preenche com dados do lead
     try {
       const lead = JSON.parse(localStorage.getItem('crm_lead_precif') || sessionStorage.getItem('crm_lead_precif') || 'null')
-      if (lead) {
-        localStorage.removeItem('crm_lead_precif')
-        sessionStorage.removeItem('crm_lead_precif')
+      // Só usa se for recente (2 min). NÃO remove aqui — o componente pode remontar
+      // durante o fluxo de auth e a segunda montagem precisa encontrar o item.
+      // A limpeza acontece 15s depois, num effect.
+      if (lead && (!lead.ts || Date.now() - lead.ts < 120000)) {
         // Captura lead_id para vincular a proposta
         if (lead.id) leadIdRef.current = lead.id
         return {
@@ -479,6 +480,15 @@ export default function PrecificacaoPage() {
   })
   const [custoHoraFonte, setCustoHoraFonte] = useState(null) // null | 'equipe' | 'propria'
   const propostaStatusRef = useRef(null) // status da proposta importada (evita rebaixar 'aprovada' para 'enviada')
+
+  // Limpa o lead vindo do CRM 15s após a montagem (depois que remontagens do fluxo de auth já passaram)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      localStorage.removeItem('crm_lead_precif')
+      sessionStorage.removeItem('crm_lead_precif')
+    }, 15000)
+    return () => clearTimeout(t)
+  }, [])
 
   // Vindo do CRM com proposta APROVADA → restaura snapshot congelado e abre direto na etapa de contrato
   useEffect(() => {

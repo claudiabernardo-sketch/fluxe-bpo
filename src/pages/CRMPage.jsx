@@ -649,8 +649,11 @@ export default function CRMPage() {
   }
 
   function abrirPrecificacao(lead) {
-    // localStorage (não sessionStorage): window.open abre nova aba e sessionStorage não atravessa
+    // localStorage (não sessionStorage): window.open abre nova aba e sessionStorage não atravessa.
+    // Com timestamp: a precificação só usa se for recente (2 min) e não apaga na leitura,
+    // porque o componente pode remontar durante o fluxo de autenticação.
     localStorage.setItem('crm_lead_precif', JSON.stringify({
+      ts: Date.now(),
       id: lead.id,
       nome: lead.fantasia || lead.nome || '',
       fantasia: lead.fantasia || '',
