@@ -956,7 +956,7 @@ export function usePropostas() {
         .from('propostas')
         .select('*')
         .eq('empresa_id', empresa?.id)
-        .order('created_at', { ascending: false })
+        .order('criado_em', { ascending: false })
         .limit(200)
       if (error) throw error
       return data || []
@@ -976,7 +976,7 @@ export function usePropostasByLead(leadId) {
         .select('*')
         .eq('empresa_id', empresa?.id)
         .eq('lead_id', leadId)
-        .order('created_at', { ascending: false })
+        .order('criado_em', { ascending: false })
       if (error) throw error
       return data || []
     },
