@@ -21,6 +21,8 @@ export {
   mapRowToCliente, mapRowToTarefa,
 } from './excelMappings'
 
+import { findHeaderRowIndex } from './excelMappings'
+
 // ── EXPORTAR ─────────────────────────────────────────────────────────
 // columns: [{ label: 'Nome da Coluna', get: (row) => row.campo }]
 export async function exportToXlsx(rows, columns, filename = 'exportacao.xlsx') {
@@ -91,7 +93,9 @@ export function importFromXlsx(file) {
         const XLSX = await getXLSX()
         const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true })
         const ws = wb.Sheets[wb.SheetNames[0]]
-        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
+        const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+        const headerRow = findHeaderRowIndex(raw)
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '', range: headerRow })
         resolve(rows)
       } catch (err) {
         reject(err)
