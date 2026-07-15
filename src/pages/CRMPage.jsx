@@ -1,4 +1,4 @@
-import { useLeads, useCreateLead, useUpdateLead, useConvertLeadToClient, useLeadInteracoes, useCreateLeadInteracao, useDeleteLeadInteracao, usePropostasByLead, useUpdateProposta, useCrmTemplates, useCreateCrmTemplate, useUpdateCrmTemplate, useDeleteCrmTemplate } from '../hooks/useData'
+import { useLeads, useCreateLead, useUpdateLead, useConvertLeadToClient, useLeadInteracoes, useCreateLeadInteracao, useDeleteLeadInteracao, usePropostas, usePropostasByLead, useUpdateProposta, useCrmTemplates, useCreateCrmTemplate, useUpdateCrmTemplate, useDeleteCrmTemplate } from '../hooks/useData'
 import { Card, Loader, EmptyState, Btn, fmtR } from '../components/ui'
 import { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -386,6 +386,17 @@ export default function CRMPage() {
   const update  = useUpdateLead()
   const convert = useConvertLeadToClient()
   const nav     = useNavigate()
+
+  // Proposta aprovada de cada lead — pra mostrar "Gerar contrato" direto no card,
+  // sem precisar abrir o lead e ir na aba Documentos pra achar
+  const { data: todasPropostas = [] } = usePropostas()
+  const propostaAprovadaPorLead = useMemo(() => {
+    const map = {}
+    for (const p of todasPropostas) {
+      if (p.status === 'aprovada' && p.lead_id && !map[p.lead_id]) map[p.lead_id] = p
+    }
+    return map
+  }, [todasPropostas])
 
   // Templates personalizados (do usuário, além dos fixos do sistema)
   const { data: meusTemplates = [] } = useCrmTemplates()
@@ -825,6 +836,16 @@ export default function CRMPage() {
                               💰 Proposta
                             </button>
                           )}
+                          {propostaAprovadaPorLead[l.id] && (
+                            <button onClick={() => {
+                              sessionStorage.setItem('proposta_gerar_contrato', JSON.stringify(propostaAprovadaPorLead[l.id]))
+                              nav('/precificacao')
+                            }}
+                              title="Proposta aprovada — gerar contrato"
+                              style={{ fontSize:9, padding:'2px 6px', border:'1px solid #86EFAC', borderRadius:5, cursor:'pointer', background:'#F0FDF4', color:'#15803D', fontWeight:700 }}>
+                              📝 Gerar contrato
+                            </button>
+                          )}
                           {getTemplatesDaEtapa(l.etapa).length > 0 && (() => {
                             const todos = getTemplatesDaEtapa(l.etapa)
                             const grupos = [...new Set(todos.map(t => t.grupo))]
@@ -896,6 +917,16 @@ export default function CRMPage() {
                     style={{ border:'1px solid #DDD6FE', background:'#EEF2FF', borderRadius:6, padding:'4px 10px', cursor:'pointer', fontSize:11, color:'#6366F1', fontWeight:600, flexShrink:0 }}>
                     💰 Proposta
                   </button>
+                  {propostaAprovadaPorLead[l.id] && (
+                    <button onClick={() => {
+                      sessionStorage.setItem('proposta_gerar_contrato', JSON.stringify(propostaAprovadaPorLead[l.id]))
+                      nav('/precificacao')
+                    }}
+                      title="Proposta aprovada — gerar contrato"
+                      style={{ border:'1px solid #86EFAC', background:'#F0FDF4', borderRadius:6, padding:'4px 10px', cursor:'pointer', fontSize:11, color:'#15803D', fontWeight:700, flexShrink:0 }}>
+                      📝 Gerar contrato
+                    </button>
+                  )}
                 </div>
                 <LinhaDoTempo lead={l} />
               </div>
