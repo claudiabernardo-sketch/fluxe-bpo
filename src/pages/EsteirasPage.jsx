@@ -362,7 +362,12 @@ export default function EsteirasPage() {
               </div>
               <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
                 <Btn variant="ghost" onClick={() => { setApplyModal(null); setApplyClient('') }}>Cancelar</Btn>
-                <Btn variant="primary" disabled={!applyClient || applying} onClick={() => aplicarEsteira(applyClient)}>
+                <Btn variant="primary" disabled={!applyClient || applying} onClick={() => {
+                  const tasks = applyModal.all
+                    ? todasTasksSelecionadas(est)
+                    : tasksDaEtapaSelecionadas(applyModal.etapa, applyModal.etIdx)
+                  aplicarTarefas(applyClient, tasks)
+                }}>
                   {applying ? 'Aplicando…' : 'Aplicar tarefas'}
                 </Btn>
               </div>
@@ -370,6 +375,39 @@ export default function EsteirasPage() {
           </div>
         )}
       </div>
+    )
+  }
+
+  return (
+    <div>
+      <div style={{ fontSize:13, color:'#64748B', marginBottom:16 }}>
+        Selecione uma esteira para ver as tarefas e checklists. Use <strong>"Aplicar selecionadas ao cliente"</strong> para criar as tarefas automaticamente.
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:14 }}>
+        {ESTEIRAS.map(esteira => {
+          const totalTasks = esteira.etapas.reduce((a,e) => a + e.tasks.length, 0)
+          const totalChecks = esteira.etapas.reduce((a,e) => a + e.tasks.reduce((b,t) => b + t.checklist.length, 0), 0)
+          return (
+            <div key={esteira.id} onClick={() => setSelected(esteira.id)}
+              style={{ background:'#fff', border:'1px solid #E2E8F0', borderRadius:12, padding:16, cursor:'pointer', transition:'all .15s', borderLeft:`4px solid ${esteira.color}` }}
+              onMouseEnter={e=>{ e.currentTarget.style.boxShadow='0 4px 20px rgba(0,0,0,.08)'; e.currentTarget.style.transform='translateY(-2px)' }}
+              onMouseLeave={e=>{ e.currentTarget.style.boxShadow=''; e.currentTarget.style.transform='' }}>
+              <div style={{ fontSize:24, marginBottom:8 }}>{esteira.icon}</div>
+              <div style={{ fontSize:14, fontWeight:700, color:'#0F172A', marginBottom:4 }}>{esteira.name}</div>
+              <div style={{ fontSize:11, color:'#64748B', marginBottom:12 }}>{esteira.etapas.length} etapas</div>
+              <div style={{ display:'flex', gap:10, fontSize:11, color:'#94A3B8' }}>
+                <span>✓ {totalTasks} tarefas</span>
+                <span>📋 {totalChecks} itens</span>
+              </div>
+              <div style={{ marginTop:10 }}>
+                <span style={{ fontSize:10, background:'#EEF2FF', color:'#4338CA', padding:'3px 8px', borderRadius:99, fontWeight:600 }}>
+                  Clique para ver e aplicar
+                </span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
-}
 }
