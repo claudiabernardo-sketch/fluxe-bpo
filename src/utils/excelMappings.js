@@ -58,6 +58,20 @@ export const TAREFAS_EXPORT_COLS = [
   { label: 'Observações',   get: r => r.obs },
 ]
 
+// ── DETECTAR LINHA DE CABEÇALHO ──────────────────────────────────────
+// As planilhas modelo (clientes, tarefas, leads) têm 1-2 linhas de título/
+// instrução antes da linha real de cabeçalhos (célula mesclada = só a
+// primeira coluna preenchida). Sem isso, sheet_to_json usa a linha de
+// título como cabeçalho e nenhuma linha real é lida — toda importação
+// falha em silêncio. Acha a primeira linha com 2+ células preenchidas.
+export function findHeaderRowIndex(rows2D, maxScan = 6) {
+  for (let i = 0; i < Math.min(maxScan, rows2D.length); i++) {
+    const filled = (rows2D[i] || []).filter(c => String(c ?? '').trim() !== '').length
+    if (filled >= 2) return i
+  }
+  return 0
+}
+
 // ── MAPEAR LINHA IMPORTADA → OBJETO DO SISTEMA ────────────────────────
 export function mapRowToCliente(row) {
   const mrr = parseFloat(String(row['MRR (R$)'] || '0').replace(/[^\d.,]/g, '').replace(',', '.')) || 0

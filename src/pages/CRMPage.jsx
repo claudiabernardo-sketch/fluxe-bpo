@@ -3,6 +3,7 @@ import { Card, Loader, EmptyState, Btn, fmtR } from '../components/ui'
 import { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { findHeaderRowIndex } from '../utils/excelMappings'
 
 // ── Aba Documentos Comerciais (propostas do lead) ──────────────────────────
 const STATUS_PROP = {
@@ -429,7 +430,9 @@ export default function CRMPage() {
         // Pega a primeira aba que tiver dados (ignora abas de instrução)
         const wsName = wb.SheetNames.find(n => !n.includes('Instrução') && !n.includes('📋')) || wb.SheetNames[0]
         const ws = wb.Sheets[wsName]
-        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
+        const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+        const headerRow = findHeaderRowIndex(raw)
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '', range: headerRow })
         
         const etapaMap = {
           'lead novo':'novo','contato':'contato','diagnóstico':'diagnostico',
@@ -457,7 +460,11 @@ export default function CRMPage() {
             importados++
           } catch { erros++ }
         }
-        alert(`✅ Importação concluída!\n${importados} leads importados${erros > 0 ? `\n⚠️ ${erros} linhas com erro (verifique os dados)` : ''}`)
+        if (importados === 0 && erros === 0) {
+          alert('⚠️ Nenhum lead foi encontrado na planilha. Confira se preencheu a partir da linha correta e se não alterou os nomes das colunas.')
+        } else {
+          alert(`✅ Importação concluída!\n${importados} leads importados${erros > 0 ? `\n⚠️ ${erros} linhas com erro (verifique os dados)` : ''}`)
+        }
       } catch (err) {
         alert('Erro ao ler o arquivo. Certifique-se de usar a planilha modelo do Fluxe.')
       }
