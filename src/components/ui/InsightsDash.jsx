@@ -4,8 +4,8 @@ import { useAuthStore } from '../../store/authStore'
 import { useClients, useTasks, useUsuarios } from '../../hooks/useData'
 import { supabase } from '../../lib/supabase'
 import { useMemo } from 'react'
+import { computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore, CUSTO_HORA_PADRAO } from '../../utils/radar'
 
-const CUSTO_HORA_PADRAO = 25
 const HORAS_MES_PADRAO = 160
 const OCUPACAO_ALERTA = 85
 
@@ -106,15 +106,12 @@ export default function InsightsDash() {
       ? usuarios.reduce((a, u) => a + (u.custo_hora || CUSTO_HORA_PADRAO), 0) / usuarios.length
       : CUSTO_HORA_PADRAO
 
+    const margensPorCliente = computeMargemPorCliente(clients, apontamentos, custoHoraMedio)
     const margemNegativa = []
     clients.forEach(c => {
-      const horas = apontamentos
-        .filter(ap => ap.cliente_id === c.id)
-        .reduce((a, ap) => a + (ap.segundos || 0) / 3600, 0)
-      const custo = horas * custoHoraMedio
-      const mrr = c.valor_mrr || 0
-      if (mrr > 0 && custo > mrr) {
-        margemNegativa.push({ nome: c.fantasia || c.razao_social, custo, mrr })
+      const m = margensPorCliente.find(x => x.clienteId === c.id)
+      if ((c.valor_mrr || 0) > 0 && m.margem < 0) {
+        margemNegativa.push({ nome: c.fantasia || c.razao_social, custo: m.custo, mrr: c.valor_mrr })
       }
     })
 
@@ -177,6 +174,29 @@ export default function InsightsDash() {
         desc: 'Sem esse dado, o cálculo de margem e rentabilidade não é preciso.',
         action: '/cap',
         cta: 'Configurar',
+      })
+    }
+
+    // ── 6. Radar do cliente — semáforo vermelho ─────────────
+    const emRisco = []
+    clients.forEach(c => {
+      const m = margensPorCliente.find(x => x.clienteId === c.id)
+      const tarefasCliente = tasks.filter(t => t.cliente_id === c.id && !t.deleted_at)
+      const areas = computeAreaStatusPorCliente(c, tarefasCliente, m)
+      const { semaforo } = computeRadarScore(areas)
+      if (semaforo === 'vermelho') emRisco.push(c)
+    })
+    if (emRisco.length > 0) {
+      const nomes = emRisco.slice(0, 2).map(c => c.fantasia || c.razao_social).join(', ')
+      list.push({
+        key: 'radar_risk',
+        icon: '🩺',
+        color: '#DC2626',
+        bg: '#FEF2F2',
+        title: `${emRisco.length} cliente${emRisco.length > 1 ? 's' : ''} em risco esta semana`,
+        desc: `${nomes}${emRisco.length > 2 ? ` e mais ${emRisco.length - 2}` : ''} — veja o radar de saúde do cliente.`,
+        action: `/clientes/${emRisco[0].id}?tab=radar`,
+        cta: 'Ver radar',
       })
     }
 
