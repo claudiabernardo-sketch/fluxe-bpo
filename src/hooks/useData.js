@@ -492,6 +492,25 @@ export function useRadarScore(clienteId) {
   })
 }
 
+export function useRadarScoreHistorico(clienteId, limite = 6) {
+  return useQuery({
+    queryKey: ['radar_score_historico', clienteId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('radar_scores')
+        .select('score, semaforo, calculado_em')
+        .eq('cliente_id', clienteId)
+        .order('calculado_em', { ascending: false })
+        .limit(limite)
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 60_000,
+    enabled: !!clienteId,
+    retry: false,
+  })
+}
+
 export function useRadarCalcLogUltimo() {
   return useQuery({
     queryKey: ['radar_calc_log_ultimo'],

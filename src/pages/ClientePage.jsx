@@ -15,6 +15,7 @@ import { supabase } from '../lib/supabase'
 import { Badge, Loader, fmtR } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 import RadarPainel from '../components/ui/RadarPainel'
+import RadarRelatorio360 from '../components/ui/RadarRelatorio360'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const ETAPA_COLOR = { comercial:'pu', pre_ob:'yw', onboarding:'bl', implantacao:'or', operacional:'gr', estrategico:'cy', acompanhamento:'gy', encerramento:'gy' }
@@ -426,6 +427,7 @@ export default function ClientePage() {
             ['rotina','🔁 Rotina'],
             ['escopo','📦 Escopo'],
             ['radar','🩺 Radar'],
+            ['relatorio360','📄 Relatório 360'],
           ].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)}
               style={{ padding:'10px 16px', border:'none', background:'transparent', cursor:'pointer', fontSize:12, fontWeight:600, whiteSpace:'nowrap',
@@ -1022,6 +1024,11 @@ export default function ClientePage() {
             <div style={{ maxWidth:800 }}>
               <RadarPainel clienteId={clienteId} />
             </div>
+          )}
+
+          {/* ── ABA RELATÓRIO 360 ─────────────────────────────────────────────── */}
+          {tab === 'relatorio360' && (
+            <RadarRelatorio360 clienteId={clienteId} />
           )}
 
         </div>

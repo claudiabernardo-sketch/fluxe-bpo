@@ -4,6 +4,8 @@
 // no painel lateral que abre direto da lista de Clientes (sem carregar o
 // resto da ficha do cliente).
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useRadarPanelStore } from '../../store/radarPanelStore'
 import {
   useClients, useTasks, useApontamentos, useApontamentosMes, useUsuarios,
   useRadarScore, useRadarAjustesManuais, useSalvarAjusteManual, useRemoverAjusteManual,
@@ -22,6 +24,7 @@ const STATUS_LABEL_RADAR = { saudavel:'Saudável', atencao:'Atenção', critico:
 const STATUS_BADGE_RADAR = { saudavel:'gr', atencao:'yw', critico:'rd' }
 
 export default function RadarPainel({ clienteId }) {
+  const navigate = useNavigate()
   const { data: clients = [] } = useClients()
   const cliente = clients.find(c => c.id === clienteId)
   const { data: tasks = [] } = useTasks()
@@ -116,10 +119,15 @@ export default function RadarPainel({ clienteId }) {
         <div style={{ fontSize:32, fontWeight:800, color: SEMAFORO_COR[scoreRadar.semaforo] }}>
           {scoreRadar.score ?? '—'}
         </div>
-        <div>
+        <div style={{ flex:1 }}>
           <span className={`b b-${SEMAFORO_BADGE[scoreRadar.semaforo]}`}>{SEMAFORO_LABEL[scoreRadar.semaforo]}</span>
           <div style={{ fontSize:10, color:'var(--tx3)', marginTop:4 }}>Score de 0 a 100</div>
         </div>
+        <button
+          onClick={() => { useRadarPanelStore.getState().fechar(); navigate(`/clientes/${clienteId}?tab=relatorio360`) }}
+          className="btn bo bsm"
+          style={{ flexShrink:0, whiteSpace:'nowrap' }}
+        >📄 Relatório 360</button>
       </div>
 
       <div style={{ border:'1px solid var(--bo)', borderRadius:'var(--r)', padding:'14px 16px', marginBottom:16, background:'var(--sur)' }}>
