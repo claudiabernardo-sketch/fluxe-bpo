@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore'
 import LOGO_SRC from '../../assets/logo-fluxe.png'
 import TimerBar from './TimerBar'
 import TrialGuard from '../ui/TrialGuard'
+import RadarPanelOverlay from '../ui/RadarPanelOverlay'
 
 
 // Captura erros de render em páginas lazy — evita tela em branco
@@ -295,6 +296,8 @@ export default function AppShell() {
         )
       })}
     </nav>
+
+    <RadarPanelOverlay />
     </>
   )
 }
