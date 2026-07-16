@@ -115,6 +115,7 @@ serve(async (req) => {
         wa_phone_number_id: numero.id,
         wa_access_token: accessToken,
         wa_waba_id: waba.id,
+        wa_provider: 'meta',
       }).eq('id', empresa_id)
       if (errSave) return ok({ error: errSave.message })
 
@@ -225,7 +226,7 @@ serve(async (req) => {
 
       const { data: pendentes } = await supabase
         .from('whatsapp_agendados')
-        .select('*, whatsapp_contatos(phone), empresas(wa_phone_number_id, wa_access_token)')
+        .select('*, whatsapp_contatos(phone), empresas(wa_phone_number_id, wa_access_token, wa_provider)')
         .eq('enviado', false)
         .lte('enviar_em', now)
         .limit(50)
@@ -237,6 +238,10 @@ serve(async (req) => {
       let enviados = 0
 
       for (const ag of pendentes) {
+        // Empresa configurada pra Z-API é processada pela fila da zapi-send,
+        // não daqui — senão os dois crons disputam a mesma linha.
+        if (ag.empresas?.wa_provider === 'zapi') continue
+
         const phone = ag.whatsapp_contatos?.phone
         const phoneNumberId = ag.empresas?.wa_phone_number_id || Deno.env.get('WA_PHONE_NUMBER_ID') || ''
         const token = ag.empresas?.wa_access_token || Deno.env.get('WA_ACCESS_TOKEN') || ''
