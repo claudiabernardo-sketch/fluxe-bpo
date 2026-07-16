@@ -453,6 +453,112 @@ export function useApontamentosMes(filters = {}) {
   })
 }
 
+// ── RADAR SCORES (calculado server-side pela Edge Function radar-calcular,
+// 1x/dia via cron) — telas leem o snapshot pronto em vez de recalcular.
+// Cliente sem snapshot ainda (empresa nova, cron não rodou hoje) cai no
+// cálculo client-side existente em radar.js — ver uso em ClientePage/
+// InsightsDash/ExecPage.
+export function useRadarScores() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['radar_scores_ultimo', empresa?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('radar_scores_ultimo')
+        .select('cliente_id, score, semaforo, areas, areas_calculadas, calculado_em')
+        .eq('empresa_id', empresa?.id)
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 5 * 60_000,
+    enabled: !!empresa?.id,
+  })
+}
+
+export function useRadarScore(clienteId) {
+  return useQuery({
+    queryKey: ['radar_score_ultimo', clienteId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('radar_scores_ultimo')
+        .select('score, semaforo, areas, areas_calculadas, calculado_em')
+        .eq('cliente_id', clienteId)
+        .maybeSingle()
+      if (error) throw error
+      return data ?? null
+    },
+    staleTime: 5 * 60_000,
+    enabled: !!clienteId,
+  })
+}
+
+export function useRadarCalcLogUltimo() {
+  return useQuery({
+    queryKey: ['radar_calc_log_ultimo'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('radar_calc_logs')
+        .select('*')
+        .order('executado_em', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (error) throw error
+      return data ?? null
+    },
+    staleTime: 60_000,
+  })
+}
+
+export function useRecalcularRadar() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('radar-calcular', {
+        headers: { 'x-trigger': 'manual' },
+        body: { trigger: 'manual' },
+      })
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['radar_calc_log_ultimo'] })
+      qc.invalidateQueries({ queryKey: ['radar_scores_ultimo'] })
+      qc.invalidateQueries({ queryKey: ['radar_alertas'] })
+    },
+  })
+}
+
+// ── RADAR ALERTAS ────────────────────────────────────
+export function useRadarAlertas() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['radar_alertas', empresa?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('radar_alertas')
+        .select('*, clientes(razao_social, fantasia)')
+        .eq('empresa_id', empresa?.id)
+        .eq('visto', false)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 60_000,
+    enabled: !!empresa?.id,
+  })
+}
+
+export function useMarcarAlertaVisto() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('radar_alertas').update({ visto: true }).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['radar_alertas'] }),
+  })
+}
+
 export function useSaveApontamento() {
   const qc = useQueryClient()
   const { empresa } = useAuthStore()

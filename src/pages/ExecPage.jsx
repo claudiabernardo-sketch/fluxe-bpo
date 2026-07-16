@@ -1,4 +1,4 @@
-import { useClients, useTasks, usePendencias, useApontamentosMes, useUsuarios } from '../hooks/useData'
+import { useClients, useTasks, usePendencias, useApontamentosMes, useUsuarios, useRadarScores } from '../hooks/useData'
 import { KpiCard, Card, CardHeader, Loader, Badge, fmtR } from '../components/ui'
 import { computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore, CUSTO_HORA_PADRAO } from '../utils/radar'
 
@@ -8,6 +8,7 @@ export default function ExecPage() {
   const { data: pends = [] } = usePendencias({ status:'aberta' })
   const { data: aponts = [] } = useApontamentosMes()
   const { data: usuarios = [] } = useUsuarios()
+  const { data: radarScores = [] } = useRadarScores()
 
   if (isLoading) return <Loader />
 
@@ -25,8 +26,14 @@ export default function ExecPage() {
     ? usuarios.reduce((a, u) => a + (u.custo_hora || CUSTO_HORA_PADRAO), 0) / usuarios.length
     : CUSTO_HORA_PADRAO
   const margensPorCliente = computeMargemPorCliente(clients, aponts, custoHoraMedio)
+  const radarMap = {}
+  radarScores.forEach(r => { radarMap[r.cliente_id] = r })
 
+  // Cliente com snapshot do servidor (radar-calcular) usa ele direto — só
+  // recalcula na hora quem ainda não tem snapshot (empresa/cliente novo).
   function radarDoCliente(cl) {
+    const snap = radarMap[cl.id]
+    if (snap) return { score: snap.score, semaforo: snap.semaforo }
     const m = margensPorCliente.find(x => x.clienteId === cl.id)
     const tarefasCliente = tasks.filter(t => t.cliente_id === cl.id && !t.deleted_at)
     const areas = computeAreaStatusPorCliente(cl, tarefasCliente, m, usuarios, aponts)

@@ -9,7 +9,7 @@ import {
   useUpdateClienteModelo, useTogglePauseModelo,
   useUpdateClienteStatus, useIniciarOperacao, useGerarTarefas,
   useAcessos, useSaveAcesso, useDeleteAcesso,
-  useApontamentos, useApontamentosMes, useUsuarios,
+  useApontamentos, useApontamentosMes, useUsuarios, useRadarScore,
 } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
@@ -106,9 +106,16 @@ export default function ClientePage() {
     const comCusto = usuariosRadar.filter(u => u.custo_hora)
     return comCusto.length ? Math.round(comCusto.reduce((a,u)=>a+u.custo_hora,0)/comCusto.length) : CUSTO_HORA_PADRAO
   })()
+  // Prefere o snapshot calculado pela Edge Function (radar-calcular, 1x/dia);
+  // sem snapshot ainda (empresa nova, cliente criado hoje) cai no cálculo na
+  // hora, igual sempre funcionou.
+  const { data: radarServer } = useRadarScore(clienteId)
   const margemRadar = cliente ? computeMargemPorCliente([cliente], apontamentosCliente, custoHoraRadar)[0] : null
-  const areasRadar = cliente ? computeAreaStatusPorCliente(cliente, tarefasCliente, margemRadar, usuariosRadar, apontamentosEquipeMes) : null
-  const scoreRadar = areasRadar ? computeRadarScore(areasRadar) : null
+  const areasRadarCalc = cliente ? computeAreaStatusPorCliente(cliente, tarefasCliente, margemRadar, usuariosRadar, apontamentosEquipeMes) : null
+  const areasRadar = radarServer?.areas || areasRadarCalc
+  const scoreRadar = radarServer
+    ? { score: radarServer.score, semaforo: radarServer.semaforo, areasCalculadas: radarServer.areas_calculadas, areasTotal: Object.keys(radarServer.areas).length }
+    : (areasRadar ? computeRadarScore(areasRadar) : null)
   const alertaRadar = areasRadar ? gerarAlertaComposto(areasRadar) : null
   const oportunidadeRadar = areasRadar ? gerarOportunidadeComercial(areasRadar, cliente) : null
 
@@ -1049,6 +1056,9 @@ export default function ClientePage() {
                 Placar de saúde calculado automaticamente a partir de tarefas e rentabilidade —
                 sem nada digitado à mão. {scoreRadar.areasCalculadas} de {scoreRadar.areasTotal} áreas
                 têm dado suficiente pra calcular hoje.
+                {radarServer?.calculado_em && (
+                  <> Atualizado em {new Date(radarServer.calculado_em).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}.</>
+                )}
               </div>
 
               <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:16, padding:'16px 20px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--sur)' }}>

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
-import { useClients, useTasks, useUsuarios } from '../../hooks/useData'
+import { useClients, useTasks, useUsuarios, useRadarScores } from '../../hooks/useData'
 import { supabase } from '../../lib/supabase'
 import { useMemo } from 'react'
 import { computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore, CUSTO_HORA_PADRAO } from '../../utils/radar'
@@ -50,6 +50,7 @@ export default function InsightsDash() {
   const { data: usuarios = [] } = useUsuarios()
   const { data: clients = [] } = useClients()
   const { data: tasks = [] } = useTasks()
+  const { data: radarScores = [] } = useRadarScores()
 
   // Apontamentos do mês para cálculo de margem
   const { data: apontamentos = [] } = useQuery({
@@ -178,12 +179,19 @@ export default function InsightsDash() {
     }
 
     // ── 6. Radar do cliente — semáforo vermelho ─────────────
+    // Cliente com snapshot do servidor (radar-calcular) usa ele direto —
+    // só recalcula na hora quem ainda não tem snapshot (empresa/cliente novo).
+    const radarMap = {}
+    radarScores.forEach(r => { radarMap[r.cliente_id] = r })
     const emRisco = []
     clients.forEach(c => {
-      const m = margensPorCliente.find(x => x.clienteId === c.id)
-      const tarefasCliente = tasks.filter(t => t.cliente_id === c.id && !t.deleted_at)
-      const areas = computeAreaStatusPorCliente(c, tarefasCliente, m, usuarios, apontamentos)
-      const { semaforo } = computeRadarScore(areas)
+      let semaforo = radarMap[c.id]?.semaforo
+      if (!semaforo) {
+        const m = margensPorCliente.find(x => x.clienteId === c.id)
+        const tarefasCliente = tasks.filter(t => t.cliente_id === c.id && !t.deleted_at)
+        const areas = computeAreaStatusPorCliente(c, tarefasCliente, m, usuarios, apontamentos)
+        semaforo = computeRadarScore(areas).semaforo
+      }
       if (semaforo === 'vermelho') emRisco.push(c)
     })
     if (emRisco.length > 0) {

@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import { Card, CardHeader, Btn } from '../components/ui'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useFeriados, useCreateFeriado, useDeleteFeriado } from '../hooks/useData'
+import { useFeriados, useCreateFeriado, useDeleteFeriado, useRadarCalcLogUltimo, useRecalcularRadar } from '../hooks/useData'
 
 // ── Calculadora de Custo Real da Hora ─────────────────────────────────────
 function CalculadoraCustoHora({ usuarios = [], editarUser }) {
@@ -265,6 +265,8 @@ export default function ConfigPage() {
   const { data: feriados = [] } = useFeriados()
   const createFeriado = useCreateFeriado()
   const deleteFeriado = useDeleteFeriado()
+  const { data: radarLog } = useRadarCalcLogUltimo()
+  const recalcularRadar = useRecalcularRadar()
   const [novoFeriado, setNovoFeriado] = useState({ data:'', descricao:'' })
 
   // ── 2FA ──────────────────────────────────────────────────
@@ -860,6 +862,38 @@ export default function ConfigPage() {
           </div>
           <div style={{ padding:'12px 16px', borderTop:'1px solid #F1F5F9', display:'flex', justifyContent:'flex-end' }}>
             <Btn variant="primary" onClick={salvarOp}>Salvar configurações</Btn>
+          </div>
+        </Card>
+      )}
+
+      {tab === 'operacional' && (
+        <Card style={{ marginTop:16 }}>
+          <CardHeader title="Radar do Cliente" icon="🩺" />
+          <div style={{ padding:'8px 16px 16px' }}>
+            <div style={{ fontSize:11, color:'#94A3B8', marginBottom:12, lineHeight:1.5 }}>
+              O score de saúde de cada cliente é recalculado automaticamente todo dia às 06:00. Use o botão abaixo se quiser forçar um recálculo agora (ex: depois de atualizar responsáveis ou lançar horas em lote).
+            </div>
+            {radarLog ? (
+              <div style={{ fontSize:11, color:'#475569', marginBottom:12 }}>
+                Último cálculo: <strong>{new Date(radarLog.executado_em).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</strong>
+                {' · '}{radarLog.clientes_processados} cliente{radarLog.clientes_processados === 1 ? '' : 's'} processado{radarLog.clientes_processados === 1 ? '' : 's'}
+                {radarLog.alertas_gerados > 0 && <> · {radarLog.alertas_gerados} alerta{radarLog.alertas_gerados === 1 ? '' : 's'} novo{radarLog.alertas_gerados === 1 ? '' : 's'}</>}
+                {radarLog.erros?.length > 0 && <span style={{ color:'#EF4444' }}> · {radarLog.erros.length} erro{radarLog.erros.length === 1 ? '' : 's'}</span>}
+              </div>
+            ) : (
+              <div style={{ fontSize:11, color:'#94A3B8', marginBottom:12 }}>Ainda não rodou nenhum cálculo — as telas usam o cálculo na hora até o primeiro rodar.</div>
+            )}
+            <Btn variant="primary" disabled={recalcularRadar.isPending} onClick={() => recalcularRadar.mutate()}>
+              {recalcularRadar.isPending ? 'Recalculando…' : '🔄 Recalcular agora'}
+            </Btn>
+            {recalcularRadar.isError && (
+              <div style={{ fontSize:11, color:'#EF4444', marginTop:8 }}>Erro: {recalcularRadar.error?.message || 'falha ao chamar a função'}</div>
+            )}
+            {recalcularRadar.isSuccess && (
+              <div style={{ fontSize:11, color:'#15803D', marginTop:8 }}>
+                ✓ {recalcularRadar.data?.clientes_processados ?? 0} clientes recalculados.
+              </div>
+            )}
           </div>
         </Card>
       )}
