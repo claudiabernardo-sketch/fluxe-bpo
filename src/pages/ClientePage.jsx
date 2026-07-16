@@ -497,6 +497,10 @@ export default function ClientePage() {
           {/* ── ABA FINANCEIRO ────────────────────────────────────────────────── */}
           {tab === 'financeiro' && form && (
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, maxWidth:800 }}>
+              <div style={{ gridColumn:'1/-1', display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderRadius:'var(--r)', background:'var(--brl)', border:'1px solid var(--br)', fontSize:12 }}>
+                <span>📊 Procurando onde lançar quanto o cliente recebeu/pagou este mês? Fica na aba</span>
+                <button onClick={() => setTab('radar')} className="btn bp bsm" style={{ flexShrink:0 }}>🩺 Radar → Métricas reais do mês</button>
+              </div>
               <div>
                 <label className="lbl">Valor mensal (R$/mês)</label>
                 <input type="text" inputMode="numeric" value={form.valor_mrr||''} onChange={e=>setForm(f=>({...f,valor_mrr:e.target.value}))} className="fi" placeholder="Ex: 1.500,00" />
