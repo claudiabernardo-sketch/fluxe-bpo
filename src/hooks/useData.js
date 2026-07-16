@@ -1328,3 +1328,54 @@ export function useUpdateProposta() {
     onError: (err) => console.error('[Fluxe]', err),
   })
 }
+
+// ── META DE CRESCIMENTO ──────────────────────────────
+// Uma meta por empresa (a mais recente). Editar = update na mesma linha,
+// não cria histórico — v1 é só "qual é a meta agora e como estou indo".
+export function useMetaCrescimento() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['meta_crescimento', empresa?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('metas_crescimento')
+        .select('*')
+        .eq('empresa_id', empresa?.id)
+        .order('criado_em', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (error) throw error
+      return data ?? null
+    },
+    staleTime: 30_000,
+    enabled: !!empresa?.id,
+  })
+}
+
+export function useSalvarMetaCrescimento() {
+  const qc = useQueryClient()
+  const { empresa, user } = useAuthStore()
+  return useMutation({
+    mutationFn: async ({ id, tipo, valor_alvo, data_alvo }) => {
+      if (id) {
+        const { data, error } = await supabase
+          .from('metas_crescimento')
+          .update({ tipo, valor_alvo, data_alvo: data_alvo || null, atualizado_em: new Date().toISOString() })
+          .eq('id', id)
+          .select()
+          .single()
+        if (error) throw error
+        return data
+      }
+      const { data, error } = await supabase
+        .from('metas_crescimento')
+        .insert({ empresa_id: empresa?.id, criado_por: user?.id, tipo, valor_alvo, data_alvo: data_alvo || null })
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['meta_crescimento'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}

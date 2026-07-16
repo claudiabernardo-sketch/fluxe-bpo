@@ -1,6 +1,8 @@
-import { useClients, useTasks, usePendencias, useApontamentosMes, useUsuarios, useRadarScores, useRadarAjustesManuaisTodos, useRadarMetricasMesTodos } from '../hooks/useData'
+import { useState } from 'react'
+import { useClients, useTasks, usePendencias, useApontamentosMes, useUsuarios, useRadarScores, useRadarAjustesManuaisTodos, useRadarMetricasMesTodos, useMetaCrescimento, useSalvarMetaCrescimento } from '../hooks/useData'
 import { KpiCard, Card, CardHeader, Loader, Badge, fmtR } from '../components/ui'
 import { computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore, aplicarAjustesManuais, aplicarMetricaMes, CUSTO_HORA_PADRAO } from '../utils/radar'
+import { formatBRL, parseBRL } from '../utils/currency'
 
 export default function ExecPage() {
   const { data: clients = [], isLoading } = useClients()
@@ -11,6 +13,9 @@ export default function ExecPage() {
   const { data: radarScores = [] } = useRadarScores()
   const { data: ajustesTodos = [] } = useRadarAjustesManuaisTodos()
   const { data: metricasTodos = [] } = useRadarMetricasMesTodos()
+  const { data: meta = null } = useMetaCrescimento()
+  const salvarMeta = useSalvarMetaCrescimento()
+  const [metaForm, setMetaForm] = useState(null)
 
   if (isLoading) return <Loader />
 
@@ -65,6 +70,41 @@ export default function ExecPage() {
   clients.forEach(c=>{ etapaCount[c.etapa]=(etapaCount[c.etapa]||0)+1 })
   const maxEt = Math.max(...Object.values(etapaCount),1)
 
+  // ── Meta de crescimento: mesmo ritmo real (novos clientes ativos/mês, 6
+  // meses) usado na previsão de capacidade, aplicado aqui pra projetar
+  // quando a meta de MRR ou nº de clientes deve ser atingida.
+  const hoje = new Date()
+  const mesesHist = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - 6 + i, 1)
+    return { ano: d.getFullYear(), mes: d.getMonth() }
+  })
+  const novosPorMes = mesesHist.map(({ ano, mes }) =>
+    ativos.filter(c => {
+      if (!c.criado_em) return false
+      const d = new Date(c.criado_em)
+      return d.getFullYear() === ano && d.getMonth() === mes
+    }).length
+  )
+  const mediaNovosClientesMes = novosPorMes.reduce((a,b) => a+b, 0) / 6
+  const ticketMedioAtual = ativos.length ? mrr/ativos.length : 0
+  const ritmoMrrMes = mediaNovosClientesMes * ticketMedioAtual
+
+  const metaAtual = meta?.tipo === 'clientes' ? ativos.length : mrr
+  const metaRitmoMes = meta?.tipo === 'clientes' ? mediaNovosClientesMes : ritmoMrrMes
+  const metaProgresso = meta?.valor_alvo > 0 ? Math.min(100, Math.round(metaAtual/meta.valor_alvo*100)) : 0
+  const metaAtingida = meta ? metaAtual >= meta.valor_alvo : false
+  const metaFalta = meta ? Math.max(0, meta.valor_alvo - metaAtual) : 0
+  const metaMeses = (!metaAtingida && metaRitmoMes > 0) ? metaFalta/metaRitmoMes : null
+  const metaDataProjetada = metaMeses != null ? new Date(hoje.getFullYear(), hoje.getMonth() + Math.ceil(metaMeses), 1) : null
+  const metaDataAlvo = meta?.data_alvo ? new Date(meta.data_alvo + 'T12:00:00') : null
+
+  async function salvarMetaHandler() {
+    const valor = metaForm.tipo === 'mrr' ? parseBRL(metaForm.valorStr) : (Number(metaForm.valorStr) || 0)
+    if (!valor || valor <= 0) return alert('Informe um valor de meta válido.')
+    await salvarMeta.mutateAsync({ id: metaForm.id, tipo: metaForm.tipo, valor_alvo: valor, data_alvo: metaForm.dataAlvo || null })
+    setMetaForm(null)
+  }
+
   return (
     <div>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:12, marginBottom:18 }}>
@@ -75,6 +115,82 @@ export default function ExecPage() {
         <KpiCard label="Pendências" value={pends.length} color={pends.length>3?'yellow':'green'} />
         <KpiCard label="Horas registradas" value={`${horasTotal.toFixed(1)}h`} color="cyan" sub="apontado este mês" />
       </div>
+
+      <Card style={{ marginBottom:14 }}>
+        <CardHeader title="Meta de crescimento" icon="🎯" />
+        <div style={{ padding:16 }}>
+          {metaForm !== null ? (
+            <div>
+              <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom:12 }}>
+                <select value={metaForm.tipo} onChange={e => setMetaForm(f => ({ ...f, tipo: e.target.value }))}
+                  style={{ padding:'8px 10px', borderRadius:8, border:'1px solid #E2E8F0', fontSize:13 }}>
+                  <option value="mrr">MRR (R$/mês)</option>
+                  <option value="clientes">Nº de clientes ativos</option>
+                </select>
+                {metaForm.tipo === 'mrr' ? (
+                  <input type="text" inputMode="decimal" placeholder="Ex: 30.000,00" value={metaForm.valorStr}
+                    onChange={e => setMetaForm(f => ({ ...f, valorStr: e.target.value }))}
+                    style={{ padding:'8px 10px', borderRadius:8, border:'1px solid #E2E8F0', fontSize:13, width:140 }} />
+                ) : (
+                  <input type="number" min={1} placeholder="Ex: 20" value={metaForm.valorStr}
+                    onChange={e => setMetaForm(f => ({ ...f, valorStr: e.target.value }))}
+                    style={{ padding:'8px 10px', borderRadius:8, border:'1px solid #E2E8F0', fontSize:13, width:100 }} />
+                )}
+                <input type="date" value={metaForm.dataAlvo}
+                  onChange={e => setMetaForm(f => ({ ...f, dataAlvo: e.target.value }))}
+                  style={{ padding:'8px 10px', borderRadius:8, border:'1px solid #E2E8F0', fontSize:13 }} />
+              </div>
+              <div style={{ display:'flex', gap:8 }}>
+                <button onClick={salvarMetaHandler} disabled={salvarMeta.isPending}
+                  style={{ padding:'8px 16px', borderRadius:8, border:'none', background:'#6366F1', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
+                  {salvarMeta.isPending ? 'Salvando...' : 'Salvar meta'}
+                </button>
+                {meta && (
+                  <button onClick={() => setMetaForm(null)}
+                    style={{ padding:'8px 16px', borderRadius:8, border:'1px solid #E2E8F0', background:'#fff', cursor:'pointer', fontSize:13 }}>
+                    Cancelar
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : !meta ? (
+            <div style={{ textAlign:'center', padding:10 }}>
+              <div style={{ fontSize:12, color:'#64748B', marginBottom:10 }}>Nenhuma meta definida ainda.</div>
+              <button onClick={() => setMetaForm({ tipo:'mrr', valorStr:'', dataAlvo:'' })}
+                style={{ padding:'8px 16px', borderRadius:8, border:'none', background:'#6366F1', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
+                + Definir meta
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:8, flexWrap:'wrap', gap:6 }}>
+                <div style={{ fontSize:13, color:'#334155' }}>
+                  {meta.tipo === 'mrr'
+                    ? <>MRR: <strong>R$ {mrr.toLocaleString('pt-BR',{maximumFractionDigits:0})}</strong> de R$ {meta.valor_alvo.toLocaleString('pt-BR',{maximumFractionDigits:0})}</>
+                    : <>Clientes ativos: <strong>{ativos.length}</strong> de {meta.valor_alvo}</>}
+                </div>
+                <button onClick={() => setMetaForm({ id: meta.id, tipo: meta.tipo, valorStr: meta.tipo==='mrr' ? formatBRL(meta.valor_alvo) : String(meta.valor_alvo), dataAlvo: meta.data_alvo || '' })}
+                  style={{ background:'none', border:'none', cursor:'pointer', color:'#6366F1', fontSize:11, fontWeight:600 }}>
+                  ✏ Editar
+                </button>
+              </div>
+              <div style={{ height:10, background:'#F1F5F9', borderRadius:99, overflow:'hidden', marginBottom:10 }}>
+                <div style={{ height:'100%', borderRadius:99, width:`${metaProgresso}%`, background: metaAtingida?'#22C55E':'#6366F1', transition:'width .5s' }} />
+              </div>
+              {metaAtingida ? (
+                <div style={{ fontSize:12, color:'#166534', fontWeight:600 }}>🎉 Meta atingida!</div>
+              ) : metaMeses == null ? (
+                <div style={{ fontSize:12, color:'#94A3B8' }}>Ainda não há ritmo de crescimento suficiente pra projetar quando a meta será atingida.</div>
+              ) : (
+                <div style={{ fontSize:12, color: metaDataAlvo ? (metaDataProjetada<=metaDataAlvo?'#166534':'#991B1B') : '#334155' }}>
+                  No ritmo atual, a meta deve ser atingida por volta de <strong>{metaDataProjetada.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}</strong>
+                  {metaDataAlvo && <> — prazo definido: {metaDataAlvo.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})} ({metaDataProjetada<=metaDataAlvo ? 'no caminho ✓' : 'fora do ritmo ⚠️'})</>}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </Card>
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14 }}>
         <Card>
