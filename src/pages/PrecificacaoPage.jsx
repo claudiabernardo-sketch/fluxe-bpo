@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import { useCreateProposta, useUpdateProposta, usePropostas } from '../hooks/useData'
+import { formatBRL } from '../utils/currency'
 
 // contratoDocx importa a lib 'docx' que é pesada — lazy pra não bloquear o carregamento
 const getContratoDocx = () => import('../utils/contratoDocx')
@@ -233,6 +234,14 @@ function parseBRL(str) {
   // Remove R$, espaços, e pontos de milhar; substitui vírgula decimal por ponto
   const clean = s.replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.')
   return parseFloat(clean) || 0
+}
+// Propostas salvas antes desse campo aceitar vírgula vieram de um <input
+// type=number> — nunca tem vírgula, só ponto decimal (ex: "1997.5"). As
+// novas sempre têm vírgula (ex: "1.997,50"). Detecta pela vírgula pra não
+// interpretar "1997.5" como 199750 por engano.
+function parseValorPropostaSalvo(v) {
+  if (!v) return 0
+  return String(v).includes(',') ? parseBRL(v) : (parseFloat(v) || 0)
 }
 const calcPeso = (h, max) => h / max < 0.3 ? 'baixo' : h / max < 0.6 ? 'médio' : 'alto'
 
@@ -499,7 +508,7 @@ export default function PrecificacaoPage() {
       const dc = p.dados_calculo || {}
       if (dc.d) setD(dc.d)
       if (dc.calc) setCalc(dc.calc)
-      if (dc.valorProposta) setValorProposta(String(dc.valorProposta))
+      if (dc.valorProposta) setValorProposta(formatBRL(parseValorPropostaSalvo(dc.valorProposta)))
       if (dc.escopo) setEscopo(dc.escopo)
       const cli = p.dados_cliente || {}
       setContratoForm(f => ({
@@ -610,7 +619,7 @@ export default function PrecificacaoPage() {
   }
 
   const irParaEscopo = async () => {
-    if (!valorProposta || parseFloat(valorProposta) <= 0) {
+    if (!valorProposta || parseBRL(valorProposta) <= 0) {
       alert('Informe o valor da proposta antes de gerar o escopo.')
       return
     }
@@ -621,7 +630,7 @@ export default function PrecificacaoPage() {
         const proposta = await createProposta.mutateAsync({
           lead_id: leadIdRef.current || undefined,
           status: 'rascunho',
-          valor_mensal: parseFloat(valorProposta),
+          valor_mensal: parseBRL(valorProposta),
           dados_cliente: {
             nome: d._clienteNome || d.nome || '',
             cnpj: d._clienteCnpj || '',
@@ -646,7 +655,7 @@ export default function PrecificacaoPage() {
     const dc = proposta.dados_calculo || {}
     if (dc.d) setD(dc.d)
     if (dc.calc) setCalc(dc.calc)
-    if (dc.valorProposta) setValorProposta(String(dc.valorProposta))
+    if (dc.valorProposta) setValorProposta(formatBRL(parseValorPropostaSalvo(dc.valorProposta)))
     setEscopo(dc.escopo || null)
     propostaIdRef.current = null  // cria nova proposta ao salvar (não sobrescreve)
     if (proposta.dados_calculo?.d?._clienteEmail) setEmailCliente(proposta.dados_calculo.d._clienteEmail)
@@ -658,7 +667,7 @@ export default function PrecificacaoPage() {
 
   const avaliarProposta = (v) => {
     if (!v || !calc) return null
-    const val = parseFloat(v)
+    const val = parseBRL(v)
     if (val < calc.vMinimo) return { cls: 'prec-fb-red', icon: '🔴', titulo: 'Abaixo do mínimo sustentável', texto: `Você está ${fmt(calc.vMinimo - val)} abaixo do custo real. Com essa precificação, cada mês gera prejuízo. O mínimo é ${fmt(calc.vMinimo)}.` }
     if (val < calc.vRecomendado * 0.85) {
       const m = Math.round(((val - calc.custoReal) / val) * 100)
@@ -1174,10 +1183,11 @@ export default function PrecificacaoPage() {
               <div style={{ marginBottom: 8 }}>
                 <label style={{ fontSize: 12, textAlign: 'center', display: 'block', marginBottom: 8, color: 'var(--ptext2)' }}>Valor da proposta (R$)</label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   className="prec-proposta-input"
                   value={valorProposta}
-                  placeholder="0"
+                  placeholder="0,00"
                   onChange={e => setValorProposta(e.target.value)}
                 />
               </div>
@@ -1198,7 +1208,7 @@ export default function PrecificacaoPage() {
                   ['Recomendado', calc.vRecomendado, '#ECFDF5', '#166534', '#6EE7B7'],
                   ['Premium', calc.vPremium, '#FEF9C3', '#92400E', '#FCD34D'],
                 ].map(([l, v, bg, color, border]) => (
-                  <button key={l} className="prec-atalho" onClick={() => setValorProposta(Math.round(v))}
+                  <button key={l} className="prec-atalho" onClick={() => setValorProposta(formatBRL(Math.round(v)))}
                     style={{ background: bg, color, borderColor: border }}>
                     Usar {l}: {fmt(v)}
                   </button>
@@ -1347,7 +1357,7 @@ export default function PrecificacaoPage() {
 
               <div style={{ background: (empresa?.cor_primaria||'#6366F1')+'18', border:`1px solid ${empresa?.cor_primaria||'#6366F1'}44`, borderRadius:10, padding:20, textAlign:'center', marginBottom:20 }}>
                 <div style={{ fontSize:11, color:empresa?.cor_primaria||'#6366F1', fontWeight:600, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:6 }}>Investimento mensal</div>
-                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:40, fontWeight:500, color:empresa?.cor_primaria||'#6366F1', letterSpacing:'-.02em' }}>{fmt(parseFloat(valorProposta))}</div>
+                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:40, fontWeight:500, color:empresa?.cor_primaria||'#6366F1', letterSpacing:'-.02em' }}>{fmt(parseBRL(valorProposta))}</div>
                 <div style={{ fontSize:11, color:'var(--ptext3)', marginTop:4 }}>por mês · primeiro pagamento no fechamento desta proposta</div>
                 {calc.licencaRepasse > 0 && (
                   <div style={{ fontSize:12, color:'var(--ptext2)', marginTop:8, paddingTop:8, borderTop:'1px dashed '+(empresa?.cor_primaria||'#6366F1')+'44' }}>
@@ -1356,7 +1366,7 @@ export default function PrecificacaoPage() {
                 )}
                 {calc.d.licencaModalidade === 'bpo_embutida' && calc.licencaEmbutida > 0 && (
                   <div style={{ fontSize:12, color:'var(--ptext2)', marginTop:8, paddingTop:8, borderTop:'1px dashed '+(empresa?.cor_primaria||'#6366F1')+'44' }}>
-                    Inclui {fmt(calc.licencaEmbutida)}/mês de licença {calc.d.erp === 'Outro' ? (calc.d.erpOutro || 'do sistema') : calc.d.erp} + {fmt(Math.max(0, parseFloat(valorProposta) - calc.licencaEmbutida))}/mês de serviços BPO
+                    Inclui {fmt(calc.licencaEmbutida)}/mês de licença {calc.d.erp === 'Outro' ? (calc.d.erpOutro || 'do sistema') : calc.d.erp} + {fmt(Math.max(0, parseBRL(valorProposta) - calc.licencaEmbutida))}/mês de serviços BPO
                   </div>
                 )}
               </div>
@@ -1392,7 +1402,7 @@ export default function PrecificacaoPage() {
                 {calc.d.bancos} conta{calc.d.bancos > 1 ? 's' : ''} bancária{calc.d.bancos > 1 ? 's' : ''} para conciliação,{' '}
                 {calc.d.capag + calc.d.carec} títulos entre contas a pagar e a receber, e complexidade operacional classificada como{' '}
                 <strong>{calc.complexLabel}</strong>.{' '}
-                {calc.d.fat > 0 && `O investimento representa ${((parseFloat(valorProposta) / calc.d.fat) * 100).toFixed(1)}% do faturamento mensal — dentro da faixa de mercado de 1% a 3%.`}
+                {calc.d.fat > 0 && `O investimento representa ${((parseBRL(valorProposta) / calc.d.fat) * 100).toFixed(1)}% do faturamento mensal — dentro da faixa de mercado de 1% a 3%.`}
               </div>
             </div>
 
@@ -1411,7 +1421,7 @@ export default function PrecificacaoPage() {
                   `CLIENTE: ${calc.d.nome || '—'}`,
                   `DATA: ${new Date().toLocaleDateString('pt-BR')}`,
                   ``,
-                  `INVESTIMENTO MENSAL: ${fmt(parseFloat(valorProposta))}`,
+                  `INVESTIMENTO MENSAL: ${fmt(parseBRL(valorProposta))}`,
                   ``,
                   `SERVIÇOS INCLUÍDOS:`,
                   ...calc.items.map(it => `• ${it.nome}`),
@@ -1451,7 +1461,7 @@ export default function PrecificacaoPage() {
           const foro = prop.foro || emp.foro || cidadeEmp
           const dadosIncompletos = !prop.representante || !emp.cnpj || !prop.cidade
           const dataHoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
-          const val = parseFloat(valorProposta)
+          const val = parseBRL(valorProposta)
           const fmt2 = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 })
           const servicos = calc.items.filter(it => !it.nome.includes('Ajuste de porte'))
 
@@ -1847,7 +1857,7 @@ export default function PrecificacaoPage() {
                     `CLIENTE: ${calc.d.nome || '—'}`,
                     `DATA: ${new Date().toLocaleDateString('pt-BR')}`,
                     ``,
-                    `INVESTIMENTO MENSAL: ${fmt(parseFloat(valorProposta))}`,
+                    `INVESTIMENTO MENSAL: ${fmt(parseBRL(valorProposta))}`,
                     ``,
                     `SERVIÇOS INCLUÍDOS:`,
                     ...calc.items.map(it => {
