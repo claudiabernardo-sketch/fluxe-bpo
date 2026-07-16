@@ -1,8 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
-import { useCreateProposta, useUpdateProposta, usePropostas } from '../hooks/useData'
+import { useCreateProposta, useUpdateProposta, usePropostas, useClients, useApontamentosMes, useUsuarios } from '../hooks/useData'
 import { formatBRL } from '../utils/currency'
+import { computeMargemPorCliente, CUSTO_HORA_PADRAO } from '../utils/radar'
+
+const HORAS_MES_PADRAO = 160
 
 // contratoDocx importa a lib 'docx' que é pesada — lazy pra não bloquear o carregamento
 const getContratoDocx = () => import('../utils/contratoDocx')
@@ -438,6 +441,12 @@ export default function PrecificacaoPage() {
   })
   const { empresa, profile } = useAuthStore()
 
+  // Impacto na capacidade da equipe + margem do book — mesma fonte que
+  // Capacidade e Rentabilidade já usam (horas do mês corrente).
+  const { data: clientesAtivos = [] } = useClients()
+  const { data: apontEquipeMes = [] } = useApontamentosMes()
+  const { data: usuariosEquipe = [] } = useUsuarios()
+
   // Proposta persistida
   const createProposta   = useCreateProposta()
   const updateProposta   = useUpdateProposta()
@@ -683,6 +692,30 @@ export default function PrecificacaoPage() {
 
   const fb = avaliarProposta(valorProposta)
   const pesoCls = { 'baixo': 'badge-baixo', 'médio': 'badge-medio', 'alto': 'badge-alto' }
+
+  // ── Impacto na capacidade da equipe + margem do book, se fechar esse cliente ──
+  const capacidade = (() => {
+    if (!calc) return null
+    const ativos = clientesAtivos.filter(c => c.status === 'ativo')
+    const horasDisponiveis = usuariosEquipe.reduce((a, u) => a + (u.horas_mes || HORAS_MES_PADRAO), 0)
+    const horasUsadas = apontEquipeMes.reduce((a, ap) => a + (ap.segundos || 0), 0) / 3600
+    const ocupacaoAtual = horasDisponiveis > 0 ? (horasUsadas / horasDisponiveis) * 100 : 0
+    const ocupacaoProjetada = horasDisponiveis > 0 ? ((horasUsadas + calc.totalHoras) / horasDisponiveis) * 100 : 0
+
+    const custoHoraMedio = usuariosEquipe.length > 0
+      ? usuariosEquipe.reduce((a, u) => a + (u.custo_hora || CUSTO_HORA_PADRAO), 0) / usuariosEquipe.length
+      : CUSTO_HORA_PADRAO
+    const margens = computeMargemPorCliente(ativos, apontEquipeMes, custoHoraMedio)
+    const mrrBook = ativos.reduce((a, c) => a + (c.valor_mrr || 0), 0)
+    const margemBook = mrrBook > 0 ? (margens.reduce((a, m) => a + m.margem, 0) / mrrBook) * 100 : 0
+
+    let nivel
+    if (ocupacaoProjetada > 100) nivel = 'critico'
+    else if (ocupacaoProjetada > 85) nivel = 'atencao'
+    else nivel = 'ok'
+
+    return { horasDisponiveis, ocupacaoAtual, ocupacaoProjetada, margemBook, nivel, semEquipe: usuariosEquipe.length === 0 }
+  })()
 
   const hoje = new Date().toLocaleDateString('pt-BR')
 
@@ -1201,6 +1234,37 @@ export default function PrecificacaoPage() {
                   </div>
                 </div>
               )}
+
+              {capacidade && capacidade.semEquipe && (
+                <div className="prec-fb prec-fb-blue">
+                  <span style={{ fontSize: 18, flexShrink: 0 }}>👥</span>
+                  <div>
+                    <strong style={{ display: 'block', marginBottom: 3 }}>Cadastre sua equipe pra ver o impacto na capacidade</strong>
+                    <span style={{ fontSize: 12, opacity: .85 }}>Configure horas/mês de cada analista em Config → Equipe, e esse aviso passa a mostrar se fechar esse cliente é seguro pra capacidade do time.</span>
+                  </div>
+                </div>
+              )}
+              {capacidade && !capacidade.semEquipe && (() => {
+                const CFG = {
+                  critico:  { cls: 'prec-fb-red',    icon: '🔴', titulo: 'Capacidade estourada' },
+                  atencao:  { cls: 'prec-fb-yellow', icon: '🟠', titulo: 'Capacidade apertada' },
+                  ok:       { cls: 'prec-fb-green',  icon: '🟢', titulo: 'Capacidade tranquila' },
+                }[capacidade.nivel]
+                const textos = {
+                  critico: `Fechar esse cliente leva sua equipe de ${capacidade.ocupacaoAtual.toFixed(0)}% pra ${capacidade.ocupacaoProjetada.toFixed(0)}% de ocupação — passa da capacidade. Risco real de atraso e queda de qualidade pros clientes que já tem. Considere reforçar a equipe antes de fechar.`,
+                  atencao: `Fechar esse cliente leva sua equipe de ${capacidade.ocupacaoAtual.toFixed(0)}% pra ${capacidade.ocupacaoProjetada.toFixed(0)}% de ocupação. Ainda dá pra atender, mas fique de olho — pouco espaço pra mais um cliente depois deste.`,
+                  ok: `Fechar esse cliente leva sua equipe de ${capacidade.ocupacaoAtual.toFixed(0)}% pra ${capacidade.ocupacaoProjetada.toFixed(0)}% de ocupação. Espaço de sobra.`,
+                }
+                return (
+                  <div className={`prec-fb ${CFG.cls}`}>
+                    <span style={{ fontSize: 18, flexShrink: 0 }}>{CFG.icon}</span>
+                    <div>
+                      <strong style={{ display: 'block', marginBottom: 3 }}>{CFG.titulo}</strong>
+                      <span style={{ fontSize: 12, opacity: .85 }}>{textos[capacidade.nivel]} Margem média da carteira atual: {capacidade.margemBook.toFixed(0)}%.</span>
+                    </div>
+                  </div>
+                )
+              })()}
 
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 16, flexWrap: 'wrap' }}>
                 {[
