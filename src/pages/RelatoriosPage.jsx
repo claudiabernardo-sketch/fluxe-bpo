@@ -5,7 +5,7 @@ import {
 } from 'recharts'
 import { useClients, useTasks, useApontamentos } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
-import { Loader, fmtR } from '../components/ui'
+import { Loader } from '../components/ui'
 import { supabase } from '../lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 
@@ -22,9 +22,7 @@ const CHART_COLORS = ['#6366F1','#22C55E','#F59E0B','#EF4444','#0EA5E9','#A855F7
 
 const PRINT_STYLE = `
 @media print {
-  body > * { display: none !important; }
-  #relatorio-print { display: block !important; }
-  .sb, .topbar { display: none !important; }
+  .sb, .topbar, .no-print { display: none !important; }
 }
 `
 
@@ -207,54 +205,86 @@ export default function RelatoriosPage() {
   }, [abertas])
 
   // ── Export Excel ─────────────────────────────────────────────────────────────
+  // Usa xlsx-js-style (mesma lib das outras exportações do sistema) em vez do
+  // xlsx puro — sem isso a planilha saía sem largura de coluna nem cabeçalho
+  // destacado, ficando com texto cortado/desconfigurado ao abrir.
   function exportarExcel() {
-    import('xlsx').then(XLSX => {
-      const wb = XLSX.utils.book_new()
+    import('xlsx-js-style').then(({ default: XLSXStyle }) => {
+      const BRAND = '4F46E5', BRAND_DARK = '3730A3', WHITE = 'FFFFFF', GRAY = '475569', LIGHT = 'EEF2FF'
+
+      function sheetFromRows(rows, headers) {
+        const X = XLSXStyle.utils.encode_cell
+        const ws = {}
+        headers.forEach((h, ci) => {
+          ws[X({ r:0, c:ci })] = { v:h, t:'s', s:{
+            fill:{ fgColor:{ rgb:BRAND } }, font:{ bold:true, color:{ rgb:WHITE }, sz:10 },
+            alignment:{ horizontal:'center', vertical:'center' },
+          }}
+        })
+        rows.forEach((row, ri) => {
+          headers.forEach((h, ci) => {
+            const value = row[h] ?? ''
+            ws[X({ r:1+ri, c:ci })] = { v:value, t: typeof value === 'number' ? 'n' : 's', s:{
+              fill:{ fgColor:{ rgb: ri % 2 === 0 ? LIGHT : WHITE } }, font:{ color:{ rgb:GRAY }, sz:10 },
+            }}
+          })
+        })
+        const colWidths = headers.map(h => {
+          const maxLen = rows.reduce((max, row) => Math.max(max, String(row[h] ?? '').length), h.length)
+          return { wch: Math.min(Math.max(maxLen + 2, 10), 45) }
+        })
+        ws['!ref'] = XLSXStyle.utils.encode_range({ s:{r:0,c:0}, e:{r:rows.length, c:headers.length-1} })
+        ws['!cols'] = colWidths
+        return ws
+      }
+
+      const wb = XLSXStyle.utils.book_new()
 
       // Aba Resumo
-      const wsKpi = XLSX.utils.json_to_sheet([
-        { Métrica: 'Período',             Valor: `${MESES[mes]} ${ano}` },
-        { Métrica: 'MRR Total',           Valor: fmtR(mrr) },
-        { Métrica: 'Clientes ativos',     Valor: ativos.length },
-        { Métrica: 'Tarefas no período',  Valor: tarefasPeriodo.length },
-        { Métrica: 'Concluídas',          Valor: conclPeriodo.length },
-        { Métrica: 'Taxa de conclusão',   Valor: `${taxa}%` },
-        { Métrica: 'Pendentes (backlog)', Valor: pendentes.length },
-        { Métrica: 'Horas registradas',   Valor: `${horasPeriodo.toFixed(1)}h` },
-      ])
-      XLSX.utils.book_append_sheet(wb, wsKpi, 'Resumo')
+      const resumoHeaders = ['Métrica', 'Valor']
+      const resumoRows = [
+        { Métrica:'Período', Valor:`${MESES[mes]} ${ano}` },
+        { Métrica:'MRR Total', Valor:mrr },
+        { Métrica:'Clientes ativos', Valor:ativos.length },
+        { Métrica:'Tarefas no período', Valor:tarefasPeriodo.length },
+        { Métrica:'Concluídas', Valor:conclPeriodo.length },
+        { Métrica:'Taxa de conclusão', Valor:`${taxa}%` },
+        { Métrica:'Pendentes (backlog)', Valor:pendentes.length },
+        { Métrica:'Horas registradas', Valor:`${horasPeriodo.toFixed(1)}h` },
+      ]
+      XLSXStyle.utils.book_append_sheet(wb, sheetFromRows(resumoRows, resumoHeaders), 'Resumo')
 
       // Aba Tarefas do período
-      const wsTarefas = XLSX.utils.json_to_sheet(tarefasPeriodo.map(t => ({
-        'Título':       t.titulo,
-        'Cliente':      clients.find(c => c.id === t.cliente_id)?.razao_social || '',
-        'Status':       t.status,
-        'Prioridade':   t.prioridade,
-        'Categoria':    t.categoria || '',
+      const tarefasHeaders = ['Título','Cliente','Status','Prioridade','Categoria','Data execução','Prazo','Responsável']
+      const tarefasRows = tarefasPeriodo.map(t => ({
+        'Título': t.titulo,
+        'Cliente': clients.find(c => c.id === t.cliente_id)?.razao_social || '',
+        'Status': t.status,
+        'Prioridade': t.prioridade,
+        'Categoria': t.categoria || '',
         'Data execução': t.data_execucao || '',
-        'Prazo':        t.prazo || '',
-        'Responsável':  membros.find(m => m.id === t.responsavel_id)?.nome || '',
-      })))
-      XLSX.utils.book_append_sheet(wb, wsTarefas, 'Tarefas')
+        'Prazo': t.prazo || '',
+        'Responsável': membros.find(m => m.id === t.responsavel_id)?.nome || '',
+      }))
+      XLSXStyle.utils.book_append_sheet(wb, sheetFromRows(tarefasRows, tarefasHeaders), 'Tarefas')
 
       // Aba Pendentes
-      const wsPend = XLSX.utils.json_to_sheet(pendentes.map(t => ({
-        'Título':       t.titulo,
-        'Cliente':      clients.find(c => c.id === t.cliente_id)?.razao_social || '',
-        'Data':         t.data_execucao || t.prazo || '',
-        'Motivo':       t.motivo_pendencia || '',
-        'Status':       t.status,
-      })))
-      XLSX.utils.book_append_sheet(wb, wsPend, 'Pendentes')
+      const pendHeaders = ['Título','Cliente','Data','Motivo','Status']
+      const pendRows = pendentes.map(t => ({
+        'Título': t.titulo,
+        'Cliente': clients.find(c => c.id === t.cliente_id)?.razao_social || '',
+        'Data': t.data_execucao || t.prazo || '',
+        'Motivo': t.motivo_pendencia || '',
+        'Status': t.status,
+      }))
+      XLSXStyle.utils.book_append_sheet(wb, sheetFromRows(pendRows, pendHeaders), 'Pendentes')
 
       // Aba Por operador
-      const wsOper = XLSX.utils.json_to_sheet(porOperador.map(o => ({
-        'Operador':   o.nome,
-        'Concluídas': o.concluidas,
-        'Em aberto':  o.abertas,
-        'Total':      o.concluidas + o.abertas,
-      })))
-      XLSX.utils.book_append_sheet(wb, wsOper, 'Por operador')
+      const operHeaders = ['Operador','Concluídas','Em aberto','Total']
+      const operRows = porOperador.map(o => ({
+        'Operador': o.nome, 'Concluídas': o.concluidas, 'Em aberto': o.abertas, 'Total': o.concluidas + o.abertas,
+      }))
+      XLSXStyle.utils.book_append_sheet(wb, sheetFromRows(operRows, operHeaders), 'Por operador')
 
       // Aba Horas
       const byU = {}
@@ -263,15 +293,13 @@ export default function RelatoriosPage() {
               const nome = membros.find(m => m.id === ap.usuario_id)?.nome || 'Desconhecido'
               byU[nome] = (byU[nome] || 0) + (ap.segundos || 0)
             })
-      const wsHoras = XLSX.utils.json_to_sheet(
-        Object.entries(byU).sort((a,b)=>b[1]-a[1]).map(([nome, seg]) => ({
-          'Usuário': nome,
-          'Horas':   (seg/3600).toFixed(1),
-        }))
-      )
-      XLSX.utils.book_append_sheet(wb, wsHoras, 'Horas')
+      const horasHeaders = ['Usuário','Horas']
+      const horasRows = Object.entries(byU).sort((a,b)=>b[1]-a[1]).map(([nome, seg]) => ({
+        'Usuário': nome, 'Horas': Number((seg/3600).toFixed(1)),
+      }))
+      XLSXStyle.utils.book_append_sheet(wb, sheetFromRows(horasRows, horasHeaders), 'Horas')
 
-      XLSX.writeFile(wb, `relatorio_${String(mes+1).padStart(2,'0')}_${ano}.xlsx`)
+      XLSXStyle.writeFile(wb, `relatorio_${String(mes+1).padStart(2,'0')}_${ano}.xlsx`)
     })
   }
 
