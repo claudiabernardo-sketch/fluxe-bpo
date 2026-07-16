@@ -4,6 +4,7 @@ import { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { findHeaderRowIndex } from '../utils/excelMappings'
+import { parseBRL, formatBRL } from '../utils/currency'
 
 // ── Aba Documentos Comerciais (propostas do lead) ──────────────────────────
 const STATUS_PROP = {
@@ -574,7 +575,7 @@ export default function CRMPage() {
       nome: lead.nome || '', fantasia: lead.fantasia || '',
       cnpj: lead.cnpj ? formatCNPJ(lead.cnpj) : '',
       contato: lead.contato || '', whatsapp: lead.whatsapp || '',
-      segmento: lead.segmento || '', valor_estimado: lead.valor_estimado || '',
+      segmento: lead.segmento || '', valor_estimado: formatBRL(lead.valor_estimado),
       etapa: lead.etapa || 'novo', obs: lead.obs || '',
       proximo_contato: lead.proximo_contato || '',
     })
@@ -620,7 +621,7 @@ export default function CRMPage() {
       contato:        form.contato        || '',
       whatsapp:       form.whatsapp       || '',
       segmento:       form.segmento       || '',
-      valor_estimado: parseFloat(form.valor_estimado) || 0,
+      valor_estimado: parseBRL(form.valor_estimado) || 0,
       obs:            form.obs            || null,
       proximo_contato: form.proximo_contato || null,
     }
@@ -1060,8 +1061,8 @@ export default function CRMPage() {
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                     <div>
                       <label style={labelStyle}>Valor mensal estimado (R$)</label>
-                      <input type="number" value={form.valor_estimado || ''} onChange={e => setF('valor_estimado', e.target.value)}
-                        placeholder="0" style={inputStyle} />
+                      <input type="text" inputMode="decimal" value={form.valor_estimado || ''} onChange={e => setF('valor_estimado', e.target.value)}
+                        placeholder="Ex: 1.500,00" style={inputStyle} />
                     </div>
                     <div>
                       <label style={labelStyle}>📅 Próximo follow-up</label>

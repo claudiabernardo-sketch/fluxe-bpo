@@ -5,6 +5,7 @@ import { Card, Btn, Badge, Loader, EmptyState, fmt } from '../components/ui'
 import { useTimerStore } from '../components/layout/TimerBar'
 import { supabase } from '../lib/supabase'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { parseBRL, formatBRL } from '../utils/currency'
 
 // Uma tarefa avulsa "repetida" vira N linhas na tabela, criadas de uma vez só,
 // uma por mês a partir da data de início — não é uma rotina permanente (isso
@@ -115,7 +116,7 @@ export default function AvulsasPage() {
 
   function abrirPainel(av) {
     setPainel(av)
-    setEdit({ ...av })
+    setEdit({ ...av, agend_valor: formatBRL(av.agend_valor) })
   }
   function fecharPainel() {
     setPainel(null)
@@ -272,7 +273,7 @@ export default function AvulsasPage() {
                       </select></div>
                   </div>
                   <div style={{ marginTop:8 }}><label style={lbl}>Valor (R$)</label>
-                    <input type="number" style={fi} value={form.agend_valor||''} onChange={e=>setForm(f=>({...f,agend_valor:e.target.value}))} placeholder="0,00" step="0.01" /></div>
+                    <input type="text" inputMode="decimal" style={fi} value={form.agend_valor||''} onChange={e=>setForm(f=>({...f,agend_valor:e.target.value}))} placeholder="Ex: 1.500,00" /></div>
                 </div>
               )}
               <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, fontWeight:600, color:'#334155' }}>
@@ -297,7 +298,7 @@ export default function AvulsasPage() {
               <Btn onClick={resetForm}>Cancelar</Btn>
               <Btn variant="primary" disabled={salvando || (recorrencia && vezesCalc < 2)} onClick={() => {
                 if (!form.titulo) return alert('Título obrigatório')
-                const payload = { ...form, is_agendamento:isAgend, agend_valor: form.agend_valor ? parseFloat(form.agend_valor) : null }
+                const payload = { ...form, is_agendamento:isAgend, agend_valor: parseBRL(form.agend_valor) }
                 if (recorrencia) createBatch.mutate({ av: payload, vezes: vezesClamp })
                 else create.mutate(payload)
               }}>{salvando?'Salvando…':'Salvar'}</Btn>
@@ -364,7 +365,7 @@ export default function AvulsasPage() {
                           </select></div>
                       </div>
                       <div style={{ marginTop:8 }}><label style={lbl}>Valor (R$)</label>
-                        <input type="number" style={fi} value={edit.agend_valor||''} onChange={e=>setEdit(f=>({...f,agend_valor:e.target.value}))} step="0.01" /></div>
+                        <input type="text" inputMode="decimal" style={fi} value={edit.agend_valor||''} onChange={e=>setEdit(f=>({...f,agend_valor:e.target.value}))} placeholder="Ex: 1.500,00" /></div>
                     </div>
                   )}
                 </div>
@@ -430,7 +431,7 @@ export default function AvulsasPage() {
                   <Btn onClick={fecharPainel}>Fechar</Btn>
                   <Btn variant="primary" disabled={update.isPending} onClick={() => {
                     const { id, clientes, ...data } = edit
-                    update.mutate({ id, ...data }, { onSuccess: fecharPainel })
+                    update.mutate({ id, ...data, agend_valor: parseBRL(data.agend_valor) }, { onSuccess: fecharPainel })
                   }}>{update.isPending ? 'Salvando…' : 'Salvar'}</Btn>
                 </div>
               </div>

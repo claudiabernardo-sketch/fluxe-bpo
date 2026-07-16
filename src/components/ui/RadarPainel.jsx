@@ -16,25 +16,13 @@ import {
   gerarAlertaComposto, gerarOportunidadeComercial, aplicarAjustesManuais, aplicarMetricaMes, AREA_LABEL, CUSTO_HORA_PADRAO,
 } from '../../utils/radar'
 import { Loader } from './index'
+import { parseBRL, formatBRL } from '../../utils/currency'
 
 const SEMAFORO_COR = { verde:'#15803D', amarelo:'#B45309', vermelho:'#DC2626', sem_dado:'#94A3B8' }
 const SEMAFORO_LABEL = { verde:'Saudável', amarelo:'Atenção', vermelho:'Crítico', sem_dado:'Sem dado suficiente' }
 const SEMAFORO_BADGE = { verde:'gr', amarelo:'yw', vermelho:'rd', sem_dado:'gy' }
 const STATUS_LABEL_RADAR = { saudavel:'Saudável', atencao:'Atenção', critico:'Crítico' }
 const STATUS_BADGE_RADAR = { saudavel:'gr', atencao:'yw', critico:'rd' }
-
-// "15.000,00" (formato brasileiro) → 15000. Mesmo padrão de PrecificacaoPage.jsx.
-function parseBRL(str) {
-  if (str === '' || str == null) return null
-  const clean = String(str).trim().replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.')
-  const n = parseFloat(clean)
-  return Number.isNaN(n) ? null : n
-}
-// 15000 → "15.000,00" — pra mostrar o valor já salvo no mesmo formato que a pessoa digita.
-function formatBRL(n) {
-  if (n === null || n === undefined || n === '') return ''
-  return Number(n).toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 })
-}
 
 export default function RadarPainel({ clienteId }) {
   const navigate = useNavigate()

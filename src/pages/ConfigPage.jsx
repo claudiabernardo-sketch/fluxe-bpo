@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { Card, CardHeader, Btn } from '../components/ui'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useFeriados, useCreateFeriado, useDeleteFeriado, useRadarCalcLogUltimo, useRecalcularRadar } from '../hooks/useData'
+import { parseBRL, formatBRL } from '../utils/currency'
 
 // ── Calculadora de Custo Real da Hora ─────────────────────────────────────
 function CalculadoraCustoHora({ usuarios = [], editarUser }) {
@@ -11,12 +12,12 @@ function CalculadoraCustoHora({ usuarios = [], editarUser }) {
   const labelStyle = { fontSize:11, fontWeight:700, color:'#64748B', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.06em' }
 
   const [regime, setRegime] = useState('clt')
-  const [salario, setSalario] = useState(3000)
+  const [salario, setSalario] = useState('3.000,00')
   const [horasMes, setHorasMes] = useState(160)
-  const [vr, setVr] = useState(600)
-  const [vt, setVt] = useState(200)
-  const [saude, setSaude] = useState(0)
-  const [outros, setOutros] = useState(0)
+  const [vr, setVr] = useState('600,00')
+  const [vt, setVt] = useState('200,00')
+  const [saude, setSaude] = useState('0,00')
+  const [outros, setOutros] = useState('0,00')
   const [margem, setMargem] = useState(30)
   const [usuarioAlvo, setUsuarioAlvo] = useState('')
   const [aplicado, setAplicado] = useState(false)
@@ -57,9 +58,10 @@ function CalculadoraCustoHora({ usuarios = [], editarUser }) {
   const resultado = useMemo(() => {
     const enc = ENCARGOS[regime]
     const totalPct = enc.items.reduce((a, i) => a + i.pct, 0)
-    const encargosValor = salario * (totalPct / 100)
-    const beneficiosValor = Number(vr) + Number(vt) + Number(saude) + Number(outros)
-    const custoMensal = salario + encargosValor + beneficiosValor
+    const salarioNum = parseBRL(salario) || 0
+    const beneficiosValor = (parseBRL(vr) || 0) + (parseBRL(vt) || 0) + (parseBRL(saude) || 0) + (parseBRL(outros) || 0)
+    const encargosValor = salarioNum * (totalPct / 100)
+    const custoMensal = salarioNum + encargosValor + beneficiosValor
     const custoHora = horasMes > 0 ? custoMensal / horasMes : 0
     const precoVenda = custoHora * (1 + margem / 100)
     return { totalPct, encargosValor, beneficiosValor, custoMensal, custoHora, precoVenda, items: enc.items }
@@ -101,7 +103,7 @@ function CalculadoraCustoHora({ usuarios = [], editarUser }) {
                 <label style={labelStyle}>Salário bruto mensal</label>
                 <div style={{ position:'relative' }}>
                   <span style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', fontSize:12, color:'#94A3B8', fontWeight:600 }}>R$</span>
-                  <input type="number" value={salario} onChange={e => setSalario(Number(e.target.value))} style={{ ...fi, paddingLeft:30 }} min={0} />
+                  <input type="text" inputMode="decimal" value={salario} onChange={e => setSalario(e.target.value)} style={{ ...fi, paddingLeft:30 }} placeholder="3.000,00" />
                 </div>
               </div>
               <div style={{ marginBottom:12 }}>
@@ -120,7 +122,7 @@ function CalculadoraCustoHora({ usuarios = [], editarUser }) {
                   <label style={labelStyle}>{label}</label>
                   <div style={{ position:'relative' }}>
                     <span style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', fontSize:12, color:'#94A3B8', fontWeight:600 }}>R$</span>
-                    <input type="number" value={val} onChange={e => set(Number(e.target.value))} style={{ ...fi, paddingLeft:30 }} min={0} />
+                    <input type="text" inputMode="decimal" value={val} onChange={e => set(e.target.value)} style={{ ...fi, paddingLeft:30 }} placeholder="0,00" />
                   </div>
                 </div>
               ))}
@@ -143,7 +145,7 @@ function CalculadoraCustoHora({ usuarios = [], editarUser }) {
                 {resultado.items.map(item => (
                   <div key={item.nome} style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'#64748B', marginBottom:5 }}>
                     <span>{item.nome} ({item.pct}%)</span>
-                    <span style={{ fontWeight:600 }}>{fmt(salario * item.pct / 100)}</span>
+                    <span style={{ fontWeight:600 }}>{fmt((parseBRL(salario) || 0) * item.pct / 100)}</span>
                   </div>
                 ))}
                 <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, fontWeight:700, color:'#1D4ED8', borderTop:'1px solid #E2E8F0', marginTop:8, paddingTop:8 }}>
@@ -152,7 +154,7 @@ function CalculadoraCustoHora({ usuarios = [], editarUser }) {
                 </div>
               </div>
               {[
-                { label: 'Salário bruto',      val: salario,                   color:'#475569' },
+                { label: 'Salário bruto',      val: parseBRL(salario) || 0,    color:'#475569' },
                 { label: 'Encargos',           val: resultado.encargosValor,   color:'#DC2626' },
                 { label: 'Benefícios',         val: resultado.beneficiosValor, color:'#D97706' },
                 { label: 'Custo mensal total', val: resultado.custoMensal,     color:'#0F172A', bold: true },
@@ -504,7 +506,7 @@ export default function ConfigPage() {
   async function salvarCustosOp() {
     if (!empresa) return
     try {
-      const total = custosOp.itens.reduce((s, i) => s + (parseFloat(i.valor) || 0), 0)
+      const total = custosOp.itens.reduce((s, i) => s + (parseBRL(i.valor) || 0), 0)
       const nClientes = parseInt(custosOp.clientesAtivos) || 0
       const payload = {
         itens: custosOp.itens,
@@ -764,7 +766,7 @@ export default function ConfigPage() {
           { v:'financeiro',    l:'🏦 Financeiro', ex:'Tarifas bancárias, taxas de máquina' },
           { v:'outros',        l:'📦 Outros', ex:'Cursos, mentorias, associações' },
         ]
-        const total = custosOp.itens.reduce((s, i) => s + (parseFloat(i.valor) || 0), 0)
+        const total = custosOp.itens.reduce((s, i) => s + (parseBRL(i.valor) || 0), 0)
         const nClientes = parseInt(custosOp.clientesAtivos) || 0
         const porCliente = nClientes > 0 ? total / nClientes : 0
         const fmtR = (v) => (v || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' })
@@ -785,7 +787,7 @@ export default function ConfigPage() {
 
               {CATEGORIAS.map(cat => {
                 const itensCat = custosOp.itens.map((it, idx) => ({ ...it, _idx: idx })).filter(it => it.categoria === cat.v)
-                const subtotal = itensCat.reduce((s, i) => s + (parseFloat(i.valor) || 0), 0)
+                const subtotal = itensCat.reduce((s, i) => s + (parseBRL(i.valor) || 0), 0)
                 return (
                   <div key={cat.v} style={{ marginBottom:14, border:'1px solid #F1F5F9', borderRadius:10, padding:'10px 14px' }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
@@ -801,7 +803,7 @@ export default function ConfigPage() {
                     {itensCat.map(it => (
                       <div key={it._idx} style={{ display:'grid', gridTemplateColumns:'1fr 130px 28px', gap:8, marginBottom:6 }}>
                         <input style={fi} value={it.descricao} onChange={e => setItem(it._idx, 'descricao', e.target.value)} placeholder="Descrição (ex: Conta Azul — 8 licenças)" />
-                        <input style={fi} type="number" min="0" step="0.01" value={it.valor} onChange={e => setItem(it._idx, 'valor', e.target.value)} placeholder="R$ /mês" />
+                        <input style={fi} type="text" inputMode="decimal" value={it.valor} onChange={e => setItem(it._idx, 'valor', e.target.value)} placeholder="Ex: 1.500,00 /mês" />
                         <button onClick={() => rmItem(it._idx)} title="Remover" style={{ border:'none', background:'transparent', color:'#DC2626', cursor:'pointer', fontSize:14 }}>✕</button>
                       </div>
                     ))}
