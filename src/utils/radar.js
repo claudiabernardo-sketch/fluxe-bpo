@@ -82,13 +82,45 @@ export function aplicarAjustesManuais(areas, ajustesManuais) {
   return resultado
 }
 
+// ── Métrica mensal real: sobrepõe o proxy de tarefa em dia com números de
+// verdade (quanto recebeu, quanto pagou, saldo em caixa). Exportada pra ser
+// aplicada tanto dentro de computeAreaStatusPorCliente (cálculo na hora)
+// quanto por cima do snapshot do servidor (RadarPainel), pra uma edição
+// aparecer na tela sem esperar o próximo ciclo do cron.
+export function aplicarMetricaMes(areas, metricaMes, receita = 0) {
+  if (!metricaMes) return areas
+  const resultado = { ...areas }
+  const { valor_a_receber, valor_recebido, valor_a_pagar, valor_pago, saldo_caixa } = metricaMes
+  if ((valor_a_receber || 0) > 0 && valor_recebido != null) {
+    const pct = (valor_recebido / valor_a_receber) * 100
+    resultado.receb = { status: pct >= 95 ? 'saudavel' : pct >= 80 ? 'atencao' : 'critico', valor: `${pct.toFixed(0)}% recebido` }
+  }
+  if ((valor_a_pagar || 0) > 0 && valor_pago != null) {
+    const pct = (valor_pago / valor_a_pagar) * 100
+    resultado.pagtos = { status: pct >= 95 ? 'saudavel' : pct >= 80 ? 'atencao' : 'critico', valor: `${pct.toFixed(0)}% pago` }
+  }
+  if (valor_recebido != null && valor_pago != null) {
+    const liquido = valor_recebido - valor_pago
+    resultado.fluxo_caixa = { status: liquido >= 0 ? 'saudavel' : liquido > -(receita * 0.1) ? 'atencao' : 'critico', valor: liquido }
+  }
+  if (saldo_caixa != null) {
+    resultado.caixa = { status: saldo_caixa >= receita ? 'saudavel' : saldo_caixa > 0 ? 'atencao' : 'critico', valor: saldo_caixa }
+  }
+  return resultado
+}
+
 // ── Status das 9 áreas calculáveis + composto ─────────────────────────
 // usuarios/apontamentosEquipe são opcionais (dados da empresa toda, não só
 // deste cliente) — sem eles, Equipe cai pra "sem_dado" em vez de mentir.
-// ajustesManuais é opcional — quando presente, sobrepõe o cálculo automático
-// de qualquer área, inclusive as "sem_dado".
+// metricaMes é opcional — números reais do mês (valor_a_receber,
+// valor_recebido, valor_a_pagar, valor_pago, saldo_caixa). Quando presente,
+// Recebíveis/Pagtos/Fluxo de Caixa/Caixa passam a refletir dinheiro de
+// verdade em vez do proxy de tarefa em dia. ajustesManuais é opcional —
+// quando presente, sobrepõe qualquer área (inclusive as calculadas por
+// metricaMes), pra quando quem opera sabe de algo que os números não
+// capturam.
 // Retorna { margem:{status,...}, ... }
-export function computeAreaStatusPorCliente(cliente, tarefasDoCliente, margemInfo, usuarios = null, apontamentosEquipe = null, ajustesManuais = null) {
+export function computeAreaStatusPorCliente(cliente, tarefasDoCliente, margemInfo, usuarios = null, apontamentosEquipe = null, ajustesManuais = null, metricaMes = null) {
   const hoje = new Date().toISOString().slice(0, 10)
   const abertas = tarefasDoCliente.filter(t => !t.deleted_at)
   const atrasadas = abertas.filter(t => isAtrasada(t, hoje))
@@ -109,7 +141,7 @@ export function computeAreaStatusPorCliente(cliente, tarefasDoCliente, margemInf
   const statusMargem = margemPct > 40 ? 'saudavel' : margemPct > 0 ? 'atencao' : 'critico'
   const statusProcessos = statusPorContagem(nProcessos)
 
-  const areas = {
+  let areas = {
     margem: { status: statusMargem, valor: `${margemPct.toFixed(0)}%` },
     lucro: { status: margem > 0 ? 'saudavel' : margem > -(receita * 0.1) ? 'atencao' : 'critico', valor: margem },
     custos: { status: custoPct < 60 ? 'saudavel' : custoPct <= 100 ? 'atencao' : 'critico', valor: `${custoPct.toFixed(0)}%` },
@@ -118,6 +150,8 @@ export function computeAreaStatusPorCliente(cliente, tarefasDoCliente, margemInf
     fluxo_caixa: { status: statusPorContagem(nFluxo), valor: nFluxo },
     processos: { status: statusProcessos, valor: nProcessos },
   }
+
+  areas = aplicarMetricaMes(areas, metricaMes, receita)
 
   // ── Equipe: cliente tem dono definido e esse dono não está sobrecarregado ──
   if (usuarios && apontamentosEquipe) {
@@ -148,7 +182,7 @@ export function computeAreaStatusPorCliente(cliente, tarefasDoCliente, margemInf
   else statusComercial = 'saudavel'
   areas.comercial = { status: statusComercial, valor: null }
 
-  AREAS_SEM_DADO.forEach(id => { areas[id] = { status: 'sem_dado', valor: null } })
+  AREAS_SEM_DADO.forEach(id => { if (!areas[id]) areas[id] = { status: 'sem_dado', valor: null } })
 
   return aplicarAjustesManuais(areas, ajustesManuais)
 }
@@ -169,13 +203,18 @@ export function computeRadarScore(areas) {
 }
 
 // ── Alerta em texto simples ─────────────────────────────────────────────
+// Baseado em status (não no formato de "valor", que muda conforme a área
+// vem do proxy de tarefa ou de metricaMes — número de tarefas num caso,
+// percentual/R$ no outro).
 export function gerarAlertaComposto(areas) {
   const problemas = []
   if (areas.margem.status === 'critico') problemas.push('margem negativa')
   else if (areas.margem.status === 'atencao') problemas.push('margem baixa')
-  if (areas.pagtos.valor > 0) problemas.push(`${areas.pagtos.valor} pagamento${areas.pagtos.valor > 1 ? 's' : ''} atrasado${areas.pagtos.valor > 1 ? 's' : ''}`)
-  if (areas.receb.valor > 0) problemas.push(`${areas.receb.valor} cobrança${areas.receb.valor > 1 ? 's' : ''} atrasada${areas.receb.valor > 1 ? 's' : ''}`)
-  if (areas.fluxo_caixa.valor > 0) problemas.push('tarefas de fluxo de caixa atrasadas')
+  if (areas.pagtos.status === 'critico') problemas.push('pagamentos atrasados')
+  else if (areas.pagtos.status === 'atencao') problemas.push('pagamentos parcialmente em dia')
+  if (areas.receb.status === 'critico') problemas.push('recebíveis atrasados')
+  else if (areas.receb.status === 'atencao') problemas.push('recebíveis parcialmente em dia')
+  if (areas.fluxo_caixa.status === 'critico') problemas.push('fluxo de caixa negativo')
   if (problemas.length === 0) return null
   return `Atenção: ${problemas.join(', ')}.`
 }

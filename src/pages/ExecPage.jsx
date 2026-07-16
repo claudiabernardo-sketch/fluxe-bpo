@@ -1,6 +1,6 @@
-import { useClients, useTasks, usePendencias, useApontamentosMes, useUsuarios, useRadarScores, useRadarAjustesManuaisTodos } from '../hooks/useData'
+import { useClients, useTasks, usePendencias, useApontamentosMes, useUsuarios, useRadarScores, useRadarAjustesManuaisTodos, useRadarMetricasMesTodos } from '../hooks/useData'
 import { KpiCard, Card, CardHeader, Loader, Badge, fmtR } from '../components/ui'
-import { computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore, aplicarAjustesManuais, CUSTO_HORA_PADRAO } from '../utils/radar'
+import { computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore, aplicarAjustesManuais, aplicarMetricaMes, CUSTO_HORA_PADRAO } from '../utils/radar'
 
 export default function ExecPage() {
   const { data: clients = [], isLoading } = useClients()
@@ -10,6 +10,7 @@ export default function ExecPage() {
   const { data: usuarios = [] } = useUsuarios()
   const { data: radarScores = [] } = useRadarScores()
   const { data: ajustesTodos = [] } = useRadarAjustesManuaisTodos()
+  const { data: metricasTodos = [] } = useRadarMetricasMesTodos()
 
   if (isLoading) return <Loader />
 
@@ -34,10 +35,13 @@ export default function ExecPage() {
     if (!ajustesPorCliente[a.cliente_id]) ajustesPorCliente[a.cliente_id] = {}
     ajustesPorCliente[a.cliente_id][a.area] = { status: a.status, observacao: a.observacao, criado_em: a.criado_em, expira_em: a.expira_em }
   })
+  const metricaPorCliente = {}
+  metricasTodos.forEach(m => { metricaPorCliente[m.cliente_id] = m })
 
   // Cliente com snapshot do servidor (radar-calcular) usa ele direto — só
   // recalcula na hora quem ainda não tem snapshot (empresa/cliente novo).
-  // Ajustes manuais entram por cima dos dois, pra refletir edição na hora.
+  // Métrica real e ajustes manuais entram por cima de qualquer fonte, pra
+  // refletir edição na hora.
   function radarDoCliente(cl) {
     const snap = radarMap[cl.id]
     let areas
@@ -48,7 +52,8 @@ export default function ExecPage() {
       const tarefasCliente = tasks.filter(t => t.cliente_id === cl.id && !t.deleted_at)
       areas = computeAreaStatusPorCliente(cl, tarefasCliente, m, usuarios, aponts)
     }
-    return computeRadarScore(aplicarAjustesManuais(areas, ajustesPorCliente[cl.id]))
+    const areasComMetrica = aplicarMetricaMes(areas, metricaPorCliente[cl.id], cl.valor_mrr || 0)
+    return computeRadarScore(aplicarAjustesManuais(areasComMetrica, ajustesPorCliente[cl.id]))
   }
   const emRisco = ativos.filter(c => radarDoCliente(c).semaforo === 'vermelho')
   const topMrr = [...ativos].sort((a,b)=>(b.valor_mrr||0)-(a.valor_mrr||0)).slice(0,5)

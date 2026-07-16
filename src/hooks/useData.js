@@ -492,6 +492,25 @@ export function useRadarScore(clienteId) {
   })
 }
 
+export function useRadarScoreHistorico(clienteId, limite = 6) {
+  return useQuery({
+    queryKey: ['radar_score_historico', clienteId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('radar_scores')
+        .select('score, semaforo, calculado_em')
+        .eq('cliente_id', clienteId)
+        .order('calculado_em', { ascending: false })
+        .limit(limite)
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 60_000,
+    enabled: !!clienteId,
+    retry: false,
+  })
+}
+
 export function useRadarCalcLogUltimo() {
   return useQuery({
     queryKey: ['radar_calc_log_ultimo'],
@@ -634,6 +653,78 @@ export function useRemoverAjusteManual() {
     onSuccess: (clienteId) => {
       qc.invalidateQueries({ queryKey: ['radar_ajustes', clienteId] })
       qc.invalidateQueries({ queryKey: ['radar_ajustes_todos'] })
+    },
+  })
+}
+
+// ── MÉTRICAS MENSAIS DO RADAR ─────────────────────────
+// Números reais do mês (quanto recebeu, quanto pagou, saldo em caixa) —
+// quando preenchidos, o Radar calcula Recebíveis/Pagtos/Fluxo de Caixa/Caixa
+// a partir deles em vez do proxy de tarefa em dia.
+function mesReferenciaAtual() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+}
+
+export function useRadarMetricaMes(clienteId) {
+  return useQuery({
+    queryKey: ['radar_metrica_mes', clienteId, mesReferenciaAtual()],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('radar_metricas_mensais')
+        .select('*')
+        .eq('cliente_id', clienteId)
+        .eq('mes_referencia', mesReferenciaAtual())
+        .maybeSingle()
+      if (error) throw error
+      return data ?? null
+    },
+    staleTime: 30_000,
+    enabled: !!clienteId,
+    retry: false, // tabela pode ainda não existir (migração não rodada) — falha rápido em vez de re-tentar
+  })
+}
+
+export function useRadarMetricasMesTodos() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['radar_metricas_mes_todos', empresa?.id, mesReferenciaAtual()],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('radar_metricas_mensais')
+        .select('*')
+        .eq('empresa_id', empresa?.id)
+        .eq('mes_referencia', mesReferenciaAtual())
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 60_000,
+    enabled: !!empresa?.id,
+  })
+}
+
+export function useSalvarMetricaMes() {
+  const qc = useQueryClient()
+  const { empresa, user } = useAuthStore()
+  return useMutation({
+    mutationFn: async ({ clienteId, valor_a_receber, valor_recebido, valor_a_pagar, valor_pago, saldo_caixa }) => {
+      const { data, error } = await supabase
+        .from('radar_metricas_mensais')
+        .upsert({
+          empresa_id: empresa?.id,
+          cliente_id: clienteId,
+          mes_referencia: mesReferenciaAtual(),
+          valor_a_receber, valor_recebido, valor_a_pagar, valor_pago, saldo_caixa,
+          atualizado_por: user?.id,
+          atualizado_em: new Date().toISOString(),
+        }, { onConflict: 'cliente_id,mes_referencia' })
+        .select()
+      if (error) throw error
+      return data?.[0]
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['radar_metrica_mes', vars.clienteId] })
+      qc.invalidateQueries({ queryKey: ['radar_metricas_mes_todos'] })
     },
   })
 }

@@ -4,13 +4,16 @@
 // no painel lateral que abre direto da lista de Clientes (sem carregar o
 // resto da ficha do cliente).
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useRadarPanelStore } from '../../store/radarPanelStore'
 import {
   useClients, useTasks, useApontamentos, useApontamentosMes, useUsuarios,
   useRadarScore, useRadarAjustesManuais, useSalvarAjusteManual, useRemoverAjusteManual,
+  useRadarMetricaMes, useSalvarMetricaMes,
 } from '../../hooks/useData'
 import {
   computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore,
-  gerarAlertaComposto, gerarOportunidadeComercial, aplicarAjustesManuais, AREA_LABEL, CUSTO_HORA_PADRAO,
+  gerarAlertaComposto, gerarOportunidadeComercial, aplicarAjustesManuais, aplicarMetricaMes, AREA_LABEL, CUSTO_HORA_PADRAO,
 } from '../../utils/radar'
 import { Loader } from './index'
 
@@ -21,6 +24,7 @@ const STATUS_LABEL_RADAR = { saudavel:'Saudável', atencao:'Atenção', critico:
 const STATUS_BADGE_RADAR = { saudavel:'gr', atencao:'yw', critico:'rd' }
 
 export default function RadarPainel({ clienteId }) {
+  const navigate = useNavigate()
   const { data: clients = [] } = useClients()
   const cliente = clients.find(c => c.id === clienteId)
   const { data: tasks = [] } = useTasks()
@@ -43,15 +47,20 @@ export default function RadarPainel({ clienteId }) {
   const areasRadarCalc = cliente ? computeAreaStatusPorCliente(cliente, tarefasCliente, margemRadar, usuariosRadar, apontamentosEquipeMes) : null
   const areasRadarBase = radarServer?.areas || areasRadarCalc
 
-  // Ajustes manuais: aplicados por cima de qualquer fonte (servidor ou cálculo
-  // na hora) — assim uma edição aparece na tela sem esperar o próximo ciclo
-  // do cron.
+  // Métricas reais do mês: sobrepõem o proxy de tarefa em dia com números de
+  // verdade (quanto recebeu, quanto pagou, saldo em caixa).
+  const { data: metricaServer, isLoading: metricaLoading } = useRadarMetricaMes(clienteId)
+  const areasComMetrica = areasRadarBase ? aplicarMetricaMes(areasRadarBase, metricaServer, margemRadar?.receita ?? 0) : null
+
+  // Ajustes manuais: aplicados por cima de qualquer fonte (servidor, cálculo
+  // na hora, ou métrica real) — assim uma edição aparece na tela sem esperar
+  // o próximo ciclo do cron.
   const { data: ajustesRaw = [] } = useRadarAjustesManuais(clienteId)
   const ajustesManuais = {}
   ajustesRaw.forEach(a => {
     ajustesManuais[a.area] = { status: a.status, observacao: a.observacao, criado_por_nome: a.usuarios?.nome, criado_em: a.criado_em, expira_em: a.expira_em }
   })
-  const areasRadar = areasRadarBase ? aplicarAjustesManuais(areasRadarBase, ajustesManuais) : null
+  const areasRadar = areasComMetrica ? aplicarAjustesManuais(areasComMetrica, ajustesManuais) : null
   const scoreRadar = areasRadar ? computeRadarScore(areasRadar) : null
   const alertaRadar = areasRadar ? gerarAlertaComposto(areasRadar) : null
   const oportunidadeRadar = areasRadar ? gerarOportunidadeComercial(areasRadar, cliente) : null
@@ -62,7 +71,38 @@ export default function RadarPainel({ clienteId }) {
   const salvarAjuste = useSalvarAjusteManual()
   const removerAjuste = useRemoverAjusteManual()
 
-  if (!cliente || !areasRadar) return <Loader />
+  // Formulário de métricas mensais — inicializa uma vez quando os dados chegam,
+  // sem sobrescrever o que a pessoa está digitando.
+  const [metricaForm, setMetricaForm] = useState(null)
+  const [metricaErro, setMetricaErro] = useState('')
+  const salvarMetrica = useSalvarMetricaMes()
+  if (!metricaLoading && metricaForm === null) {
+    setMetricaForm({
+      valor_a_receber: metricaServer?.valor_a_receber ?? '',
+      valor_recebido: metricaServer?.valor_recebido ?? '',
+      valor_a_pagar: metricaServer?.valor_a_pagar ?? '',
+      valor_pago: metricaServer?.valor_pago ?? '',
+      saldo_caixa: metricaServer?.saldo_caixa ?? '',
+    })
+  }
+  async function salvarMetricasDoMes() {
+    try {
+      setMetricaErro('')
+      const n = v => (v === '' || v === null || v === undefined ? null : Number(v))
+      await salvarMetrica.mutateAsync({
+        clienteId,
+        valor_a_receber: n(metricaForm.valor_a_receber),
+        valor_recebido: n(metricaForm.valor_recebido),
+        valor_a_pagar: n(metricaForm.valor_a_pagar),
+        valor_pago: n(metricaForm.valor_pago),
+        saldo_caixa: n(metricaForm.saldo_caixa),
+      })
+    } catch (err) {
+      setMetricaErro(err?.message || 'Erro ao salvar métricas')
+    }
+  }
+
+  if (!cliente || !areasRadar || metricaForm === null) return <Loader />
 
   return (
     <div>
@@ -79,9 +119,55 @@ export default function RadarPainel({ clienteId }) {
         <div style={{ fontSize:32, fontWeight:800, color: SEMAFORO_COR[scoreRadar.semaforo] }}>
           {scoreRadar.score ?? '—'}
         </div>
-        <div>
+        <div style={{ flex:1 }}>
           <span className={`b b-${SEMAFORO_BADGE[scoreRadar.semaforo]}`}>{SEMAFORO_LABEL[scoreRadar.semaforo]}</span>
           <div style={{ fontSize:10, color:'var(--tx3)', marginTop:4 }}>Score de 0 a 100</div>
+        </div>
+        <button
+          onClick={() => { useRadarPanelStore.getState().fechar(); navigate(`/clientes/${clienteId}?tab=relatorio360`) }}
+          className="btn bo bsm"
+          style={{ flexShrink:0, whiteSpace:'nowrap' }}
+        >📄 Relatório 360</button>
+      </div>
+
+      <div style={{ border:'1px solid var(--bo)', borderRadius:'var(--r)', padding:'14px 16px', marginBottom:16, background:'var(--sur)' }}>
+        <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom:6, flexWrap:'wrap', gap:6 }}>
+          <div style={{ fontSize:11, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.05em' }}>
+            📊 Métricas reais do mês
+          </div>
+          {metricaServer?.atualizado_em && (
+            <div style={{ fontSize:10, color:'var(--tx3)' }}>
+              Atualizado {new Date(metricaServer.atualizado_em).toLocaleDateString('pt-BR')}
+            </div>
+          )}
+        </div>
+        <div style={{ fontSize:11, color:'var(--tx3)', marginBottom:10, lineHeight:1.4 }}>
+          Preencha os números reais desse cliente — o Radar usa eles pra calcular Recebíveis, Pagtos, Fluxo de Caixa e Caixa, em vez de só olhar se a tarefa está em dia.
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:8, marginBottom:10 }}>
+          {[
+            ['valor_a_receber', 'A receber (R$)'],
+            ['valor_recebido', 'Recebido (R$)'],
+            ['valor_a_pagar', 'A pagar (R$)'],
+            ['valor_pago', 'Pago (R$)'],
+            ['saldo_caixa', 'Saldo em caixa (R$)'],
+          ].map(([campo, label]) => (
+            <div key={campo}>
+              <label style={{ fontSize:10, color:'var(--tx3)', display:'block', marginBottom:3 }}>{label}</label>
+              <input
+                type="number" step="0.01" placeholder="0,00"
+                value={metricaForm[campo]}
+                onChange={e => setMetricaForm(f => ({ ...f, [campo]: e.target.value }))}
+                style={{ width:'100%', fontSize:12, padding:'6px 8px', border:'1px solid var(--bo)', borderRadius:6, background:'var(--sur)', color:'var(--tx)', boxSizing:'border-box' }}
+              />
+            </div>
+          ))}
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <button className="btn bp bsm" disabled={salvarMetrica.isPending} onClick={salvarMetricasDoMes}>
+            {salvarMetrica.isPending ? 'Salvando…' : 'Salvar métricas'}
+          </button>
+          {metricaErro && <div style={{ fontSize:10, color:'#EF4444' }}>{metricaErro}</div>}
         </div>
       </div>
 

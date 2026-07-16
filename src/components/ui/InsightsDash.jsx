@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
-import { useClients, useTasks, useUsuarios, useRadarScores, useRadarAjustesManuaisTodos } from '../../hooks/useData'
+import { useClients, useTasks, useUsuarios, useRadarScores, useRadarAjustesManuaisTodos, useRadarMetricasMesTodos } from '../../hooks/useData'
 import { supabase } from '../../lib/supabase'
 import { useMemo } from 'react'
-import { computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore, aplicarAjustesManuais, CUSTO_HORA_PADRAO } from '../../utils/radar'
+import { computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore, aplicarAjustesManuais, aplicarMetricaMes, CUSTO_HORA_PADRAO } from '../../utils/radar'
 
 const HORAS_MES_PADRAO = 160
 const OCUPACAO_ALERTA = 85
@@ -52,6 +52,7 @@ export default function InsightsDash() {
   const { data: tasks = [] } = useTasks()
   const { data: radarScores = [] } = useRadarScores()
   const { data: ajustesTodos = [] } = useRadarAjustesManuaisTodos()
+  const { data: metricasTodos = [] } = useRadarMetricasMesTodos()
 
   // Apontamentos do mês para cálculo de margem
   const { data: apontamentos = [] } = useQuery({
@@ -190,6 +191,8 @@ export default function InsightsDash() {
       if (!ajustesPorCliente[a.cliente_id]) ajustesPorCliente[a.cliente_id] = {}
       ajustesPorCliente[a.cliente_id][a.area] = { status: a.status, observacao: a.observacao, criado_em: a.criado_em, expira_em: a.expira_em }
     })
+    const metricaPorCliente = {}
+    metricasTodos.forEach(m => { metricaPorCliente[m.cliente_id] = m })
     const emRisco = []
     clients.forEach(c => {
       const snap = radarMap[c.id]
@@ -201,7 +204,9 @@ export default function InsightsDash() {
         const tarefasCliente = tasks.filter(t => t.cliente_id === c.id && !t.deleted_at)
         areas = computeAreaStatusPorCliente(c, tarefasCliente, m, usuarios, apontamentos)
       }
-      const { semaforo } = computeRadarScore(aplicarAjustesManuais(areas, ajustesPorCliente[c.id]))
+      const receitaCliente = c.valor_mrr || 0
+      const areasComMetrica = aplicarMetricaMes(areas, metricaPorCliente[c.id], receitaCliente)
+      const { semaforo } = computeRadarScore(aplicarAjustesManuais(areasComMetrica, ajustesPorCliente[c.id]))
       if (semaforo === 'vermelho') emRisco.push(c)
     })
     if (emRisco.length > 0) {
@@ -231,7 +236,7 @@ export default function InsightsDash() {
     }
 
     return list
-  }, [usuarios, clients, tasks, apontamentos, radarScores, ajustesTodos])
+  }, [usuarios, clients, tasks, apontamentos, radarScores, ajustesTodos, metricasTodos])
 
   if (insights.length === 0) return null
 
