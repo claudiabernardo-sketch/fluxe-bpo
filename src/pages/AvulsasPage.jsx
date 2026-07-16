@@ -1,10 +1,20 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useClients } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
 import { Card, Btn, Badge, Loader, EmptyState, fmt } from '../components/ui'
 import { useTimerStore } from '../components/layout/TimerBar'
 import { supabase } from '../lib/supabase'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+
+// Uma tarefa avulsa "repetida" vira N linhas na tabela, criadas de uma vez só,
+// uma por mês a partir da data informada — não é uma rotina permanente (isso
+// já existe em Modelos), é uma série finita e conhecida no momento da criação.
+function addMonths(dateStr, n) {
+  if (!dateStr) return null
+  const d = new Date(dateStr + 'T12:00:00')
+  d.setMonth(d.getMonth() + n)
+  return d.toISOString().slice(0, 10)
+}
 
 export default function AvulsasPage() {
   const { data: clients = [] } = useClients()
@@ -14,6 +24,8 @@ export default function AvulsasPage() {
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ prioridade:'media', status:'aberta' })
   const [isAgend, setIsAgend] = useState(false)
+  const [recorrencia, setRecorrencia] = useState(false)
+  const [vezes, setVezes] = useState(6)
 
   const { data: avulsas = [], isLoading } = useQuery({
     queryKey: ['avulsas', empresa?.id],
@@ -28,6 +40,14 @@ export default function AvulsasPage() {
     enabled: !!empresa?.id,
   })
 
+  function resetForm() {
+    setModal(false)
+    setForm({ prioridade:'media', status:'aberta' })
+    setIsAgend(false)
+    setRecorrencia(false)
+    setVezes(6)
+  }
+
   const create = useMutation({
     mutationFn: async (av) => {
       const { data, error } = await supabase.from('tarefas_avulsas')
@@ -35,8 +55,29 @@ export default function AvulsasPage() {
       if (error) throw error
       return data?.[0]
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey:['avulsas'] }); setModal(false); setForm({ prioridade:'media', status:'aberta' }); setIsAgend(false) },
+    onSuccess: () => { qc.invalidateQueries({ queryKey:['avulsas'] }); resetForm() },
     onError: (err) => alert('Erro ao criar tarefa: ' + err.message),
+  })
+
+  // Cria as N parcelas de uma vez só (1 requisição), cada uma um mês depois da anterior
+  const createBatch = useMutation({
+    mutationFn: async (av) => {
+      const grupoId = crypto.randomUUID()
+      const rows = Array.from({ length: vezes }, (_, i) => ({
+        ...av,
+        empresa_id: empresa?.id,
+        titulo: `${av.titulo} (${i+1}/${vezes})`,
+        prazo: addMonths(av.prazo, i),
+        recorrencia_grupo_id: grupoId,
+        lote_atual: i + 1,
+        lote_total: vezes,
+      }))
+      const { data, error } = await supabase.from('tarefas_avulsas').insert(rows).select()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey:['avulsas'] }); resetForm() },
+    onError: (err) => alert('Erro ao criar as parcelas: ' + err.message),
   })
 
   const update = useMutation({
@@ -48,12 +89,62 @@ export default function AvulsasPage() {
     onError: (err) => alert('Erro ao atualizar tarefa: ' + err.message),
   })
 
+  // ── Anexos (mesmo bucket "tarefas" já usado na tela de Tarefas, cada avulsa
+  // na sua própria pasta — sem precisar de tabela nem permissão nova) ────────
+  const [anexoModal, setAnexoModal] = useState(null) // id da avulsa, ou null = fechado
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef(null)
+  const empresaId = empresa?.id || 'shared'
+  const anexoFolder = anexoModal ? `${empresaId}/avulsa-${anexoModal}` : null
+
+  const { data: anexos = [] } = useQuery({
+    queryKey: ['anexos-avulsa', anexoModal, empresaId],
+    queryFn: async () => {
+      if (!anexoFolder) return []
+      const { data, error } = await supabase.storage.from('tarefas')
+        .list(anexoFolder, { limit:100, sortBy:{ column:'created_at', order:'desc' } })
+      if (error) { console.error('storage list:', error.message); return [] }
+      return (data || []).map(f => ({
+        nome: f.name,
+        url: supabase.storage.from('tarefas').getPublicUrl(`${anexoFolder}/${f.name}`).data.publicUrl,
+        criado_em: f.created_at,
+      }))
+    },
+    enabled: !!anexoModal,
+  })
+
+  async function uploadAnexo(file) {
+    if (!anexoFolder || !file) return
+    setUploading(true)
+    try {
+      const path = `${anexoFolder}/${Date.now()}-${file.name}`
+      const { error } = await supabase.storage.from('tarefas').upload(path, file, { upsert:false, cacheControl:'3600' })
+      if (error) { alert('Erro no upload: ' + error.message); return }
+      qc.invalidateQueries({ queryKey:['anexos-avulsa', anexoModal] })
+    } catch (e) {
+      alert('Erro ao enviar: ' + (e.message || 'erro desconhecido'))
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  async function deleteAnexo(nome) {
+    if (!confirm('Excluir anexo?')) return
+    const { error } = await supabase.storage.from('tarefas').remove([`${anexoFolder}/${nome}`])
+    if (error) alert('Erro ao excluir: ' + error.message)
+    else qc.invalidateQueries({ queryKey:['anexos-avulsa', anexoModal] })
+  }
+
   const DIAS_AG = [ {value:'proxima_segunda',label:'Próxima segunda'},{value:'proxima_terca',label:'Próxima terça'},{value:'proxima_quarta',label:'Próxima quarta'},{value:'proxima_quinta',label:'Próxima quinta'},{value:'proxima_sexta',label:'Próxima sexta'},{value:'urgente',label:'Urgente — hoje'} ]
   const FORMAS = [ {value:'pix',label:'PIX'},{value:'ted',label:'TED'},{value:'boleto',label:'Boleto'},{value:'cartao',label:'Cartão'} ]
 
   const fi = { width:'100%', padding:'7px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'inherit', background:'#fff' }
+  const lbl = { fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }
 
   if (isLoading) return <Loader />
+
+  const salvando = create.isPending || createBatch.isPending
 
   return (
     <div>
@@ -72,13 +163,15 @@ export default function AvulsasPage() {
               </button>
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontSize:12, fontWeight:600, color: av.status==='concluida'?'#94A3B8':'#0F172A', textDecoration: av.status==='concluida'?'line-through':'none' }}>{av.titulo}</div>
-                <div style={{ fontSize:10, color:'#94A3B8', marginTop:2, display:'flex', gap:8 }}>
+                <div style={{ fontSize:10, color:'#94A3B8', marginTop:2, display:'flex', gap:8, flexWrap:'wrap' }}>
                   {av.clientes && <span>🏢 {av.clientes.fantasia||av.clientes.razao_social}</span>}
                   {av.prazo && <span>📅 {fmt(av.prazo)}</span>}
                   {av.is_agendamento && <span style={{ color:'#0E7490', fontWeight:600 }}>🏦 {av.agend_forma?.toUpperCase()} {av.agend_valor?`R$ ${Number(av.agend_valor).toLocaleString('pt-BR')}`:''}</span>}
+                  {av.lote_total && <span style={{ color:'#7C3AED', fontWeight:600 }}>📦 {av.lote_atual}/{av.lote_total}</span>}
                 </div>
               </div>
               <Badge label={av.prioridade} color={av.prioridade==='alta'?'red':av.prioridade==='media'?'yellow':'green'} />
+              <Btn small onClick={() => setAnexoModal(av.id)}>📎</Btn>
               {av.status !== 'concluida' && (
                 <Btn small onClick={() => {
                   const cl = clients.find(c=>c.id===av.cliente_id)
@@ -95,17 +188,19 @@ export default function AvulsasPage() {
           <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:500, maxHeight:'90vh', overflow:'auto', padding:24 }}>
             <div style={{ fontWeight:700, fontSize:15, marginBottom:16 }}>Nova tarefa livre</div>
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-              <div><label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Título *</label>
+              <div><label style={lbl}>Título *</label>
                 <input style={fi} value={form.titulo||''} onChange={e=>setForm(f=>({...f,titulo:e.target.value}))} placeholder="Descreva a tarefa..." /></div>
-              <div><label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Cliente</label>
+              <div><label style={lbl}>Cliente</label>
                 <select style={fi} value={form.cliente_id||''} onChange={e=>setForm(f=>({...f,cliente_id:e.target.value||null}))}>
                   <option value="">— Sem cliente —</option>
                   {clients.map(c=><option key={c.id} value={c.id}>{c.razao_social}</option>)}
                 </select></div>
+              <div><label style={lbl}>Observações</label>
+                <textarea style={{ ...fi, minHeight:60, resize:'vertical' }} value={form.obs||''} onChange={e=>setForm(f=>({...f,obs:e.target.value}))} placeholder="Detalhes do lote, contexto, o que ainda falta..." /></div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                <div><label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Prazo</label>
+                <div><label style={lbl}>{recorrencia ? 'Prazo da 1ª parcela' : 'Prazo'}</label>
                   <input type="date" style={fi} value={form.prazo||''} onChange={e=>setForm(f=>({...f,prazo:e.target.value||null}))} /></div>
-                <div><label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Prioridade</label>
+                <div><label style={lbl}>Prioridade</label>
                   <select style={fi} value={form.prioridade||'media'} onChange={e=>setForm(f=>({...f,prioridade:e.target.value}))}>
                     <option value="alta">🔴 Alta</option><option value="media">🟡 Média</option><option value="baixa">🟢 Baixa</option>
                   </select></div>
@@ -118,27 +213,94 @@ export default function AvulsasPage() {
                 <div style={{ background:'#ECFEFF', border:'1px solid #A5F3FC', borderRadius:8, padding:12 }}>
                   <div style={{ fontSize:11, fontWeight:700, color:'#0E7490', marginBottom:8 }}>🏦 Agendamento bancário</div>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                    <div><label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Agendar para</label>
+                    <div><label style={lbl}>Agendar para</label>
                       <select style={fi} value={form.agend_dia||''} onChange={e=>setForm(f=>({...f,agend_dia:e.target.value}))}>
                         <option value="">Próximo agendamento</option>
                         {DIAS_AG.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
                       </select></div>
-                    <div><label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Forma</label>
+                    <div><label style={lbl}>Forma</label>
                       <select style={fi} value={form.agend_forma||'pix'} onChange={e=>setForm(f=>({...f,agend_forma:e.target.value}))}>
                         {FORMAS.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
                       </select></div>
                   </div>
-                  <div style={{ marginTop:8 }}><label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Valor (R$)</label>
+                  <div style={{ marginTop:8 }}><label style={lbl}>Valor (R$)</label>
                     <input type="number" style={fi} value={form.agend_valor||''} onChange={e=>setForm(f=>({...f,agend_valor:e.target.value}))} placeholder="0,00" step="0.01" /></div>
+                </div>
+              )}
+              <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, fontWeight:600, color:'#334155' }}>
+                <input type="checkbox" checked={recorrencia} onChange={e=>setRecorrencia(e.target.checked)} style={{ width:14, height:14, accentColor:'#7C3AED' }} />
+                Repetir mensalmente (gera várias tarefas, uma por mês)
+              </label>
+              {recorrencia && (
+                <div style={{ background:'#F5F3FF', border:'1px solid #DDD6FE', borderRadius:8, padding:12 }}>
+                  <label style={lbl}>Quantas vezes (meses)</label>
+                  <input type="number" style={fi} min={2} max={24} value={vezes} onChange={e=>setVezes(Math.max(2, Math.min(24, parseInt(e.target.value)||2)))} />
+                  <div style={{ fontSize:10, color:'#7C3AED', marginTop:6 }}>
+                    Cria {vezes} tarefas, uma por mês a partir do prazo acima — cada uma numerada "(1/{vezes})", "(2/{vezes})" etc.
+                  </div>
                 </div>
               )}
             </div>
             <div style={{ display:'flex', gap:8, marginTop:16, justifyContent:'flex-end' }}>
-              <Btn onClick={() => { setModal(false); setForm({ prioridade:'media', status:'aberta' }); setIsAgend(false) }}>Cancelar</Btn>
-              <Btn variant="primary" disabled={create.isPending} onClick={() => {
+              <Btn onClick={resetForm}>Cancelar</Btn>
+              <Btn variant="primary" disabled={salvando} onClick={() => {
                 if (!form.titulo) return alert('Título obrigatório')
-                create.mutate({ ...form, is_agendamento:isAgend, agend_valor: form.agend_valor ? parseFloat(form.agend_valor) : null })
-              }}>{create.isPending?'Salvando…':'Salvar'}</Btn>
+                if (recorrencia && (!vezes || vezes < 2)) return alert('Informe ao menos 2 parcelas')
+                const payload = { ...form, is_agendamento:isAgend, agend_valor: form.agend_valor ? parseFloat(form.agend_valor) : null }
+                if (recorrencia) createBatch.mutate(payload)
+                else create.mutate(payload)
+              }}>{salvando?'Salvando…':'Salvar'}</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {anexoModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1100, padding:16 }}
+          onClick={() => setAnexoModal(null)}>
+          <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:420, maxHeight:'80vh', display:'flex', flexDirection:'column' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ padding:'14px 18px', borderBottom:'1px solid #E2E8F0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <div style={{ fontWeight:700, fontSize:14 }}>📎 Anexos</div>
+              <button onClick={() => setAnexoModal(null)} style={{ border:'none', background:'none', cursor:'pointer', fontSize:20, color:'#94A3B8' }}>×</button>
+            </div>
+
+            <div style={{ padding:'12px 14px', borderBottom:'1px solid #E2E8F0' }}>
+              <input ref={fileInputRef} type="file" id="avulsa-anexo-input" style={{ display:'none' }}
+                onChange={e => { if (e.target.files[0]) uploadAnexo(e.target.files[0]) }} />
+              <label htmlFor="avulsa-anexo-input"
+                style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:10, borderRadius:8, border:'2px dashed #CBD5E1', background:'#fff', cursor:'pointer', fontSize:12, fontWeight:600, color:'#64748B' }}>
+                {uploading ? '⏳ Enviando...' : '📎 Clique para anexar arquivo'}
+              </label>
+            </div>
+
+            <div style={{ flex:1, overflow:'auto', padding:'4px 0' }}>
+              {anexos.length === 0
+                ? <div style={{ padding:24, textAlign:'center', color:'#94A3B8', fontSize:11 }}>Nenhum anexo</div>
+                : anexos.map(a => {
+                  const ext = a.nome?.split('.').pop()?.toLowerCase()
+                  const icon = ['pdf'].includes(ext)?'📄':['jpg','jpeg','png','gif','webp'].includes(ext)?'🖼️':['xlsx','xls','csv'].includes(ext)?'📊':['docx','doc'].includes(ext)?'📝':'📎'
+                  return (
+                    <div key={a.nome} style={{ padding:'8px 14px', borderBottom:'1px solid #F0F0F0', display:'flex', alignItems:'center', gap:8 }}>
+                      <span style={{ fontSize:20, flexShrink:0 }}>{icon}</span>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <a href={a.url} target="_blank" rel="noreferrer"
+                          style={{ fontSize:11, fontWeight:600, color:'#6366F1', textDecoration:'none', display:'block', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                          {a.nome}
+                        </a>
+                        {a.criado_em && (
+                          <div style={{ fontSize:9, color:'#94A3B8', marginTop:1 }}>
+                            {new Date(a.criado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}
+                          </div>
+                        )}
+                      </div>
+                      <button onClick={() => deleteAnexo(a.nome)}
+                        style={{ border:'none', background:'none', cursor:'pointer', color:'#CBD5E1', fontSize:14, padding:'2px 4px', flexShrink:0 }}
+                        title="Excluir anexo">×</button>
+                    </div>
+                  )
+                })
+              }
             </div>
           </div>
         </div>
