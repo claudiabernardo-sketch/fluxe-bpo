@@ -61,6 +61,66 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
+    // ── Ação: Embedded Signup — troca o código que a Meta devolve depois do
+    // cliente conectar o WhatsApp dele (login do Facebook, dentro do Fluxe)
+    // por um token de acesso, descobre o phone_number_id do número que ele
+    // acabou de configurar, e já inscreve esse WABA no nosso webhook pra
+    // começar a receber mensagem sem passo manual nenhum. ──────────────────
+    if (action === 'exchange_code') {
+      const { code, empresa_id } = payload
+      const appId = Deno.env.get('META_APP_ID') || ''
+      const appSecret = Deno.env.get('META_APP_SECRET') || ''
+
+      if (!appId || !appSecret) return ok({ error: 'META_APP_ID / META_APP_SECRET não configurados no Supabase' })
+      if (!code || !empresa_id) return ok({ error: 'code e empresa_id são obrigatórios' })
+
+      // 1. Troca o código por um token de acesso (curta duração)
+      const tokenRes = await fetch(
+        `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${appId}&client_secret=${appSecret}&code=${code}`
+      )
+      const tokenData = await tokenRes.json()
+      if (!tokenRes.ok || tokenData.error) {
+        return ok({ error: tokenData.error?.message || 'Erro ao trocar o código por token' })
+      }
+      const shortToken = tokenData.access_token
+
+      // 2. Estende pra um token de longa duração (~60 dias, renovável)
+      const longRes = await fetch(
+        `https://graph.facebook.com/v19.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId}&client_secret=${appSecret}&fb_exchange_token=${shortToken}`
+      )
+      const longData = await longRes.json()
+      const accessToken = longData.access_token || shortToken
+
+      // 3. Descobre quais WhatsApp Business Accounts esse login trouxe
+      const wabaRes = await fetch(
+        `https://graph.facebook.com/v19.0/me/businesses?fields=owned_whatsapp_business_accounts{id,phone_numbers{id,display_phone_number,verified_name}}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      )
+      const wabaData = await wabaRes.json()
+      const waba = wabaData.data?.[0]?.owned_whatsapp_business_accounts?.data?.[0]
+      const numero = waba?.phone_numbers?.data?.[0]
+
+      if (!waba || !numero) {
+        return ok({ error: 'Não encontrei nenhum número de WhatsApp configurado nessa conta. Confirme que o número foi criado durante o login.' })
+      }
+
+      // 4. Inscreve o app nos webhooks desse WABA (senão não chegam mensagens)
+      await fetch(`https://graph.facebook.com/v19.0/${waba.id}/subscribed_apps`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      // 5. Salva no Fluxe, já pronto pra usar
+      const { error: errSave } = await supabase.from('empresas').update({
+        wa_phone_number_id: numero.id,
+        wa_access_token: accessToken,
+        wa_waba_id: waba.id,
+      }).eq('id', empresa_id)
+      if (errSave) return ok({ error: errSave.message })
+
+      return ok({ success: true, numero: numero.display_phone_number, nome: numero.verified_name })
+    }
+
     // ── Ação: testar conexão (valida phoneNumberId + token direto na Meta,
     // sem enviar nenhuma mensagem) ──────────────────────────────────────────
     if (action === 'test') {
@@ -212,7 +272,7 @@ serve(async (req) => {
       return ok({ success: true, enviados })
     }
 
-    return ok({ error: 'Ação inválida. Use: test | send | schedule | process_queue' })
+    return ok({ error: 'Ação inválida. Use: exchange_code | test | send | schedule | process_queue' })
 
   } catch (e) {
     return ok({ error: e.message || 'Erro interno' })

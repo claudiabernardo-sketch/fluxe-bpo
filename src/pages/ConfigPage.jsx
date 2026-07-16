@@ -264,6 +264,8 @@ export default function ConfigPage() {
   const [empForm, setEmpForm] = useState({ nome:'', email:'', telefone:'', cnpj:'', site:'', slogan:'', cor_primaria:'#6366F1', cor_secundaria:'#8B5CF6', fonte:'Inter', logo_url:'', autentique_token:'', wa_phone_number_id:'', wa_access_token:'' })
   const [waTesting, setWaTesting] = useState(false)
   const [waStatus, setWaStatus] = useState(null)
+  const [waConectando, setWaConectando] = useState(false)
+  const [fbReady, setFbReady] = useState(false)
   const [opForm, setOpForm] = useState({ custoHora:35, fechamentoDia:5, nfDia:1, reuniaoDia:10 })
   const [custosOp, setCustosOp] = useState({ itens: [], clientesAtivos: '' })
   const { data: feriados = [] } = useFeriados()
@@ -474,6 +476,62 @@ export default function ConfigPage() {
       }
     }
   }, [empresa])
+
+  // Carrega o SDK do Facebook uma vez, sob demanda (só quando a aba
+  // Integrações existe na página) — é ele que abre o popup de login pra
+  // conectar o WhatsApp do cliente sem sair do Fluxe.
+  useEffect(() => {
+    const appId = import.meta.env.VITE_META_APP_ID
+    if (!appId || window.FB) { if (window.FB) setFbReady(true); return }
+    window.fbAsyncInit = function () {
+      window.FB.init({ appId, cookie: true, xfbml: false, version: 'v19.0' })
+      setFbReady(true)
+    }
+    const s = document.createElement('script')
+    s.src = 'https://connect.facebook.net/pt_BR/sdk.js'
+    s.async = true
+    s.defer = true
+    document.body.appendChild(s)
+  }, [])
+
+  // Abre o popup de login do Facebook (Embedded Signup) — o cliente escolhe
+  // ou cria o número dele, sem precisar copiar/colar nada técnico. No fim,
+  // a Meta devolve um "code" que a Edge Function troca por um token.
+  function conectarWhatsApp() {
+    const configId = import.meta.env.VITE_META_WA_CONFIG_ID
+    if (!window.FB || !configId) {
+      return setWaStatus({ ok: false, msg: '❌ Conexão via Facebook ainda não configurada (falta VITE_META_APP_ID / VITE_META_WA_CONFIG_ID).' })
+    }
+    setWaConectando(true); setWaStatus(null)
+    window.FB.login((response) => {
+      const code = response?.authResponse?.code
+      if (!code) { setWaConectando(false); return }
+      ;(async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-send`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'exchange_code', code, empresa_id: empresa.id }),
+          })
+          const data = await res.json()
+          if (data.error) throw new Error(data.error)
+          setWaStatus({ ok: true, msg: `✅ Conectado! Número: ${data.numero || '—'}${data.nome ? ` (${data.nome})` : ''}` })
+          setEmpForm(f => ({ ...f, wa_phone_number_id: 'conectado', wa_access_token: 'conectado' }))
+          updateEmpresa({})
+        } catch (e) {
+          setWaStatus({ ok: false, msg: '❌ ' + (e.message || 'Erro ao conectar') })
+        } finally {
+          setWaConectando(false)
+        }
+      })()
+    }, {
+      config_id: configId,
+      response_type: 'code',
+      override_default_response_type: true,
+      extras: { feature: 'whatsapp_embedded_signup', sessionInfoVersion: '3' },
+    })
+  }
 
   async function salvarEmpresa() {
     if (!empresa) return
@@ -1151,6 +1209,14 @@ export default function ConfigPage() {
                 : <span style={{ marginLeft:'auto', background:'#FEF3C7', color:'#D97706', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, whiteSpace:'nowrap' }}>Não configurado</span>
               }
             </div>
+            <Btn variant="primary" onClick={conectarWhatsApp} disabled={waConectando}>
+              {waConectando ? 'Conectando...' : '📱 Conectar WhatsApp'}
+            </Btn>
+            <div style={{ fontSize:10, color:'#94A3B8', marginTop:6, marginBottom:16 }}>
+              Abre o login do Facebook — escolha ou crie o número de WhatsApp da sua empresa, sem precisar copiar/colar nada técnico.
+            </div>
+
+            <div style={{ fontSize:11, fontWeight:700, color:'#64748B', marginBottom:8 }}>Ou configure manualmente (avançado)</div>
             <div style={{ fontSize:11, color:'#64748B', marginBottom:12, lineHeight:1.6, background:'#F8FAFC', borderRadius:8, padding:'10px 12px' }}>
               <strong>Como configurar:</strong><br/>
               1. No <a href="https://business.facebook.com" target="_blank" rel="noopener noreferrer" style={{ color:'#6366F1' }}>Meta Business Manager</a>, crie/abra um App com o produto <strong>WhatsApp</strong> adicionado<br/>
