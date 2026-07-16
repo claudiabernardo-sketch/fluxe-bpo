@@ -144,7 +144,7 @@ export default function TasksPage() {
   const logHistorico = (tarefa_id, acao) => {
     // fire-and-forget
     supabase.from('tarefa_historico')
-      .insert({ tarefa_id, usuario_id: profile?.id, acao })
+      .insert({ tarefa_id, usuario_id: profile?.id, acao, empresa_id: empresaId })
       .then(({ error }) => {
         if (error) console.error('historico insert:', error.message)
         else qc.invalidateQueries({ queryKey: ['historico', tarefa_id] })
