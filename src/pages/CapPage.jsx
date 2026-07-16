@@ -1,4 +1,5 @@
-import { useApontamentosMes, useUsuarios } from '../hooks/useData'
+import { useState } from 'react'
+import { useApontamentosMes, useUsuarios, useClients } from '../hooks/useData'
 import { KpiCard, Card, CardHeader, Loader } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 
@@ -8,6 +9,8 @@ const CUSTO_HORA_PADRAO = 65 // R$65/h — referência realista para analista BP
 export default function CapPage() {
   const { data: aponts = [], isLoading } = useApontamentosMes()
   const { data: usuarios = [] } = useUsuarios()
+  const { data: clients = [] } = useClients()
+  const [semanasContratar, setSemanasContratar] = useState(6)
 
   if (isLoading) return <Loader />
 
@@ -29,6 +32,37 @@ export default function CapPage() {
     if (!ap.usuario_id) return
     byUser[ap.usuario_id] = (byUser[ap.usuario_id]||0) + (ap.segundos||0)/3600
   })
+
+  // ── Previsão de crescimento: projeta a ocupação futura a partir do ritmo
+  // real de novos clientes ativos (criado_em) nos últimos 6 meses completos,
+  // pra avisar com antecedência quando a equipe vai estourar a capacidade.
+  const ativos = clients.filter(c => c.status === 'ativo')
+  const hoje = new Date()
+  const mesesHist = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - 6 + i, 1)
+    return { ano: d.getFullYear(), mes: d.getMonth() }
+  })
+  const novosPorMes = mesesHist.map(({ ano, mes }) =>
+    ativos.filter(c => {
+      if (!c.criado_em) return false
+      const d = new Date(c.criado_em)
+      return d.getFullYear() === ano && d.getMonth() === mes
+    }).length
+  )
+  const mediaNovosMes = novosPorMes.reduce((a,b) => a+b, 0) / 6
+  const temHistoricoSuficiente = novosPorMes.some(n => n > 0)
+  const horasPorClienteMedia = ativos.length > 0 && horasUsadas >= 1 ? horasUsadas/ativos.length : hrsNovoCl
+
+  const projecao = Array.from({ length: 12 }, (_, i) => {
+    const n = i + 1
+    const horasProj = horasUsadas + mediaNovosMes * n * horasPorClienteMedia
+    const ocupProj = horasTotal > 0 ? Math.round(horasProj/horasTotal*100) : 0
+    return { n, ocupProj, data: new Date(hoje.getFullYear(), hoje.getMonth()+n, 1) }
+  })
+  const mesEstouro = projecao.find(p => p.ocupProj >= 85) || null
+  const dataComecarContratar = mesEstouro
+    ? new Date(mesEstouro.data.getTime() - semanasContratar*7*86400000)
+    : null
 
   return (
     <div>
@@ -104,6 +138,50 @@ export default function CapPage() {
           </div>
         </Card>
       </div>
+
+      {/* Previsão de crescimento */}
+      {usuarios.length > 0 && (
+        <Card>
+          <CardHeader title="Previsão de crescimento" icon="📈" />
+          <div style={{ padding:16 }}>
+            {!temHistoricoSuficiente ? (
+              <div style={{ textAlign:'center', color:'#94A3B8', fontSize:12, padding:20 }}>
+                Ainda não há histórico de novos clientes suficiente pra projetar — volte aqui daqui a alguns meses.
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize:12, color:'#64748B', marginBottom:12 }}>
+                  Ritmo médio: <strong>{mediaNovosMes.toFixed(1)} novos clientes/mês</strong> (últimos 6 meses) · ~{horasPorClienteMedia.toFixed(0)}h/cliente
+                </div>
+                <div className="mrr-sparkline" style={{ height:50, marginBottom:14 }}>
+                  {projecao.map(p => (
+                    <div key={p.n} className="mrr-bar" title={`${p.data.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'})}: ${p.ocupProj}%`}
+                      style={{ height:`${Math.max(4, Math.min(100, p.ocupProj))}%`, background: p.ocupProj>=85?'#EF4444':p.ocupProj>=60?'#F97316':'#22C55E' }} />
+                  ))}
+                </div>
+                {!mesEstouro ? (
+                  <div style={{ background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:10, padding:'10px 14px', fontSize:12, color:'#166534' }}>
+                    ✓ Nesse ritmo, sua equipe aguenta tranquilo pelos próximos 12 meses.
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:10, padding:'10px 14px', fontSize:12, color:'#991B1B', marginBottom:10 }}>
+                      ⚠️ Nesse ritmo, sua equipe deve estourar a capacidade em <strong>{mesEstouro.n} {mesEstouro.n===1?'mês':'meses'}</strong>, por volta de {mesEstouro.data.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}.
+                    </div>
+                    <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:6, fontSize:12, color:'#64748B' }}>
+                      <span>Contratar leva em média</span>
+                      <input type="number" min={1} max={20} value={semanasContratar}
+                        onChange={e => setSemanasContratar(Math.max(1, Number(e.target.value)||1))}
+                        style={{ width:44, padding:'3px 6px', border:'1px solid #E2E8F0', borderRadius:6, textAlign:'center' }} />
+                      <span>semanas (vaga + entrevistas + ramp-up). Pra não sentir o aperto, comece o processo até <strong>{dataComecarContratar.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</strong>.</span>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Custo da equipe */}
       {usuarios.some(u => u.custo_hora) && (
