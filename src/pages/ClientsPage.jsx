@@ -1,4 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useUpdateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTarefaModelos, useAcessos, useSaveAcesso, useDeleteAcesso, useUsuarios } from '../hooks/useData'
 import { useQueryClient } from '@tanstack/react-query'
 import { Card, CardHeader, Badge, Btn, Loader, EmptyState, fmt, fmtR } from '../components/ui'
@@ -39,6 +40,7 @@ function fmtCNPJ(v) {
 }
 
 export default function ClientsPage() {
+  const navigate = useNavigate()
   const { data: clients = [], isLoading } = useClients()
   const { data: usuarios = [] } = useUsuarios()
   const createClient = useCreateClient()
@@ -456,6 +458,9 @@ export default function ClientsPage() {
                     <td style={{ padding:'10px 14px', fontSize:11, color:'var(--tx2)' }}>{cl.software_erp || '—'}</td>
                     <td style={{ padding:'10px 14px' }} onClick={e => e.stopPropagation()}>
                       <div style={{ display:'flex', gap:5 }}>
+                        <button className="btn bo bsm" title="Radar de saúde do cliente" onClick={() => navigate(`/clientes/${cl.id}?tab=radar`)}>
+                          🩺
+                        </button>
                         <button className="btn bo bsm" onClick={() => openEdit(cl)}>
                           <i className="fa-solid fa-pencil"></i>
                         </button>
