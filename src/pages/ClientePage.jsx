@@ -10,6 +10,7 @@ import {
   useUpdateClienteStatus, useIniciarOperacao, useGerarTarefas,
   useAcessos, useSaveAcesso, useDeleteAcesso,
   useApontamentos, useApontamentosMes, useUsuarios, useRadarScore,
+  useRadarAjustesManuais, useSalvarAjusteManual, useRemoverAjusteManual,
 } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
@@ -17,7 +18,7 @@ import { Badge, Loader, fmtR } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 import {
   computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore,
-  gerarAlertaComposto, gerarOportunidadeComercial, AREA_LABEL, CUSTO_HORA_PADRAO,
+  gerarAlertaComposto, gerarOportunidadeComercial, aplicarAjustesManuais, AREA_LABEL, CUSTO_HORA_PADRAO,
 } from '../utils/radar'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -112,12 +113,26 @@ export default function ClientePage() {
   const { data: radarServer } = useRadarScore(clienteId)
   const margemRadar = cliente ? computeMargemPorCliente([cliente], apontamentosCliente, custoHoraRadar)[0] : null
   const areasRadarCalc = cliente ? computeAreaStatusPorCliente(cliente, tarefasCliente, margemRadar, usuariosRadar, apontamentosEquipeMes) : null
-  const areasRadar = radarServer?.areas || areasRadarCalc
-  const scoreRadar = radarServer
-    ? { score: radarServer.score, semaforo: radarServer.semaforo, areasCalculadas: radarServer.areas_calculadas, areasTotal: Object.keys(radarServer.areas).length }
-    : (areasRadar ? computeRadarScore(areasRadar) : null)
+  const areasRadarBase = radarServer?.areas || areasRadarCalc
+
+  // Ajustes manuais: aplicados por cima de qualquer fonte (servidor ou cálculo
+  // na hora) — assim uma edição aparece na tela sem esperar o próximo ciclo
+  // do cron.
+  const { data: ajustesRaw = [] } = useRadarAjustesManuais(clienteId)
+  const ajustesManuais = {}
+  ajustesRaw.forEach(a => {
+    ajustesManuais[a.area] = { status: a.status, observacao: a.observacao, criado_por_nome: a.usuarios?.nome, criado_em: a.criado_em, expira_em: a.expira_em }
+  })
+  const areasRadar = areasRadarBase ? aplicarAjustesManuais(areasRadarBase, ajustesManuais) : null
+  const scoreRadar = areasRadar ? computeRadarScore(areasRadar) : null
   const alertaRadar = areasRadar ? gerarAlertaComposto(areasRadar) : null
   const oportunidadeRadar = areasRadar ? gerarOportunidadeComercial(areasRadar, cliente) : null
+
+  const [editandoArea, setEditandoArea] = useState(null)
+  const [ajusteForm, setAjusteForm] = useState({ status: 'saudavel', observacao: '' })
+  const [ajusteErro, setAjusteErro] = useState('')
+  const salvarAjuste = useSalvarAjusteManual()
+  const removerAjuste = useRemoverAjusteManual()
 
   // Rotinas
   const { data: rotinas = [] } = useRotinas(clienteId)
@@ -1104,11 +1119,79 @@ export default function ClientePage() {
               <div style={{ fontSize:11, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:8 }}>
                 13 áreas de saúde
               </div>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:8 }}>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))', gap:8 }}>
                 {Object.entries(areasRadar).map(([id, a]) => (
-                  <div key={id} style={{ padding:'10px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background: a.status==='sem_dado' ? 'var(--s2)' : 'var(--sur)', opacity: a.status==='sem_dado' ? .6 : 1 }}>
-                    <div style={{ fontSize:11, fontWeight:600, color:'var(--tx)', marginBottom:6 }}>{AREA_LABEL[id]}</div>
-                    <span className={`b b-${a.status==='sem_dado' ? 'gy' : STATUS_BADGE_RADAR[a.status]}`}>{a.status==='sem_dado' ? 'Sem dado' : STATUS_LABEL_RADAR[a.status]}</span>
+                  <div key={id} style={{ padding:'10px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background: a.status==='sem_dado' ? 'var(--s2)' : 'var(--sur)', opacity: a.status==='sem_dado' && editandoArea!==id ? .6 : 1 }}>
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
+                      <div style={{ fontSize:11, fontWeight:600, color:'var(--tx)' }}>{AREA_LABEL[id]}</div>
+                      <button
+                        onClick={() => {
+                          if (editandoArea === id) { setEditandoArea(null); return }
+                          setAjusteForm({ status: a.status === 'sem_dado' ? 'saudavel' : a.status, observacao: a.observacao || '' })
+                          setAjusteErro('')
+                          setEditandoArea(id)
+                        }}
+                        title="Ajustar manualmente"
+                        style={{ border:'none', background:'none', cursor:'pointer', fontSize:11, color:'var(--tx3)', padding:0, lineHeight:1 }}
+                      >✏️</button>
+                    </div>
+
+                    {editandoArea === id ? (
+                      <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                        <select value={ajusteForm.status} onChange={e => setAjusteForm(f => ({ ...f, status: e.target.value }))}
+                          style={{ fontSize:11, padding:'4px 6px', border:'1px solid var(--bo)', borderRadius:6, background:'var(--sur)', color:'var(--tx)' }}>
+                          <option value="saudavel">Saudável</option>
+                          <option value="atencao">Atenção</option>
+                          <option value="critico">Crítico</option>
+                        </select>
+                        <textarea value={ajusteForm.observacao} onChange={e => setAjusteForm(f => ({ ...f, observacao: e.target.value }))}
+                          placeholder="Observação (opcional)" rows={2}
+                          style={{ fontSize:11, padding:'4px 6px', border:'1px solid var(--bo)', borderRadius:6, background:'var(--sur)', color:'var(--tx)', resize:'vertical', fontFamily:'inherit' }} />
+                        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                          <button className="btn bp bsm" style={{ fontSize:10, padding:'4px 8px' }} disabled={salvarAjuste.isPending}
+                            onClick={async () => {
+                              try {
+                                setAjusteErro('')
+                                await salvarAjuste.mutateAsync({ clienteId, area: id, status: ajusteForm.status, observacao: ajusteForm.observacao })
+                                setEditandoArea(null)
+                              } catch (err) {
+                                setAjusteErro(err?.message || 'Erro ao salvar o ajuste')
+                              }
+                            }}>
+                            {salvarAjuste.isPending ? 'Salvando…' : 'Salvar'}
+                          </button>
+                          <button className="btn bo bsm" style={{ fontSize:10, padding:'4px 8px' }} onClick={() => setEditandoArea(null)}>Cancelar</button>
+                          {a.manual && (
+                            <button
+                              style={{ fontSize:10, color:'#EF4444', border:'none', background:'none', cursor:'pointer', marginLeft:'auto' }}
+                              onClick={async () => {
+                                const ajusteExistente = ajustesRaw.find(x => x.area === id)
+                                if (!ajusteExistente) return
+                                if (!confirm('Remover o ajuste manual e voltar pro cálculo automático?')) return
+                                try {
+                                  setAjusteErro('')
+                                  await removerAjuste.mutateAsync({ id: ajusteExistente.id, clienteId })
+                                  setEditandoArea(null)
+                                } catch (err) {
+                                  setAjusteErro(err?.message || 'Erro ao remover o ajuste')
+                                }
+                              }}
+                            >Remover</button>
+                          )}
+                        </div>
+                        {ajusteErro && <div style={{ fontSize:10, color:'#EF4444' }}>{ajusteErro}</div>}
+                      </div>
+                    ) : (
+                      <>
+                        <span className={`b b-${a.status==='sem_dado' ? 'gy' : STATUS_BADGE_RADAR[a.status]}`}>{a.status==='sem_dado' ? 'Sem dado' : STATUS_LABEL_RADAR[a.status]}</span>
+                        {a.manual && (
+                          <div style={{ fontSize:9, color:'var(--tx3)', marginTop:4, lineHeight:1.4 }}>
+                            ✏️ Manual{a.criado_por_nome ? ` por ${a.criado_por_nome}` : ''} · {a.criado_em ? new Date(a.criado_em).toLocaleDateString('pt-BR') : ''}
+                            {a.observacao && <div style={{ marginTop:2, fontStyle:'italic' }}>"{a.observacao}"</div>}
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 ))}
               </div>

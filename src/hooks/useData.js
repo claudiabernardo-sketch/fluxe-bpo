@@ -559,6 +559,85 @@ export function useMarcarAlertaVisto() {
   })
 }
 
+// ── AJUSTES MANUAIS DO RADAR ─────────────────────────
+// Sobrepõe o cálculo automático de qualquer área (inclusive "sem dado")
+// quando quem opera o cliente sabe da situação real.
+export function useRadarAjustesManuais(clienteId) {
+  return useQuery({
+    queryKey: ['radar_ajustes', clienteId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('radar_ajustes_manuais')
+        .select('*, usuarios(nome)')
+        .eq('cliente_id', clienteId)
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 30_000,
+    enabled: !!clienteId,
+  })
+}
+
+export function useRadarAjustesManuaisTodos() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['radar_ajustes_todos', empresa?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('radar_ajustes_manuais')
+        .select('*, usuarios(nome)')
+        .eq('empresa_id', empresa?.id)
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 60_000,
+    enabled: !!empresa?.id,
+  })
+}
+
+export function useSalvarAjusteManual() {
+  const qc = useQueryClient()
+  const { empresa, user } = useAuthStore()
+  return useMutation({
+    mutationFn: async ({ clienteId, area, status, observacao }) => {
+      const { data, error } = await supabase
+        .from('radar_ajustes_manuais')
+        .upsert({
+          empresa_id: empresa?.id,
+          cliente_id: clienteId,
+          area,
+          status,
+          observacao: observacao || null,
+          criado_por: user?.id,
+          criado_em: new Date().toISOString(),
+          expira_em: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        }, { onConflict: 'cliente_id,area' })
+        .select()
+      if (error) throw error
+      return data?.[0]
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['radar_ajustes', vars.clienteId] })
+      qc.invalidateQueries({ queryKey: ['radar_ajustes_todos'] })
+    },
+  })
+}
+
+export function useRemoverAjusteManual() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, clienteId }) => {
+      const { error } = await supabase.from('radar_ajustes_manuais').delete().eq('id', id)
+      if (error) throw error
+      return clienteId
+    },
+    onSuccess: (clienteId) => {
+      qc.invalidateQueries({ queryKey: ['radar_ajustes', clienteId] })
+      qc.invalidateQueries({ queryKey: ['radar_ajustes_todos'] })
+    },
+  })
+}
+
 export function useSaveApontamento() {
   const qc = useQueryClient()
   const { empresa } = useAuthStore()

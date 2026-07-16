@@ -57,11 +57,38 @@ function statusPorContagem(n) {
   return 'critico'
 }
 
+// ── Ajuste manual: sobrepõe o cálculo automático (ou o "sem_dado") quando
+// quem opera o cliente sabe da situação real e registrou isso na tela.
+// ajustesManuais = { [area]: { status, observacao, criado_por_nome, criado_em, expira_em } }
+// Ajuste vencido (expira_em no passado) é ignorado — evita informação velha
+// aparecer como atual pra sempre.
+export function aplicarAjustesManuais(areas, ajustesManuais) {
+  if (!ajustesManuais) return areas
+  const agora = Date.now()
+  const resultado = { ...areas }
+  Object.entries(ajustesManuais).forEach(([area, ajuste]) => {
+    if (!ajuste) return
+    if (ajuste.expira_em && new Date(ajuste.expira_em).getTime() < agora) return
+    resultado[area] = {
+      status: ajuste.status,
+      valor: resultado[area]?.valor ?? null,
+      manual: true,
+      observacao: ajuste.observacao || null,
+      criado_por_nome: ajuste.criado_por_nome || null,
+      criado_em: ajuste.criado_em || null,
+      expira_em: ajuste.expira_em || null,
+    }
+  })
+  return resultado
+}
+
 // ── Status das 9 áreas calculáveis + composto ─────────────────────────
 // usuarios/apontamentosEquipe são opcionais (dados da empresa toda, não só
 // deste cliente) — sem eles, Equipe cai pra "sem_dado" em vez de mentir.
+// ajustesManuais é opcional — quando presente, sobrepõe o cálculo automático
+// de qualquer área, inclusive as "sem_dado".
 // Retorna { margem:{status,...}, ... }
-export function computeAreaStatusPorCliente(cliente, tarefasDoCliente, margemInfo, usuarios = null, apontamentosEquipe = null) {
+export function computeAreaStatusPorCliente(cliente, tarefasDoCliente, margemInfo, usuarios = null, apontamentosEquipe = null, ajustesManuais = null) {
   const hoje = new Date().toISOString().slice(0, 10)
   const abertas = tarefasDoCliente.filter(t => !t.deleted_at)
   const atrasadas = abertas.filter(t => isAtrasada(t, hoje))
@@ -123,13 +150,14 @@ export function computeAreaStatusPorCliente(cliente, tarefasDoCliente, margemInf
 
   AREAS_SEM_DADO.forEach(id => { areas[id] = { status: 'sem_dado', valor: null } })
 
-  return areas
+  return aplicarAjustesManuais(areas, ajustesManuais)
 }
 
 const SCORE_POR_STATUS = { saudavel: 100, atencao: 50, critico: 0 }
 
 // ── Score + Semáforo compostos ─────────────────────────────────────────
-// Média só das áreas calculáveis (7 de 13) — nunca inclui "sem_dado".
+// Média só das áreas calculáveis (automáticas + ajustadas manualmente) —
+// nunca inclui "sem_dado".
 export function computeRadarScore(areas) {
   const calculaveis = Object.entries(areas).filter(([, a]) => a.status !== 'sem_dado')
   const n = calculaveis.length

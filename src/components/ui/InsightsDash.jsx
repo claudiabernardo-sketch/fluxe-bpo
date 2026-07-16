@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
-import { useClients, useTasks, useUsuarios, useRadarScores } from '../../hooks/useData'
+import { useClients, useTasks, useUsuarios, useRadarScores, useRadarAjustesManuaisTodos } from '../../hooks/useData'
 import { supabase } from '../../lib/supabase'
 import { useMemo } from 'react'
-import { computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore, CUSTO_HORA_PADRAO } from '../../utils/radar'
+import { computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore, aplicarAjustesManuais, CUSTO_HORA_PADRAO } from '../../utils/radar'
 
 const HORAS_MES_PADRAO = 160
 const OCUPACAO_ALERTA = 85
@@ -51,6 +51,7 @@ export default function InsightsDash() {
   const { data: clients = [] } = useClients()
   const { data: tasks = [] } = useTasks()
   const { data: radarScores = [] } = useRadarScores()
+  const { data: ajustesTodos = [] } = useRadarAjustesManuaisTodos()
 
   // Apontamentos do mês para cálculo de margem
   const { data: apontamentos = [] } = useQuery({
@@ -181,17 +182,26 @@ export default function InsightsDash() {
     // ── 6. Radar do cliente — semáforo vermelho ─────────────
     // Cliente com snapshot do servidor (radar-calcular) usa ele direto —
     // só recalcula na hora quem ainda não tem snapshot (empresa/cliente novo).
+    // Ajustes manuais entram por cima dos dois, pra refletir edição na hora.
     const radarMap = {}
     radarScores.forEach(r => { radarMap[r.cliente_id] = r })
+    const ajustesPorCliente = {}
+    ajustesTodos.forEach(a => {
+      if (!ajustesPorCliente[a.cliente_id]) ajustesPorCliente[a.cliente_id] = {}
+      ajustesPorCliente[a.cliente_id][a.area] = { status: a.status, observacao: a.observacao, criado_em: a.criado_em, expira_em: a.expira_em }
+    })
     const emRisco = []
     clients.forEach(c => {
-      let semaforo = radarMap[c.id]?.semaforo
-      if (!semaforo) {
+      const snap = radarMap[c.id]
+      let areas
+      if (snap) {
+        areas = snap.areas
+      } else {
         const m = margensPorCliente.find(x => x.clienteId === c.id)
         const tarefasCliente = tasks.filter(t => t.cliente_id === c.id && !t.deleted_at)
-        const areas = computeAreaStatusPorCliente(c, tarefasCliente, m, usuarios, apontamentos)
-        semaforo = computeRadarScore(areas).semaforo
+        areas = computeAreaStatusPorCliente(c, tarefasCliente, m, usuarios, apontamentos)
       }
+      const { semaforo } = computeRadarScore(aplicarAjustesManuais(areas, ajustesPorCliente[c.id]))
       if (semaforo === 'vermelho') emRisco.push(c)
     })
     if (emRisco.length > 0) {
@@ -221,7 +231,7 @@ export default function InsightsDash() {
     }
 
     return list
-  }, [usuarios, clients, tasks, apontamentos])
+  }, [usuarios, clients, tasks, apontamentos, radarScores, ajustesTodos])
 
   if (insights.length === 0) return null
 

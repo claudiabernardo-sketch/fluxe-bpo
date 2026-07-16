@@ -36,6 +36,19 @@ type Cliente = {
 type Tarefa = { cliente_id: string | null; categoria: string | null; status: string; prazo: string | null; data_execucao: string | null; deleted_at: string | null }
 type Apontamento = { cliente_id: string | null; usuario_id: string | null; segundos: number | null }
 type Usuario = { id: string; custo_hora: number | null; horas_mes: number | null }
+type AjusteManual = { cliente_id: string; area: string; status: string; observacao: string | null; criado_em: string; expira_em: string }
+
+// Sobrepõe o cálculo automático (ou "sem_dado") com o que foi ajustado à mão
+// na tela — mesma regra de src/utils/radar.js. Ajuste vencido é ignorado.
+function aplicarAjustesManuais(areas: Record<string, Area>, ajustes: AjusteManual[]) {
+  const agora = Date.now()
+  const resultado = { ...areas }
+  for (const a of ajustes) {
+    if (new Date(a.expira_em).getTime() < agora) continue
+    resultado[a.area] = { status: a.status, valor: resultado[a.area]?.valor ?? null }
+  }
+  return resultado
+}
 
 function computeMargem(cliente: Cliente, apontamentos: Apontamento[], custoHoraMedio: number) {
   const horas = apontamentos.filter(a => a.cliente_id === cliente.id).reduce((s, a) => s + (a.segundos || 0), 0) / 3600
@@ -151,11 +164,12 @@ serve(async (req) => {
 
     for (const empresa of empresas ?? []) {
       try {
-        const [{ data: clientes }, { data: tarefas }, { data: apontamentos }, { data: usuarios }] = await Promise.all([
+        const [{ data: clientes }, { data: tarefas }, { data: apontamentos }, { data: usuarios }, { data: ajustes }] = await Promise.all([
           supabase.from('clientes').select('id,status,valor_mrr,responsavel_id,inicio_contrato').eq('empresa_id', empresa.id).eq('status', 'ativo'),
           supabase.from('tarefas').select('cliente_id,categoria,status,prazo,data_execucao,deleted_at').eq('empresa_id', empresa.id),
           supabase.from('apontamentos').select('cliente_id,usuario_id,segundos').eq('empresa_id', empresa.id).gte('inicio', inicioMes.toISOString()),
           supabase.from('usuarios').select('id,custo_hora,horas_mes').eq('empresa_id', empresa.id),
+          supabase.from('radar_ajustes_manuais').select('cliente_id,area,status,observacao,criado_em,expira_em').eq('empresa_id', empresa.id),
         ])
 
         if (!clientes || clientes.length === 0) continue
@@ -165,11 +179,18 @@ serve(async (req) => {
           ? usuarios.reduce((a, u) => a + (u.custo_hora || CUSTO_HORA_PADRAO), 0) / usuarios.length
           : CUSTO_HORA_PADRAO
 
+        const ajustesPorCliente: Record<string, AjusteManual[]> = {}
+        for (const a of (ajustes as AjusteManual[]) || []) {
+          if (!ajustesPorCliente[a.cliente_id]) ajustesPorCliente[a.cliente_id] = []
+          ajustesPorCliente[a.cliente_id].push(a)
+        }
+
         for (const cliente of clientes as Cliente[]) {
           try {
             const tarefasCliente = (tarefas as Tarefa[] || []).filter(t => t.cliente_id === cliente.id && !t.deleted_at)
             const margemInfo = computeMargem(cliente, (apontamentos as Apontamento[]) || [], custoHoraMedio)
-            const areas = computeAreas(cliente, tarefasCliente, margemInfo, (usuarios as Usuario[]) || [], (apontamentos as Apontamento[]) || [])
+            const areasAuto = computeAreas(cliente, tarefasCliente, margemInfo, (usuarios as Usuario[]) || [], (apontamentos as Apontamento[]) || [])
+            const areas = aplicarAjustesManuais(areasAuto, ajustesPorCliente[cliente.id] || [])
             const { score, semaforo, areasCalculadas } = computeScore(areas)
 
             const { data: ultimo } = await supabase

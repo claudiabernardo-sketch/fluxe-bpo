@@ -1,6 +1,6 @@
-import { useClients, useTasks, usePendencias, useApontamentosMes, useUsuarios, useRadarScores } from '../hooks/useData'
+import { useClients, useTasks, usePendencias, useApontamentosMes, useUsuarios, useRadarScores, useRadarAjustesManuaisTodos } from '../hooks/useData'
 import { KpiCard, Card, CardHeader, Loader, Badge, fmtR } from '../components/ui'
-import { computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore, CUSTO_HORA_PADRAO } from '../utils/radar'
+import { computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore, aplicarAjustesManuais, CUSTO_HORA_PADRAO } from '../utils/radar'
 
 export default function ExecPage() {
   const { data: clients = [], isLoading } = useClients()
@@ -9,6 +9,7 @@ export default function ExecPage() {
   const { data: aponts = [] } = useApontamentosMes()
   const { data: usuarios = [] } = useUsuarios()
   const { data: radarScores = [] } = useRadarScores()
+  const { data: ajustesTodos = [] } = useRadarAjustesManuaisTodos()
 
   if (isLoading) return <Loader />
 
@@ -28,16 +29,26 @@ export default function ExecPage() {
   const margensPorCliente = computeMargemPorCliente(clients, aponts, custoHoraMedio)
   const radarMap = {}
   radarScores.forEach(r => { radarMap[r.cliente_id] = r })
+  const ajustesPorCliente = {}
+  ajustesTodos.forEach(a => {
+    if (!ajustesPorCliente[a.cliente_id]) ajustesPorCliente[a.cliente_id] = {}
+    ajustesPorCliente[a.cliente_id][a.area] = { status: a.status, observacao: a.observacao, criado_em: a.criado_em, expira_em: a.expira_em }
+  })
 
   // Cliente com snapshot do servidor (radar-calcular) usa ele direto — só
   // recalcula na hora quem ainda não tem snapshot (empresa/cliente novo).
+  // Ajustes manuais entram por cima dos dois, pra refletir edição na hora.
   function radarDoCliente(cl) {
     const snap = radarMap[cl.id]
-    if (snap) return { score: snap.score, semaforo: snap.semaforo }
-    const m = margensPorCliente.find(x => x.clienteId === cl.id)
-    const tarefasCliente = tasks.filter(t => t.cliente_id === cl.id && !t.deleted_at)
-    const areas = computeAreaStatusPorCliente(cl, tarefasCliente, m, usuarios, aponts)
-    return computeRadarScore(areas)
+    let areas
+    if (snap) {
+      areas = snap.areas
+    } else {
+      const m = margensPorCliente.find(x => x.clienteId === cl.id)
+      const tarefasCliente = tasks.filter(t => t.cliente_id === cl.id && !t.deleted_at)
+      areas = computeAreaStatusPorCliente(cl, tarefasCliente, m, usuarios, aponts)
+    }
+    return computeRadarScore(aplicarAjustesManuais(areas, ajustesPorCliente[cl.id]))
   }
   const emRisco = ativos.filter(c => radarDoCliente(c).semaforo === 'vermelho')
   const topMrr = [...ativos].sort((a,b)=>(b.valor_mrr||0)-(a.valor_mrr||0)).slice(0,5)
