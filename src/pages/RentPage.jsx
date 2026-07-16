@@ -1,11 +1,11 @@
-import { useClients, useApontamentos, useUsuarios } from '../hooks/useData'
+import { useClients, useApontamentosMes, useUsuarios } from '../hooks/useData'
 import { KpiCard, Card, CardHeader, Loader, fmtR } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 import { computeMargemPorCliente, CUSTO_HORA_PADRAO } from '../utils/radar'
 
 export default function RentPage() {
   const { data: clients = [], isLoading } = useClients()
-  const { data: aponts = [] } = useApontamentos()
+  const { data: aponts = [] } = useApontamentosMes()
   const { data: usuarios = [] } = useUsuarios()
   if (isLoading) return <Loader />
 
@@ -37,7 +37,7 @@ export default function RentPage() {
         title="Como funciona a Rentabilidade"
         color="#22C55E"
         tips={[
-          'Compara o MRR do cliente com o custo real de atendimento (horas × custo/hora).',
+          'Compara o MRR do cliente com o custo real de atendimento (horas do mês × custo/hora).',
           'Margem negativa significa que você está perdendo dinheiro nesse cliente.',
           'Para o cálculo ser preciso, registre horas via timer nas tarefas.',
           'Configure o custo/hora de cada analista em Capacidade.',

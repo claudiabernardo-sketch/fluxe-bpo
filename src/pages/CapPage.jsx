@@ -1,4 +1,4 @@
-import { useApontamentos, useUsuarios } from '../hooks/useData'
+import { useApontamentosMes, useUsuarios } from '../hooks/useData'
 import { KpiCard, Card, CardHeader, Loader } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 
@@ -6,7 +6,7 @@ const HORAS_MES_PADRAO = 160
 const CUSTO_HORA_PADRAO = 65 // R$65/h — referência realista para analista BPO financeiro
 
 export default function CapPage() {
-  const { data: aponts = [], isLoading } = useApontamentos()
+  const { data: aponts = [], isLoading } = useApontamentosMes()
   const { data: usuarios = [] } = useUsuarios()
 
   if (isLoading) return <Loader />
@@ -39,14 +39,14 @@ export default function CapPage() {
         color="#6366F1"
         tips={[
           'Informe o custo/hora e horas mensais de cada analista para cálculos precisos.',
-          'A ocupação mostra % das horas disponíveis já comprometidas com apontamentos.',
+          'A ocupação mostra % das horas disponíveis do mês já comprometidas com apontamentos.',
           'Use "Novos clientes cabem" para saber quantos clientes pode aceitar sem sobrecarregar a equipe.',
           'Acima de 85% de ocupação, o risco de atraso nos prazos aumenta significativamente.',
         ]}
       />
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:12, marginBottom:18 }}>
         <KpiCard label="Horas disponíveis" value={`${horasTotal}h`} color="blue" sub={`${usuarios.length} analistas`} />
-        <KpiCard label="Horas utilizadas" value={`${horasUsadas.toFixed(1)}h`} color={ocupacao>85?'red':ocupacao>60?'orange':'green'} sub={`${ocupacao}% da capacidade`} />
+        <KpiCard label="Horas utilizadas" value={`${horasUsadas.toFixed(1)}h`} color={ocupacao>85?'red':ocupacao>60?'orange':'green'} sub={`${ocupacao}% da capacidade (este mês)`} />
         <KpiCard label="Horas livres" value={`${horasLivres.toFixed(1)}h`} color="cyan" sub="disponível para venda" />
         <KpiCard label="Novos clientes cabem" value={novosClientes} color="purple" sub={`${hrsNovoCl}h/cliente médio`} />
       </div>
