@@ -1,8 +1,7 @@
 import { useClients, useApontamentos, useUsuarios } from '../hooks/useData'
 import { KpiCard, Card, CardHeader, Loader, fmtR } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
-
-const CUSTO_HORA_PADRAO = 65 // R$65/h — referência realista para analista BPO financeiro
+import { computeMargemPorCliente, CUSTO_HORA_PADRAO } from '../utils/radar'
 
 export default function RentPage() {
   const { data: clients = [], isLoading } = useClients()
@@ -21,13 +20,10 @@ export default function RentPage() {
   const arr = mrr * 12
   const tm = ativos.length ? Math.round(mrr/ativos.length) : 0
 
+  const margens = computeMargemPorCliente(ativos, aponts, CUSTO_HORA)
   const rows = ativos.map(cl => {
-    const horas = aponts.filter(a=>a.cliente_id===cl.id).reduce((s,a)=>s+(a.segundos||0),0)/3600
-    const custo = horas * CUSTO_HORA
-    const receita = cl.valor_mrr || 0
-    const margem = receita - custo
-    const pct = receita > 0 ? margem/receita*100 : 0
-    return { ...cl, horas, custo, margem, pct }
+    const m = margens.find(x => x.clienteId === cl.id)
+    return { ...cl, horas: m.horas, custo: m.custo, margem: m.margem, pct: m.margemPct }
   }).sort((a,b)=>b.pct-a.pct)
 
   const totalMargem = rows.reduce((a,r)=>a+r.margem,0)
