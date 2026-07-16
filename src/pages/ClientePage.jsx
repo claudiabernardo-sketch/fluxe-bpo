@@ -1066,6 +1066,25 @@ export default function ClientePage() {
                   ⚠️ {alertaRadar}
                 </div>
               )}
+              {(scoreRadar.semaforo === 'vermelho' || scoreRadar.semaforo === 'amarelo') && (() => {
+                const problemas = Object.entries(areasRadar)
+                  .filter(([, a]) => a.status === 'critico')
+                  .map(([id]) => AREA_LABEL[id])
+                const msg = `🩺 Radar Fluxe — ${cliente.razao_social}\n` +
+                  `Score: ${scoreRadar.score}/100 (${SEMAFORO_LABEL[scoreRadar.semaforo]})\n` +
+                  (problemas.length ? `Áreas críticas: ${problemas.join(', ')}\n` : '') +
+                  `Ver detalhes: ${window.location.origin}/clientes/${clienteId}?tab=radar`
+                return (
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(msg)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="btn bo bsm"
+                    style={{ display:'inline-flex', alignItems:'center', gap:6, marginBottom:16, textDecoration:'none' }}
+                  >
+                    📲 Avisar time no WhatsApp
+                  </a>
+                )
+              })()}
               {oportunidadeRadar && (
                 <div style={{ padding:'12px 16px', borderRadius:'var(--r)', background:'var(--gr-bg, #F0FDF4)', border:'1px solid var(--gr, #86EFAC)', color:'var(--grt, #15803D)', fontSize:12, fontWeight:600, marginBottom:16 }}>
                   💡 {oportunidadeRadar}
