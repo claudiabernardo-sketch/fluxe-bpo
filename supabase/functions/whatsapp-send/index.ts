@@ -61,6 +61,35 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
+    // ── Ação: testar conexão (valida phoneNumberId + token direto na Meta,
+    // sem enviar nenhuma mensagem) ──────────────────────────────────────────
+    if (action === 'test') {
+      const { empresa_id } = payload
+
+      const { data: empresa } = await supabase
+        .from('empresas')
+        .select('wa_phone_number_id, wa_access_token')
+        .eq('id', empresa_id)
+        .single()
+
+      const phoneNumberId = empresa?.wa_phone_number_id || ''
+      const token = empresa?.wa_access_token || ''
+
+      if (!phoneNumberId || !token) return ok({ error: 'Preencha o Phone Number ID e o Access Token antes de testar' })
+
+      const res = await fetch(
+        `https://graph.facebook.com/v19.0/${phoneNumberId}?fields=display_phone_number,verified_name`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      const data = await res.json()
+
+      if (!res.ok || data.error) {
+        return ok({ error: data.error?.message || `Erro ${res.status} ao validar credenciais` })
+      }
+
+      return ok({ success: true, numero: data.display_phone_number, nome: data.verified_name })
+    }
+
     // ── Ação: enviar mensagem imediata ─────────────────────────────────────
     if (action === 'send') {
       const { contato_id, empresa_id, corpo } = payload
@@ -181,7 +210,7 @@ serve(async (req) => {
       return ok({ success: true, enviados })
     }
 
-    return ok({ error: 'Ação inválida. Use: send | schedule | process_queue' })
+    return ok({ error: 'Ação inválida. Use: test | send | schedule | process_queue' })
 
   } catch (e) {
     return ok({ error: e.message || 'Erro interno' })

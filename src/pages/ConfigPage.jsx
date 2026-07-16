@@ -261,7 +261,9 @@ export default function ConfigPage() {
   const [saveError, setSaveError] = useState('')
   const [tab, setTab] = useState('empresa')
 
-  const [empForm, setEmpForm] = useState({ nome:'', email:'', telefone:'', cnpj:'', site:'', slogan:'', cor_primaria:'#6366F1', cor_secundaria:'#8B5CF6', fonte:'Inter', logo_url:'', autentique_token:'' })
+  const [empForm, setEmpForm] = useState({ nome:'', email:'', telefone:'', cnpj:'', site:'', slogan:'', cor_primaria:'#6366F1', cor_secundaria:'#8B5CF6', fonte:'Inter', logo_url:'', autentique_token:'', wa_phone_number_id:'', wa_access_token:'' })
+  const [waTesting, setWaTesting] = useState(false)
+  const [waStatus, setWaStatus] = useState(null)
   const [opForm, setOpForm] = useState({ custoHora:35, fechamentoDia:5, nfDia:1, reuniaoDia:10 })
   const [custosOp, setCustosOp] = useState({ itens: [], clientesAtivos: '' })
   const { data: feriados = [] } = useFeriados()
@@ -464,7 +466,7 @@ export default function ConfigPage() {
 
   useEffect(() => {
     if (empresa) {
-      setEmpForm({ nome: empresa.nome||'', email: empresa.email||'', telefone: empresa.telefone||'', cnpj: empresa.cnpj||'', site: empresa.site||'', slogan: empresa.slogan||'', cor_primaria: empresa.cor_primaria||'#6366F1', cor_secundaria: empresa.cor_secundaria||'#8B5CF6', fonte: empresa.fonte||'Inter', logo_url: empresa.logo_url||'', autentique_token: empresa.autentique_token||'' })
+      setEmpForm({ nome: empresa.nome||'', email: empresa.email||'', telefone: empresa.telefone||'', cnpj: empresa.cnpj||'', site: empresa.site||'', slogan: empresa.slogan||'', cor_primaria: empresa.cor_primaria||'#6366F1', cor_secundaria: empresa.cor_secundaria||'#8B5CF6', fonte: empresa.fonte||'Inter', logo_url: empresa.logo_url||'', autentique_token: empresa.autentique_token||'', wa_phone_number_id: empresa.wa_phone_number_id||'', wa_access_token: empresa.wa_access_token||'' })
       if (empresa.config) {
         try { setOpForm(o => ({ ...o, ...empresa.config })) } catch{}
         try { if (empresa.config.proposta) setPropForm(o => ({ ...o, ...empresa.config.proposta })) } catch{}
@@ -485,12 +487,44 @@ export default function ConfigPage() {
         fonte: empForm.fonte || 'Inter',
         logo_url: empForm.logo_url || null,
         autentique_token: empForm.autentique_token || null,
+        wa_phone_number_id: empForm.wa_phone_number_id || null,
+        wa_access_token: empForm.wa_access_token || null,
       }
       const { error } = await supabase.from('empresas').update(payload).eq('id', empresa.id)
       if (error) throw error
       updateEmpresa(payload)
       setSaved(true); setTimeout(() => setSaved(false), 2000)
     } catch (e) { setSaveError(e.message || 'Erro ao salvar'); setTimeout(() => setSaveError(''), 3000) }
+  }
+
+  // Salva Phone Number ID + Access Token e já valida direto na Meta, sem
+  // precisar enviar mensagem nenhuma pra testar.
+  async function testarWhatsapp() {
+    if (!empForm.wa_phone_number_id?.trim() || !empForm.wa_access_token?.trim()) {
+      return setWaStatus({ ok: false, msg: 'Preencha o Phone Number ID e o Access Token.' })
+    }
+    setWaTesting(true); setWaStatus(null)
+    try {
+      const { error: errSave } = await supabase.from('empresas')
+        .update({ wa_phone_number_id: empForm.wa_phone_number_id.trim(), wa_access_token: empForm.wa_access_token.trim() })
+        .eq('id', empresa.id)
+      if (errSave) throw errSave
+      updateEmpresa({ wa_phone_number_id: empForm.wa_phone_number_id.trim(), wa_access_token: empForm.wa_access_token.trim() })
+
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-send`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'test', empresa_id: empresa.id }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setWaStatus({ ok: true, msg: `✅ Conectado! Número: ${data.numero || '—'}${data.nome ? ` (${data.nome})` : ''}` })
+    } catch (e) {
+      setWaStatus({ ok: false, msg: '❌ ' + (e.message || 'Erro ao testar conexão') })
+    } finally {
+      setWaTesting(false)
+    }
   }
 
   async function salvarOp() {
@@ -1102,6 +1136,54 @@ export default function ConfigPage() {
               placeholder="Cole aqui o token do Autentique..."
               style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box' }}
             />
+          </div>
+
+          {/* WhatsApp (Meta Cloud API) */}
+          <div style={{ border:'1px solid #E2E8F0', borderRadius:12, padding:20, marginBottom:16 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+              <span style={{ fontSize:20 }}>💬</span>
+              <div>
+                <div style={{ fontWeight:700, fontSize:13 }}>WhatsApp — API oficial da Meta</div>
+                <div style={{ fontSize:11, color:'#64748B' }}>Envie e receba mensagens de clientes direto pelo Fluxe</div>
+              </div>
+              {empForm.wa_phone_number_id && empForm.wa_access_token
+                ? <span style={{ marginLeft:'auto', background:'#DCFCE7', color:'#16A34A', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, whiteSpace:'nowrap' }}>✓ Conectado</span>
+                : <span style={{ marginLeft:'auto', background:'#FEF3C7', color:'#D97706', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, whiteSpace:'nowrap' }}>Não configurado</span>
+              }
+            </div>
+            <div style={{ fontSize:11, color:'#64748B', marginBottom:12, lineHeight:1.6, background:'#F8FAFC', borderRadius:8, padding:'10px 12px' }}>
+              <strong>Como configurar:</strong><br/>
+              1. No <a href="https://business.facebook.com" target="_blank" rel="noopener noreferrer" style={{ color:'#6366F1' }}>Meta Business Manager</a>, crie/abra um App com o produto <strong>WhatsApp</strong> adicionado<br/>
+              2. Em <strong>WhatsApp → Configuração da API</strong>, copie o <strong>Phone Number ID</strong> e gere um <strong>Token de acesso permanente</strong> (Token temporário expira em 24h)<br/>
+              3. Cole os dois campos abaixo e clique em <strong>Testar e salvar</strong><br/>
+              4. Em <strong>WhatsApp → Configuração → Webhooks</strong>, registre a URL <code style={{ fontSize:10 }}>{import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook</code> com o token de verificação combinado com o time técnico
+            </div>
+            <label style={{ fontSize:11, fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>Phone Number ID</label>
+            <input
+              type="text"
+              value={empForm.wa_phone_number_id||''}
+              onChange={e => setEmpForm(f => ({ ...f, wa_phone_number_id: e.target.value }))}
+              placeholder="Ex: 123456789012345"
+              style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box', marginBottom:10 }}
+            />
+            <label style={{ fontSize:11, fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>Access Token</label>
+            <input
+              type="password"
+              value={empForm.wa_access_token||''}
+              onChange={e => setEmpForm(f => ({ ...f, wa_access_token: e.target.value }))}
+              placeholder="Cole aqui o token de acesso da Meta..."
+              style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box' }}
+            />
+            {waStatus && (
+              <div style={{ fontSize:11, padding:'8px 10px', borderRadius:8, marginTop:10, background: waStatus.ok?'#F0FDF4':'#FEF2F2', color: waStatus.ok?'#15803D':'#991B1B', border:`1px solid ${waStatus.ok?'#BBF7D0':'#FECDD3'}` }}>
+                {waStatus.msg}
+              </div>
+            )}
+            <div style={{ marginTop:10 }}>
+              <Btn variant="primary" onClick={testarWhatsapp} disabled={waTesting}>
+                {waTesting ? 'Testando...' : 'Testar e salvar'}
+              </Btn>
+            </div>
           </div>
 
           <Btn variant="primary" onClick={salvarEmpresa}>Salvar dados</Btn>
