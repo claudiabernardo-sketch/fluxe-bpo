@@ -92,7 +92,7 @@ serve(async (req) => {
 
     // ── Ação: enviar mensagem imediata ─────────────────────────────────────
     if (action === 'send') {
-      const { contato_id, empresa_id, corpo } = payload
+      const { contato_id, empresa_id, corpo, usuario_id } = payload
 
       // Busca phone do contato
       const { data: contato, error: ce } = await supabase
@@ -128,6 +128,7 @@ serve(async (req) => {
         tipo: 'text',
         corpo,
         lida: true,
+        usuario_id: usuario_id || null,
       })
 
       // Atualiza último contato
@@ -202,6 +203,7 @@ serve(async (req) => {
             tipo: 'text',
             corpo: ag.corpo,
             lida: true,
+            usuario_id: ag.criado_por || null,
           })
           enviados++
         }
