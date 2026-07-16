@@ -225,6 +225,7 @@ serve(async (req) => {
             tarefa_modelos!inner (
               id, titulo, categoria, prioridade,
               recorrencia, dia_mes, dias_semana, dias_mes,
+              checklist_items,
               ativo, deleted_at
             )
           `)
@@ -239,6 +240,16 @@ serve(async (req) => {
         const { data: vinculos, error: errVinc } = await queryVinculos
         if (errVinc) { erros.push(`[${empId}] vinculos: ${errVinc.message}`); continue }
         if (!vinculos?.length) continue
+
+        // Checklist padrão de cada modelo — copiado pra tarefa_checklists de
+        // cada tarefa gerada, mesmo comportamento da criação manual em
+        // TasksPage.jsx (senão o checklist do modelo nunca chega em quem
+        // executa a tarefa, já que a imensa maioria é gerada por aqui).
+        const checklistPorModelo: Record<string, string[]> = {}
+        for (const v of (vinculos as any[])) {
+          const items = v.tarefa_modelos?.checklist_items
+          if (Array.isArray(items) && items.length) checklistPorModelo[v.modelo_id] = items
+        }
 
         // ── 5. Processar cada data ─────────────────────────────────────────
         for (const dataAlvo of datasAlvo) {
@@ -369,11 +380,20 @@ serve(async (req) => {
                 }
               } else {
                 tarefasGeradas += lote.length
+                const checklistRows: any[] = []
                 for (const ins of (inseridas ?? []) as any[]) {
                   detalhes.push({
                     empresa_id: empId, cliente_id: ins.cliente_id, modelo_id: ins.modelo_id,
                     data_alvo: dataAlvo, resultado: 'gerada', motivo: null, tarefa_id: ins.id,
                   })
+                  const items = ins.modelo_id ? checklistPorModelo[ins.modelo_id] : null
+                  if (items?.length) {
+                    for (const texto of items) checklistRows.push({ tarefa_id: ins.id, empresa_id: empId, texto })
+                  }
+                }
+                if (checklistRows.length) {
+                  const { error: errCk } = await supabase.from('tarefa_checklists').insert(checklistRows)
+                  if (errCk) erros.push(`[${empId}] checklist lote ${i}: ${errCk.message}`)
                 }
               }
             }
