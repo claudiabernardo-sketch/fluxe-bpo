@@ -1194,10 +1194,11 @@ export default function CRMPage() {
                   )}
                 </div>
               </div>
+              <div style={{ fontWeight:700, fontSize:12, marginBottom:10, color:'#0F172A' }}>✏️ Meus templates ({meusTemplates.length})</div>
               {meusTemplates.length === 0 ? (
-                <div style={{ textAlign:'center', color:'#94A3B8', fontSize:12, padding:'20px 0' }}>Nenhum template personalizado ainda. Crie o primeiro acima!</div>
+                <div style={{ textAlign:'center', color:'#94A3B8', fontSize:12, padding:'20px 0', background:'#F8FAFC', borderRadius:10, marginBottom:16 }}>Nenhum template personalizado ainda. Crie o primeiro acima!</div>
               ) : (
-                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:16 }}>
                   {meusTemplates.map(t => (
                     <div key={t.id} style={{ border:'1px solid #E2E8F0', borderRadius:10, padding:'10px 14px' }}>
                       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
@@ -1217,6 +1218,43 @@ export default function CRMPage() {
                   ))}
                 </div>
               )}
+
+              {/* Modelos prontos do sistema — não editáveis aqui, só pra referência.
+                  Aparecem no seletor "💬 Mensagem" de cada lead junto com os personalizados. */}
+              <details>
+                <summary style={{ cursor:'pointer', fontWeight:700, fontSize:12, color:'#0F172A', marginBottom:10, listStyle:'none' }}>
+                  📍 Modelos prontos do sistema — ver lista
+                </summary>
+                <div style={{ fontSize:11, color:'#94A3B8', margin:'6px 0 10px' }}>
+                  Já vêm prontos no Fluxe, não podem ser editados aqui, mas aparecem junto com os seus no menu "💬 Mensagem" de cada lead.
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                  {Object.entries(TEMPLATES_ETAPA).map(([etapaId, tpls]) => (
+                    <div key={etapaId}>
+                      <div style={{ fontSize:10, fontWeight:700, color:'#6366F1', textTransform:'uppercase', letterSpacing:'.04em', marginBottom:6 }}>
+                        📍 {ETAPAS.find(e => e.id === etapaId)?.label || etapaId}
+                      </div>
+                      {tpls.map(t => (
+                        <div key={t.id} style={{ border:'1px solid #F1F5F9', borderRadius:8, padding:'8px 12px', marginBottom:6, background:'#FAFAFA' }}>
+                          <div style={{ fontWeight:600, fontSize:12 }}>{t.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                  {TEMPLATES_GLOBAIS.map(g => (
+                    <div key={g.categoria}>
+                      <div style={{ fontSize:10, fontWeight:700, color:'#6366F1', textTransform:'uppercase', letterSpacing:'.04em', marginBottom:6 }}>
+                        {g.categoria}
+                      </div>
+                      {g.templates.map(t => (
+                        <div key={t.id} style={{ border:'1px solid #F1F5F9', borderRadius:8, padding:'8px 12px', marginBottom:6, background:'#FAFAFA' }}>
+                          <div style={{ fontWeight:600, fontSize:12 }}>{t.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </details>
             </div>
           </div>
         </div>
