@@ -9,16 +9,12 @@ import {
   useUpdateClienteModelo, useTogglePauseModelo,
   useUpdateClienteStatus, useIniciarOperacao, useGerarTarefas,
   useAcessos, useSaveAcesso, useDeleteAcesso,
-  useApontamentos, useUsuarios,
 } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import { Badge, Loader, fmtR } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
-import {
-  computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore,
-  gerarAlertaComposto, gerarOportunidadeComercial, AREA_LABEL, CUSTO_HORA_PADRAO,
-} from '../utils/radar'
+import RadarPainel from '../components/ui/RadarPainel'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const ETAPA_COLOR = { comercial:'pu', pre_ob:'yw', onboarding:'bl', implantacao:'or', operacional:'gr', estrategico:'cy', acompanhamento:'gy', encerramento:'gy' }
@@ -28,12 +24,6 @@ const STATUS_LABEL = { ativo:'Ativo', inativo:'Inativo', pausado:'Pausado', onbo
 const STATUS_OP_COLOR = { em_configuracao:'yw', operacional:'gr', pausado:'or', encerrado:'gy' }
 const STATUS_OP_LABEL = { em_configuracao:'Em Configuração', operacional:'Operacional', pausado:'Pausado', encerrado:'Encerrado' }
 
-// Radar do cliente
-const SEMAFORO_COR = { verde:'#15803D', amarelo:'#B45309', vermelho:'#DC2626', sem_dado:'#94A3B8' }
-const SEMAFORO_LABEL = { verde:'Saudável', amarelo:'Atenção', vermelho:'Crítico', sem_dado:'Sem dado suficiente' }
-const SEMAFORO_BADGE = { verde:'gr', amarelo:'yw', vermelho:'rd', sem_dado:'gy' }
-const STATUS_LABEL_RADAR = { saudavel:'Saudável', atencao:'Atenção', critico:'Crítico' }
-const STATUS_BADGE_RADAR = { saudavel:'gr', atencao:'yw', critico:'rd' }
 const RECORRENCIA_LABEL = { diaria:'Diária', dias_uteis:'Dias úteis', semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal', bimestral:'Bimestral', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual', dias_especificos:'Dias específicos' }
 const DIAS_SEMANA_R = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 
@@ -96,19 +86,6 @@ export default function ClientePage() {
   const deleteTask = useDeleteTask()
   const [taskForm, setTaskForm] = useState({ titulo:'', prazo:'', status:'aberta', prioridade:'media' })
   const [taskErr, setTaskErr] = useState('')
-
-  // Radar de saúde do cliente
-  const { data: apontamentosCliente = [] } = useApontamentos({ clientId: clienteId })
-  const { data: usuariosRadar = [] } = useUsuarios()
-  const custoHoraRadar = (() => {
-    const comCusto = usuariosRadar.filter(u => u.custo_hora)
-    return comCusto.length ? Math.round(comCusto.reduce((a,u)=>a+u.custo_hora,0)/comCusto.length) : CUSTO_HORA_PADRAO
-  })()
-  const margemRadar = cliente ? computeMargemPorCliente([cliente], apontamentosCliente, custoHoraRadar)[0] : null
-  const areasRadar = cliente ? computeAreaStatusPorCliente(cliente, tarefasCliente, margemRadar) : null
-  const scoreRadar = areasRadar ? computeRadarScore(areasRadar) : null
-  const alertaRadar = areasRadar ? gerarAlertaComposto(areasRadar) : null
-  const oportunidadeRadar = areasRadar ? gerarOportunidadeComercial(areasRadar, cliente) : null
 
   // Rotinas
   const { data: rotinas = [] } = useRotinas(clienteId)
@@ -1041,46 +1018,9 @@ export default function ClientePage() {
           )}
 
           {/* ── ABA RADAR ─────────────────────────────────────────────────────── */}
-          {tab === 'radar' && areasRadar && (
+          {tab === 'radar' && (
             <div style={{ maxWidth:800 }}>
-              <div style={{ fontSize:11, color:'var(--tx3)', marginBottom:16 }}>
-                Placar de saúde calculado automaticamente a partir de tarefas e rentabilidade —
-                sem nada digitado à mão. {scoreRadar.areasCalculadas} de {scoreRadar.areasTotal} áreas
-                têm dado suficiente pra calcular hoje.
-              </div>
-
-              <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:16, padding:'16px 20px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--sur)' }}>
-                <div style={{ fontSize:32, fontWeight:800, color: SEMAFORO_COR[scoreRadar.semaforo] }}>
-                  {scoreRadar.score ?? '—'}
-                </div>
-                <div>
-                  <span className={`b b-${SEMAFORO_BADGE[scoreRadar.semaforo]}`}>{SEMAFORO_LABEL[scoreRadar.semaforo]}</span>
-                  <div style={{ fontSize:10, color:'var(--tx3)', marginTop:4 }}>Score de 0 a 100</div>
-                </div>
-              </div>
-
-              {alertaRadar && (
-                <div style={{ padding:'12px 16px', borderRadius:'var(--r)', background:'var(--rd-bg, #FEF2F2)', border:'1px solid var(--rd, #FCA5A5)', color:'var(--rdt, #991B1B)', fontSize:12, fontWeight:600, marginBottom:12 }}>
-                  ⚠️ {alertaRadar}
-                </div>
-              )}
-              {oportunidadeRadar && (
-                <div style={{ padding:'12px 16px', borderRadius:'var(--r)', background:'var(--gr-bg, #F0FDF4)', border:'1px solid var(--gr, #86EFAC)', color:'var(--grt, #15803D)', fontSize:12, fontWeight:600, marginBottom:16 }}>
-                  💡 {oportunidadeRadar}
-                </div>
-              )}
-
-              <div style={{ fontSize:11, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:8 }}>
-                13 áreas de saúde
-              </div>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:8 }}>
-                {Object.entries(areasRadar).map(([id, a]) => (
-                  <div key={id} style={{ padding:'10px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background: a.status==='sem_dado' ? 'var(--s2)' : 'var(--sur)', opacity: a.status==='sem_dado' ? .6 : 1 }}>
-                    <div style={{ fontSize:11, fontWeight:600, color:'var(--tx)', marginBottom:6 }}>{AREA_LABEL[id]}</div>
-                    <span className={`b b-${a.status==='sem_dado' ? 'gy' : STATUS_BADGE_RADAR[a.status]}`}>{a.status==='sem_dado' ? 'Sem dado' : STATUS_LABEL_RADAR[a.status]}</span>
-                  </div>
-                ))}
-              </div>
+              <RadarPainel clienteId={clienteId} />
             </div>
           )}
 
