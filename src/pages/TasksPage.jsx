@@ -233,7 +233,7 @@ export default function TasksPage() {
     if (!form.titulo?.trim()) return alert('Título obrigatório')
     const payload = { titulo:form.titulo, categoria:form.categoria||null, prioridade:form.prioridade||'media', status:form.status||'aberta', prazo:form.prazo||null, obs:form.obs||null, motivo_pendencia:form.motivo_pendencia||null, cliente_id:form.cliente_id||null, responsavel_id:form.responsavel_id||null, banco:form.banco||null }
     if (modal.mode === 'new') {
-      const t = await createTask.mutateAsync(payload)
+      const t = await createTask.mutateAsync({ ...payload, modelo_id: modal.modeloId || null })
       await logHistorico(t.id, 'Tarefa criada')
       // Se veio de um modelo com checklist pronto, já cria os itens na tarefa nova
       const modeloOrigem = modal.modeloId ? modelos.find(m => m.id === modal.modeloId) : null
@@ -518,6 +518,16 @@ export default function TasksPage() {
             {selectedTask.prazo && <span style={{ color:isVencida(selectedTask.prazo,selectedTask.status)?'#991B1B':'' }}>📅 {fmt(selectedTask.prazo)}</span>}
             {selectedTask.responsavel_id && <span>👤 {usuarios.find(u=>u.id===selectedTask.responsavel_id)?.nome||'—'}</span>}
           </div>
+
+          {/* Como fazer — descrição operacional do modelo que gerou esta tarefa */}
+          {selectedTask.modelo_id && modelos.find(m=>m.id===selectedTask.modelo_id)?.descricao && (
+            <div style={{ padding:'10px 16px', borderBottom:'1px solid #F1F5F9', background:'#FFFBEB' }}>
+              <div style={{ fontWeight:700, fontSize:11, color:'#92400E', marginBottom:4 }}>📋 Como fazer</div>
+              <div style={{ fontSize:12, color:'#78350F', whiteSpace:'pre-wrap', lineHeight:1.5 }}>
+                {modelos.find(m=>m.id===selectedTask.modelo_id)?.descricao}
+              </div>
+            </div>
+          )}
 
           {/* Timer */}
           <div style={{ padding:'8px 16px', borderBottom:'1px solid #F1F5F9' }}>
