@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useApontamentosMes, useUsuarios, useClients } from '../hooks/useData'
 import { KpiCard, Card, CardHeader, Loader } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
+import { computeMargemPorCliente } from '../utils/radar'
+import { formatBRL, parseBRL } from '../utils/currency'
 
 const HORAS_MES_PADRAO = 160
 const CUSTO_HORA_PADRAO = 65 // R$65/h — referência realista para analista BPO financeiro
@@ -11,6 +13,9 @@ export default function CapPage() {
   const { data: usuarios = [] } = useUsuarios()
   const { data: clients = [] } = useClients()
   const [semanasContratar, setSemanasContratar] = useState(6)
+  const [simN, setSimN] = useState(3)
+  const [simTicketStr, setSimTicketStr] = useState('')
+  const [simHorasStr, setSimHorasStr] = useState('')
 
   if (isLoading) return <Loader />
 
@@ -63,6 +68,36 @@ export default function CapPage() {
   const dataComecarContratar = mesEstouro
     ? new Date(mesEstouro.data.getTime() - semanasContratar*7*86400000)
     : null
+
+  // ── Simulação "e se": mesma engine de margem da Rentabilidade
+  // (computeMargemPorCliente), aplicada a um cenário hipotético em vez da
+  // carteira real — não grava nada, só recalcula na hora.
+  const mrrAtual = ativos.reduce((a,c) => a+(c.valor_mrr||0), 0)
+  const ticketMedioAtual = ativos.length ? mrrAtual/ativos.length : 0
+  const usuariosComCusto = usuarios.filter(u => u.custo_hora)
+  const CUSTO_HORA_SIM = usuariosComCusto.length
+    ? Math.round(usuariosComCusto.reduce((a,u)=>a+u.custo_hora,0)/usuariosComCusto.length)
+    : CUSTO_HORA_PADRAO
+  const margensAtuais = computeMargemPorCliente(ativos, aponts, CUSTO_HORA_SIM)
+  const custoAtualTotal = margensAtuais.reduce((a,m)=>a+m.custo, 0)
+  const margemGlobalAtualPct = mrrAtual > 0 ? (mrrAtual-custoAtualTotal)/mrrAtual*100 : 0
+
+  const simNClientes = Math.max(0, Number(simN)||0)
+  const simTicket = simTicketStr === '' ? ticketMedioAtual : (parseBRL(simTicketStr) || 0)
+  const simHorasCliente = simHorasStr === '' ? horasPorClienteMedia : (Number(simHorasStr) || 0)
+
+  const horasAdicionaisSim = simNClientes * simHorasCliente
+  const horasProjSim = horasUsadas + horasAdicionaisSim
+  const ocupSim = horasTotal > 0 ? Math.round(horasProjSim/horasTotal*100) : 0
+  const custoAdicionalSim = horasAdicionaisSim * CUSTO_HORA_SIM
+  const mrrAdicionalSim = simNClientes * simTicket
+  const mrrNovoSim = mrrAtual + mrrAdicionalSim
+  const margemGlobalNovaPct = mrrNovoSim > 0
+    ? ((mrrAtual-custoAtualTotal)+(mrrAdicionalSim-custoAdicionalSim))/mrrNovoSim*100
+    : 0
+  const horasMediaAnalista = usuarios.length ? horasTotal/usuarios.length : HORAS_MES_PADRAO
+  const horasExcedentesSim = Math.max(0, horasProjSim - horasTotal*0.85)
+  const analistasNecessariosSim = horasExcedentesSim > 0 ? Math.ceil(horasExcedentesSim/horasMediaAnalista) : 0
 
   return (
     <div>
@@ -178,6 +213,61 @@ export default function CapPage() {
                   </>
                 )}
               </>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* Simulação "e se" */}
+      {usuarios.length > 0 && (
+        <Card>
+          <CardHeader title="Simule um cenário" icon="🧪" />
+          <div style={{ padding:16 }}>
+            <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:8, fontSize:12, color:'#64748B', marginBottom:16 }}>
+              <span>E se eu fechar mais</span>
+              <input type="number" min={0} max={50} value={simN}
+                onChange={e => setSimN(Math.max(0, Number(e.target.value)||0))}
+                style={{ width:44, padding:'3px 6px', border:'1px solid #E2E8F0', borderRadius:6, textAlign:'center' }} />
+              <span>clientes de</span>
+              <input type="text" inputMode="decimal" placeholder={formatBRL(ticketMedioAtual)} value={simTicketStr}
+                onChange={e => setSimTicketStr(e.target.value)}
+                style={{ width:90, padding:'3px 6px', border:'1px solid #E2E8F0', borderRadius:6, textAlign:'center' }} />
+              <span>R$/mês cada, usando</span>
+              <input type="number" min={1} max={200} placeholder={String(Math.round(horasPorClienteMedia))} value={simHorasStr}
+                onChange={e => setSimHorasStr(e.target.value)}
+                style={{ width:50, padding:'3px 6px', border:'1px solid #E2E8F0', borderRadius:6, textAlign:'center' }} />
+              <span>h/mês cada?</span>
+            </div>
+
+            {simNClientes === 0 ? (
+              <div style={{ textAlign:'center', color:'#94A3B8', fontSize:12, padding:10 }}>Informe quantos clientes simular.</div>
+            ) : (
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:12 }}>
+                <div style={{ background:'#F8FAFC', borderRadius:10, padding:'12px 16px' }}>
+                  <div style={{ fontSize:11, color:'#64748B', marginBottom:4 }}>Ocupação da equipe</div>
+                  <div style={{ fontSize:18, fontWeight:800, color: ocupSim>=85?'#EF4444':ocupSim>=60?'#F97316':'#22C55E' }}>
+                    {ocupacao}% → {ocupSim}%
+                  </div>
+                  {analistasNecessariosSim > 0 && (
+                    <div style={{ fontSize:10, color:'#991B1B', marginTop:2 }}>
+                      Precisaria de ~{analistasNecessariosSim} analista{analistasNecessariosSim>1?'s':''} a mais pra caber com folga
+                    </div>
+                  )}
+                </div>
+                <div style={{ background:'#F8FAFC', borderRadius:10, padding:'12px 16px' }}>
+                  <div style={{ fontSize:11, color:'#64748B', marginBottom:4 }}>MRR</div>
+                  <div style={{ fontSize:18, fontWeight:800, color:'#0F172A' }}>
+                    R$ {mrrAtual.toLocaleString('pt-BR',{maximumFractionDigits:0})} → R$ {mrrNovoSim.toLocaleString('pt-BR',{maximumFractionDigits:0})}
+                  </div>
+                  <div style={{ fontSize:10, color:'#16A34A', marginTop:2 }}>+R$ {mrrAdicionalSim.toLocaleString('pt-BR',{maximumFractionDigits:0})}/mês</div>
+                </div>
+                <div style={{ background:'#F8FAFC', borderRadius:10, padding:'12px 16px' }}>
+                  <div style={{ fontSize:11, color:'#64748B', marginBottom:4 }}>Margem da carteira</div>
+                  <div style={{ fontSize:18, fontWeight:800, color: margemGlobalNovaPct>=margemGlobalAtualPct?'#16A34A':'#EF4444' }}>
+                    {margemGlobalAtualPct.toFixed(0)}% → {margemGlobalNovaPct.toFixed(0)}%
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </Card>
