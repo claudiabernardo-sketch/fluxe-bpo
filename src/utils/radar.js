@@ -37,7 +37,8 @@ export function computeMargemPorCliente(clientes, apontamentos, custoHoraMedio =
     const custo = horas * custoHoraMedio
     const receita = cl.valor_mrr || 0
     const margem = receita - custo
-    const margemPct = receita > 0 ? (margem / receita) * 100 : 0
+    // Sem receita mas com custo real = prejuízo total, não "0%" (que parecia neutro).
+    const margemPct = receita > 0 ? (margem / receita) * 100 : (margem < 0 ? -100 : 0)
     return { clienteId: cl.id, horas, custo, receita, margem, margemPct }
   })
 }

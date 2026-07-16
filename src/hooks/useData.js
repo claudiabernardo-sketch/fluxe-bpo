@@ -421,6 +421,38 @@ export function useApontamentos(filters = {}) {
   })
 }
 
+// Mesma fonte de dados, mas filtrada pelo mês corrente — usada em telas que
+// comparam horas com uma meta mensal (Rentabilidade, Capacidade, Executivo),
+// pra não misturar 6 meses de hora com 1 mês de receita/capacidade.
+export function useApontamentosMes(filters = {}) {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['apontamentos_mes', empresa?.id, filters],
+    queryFn: async () => {
+      const inicioMes = new Date()
+      inicioMes.setDate(1)
+      inicioMes.setHours(0, 0, 0, 0)
+
+      let q = supabase
+        .from('apontamentos')
+        .select('*, clientes(razao_social, fantasia), tarefas(titulo, categoria), usuarios(nome)')
+        .eq('empresa_id', empresa?.id)
+        .gte('inicio', inicioMes.toISOString())
+        .order('inicio', { ascending: false })
+        .limit(1000)
+
+      if (filters.clientId) q = q.eq('cliente_id', filters.clientId)
+      if (filters.userId)   q = q.eq('usuario_id', filters.userId)
+
+      const { data, error } = await q
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 30_000,
+    enabled: !!empresa?.id,
+  })
+}
+
 export function useSaveApontamento() {
   const qc = useQueryClient()
   const { empresa } = useAuthStore()

@@ -1354,6 +1354,11 @@ export default function PrecificacaoPage() {
                     + {fmt(calc.licencaRepasse)}/mês — licença {calc.d.erp === 'Outro' ? (calc.d.erpOutro || 'do sistema') : calc.d.erp} (repasse, reajustado conforme a plataforma)
                   </div>
                 )}
+                {calc.d.licencaModalidade === 'bpo_embutida' && calc.licencaEmbutida > 0 && (
+                  <div style={{ fontSize:12, color:'var(--ptext2)', marginTop:8, paddingTop:8, borderTop:'1px dashed '+(empresa?.cor_primaria||'#6366F1')+'44' }}>
+                    Inclui {fmt(calc.licencaEmbutida)}/mês de licença {calc.d.erp === 'Outro' ? (calc.d.erpOutro || 'do sistema') : calc.d.erp} + {fmt(Math.max(0, parseFloat(valorProposta) - calc.licencaEmbutida))}/mês de serviços BPO
+                  </div>
+                )}
               </div>
 
               <div style={{ marginBottom:20 }}>
@@ -1689,7 +1694,7 @@ export default function PrecificacaoPage() {
                   <p className="ctr-p"><strong>Parágrafo Primeiro:</strong> Além da mensalidade, a CONTRATANTE reembolsará mensalmente à CONTRATADA o valor de {fmt2(calc.licencaRepasse)} referente à licença do sistema {calc.d.erp === 'Outro' ? (calc.d.erpOutro || 'de gestão financeira') : calc.d.erp}, a título de repasse. Eventuais reajustes de preço praticados pela plataforma serão automaticamente repassados à CONTRATANTE, mediante comunicação prévia.</p>
                 )}
                 {calc.licencaEmbutida > 0 && (
-                  <p className="ctr-p"><strong>Parágrafo Primeiro:</strong> A mensalidade contratada inclui a licença do sistema {calc.d.erp === 'Outro' ? (calc.d.erpOutro || 'de gestão financeira') : calc.d.erp}, contratada e mantida pela CONTRATADA.</p>
+                  <p className="ctr-p"><strong>Parágrafo Primeiro:</strong> A mensalidade contratada inclui a licença do sistema {calc.d.erp === 'Outro' ? (calc.d.erpOutro || 'de gestão financeira') : calc.d.erp}, no valor de {fmt2(calc.licencaEmbutida)}/mês, contratada e mantida pela CONTRATADA.</p>
                 )}
                 {calc.d.licencaModalidade === 'contabilidade' && calc.d.erp && (
                   <p className="ctr-p"><strong>Parágrafo Primeiro:</strong> A licença do sistema {calc.d.erp === 'Outro' ? (calc.d.erpOutro || 'de gestão financeira') : calc.d.erp} é fornecida pela contabilidade da CONTRATANTE. A eventual descontinuidade desse fornecimento não é de responsabilidade da CONTRATADA, e a nova contratação da licença deverá ser acordada entre as partes.</p>

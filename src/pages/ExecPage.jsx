@@ -1,11 +1,13 @@
-import { useClients, useTasks, usePendencias, useApontamentos } from '../hooks/useData'
+import { useClients, useTasks, usePendencias, useApontamentosMes, useUsuarios } from '../hooks/useData'
 import { KpiCard, Card, CardHeader, Loader, Badge, fmtR } from '../components/ui'
+import { computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore, CUSTO_HORA_PADRAO } from '../utils/radar'
 
 export default function ExecPage() {
   const { data: clients = [], isLoading } = useClients()
   const { data: tasks = [] } = useTasks()
   const { data: pends = [] } = usePendencias({ status:'aberta' })
-  const { data: aponts = [] } = useApontamentos()
+  const { data: aponts = [] } = useApontamentosMes()
+  const { data: usuarios = [] } = useUsuarios()
 
   if (isLoading) return <Loader />
 
@@ -13,19 +15,26 @@ export default function ExecPage() {
   const mrr = ativos.reduce((a,c)=>a+(c.valor_mrr||0), 0)
   const arr = mrr * 12
   const onboarding = clients.filter(c=>['onboarding','implantacao'].includes(c.etapa)).length
-  const today = new Date().toISOString().slice(0,10)
+  const today = new Date().toLocaleDateString('en-CA')
   const vencidas = tasks.filter(t=>t.prazo && t.prazo < today && t.status !== 'concluida')
   const horasTotal = aponts.reduce((a,ap)=>a+(ap.segundos||0),0)/3600
 
-  // Health Score simples
-  function hs(cl) {
-    const ct = tasks.filter(t=>t.cliente_id===cl.id)
-    const v = ct.filter(t=>t.prazo && t.prazo < today && t.status!=='concluida').length
-    const pa = pends.filter(p=>p.cliente_id===cl.id).length
-    return Math.max(0, Math.min(100, 100 - v*10 - pa*6))
+  // Mesma conta usada no Radar do Cliente (radar.js) — pra não divergir do
+  // que aparece na aba Radar e nos insights do Dashboard.
+  const custoHoraMedio = usuarios.length > 0
+    ? usuarios.reduce((a, u) => a + (u.custo_hora || CUSTO_HORA_PADRAO), 0) / usuarios.length
+    : CUSTO_HORA_PADRAO
+  const margensPorCliente = computeMargemPorCliente(clients, aponts, custoHoraMedio)
+
+  function radarDoCliente(cl) {
+    const m = margensPorCliente.find(x => x.clienteId === cl.id)
+    const tarefasCliente = tasks.filter(t => t.cliente_id === cl.id && !t.deleted_at)
+    const areas = computeAreaStatusPorCliente(cl, tarefasCliente, m)
+    return computeRadarScore(areas)
   }
-  const emRisco = ativos.filter(c=>hs(c)<50)
-  const topMrr = [...ativos].sort((a,b)=>b.valor_mrr-a.valor_mrr).slice(0,5)
+  const emRisco = ativos.filter(c => radarDoCliente(c).semaforo === 'vermelho')
+  const topMrr = [...ativos].sort((a,b)=>(b.valor_mrr||0)-(a.valor_mrr||0)).slice(0,5)
+  const topMrrMax = topMrr.length ? (topMrr[0].valor_mrr || 0) : 0
 
   const etapaMap = { comercial:'Comercial', pre_ob:'Pré-Onb.', onboarding:'Onboarding', implantacao:'Implantação', operacional:'Operacional', estrategico:'Estratégico', acompanhamento:'Acompanham.' }
   const etapaColor = { comercial:'purple', pre_ob:'yellow', onboarding:'blue', implantacao:'orange', operacional:'green', estrategico:'cyan' }
@@ -41,7 +50,7 @@ export default function ExecPage() {
         <KpiCard label="Em onboarding" value={onboarding} color="purple" />
         <KpiCard label="Tarefas atrasadas" value={vencidas.length} color={vencidas.length>0?'red':'green'} />
         <KpiCard label="Pendências" value={pends.length} color={pends.length>3?'yellow':'green'} />
-        <KpiCard label="Horas registradas" value={`${horasTotal.toFixed(1)}h`} color="cyan" sub="total apontado" />
+        <KpiCard label="Horas registradas" value={`${horasTotal.toFixed(1)}h`} color="cyan" sub="apontado este mês" />
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14 }}>
@@ -61,22 +70,25 @@ export default function ExecPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Clientes em risco (Health < 50)" icon="⚠" />
+          <CardHeader title="Clientes em risco (Radar)" icon="⚠" />
           <div>
             {emRisco.length === 0
               ? <div style={{ padding:20, textAlign:'center', color:'#22C55E', fontSize:12 }}>✓ Todos saudáveis</div>
-              : emRisco.map(cl => (
-                <div key={cl.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 16px', borderBottom:'1px solid #F8FAFC' }}>
-                  <div style={{ width:36, height:36, borderRadius:'50%', background:'#FEF2F2', border:'2px solid #EF4444', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, color:'#991B1B' }}>
-                    {hs(cl)}
+              : emRisco.map(cl => {
+                const { score } = radarDoCliente(cl)
+                return (
+                  <div key={cl.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 16px', borderBottom:'1px solid #F8FAFC' }}>
+                    <div style={{ width:36, height:36, borderRadius:'50%', background:'#FEF2F2', border:'2px solid #EF4444', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, color:'#991B1B' }}>
+                      {score ?? '–'}
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:12, fontWeight:600, color:'#0F172A' }}>{cl.razao_social}</div>
+                      <div style={{ fontSize:10, color:'#94A3B8' }}>{cl.segmento}</div>
+                    </div>
+                    <div style={{ fontSize:12, fontWeight:700, color:'#15803D' }}>{fmtR(cl.valor_mrr)}</div>
                   </div>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:12, fontWeight:600, color:'#0F172A' }}>{cl.razao_social}</div>
-                    <div style={{ fontSize:10, color:'#94A3B8' }}>{cl.segmento}</div>
-                  </div>
-                  <div style={{ fontSize:12, fontWeight:700, color:'#15803D' }}>{fmtR(cl.valor_mrr)}</div>
-                </div>
-              ))
+                )
+              })
             }
           </div>
         </Card>
@@ -92,7 +104,7 @@ export default function ExecPage() {
               </div>
               <div style={{ flex:1, fontSize:12, fontWeight:600, color:'#0F172A' }}>{cl.razao_social}</div>
               <div style={{ height:6, width:120, background:'#F1F5F9', borderRadius:99, overflow:'hidden' }}>
-                <div style={{ height:'100%', background:'#6366F1', borderRadius:99, width:`${Math.round((cl.valor_mrr/topMrr[0].valor_mrr)*100)}%` }} />
+                <div style={{ height:'100%', background:'#6366F1', borderRadius:99, width:`${topMrrMax > 0 ? Math.round(((cl.valor_mrr||0)/topMrrMax)*100) : 0}%` }} />
               </div>
               <div style={{ fontSize:12, fontWeight:700, color:'#15803D', width:90, textAlign:'right' }}>{fmtR(cl.valor_mrr)}</div>
             </div>
