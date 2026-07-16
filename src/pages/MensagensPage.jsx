@@ -179,7 +179,8 @@ function ModalAgendar({ contato, onClose }) {
     if (!enviarEm) return alert('Defina a data e hora')
     setSaving(true)
     try {
-      const { data, error } = await supabase.functions.invoke('whatsapp-send', {
+      const fn = empresa?.wa_provider === 'zapi' ? 'zapi-send' : 'whatsapp-send'
+      const { data, error } = await supabase.functions.invoke(fn, {
         body: { action: 'schedule', contato_id: contato.id, empresa_id: empresa?.id, corpo, enviar_em: enviarEm, criado_por: user?.id }
       })
       if (error || data?.error) throw new Error(data?.error || error?.message)
@@ -294,7 +295,8 @@ export default function MensagensPage() {
     if (!textoEnvio.trim() || !contatoAtivo) return
     setEnviando(true)
     try {
-      const { data, error } = await supabase.functions.invoke('whatsapp-send', {
+      const fn = empresa?.wa_provider === 'zapi' ? 'zapi-send' : 'whatsapp-send'
+      const { data, error } = await supabase.functions.invoke(fn, {
         body: { action: 'send', contato_id: contatoAtivo.id, empresa_id: empresa?.id, corpo: textoEnvio, usuario_id: user?.id }
       })
       if (error || data?.error) throw new Error(data?.error || error?.message)

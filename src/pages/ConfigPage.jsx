@@ -266,6 +266,10 @@ export default function ConfigPage() {
   const [waStatus, setWaStatus] = useState(null)
   const [waConectando, setWaConectando] = useState(false)
   const [fbReady, setFbReady] = useState(false)
+  const [waProviderTab, setWaProviderTab] = useState('meta')
+  const [zapiTesting, setZapiTesting] = useState(false)
+  const [zapiStatus, setZapiStatus] = useState(null)
+  const [zapiRiscoConfirmado, setZapiRiscoConfirmado] = useState(false)
   const [opForm, setOpForm] = useState({ custoHora:35, fechamentoDia:5, nfDia:1, reuniaoDia:10 })
   const [custosOp, setCustosOp] = useState({ itens: [], clientesAtivos: '' })
   const { data: feriados = [] } = useFeriados()
@@ -468,7 +472,8 @@ export default function ConfigPage() {
 
   useEffect(() => {
     if (empresa) {
-      setEmpForm({ nome: empresa.nome||'', email: empresa.email||'', telefone: empresa.telefone||'', cnpj: empresa.cnpj||'', site: empresa.site||'', slogan: empresa.slogan||'', cor_primaria: empresa.cor_primaria||'#6366F1', cor_secundaria: empresa.cor_secundaria||'#8B5CF6', fonte: empresa.fonte||'Inter', logo_url: empresa.logo_url||'', autentique_token: empresa.autentique_token||'', wa_phone_number_id: empresa.wa_phone_number_id||'', wa_access_token: empresa.wa_access_token||'' })
+      setEmpForm({ nome: empresa.nome||'', email: empresa.email||'', telefone: empresa.telefone||'', cnpj: empresa.cnpj||'', site: empresa.site||'', slogan: empresa.slogan||'', cor_primaria: empresa.cor_primaria||'#6366F1', cor_secundaria: empresa.cor_secundaria||'#8B5CF6', fonte: empresa.fonte||'Inter', logo_url: empresa.logo_url||'', autentique_token: empresa.autentique_token||'', wa_phone_number_id: empresa.wa_phone_number_id||'', wa_access_token: empresa.wa_access_token||'', zapi_instance_id: empresa.zapi_instance_id||'', zapi_instance_token: empresa.zapi_instance_token||'', zapi_client_token: empresa.zapi_client_token||'' })
+      setWaProviderTab(empresa.wa_provider === 'zapi' ? 'zapi' : 'meta')
       if (empresa.config) {
         try { setOpForm(o => ({ ...o, ...empresa.config })) } catch{}
         try { if (empresa.config.proposta) setPropForm(o => ({ ...o, ...empresa.config.proposta })) } catch{}
@@ -547,6 +552,9 @@ export default function ConfigPage() {
         autentique_token: empForm.autentique_token || null,
         wa_phone_number_id: empForm.wa_phone_number_id || null,
         wa_access_token: empForm.wa_access_token || null,
+        zapi_instance_id: empForm.zapi_instance_id || null,
+        zapi_instance_token: empForm.zapi_instance_token || null,
+        zapi_client_token: empForm.zapi_client_token || null,
       }
       const { error } = await supabase.from('empresas').update(payload).eq('id', empresa.id)
       if (error) throw error
@@ -564,10 +572,10 @@ export default function ConfigPage() {
     setWaTesting(true); setWaStatus(null)
     try {
       const { error: errSave } = await supabase.from('empresas')
-        .update({ wa_phone_number_id: empForm.wa_phone_number_id.trim(), wa_access_token: empForm.wa_access_token.trim() })
+        .update({ wa_phone_number_id: empForm.wa_phone_number_id.trim(), wa_access_token: empForm.wa_access_token.trim(), wa_provider: 'meta' })
         .eq('id', empresa.id)
       if (errSave) throw errSave
-      updateEmpresa({ wa_phone_number_id: empForm.wa_phone_number_id.trim(), wa_access_token: empForm.wa_access_token.trim() })
+      updateEmpresa({ wa_phone_number_id: empForm.wa_phone_number_id.trim(), wa_access_token: empForm.wa_access_token.trim(), wa_provider: 'meta' })
 
       const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-send`, {
@@ -582,6 +590,40 @@ export default function ConfigPage() {
       setWaStatus({ ok: false, msg: '❌ ' + (e.message || 'Erro ao testar conexão') })
     } finally {
       setWaTesting(false)
+    }
+  }
+
+  // Testa e salva a conexão Z-API (não-oficial) — exige a instância já
+  // conectada (QR Code escaneado) no painel da Z-API antes de funcionar.
+  async function testarZapi() {
+    if (!empForm.zapi_instance_id?.trim() || !empForm.zapi_instance_token?.trim()) {
+      return setZapiStatus({ ok: false, msg: 'Preencha o Instance ID e o Instance Token.' })
+    }
+    setZapiTesting(true); setZapiStatus(null)
+    try {
+      const payloadZapi = {
+        zapi_instance_id: empForm.zapi_instance_id.trim(),
+        zapi_instance_token: empForm.zapi_instance_token.trim(),
+        zapi_client_token: empForm.zapi_client_token?.trim() || null,
+        wa_provider: 'zapi',
+      }
+      const { error: errSave } = await supabase.from('empresas').update(payloadZapi).eq('id', empresa.id)
+      if (errSave) throw errSave
+      updateEmpresa(payloadZapi)
+
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/zapi-send`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'test', empresa_id: empresa.id }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setZapiStatus({ ok: true, msg: '✅ Conectado! O WhatsApp já está ativo nessa instância.' })
+    } catch (e) {
+      setZapiStatus({ ok: false, msg: '❌ ' + (e.message || 'Erro ao testar conexão') })
+    } finally {
+      setZapiTesting(false)
     }
   }
 
@@ -1196,60 +1238,143 @@ export default function ConfigPage() {
             />
           </div>
 
-          {/* WhatsApp (Meta Cloud API) */}
+          {/* WhatsApp — dois caminhos possíveis */}
           <div style={{ border:'1px solid #E2E8F0', borderRadius:12, padding:20, marginBottom:16 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
               <span style={{ fontSize:20 }}>💬</span>
               <div>
-                <div style={{ fontWeight:700, fontSize:13 }}>WhatsApp — API oficial da Meta</div>
+                <div style={{ fontWeight:700, fontSize:13 }}>WhatsApp</div>
                 <div style={{ fontSize:11, color:'#64748B' }}>Envie e receba mensagens de clientes direto pelo Fluxe</div>
               </div>
-              {empForm.wa_phone_number_id && empForm.wa_access_token
+              {((empForm.wa_phone_number_id && empForm.wa_access_token) || (empForm.zapi_instance_id && empForm.zapi_instance_token))
                 ? <span style={{ marginLeft:'auto', background:'#DCFCE7', color:'#16A34A', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, whiteSpace:'nowrap' }}>✓ Conectado</span>
                 : <span style={{ marginLeft:'auto', background:'#FEF3C7', color:'#D97706', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, whiteSpace:'nowrap' }}>Não configurado</span>
               }
             </div>
-            <Btn variant="primary" onClick={conectarWhatsApp} disabled={waConectando}>
-              {waConectando ? 'Conectando...' : '📱 Conectar WhatsApp'}
-            </Btn>
-            <div style={{ fontSize:10, color:'#94A3B8', marginTop:6, marginBottom:16 }}>
-              Abre o login do Facebook — escolha ou crie o número de WhatsApp da sua empresa, sem precisar copiar/colar nada técnico.
+
+            <div style={{ display:'flex', gap:6, marginBottom:16, background:'#F1F5F9', padding:4, borderRadius:10 }}>
+              <button onClick={() => setWaProviderTab('meta')}
+                style={{ flex:1, padding:'8px 10px', borderRadius:8, border:'none', cursor:'pointer', fontSize:12, fontWeight:700,
+                  background: waProviderTab==='meta' ? '#fff' : 'transparent', color: waProviderTab==='meta' ? '#0F172A' : '#64748B',
+                  boxShadow: waProviderTab==='meta' ? '0 1px 3px rgba(0,0,0,.1)' : 'none' }}>
+                ✅ API oficial (Meta)
+              </button>
+              <button onClick={() => setWaProviderTab('zapi')}
+                style={{ flex:1, padding:'8px 10px', borderRadius:8, border:'none', cursor:'pointer', fontSize:12, fontWeight:700,
+                  background: waProviderTab==='zapi' ? '#fff' : 'transparent', color: waProviderTab==='zapi' ? '#0F172A' : '#64748B',
+                  boxShadow: waProviderTab==='zapi' ? '0 1px 3px rgba(0,0,0,.1)' : 'none' }}>
+                ⚡ Conexão rápida (Z-API)
+              </button>
             </div>
 
-            <div style={{ fontSize:11, fontWeight:700, color:'#64748B', marginBottom:8 }}>Ou configure manualmente (avançado)</div>
-            <div style={{ fontSize:11, color:'#64748B', marginBottom:12, lineHeight:1.6, background:'#F8FAFC', borderRadius:8, padding:'10px 12px' }}>
-              <strong>Como configurar:</strong><br/>
-              1. No <a href="https://business.facebook.com" target="_blank" rel="noopener noreferrer" style={{ color:'#6366F1' }}>Meta Business Manager</a>, crie/abra um App com o produto <strong>WhatsApp</strong> adicionado<br/>
-              2. Em <strong>WhatsApp → Configuração da API</strong>, copie o <strong>Phone Number ID</strong> e gere um <strong>Token de acesso permanente</strong> (Token temporário expira em 24h)<br/>
-              3. Cole os dois campos abaixo e clique em <strong>Testar e salvar</strong><br/>
-              4. Em <strong>WhatsApp → Configuração → Webhooks</strong>, registre a URL <code style={{ fontSize:10 }}>{import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook</code> com o token de verificação combinado com o time técnico
-            </div>
-            <label style={{ fontSize:11, fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>Phone Number ID</label>
-            <input
-              type="text"
-              value={empForm.wa_phone_number_id||''}
-              onChange={e => setEmpForm(f => ({ ...f, wa_phone_number_id: e.target.value }))}
-              placeholder="Ex: 123456789012345"
-              style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box', marginBottom:10 }}
-            />
-            <label style={{ fontSize:11, fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>Access Token</label>
-            <input
-              type="password"
-              value={empForm.wa_access_token||''}
-              onChange={e => setEmpForm(f => ({ ...f, wa_access_token: e.target.value }))}
-              placeholder="Cole aqui o token de acesso da Meta..."
-              style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box' }}
-            />
-            {waStatus && (
-              <div style={{ fontSize:11, padding:'8px 10px', borderRadius:8, marginTop:10, background: waStatus.ok?'#F0FDF4':'#FEF2F2', color: waStatus.ok?'#15803D':'#991B1B', border:`1px solid ${waStatus.ok?'#BBF7D0':'#FECDD3'}` }}>
-                {waStatus.msg}
-              </div>
+            {waProviderTab === 'meta' ? (
+              <>
+                <Btn variant="primary" onClick={conectarWhatsApp} disabled={waConectando}>
+                  {waConectando ? 'Conectando...' : '📱 Conectar WhatsApp'}
+                </Btn>
+                <div style={{ fontSize:10, color:'#94A3B8', marginTop:6, marginBottom:16 }}>
+                  Abre o login do Facebook — escolha ou crie o número de WhatsApp da sua empresa, sem precisar copiar/colar nada técnico. Sem risco de bloqueio.
+                </div>
+
+                <div style={{ fontSize:11, fontWeight:700, color:'#64748B', marginBottom:8 }}>Ou configure manualmente (avançado)</div>
+                <div style={{ fontSize:11, color:'#64748B', marginBottom:12, lineHeight:1.6, background:'#F8FAFC', borderRadius:8, padding:'10px 12px' }}>
+                  <strong>Como configurar:</strong><br/>
+                  1. No <a href="https://business.facebook.com" target="_blank" rel="noopener noreferrer" style={{ color:'#6366F1' }}>Meta Business Manager</a>, crie/abra um App com o produto <strong>WhatsApp</strong> adicionado<br/>
+                  2. Em <strong>WhatsApp → Configuração da API</strong>, copie o <strong>Phone Number ID</strong> e gere um <strong>Token de acesso permanente</strong> (Token temporário expira em 24h)<br/>
+                  3. Cole os dois campos abaixo e clique em <strong>Testar e salvar</strong><br/>
+                  4. Em <strong>WhatsApp → Configuração → Webhooks</strong>, registre a URL <code style={{ fontSize:10 }}>{import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook</code> com o token de verificação combinado com o time técnico
+                </div>
+                <label style={{ fontSize:11, fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>Phone Number ID</label>
+                <input
+                  type="text"
+                  value={empForm.wa_phone_number_id||''}
+                  onChange={e => setEmpForm(f => ({ ...f, wa_phone_number_id: e.target.value }))}
+                  placeholder="Ex: 123456789012345"
+                  style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box', marginBottom:10 }}
+                />
+                <label style={{ fontSize:11, fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>Access Token</label>
+                <input
+                  type="password"
+                  value={empForm.wa_access_token||''}
+                  onChange={e => setEmpForm(f => ({ ...f, wa_access_token: e.target.value }))}
+                  placeholder="Cole aqui o token de acesso da Meta..."
+                  style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box' }}
+                />
+                {waStatus && (
+                  <div style={{ fontSize:11, padding:'8px 10px', borderRadius:8, marginTop:10, background: waStatus.ok?'#F0FDF4':'#FEF2F2', color: waStatus.ok?'#15803D':'#991B1B', border:`1px solid ${waStatus.ok?'#BBF7D0':'#FECDD3'}` }}>
+                    {waStatus.msg}
+                  </div>
+                )}
+                <div style={{ marginTop:10 }}>
+                  <Btn variant="primary" onClick={testarWhatsapp} disabled={waTesting}>
+                    {waTesting ? 'Testando...' : 'Testar e salvar'}
+                  </Btn>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ background:'#FEF2F2', border:'1px solid #FECDD3', borderRadius:10, padding:'12px 14px', marginBottom:14 }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:'#991B1B', marginBottom:4 }}>⚠️ Conexão não-oficial — leia antes de usar</div>
+                  <div style={{ fontSize:11, color:'#7F1D1D', lineHeight:1.6 }}>
+                    Esse caminho conecta o número escaneando um QR Code (como o WhatsApp Web), sem passar pela aprovação da Meta.
+                    É mais rápido de configurar, mas <strong>a Meta pode bloquear esse número a qualquer momento, sem aviso prévio</strong> —
+                    incluindo perda de acesso ao histórico de conversas. Use só se você entende e aceita esse risco pro seu número.
+                  </div>
+                </div>
+
+                {!zapiRiscoConfirmado ? (
+                  <button onClick={() => setZapiRiscoConfirmado(true)}
+                    style={{ padding:'8px 16px', borderRadius:8, border:'1px solid #FECDD3', background:'#fff', color:'#991B1B', cursor:'pointer', fontSize:12, fontWeight:600 }}>
+                    Entendi o risco, quero configurar mesmo assim
+                  </button>
+                ) : (
+                  <>
+                    <div style={{ fontSize:11, color:'#64748B', marginBottom:12, lineHeight:1.6, background:'#F8FAFC', borderRadius:8, padding:'10px 12px' }}>
+                      <strong>Como configurar:</strong><br/>
+                      1. Crie uma conta em <a href="https://z-api.io" target="_blank" rel="noopener noreferrer" style={{ color:'#6366F1' }}>z-api.io</a> e crie uma instância<br/>
+                      2. No painel da instância, escaneie o QR Code com o WhatsApp do número que vai usar<br/>
+                      3. Copie o <strong>Instance ID</strong> e o <strong>Instance Token</strong> (e o Client-Token, se tiver ativado em Segurança) e cole abaixo<br/>
+                      4. Clique em <strong>Testar e salvar</strong><br/>
+                      5. No painel da instância, em <strong>Webhooks → Ao receber</strong>, cole a URL <code style={{ fontSize:10 }}>{import.meta.env.VITE_SUPABASE_URL}/functions/v1/zapi-webhook</code>
+                    </div>
+                    <label style={{ fontSize:11, fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>Instance ID</label>
+                    <input
+                      type="text"
+                      value={empForm.zapi_instance_id||''}
+                      onChange={e => setEmpForm(f => ({ ...f, zapi_instance_id: e.target.value }))}
+                      placeholder="Ex: 3A1B2C3D4E5F..."
+                      style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box', marginBottom:10 }}
+                    />
+                    <label style={{ fontSize:11, fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>Instance Token</label>
+                    <input
+                      type="password"
+                      value={empForm.zapi_instance_token||''}
+                      onChange={e => setEmpForm(f => ({ ...f, zapi_instance_token: e.target.value }))}
+                      placeholder="Cole aqui o token da instância..."
+                      style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box', marginBottom:10 }}
+                    />
+                    <label style={{ fontSize:11, fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>Client-Token (opcional, se ativou Segurança da conta)</label>
+                    <input
+                      type="password"
+                      value={empForm.zapi_client_token||''}
+                      onChange={e => setEmpForm(f => ({ ...f, zapi_client_token: e.target.value }))}
+                      placeholder="Cole aqui o token de segurança da conta..."
+                      style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box' }}
+                    />
+                    {zapiStatus && (
+                      <div style={{ fontSize:11, padding:'8px 10px', borderRadius:8, marginTop:10, background: zapiStatus.ok?'#F0FDF4':'#FEF2F2', color: zapiStatus.ok?'#15803D':'#991B1B', border:`1px solid ${zapiStatus.ok?'#BBF7D0':'#FECDD3'}` }}>
+                        {zapiStatus.msg}
+                      </div>
+                    )}
+                    <div style={{ marginTop:10 }}>
+                      <Btn variant="primary" onClick={testarZapi} disabled={zapiTesting}>
+                        {zapiTesting ? 'Testando...' : 'Testar e salvar'}
+                      </Btn>
+                    </div>
+                  </>
+                )}
+              </>
             )}
-            <div style={{ marginTop:10 }}>
-              <Btn variant="primary" onClick={testarWhatsapp} disabled={waTesting}>
-                {waTesting ? 'Testando...' : 'Testar e salvar'}
-              </Btn>
-            </div>
           </div>
 
           <Btn variant="primary" onClick={salvarEmpresa}>Salvar dados</Btn>
