@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../store/authStore'
-import { useClients } from '../hooks/useData'
+import { useClients, useUsuarios } from '../hooks/useData'
 import { supabase } from '../lib/supabase'
 import { Loader } from '../components/ui'
 
@@ -169,7 +169,7 @@ function ModalCriarTarefa({ msg, contato, onClose, onSuccess }) {
 // ─── Modal: Agendar mensagem ───────────────────────────────────────────────
 
 function ModalAgendar({ contato, onClose }) {
-  const { empresa, usuario } = useAuthStore()
+  const { empresa, user } = useAuthStore()
   const [corpo, setCorpo] = useState('')
   const [enviarEm, setEnviarEm] = useState('')
   const [saving, setSaving] = useState(false)
@@ -180,7 +180,7 @@ function ModalAgendar({ contato, onClose }) {
     setSaving(true)
     try {
       const { data, error } = await supabase.functions.invoke('whatsapp-send', {
-        body: { action: 'schedule', contato_id: contato.id, empresa_id: empresa?.id, corpo, enviar_em: enviarEm, criado_por: usuario?.id }
+        body: { action: 'schedule', contato_id: contato.id, empresa_id: empresa?.id, corpo, enviar_em: enviarEm, criado_por: user?.id }
       })
       if (error || data?.error) throw new Error(data?.error || error?.message)
       onClose()
@@ -229,7 +229,8 @@ function ModalAgendar({ contato, onClose }) {
 // ─── Página principal ──────────────────────────────────────────────────────
 
 export default function MensagensPage() {
-  const { empresa } = useAuthStore()
+  const { empresa, user } = useAuthStore()
+  const { data: usuarios = [] } = useUsuarios()
   const qc = useQueryClient()
   const [contatoAtivo, setContatoAtivo] = useState(null)
   const [textoEnvio, setTextoEnvio] = useState('')
@@ -294,7 +295,7 @@ export default function MensagensPage() {
     setEnviando(true)
     try {
       const { data, error } = await supabase.functions.invoke('whatsapp-send', {
-        body: { action: 'send', contato_id: contatoAtivo.id, empresa_id: empresa?.id, corpo: textoEnvio }
+        body: { action: 'send', contato_id: contatoAtivo.id, empresa_id: empresa?.id, corpo: textoEnvio, usuario_id: user?.id }
       })
       if (error || data?.error) throw new Error(data?.error || error?.message)
       setTextoEnvio('')
@@ -440,7 +441,10 @@ export default function MensagensPage() {
                         <div style={{ marginTop: 4, fontSize: 9, color: '#94A3B8' }}>✓ Tarefa criada</div>
                       )}
                     </div>
-                    <div style={{ fontSize: 9, color: '#94A3B8', marginTop: 2, textAlign: enviada ? 'right' : 'left' }}>{fmtTime(msg.enviado_em)}</div>
+                    <div style={{ fontSize: 9, color: '#94A3B8', marginTop: 2, textAlign: enviada ? 'right' : 'left' }}>
+                      {enviada && msg.usuario_id && (usuarios.find(u => u.id === msg.usuario_id)?.nome?.split(' ')[0] || '') + ' · '}
+                      {fmtTime(msg.enviado_em)}
+                    </div>
                   </div>
                 </div>
               )
