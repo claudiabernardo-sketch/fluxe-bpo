@@ -37,6 +37,7 @@ type Tarefa = { cliente_id: string | null; categoria: string | null; status: str
 type Apontamento = { cliente_id: string | null; usuario_id: string | null; segundos: number | null }
 type Usuario = { id: string; custo_hora: number | null; horas_mes: number | null }
 type AjusteManual = { cliente_id: string; area: string; status: string; observacao: string | null; criado_em: string; expira_em: string }
+type MetricaMes = { cliente_id: string; valor_a_receber: number | null; valor_recebido: number | null; valor_a_pagar: number | null; valor_pago: number | null; saldo_caixa: number | null }
 
 // Sobrepõe o cálculo automático (ou "sem_dado") com o que foi ajustado à mão
 // na tela — mesma regra de src/utils/radar.js. Ajuste vencido é ignorado.
@@ -77,6 +78,7 @@ function computeAreas(
   margemInfo: ReturnType<typeof computeMargem>,
   usuarios: Usuario[],
   apontamentosEquipe: Apontamento[],
+  metricaMes: MetricaMes | null,
 ) {
   const hoje = new Date().toISOString().slice(0, 10)
   const abertas = tarefasDoCliente.filter(t => !t.deleted_at)
@@ -103,6 +105,26 @@ function computeAreas(
     processos: { status: statusProcessos, valor: nProcessos },
   }
 
+  // ── Métricas reais do mês sobrepõem o proxy de tarefa ──────────────────
+  if (metricaMes) {
+    const { valor_a_receber, valor_recebido, valor_a_pagar, valor_pago, saldo_caixa } = metricaMes
+    if ((valor_a_receber || 0) > 0 && valor_recebido != null) {
+      const pct = (valor_recebido / valor_a_receber!) * 100
+      areas.receb = { status: pct >= 95 ? 'saudavel' : pct >= 80 ? 'atencao' : 'critico', valor: `${pct.toFixed(0)}% recebido` }
+    }
+    if ((valor_a_pagar || 0) > 0 && valor_pago != null) {
+      const pct = (valor_pago / valor_a_pagar!) * 100
+      areas.pagtos = { status: pct >= 95 ? 'saudavel' : pct >= 80 ? 'atencao' : 'critico', valor: `${pct.toFixed(0)}% pago` }
+    }
+    if (valor_recebido != null && valor_pago != null) {
+      const liquido = valor_recebido - valor_pago
+      areas.fluxo_caixa = { status: liquido >= 0 ? 'saudavel' : liquido > -(receita * 0.1) ? 'atencao' : 'critico', valor: liquido }
+    }
+    if (saldo_caixa != null) {
+      areas.caixa = { status: saldo_caixa >= receita ? 'saudavel' : saldo_caixa > 0 ? 'atencao' : 'critico', valor: saldo_caixa }
+    }
+  }
+
   if (!cliente.responsavel_id) {
     areas.equipe = { status: 'critico', valor: 'sem responsável' }
   } else {
@@ -126,7 +148,7 @@ function computeAreas(
   else statusComercial = 'saudavel'
   areas.comercial = { status: statusComercial, valor: null }
 
-  AREAS_SEM_DADO.forEach(id => { areas[id] = { status: 'sem_dado', valor: null } })
+  AREAS_SEM_DADO.forEach(id => { if (!areas[id]) areas[id] = { status: 'sem_dado', valor: null } })
 
   return areas
 }
@@ -164,12 +186,15 @@ serve(async (req) => {
 
     for (const empresa of empresas ?? []) {
       try {
-        const [{ data: clientes }, { data: tarefas }, { data: apontamentos }, { data: usuarios }, { data: ajustes }] = await Promise.all([
+        const mesRef = `${inicioMes.getFullYear()}-${String(inicioMes.getMonth() + 1).padStart(2, '0')}-01`
+
+        const [{ data: clientes }, { data: tarefas }, { data: apontamentos }, { data: usuarios }, { data: ajustes }, { data: metricas }] = await Promise.all([
           supabase.from('clientes').select('id,status,valor_mrr,responsavel_id,inicio_contrato').eq('empresa_id', empresa.id).eq('status', 'ativo'),
           supabase.from('tarefas').select('cliente_id,categoria,status,prazo,data_execucao,deleted_at').eq('empresa_id', empresa.id),
           supabase.from('apontamentos').select('cliente_id,usuario_id,segundos').eq('empresa_id', empresa.id).gte('inicio', inicioMes.toISOString()),
           supabase.from('usuarios').select('id,custo_hora,horas_mes').eq('empresa_id', empresa.id),
           supabase.from('radar_ajustes_manuais').select('cliente_id,area,status,observacao,criado_em,expira_em').eq('empresa_id', empresa.id),
+          supabase.from('radar_metricas_mensais').select('cliente_id,valor_a_receber,valor_recebido,valor_a_pagar,valor_pago,saldo_caixa').eq('empresa_id', empresa.id).eq('mes_referencia', mesRef),
         ])
 
         if (!clientes || clientes.length === 0) continue
@@ -184,12 +209,16 @@ serve(async (req) => {
           if (!ajustesPorCliente[a.cliente_id]) ajustesPorCliente[a.cliente_id] = []
           ajustesPorCliente[a.cliente_id].push(a)
         }
+        const metricaPorCliente: Record<string, MetricaMes> = {}
+        for (const m of (metricas as MetricaMes[]) || []) {
+          metricaPorCliente[m.cliente_id] = m
+        }
 
         for (const cliente of clientes as Cliente[]) {
           try {
             const tarefasCliente = (tarefas as Tarefa[] || []).filter(t => t.cliente_id === cliente.id && !t.deleted_at)
             const margemInfo = computeMargem(cliente, (apontamentos as Apontamento[]) || [], custoHoraMedio)
-            const areasAuto = computeAreas(cliente, tarefasCliente, margemInfo, (usuarios as Usuario[]) || [], (apontamentos as Apontamento[]) || [])
+            const areasAuto = computeAreas(cliente, tarefasCliente, margemInfo, (usuarios as Usuario[]) || [], (apontamentos as Apontamento[]) || [], metricaPorCliente[cliente.id] || null)
             const areas = aplicarAjustesManuais(areasAuto, ajustesPorCliente[cliente.id] || [])
             const { score, semaforo, areasCalculadas } = computeScore(areas)
 
