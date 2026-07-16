@@ -23,6 +23,19 @@ const SEMAFORO_BADGE = { verde:'gr', amarelo:'yw', vermelho:'rd', sem_dado:'gy' 
 const STATUS_LABEL_RADAR = { saudavel:'Saudável', atencao:'Atenção', critico:'Crítico' }
 const STATUS_BADGE_RADAR = { saudavel:'gr', atencao:'yw', critico:'rd' }
 
+// "15.000,00" (formato brasileiro) → 15000. Mesmo padrão de PrecificacaoPage.jsx.
+function parseBRL(str) {
+  if (str === '' || str == null) return null
+  const clean = String(str).trim().replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.')
+  const n = parseFloat(clean)
+  return Number.isNaN(n) ? null : n
+}
+// 15000 → "15.000,00" — pra mostrar o valor já salvo no mesmo formato que a pessoa digita.
+function formatBRL(n) {
+  if (n === null || n === undefined || n === '') return ''
+  return Number(n).toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 })
+}
+
 export default function RadarPainel({ clienteId }) {
   const navigate = useNavigate()
   const { data: clients = [] } = useClients()
@@ -78,24 +91,23 @@ export default function RadarPainel({ clienteId }) {
   const salvarMetrica = useSalvarMetricaMes()
   if (!metricaLoading && metricaForm === null) {
     setMetricaForm({
-      valor_a_receber: metricaServer?.valor_a_receber ?? '',
-      valor_recebido: metricaServer?.valor_recebido ?? '',
-      valor_a_pagar: metricaServer?.valor_a_pagar ?? '',
-      valor_pago: metricaServer?.valor_pago ?? '',
-      saldo_caixa: metricaServer?.saldo_caixa ?? '',
+      valor_a_receber: formatBRL(metricaServer?.valor_a_receber),
+      valor_recebido: formatBRL(metricaServer?.valor_recebido),
+      valor_a_pagar: formatBRL(metricaServer?.valor_a_pagar),
+      valor_pago: formatBRL(metricaServer?.valor_pago),
+      saldo_caixa: formatBRL(metricaServer?.saldo_caixa),
     })
   }
   async function salvarMetricasDoMes() {
     try {
       setMetricaErro('')
-      const n = v => (v === '' || v === null || v === undefined ? null : Number(v))
       await salvarMetrica.mutateAsync({
         clienteId,
-        valor_a_receber: n(metricaForm.valor_a_receber),
-        valor_recebido: n(metricaForm.valor_recebido),
-        valor_a_pagar: n(metricaForm.valor_a_pagar),
-        valor_pago: n(metricaForm.valor_pago),
-        saldo_caixa: n(metricaForm.saldo_caixa),
+        valor_a_receber: parseBRL(metricaForm.valor_a_receber),
+        valor_recebido: parseBRL(metricaForm.valor_recebido),
+        valor_a_pagar: parseBRL(metricaForm.valor_a_pagar),
+        valor_pago: parseBRL(metricaForm.valor_pago),
+        saldo_caixa: parseBRL(metricaForm.saldo_caixa),
       })
     } catch (err) {
       setMetricaErro(err?.message || 'Erro ao salvar métricas')
@@ -143,19 +155,20 @@ export default function RadarPainel({ clienteId }) {
         </div>
         <div style={{ fontSize:11, color:'var(--tx3)', marginBottom:10, lineHeight:1.4 }}>
           Preencha os números reais desse cliente — o Radar usa eles pra calcular Recebíveis, Pagtos, Fluxo de Caixa e Caixa, em vez de só olhar se a tarefa está em dia.
+          "Em aberto" é o valor pendente agora (não pago/recebido ainda), não uma previsão futura.
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:8, marginBottom:10 }}>
           {[
-            ['valor_a_receber', 'A receber (R$)'],
+            ['valor_a_receber', 'Em aberto a receber (R$)'],
             ['valor_recebido', 'Recebido (R$)'],
-            ['valor_a_pagar', 'A pagar (R$)'],
+            ['valor_a_pagar', 'Em aberto a pagar (R$)'],
             ['valor_pago', 'Pago (R$)'],
             ['saldo_caixa', 'Saldo em caixa (R$)'],
           ].map(([campo, label]) => (
             <div key={campo}>
               <label style={{ fontSize:10, color:'var(--tx3)', display:'block', marginBottom:3 }}>{label}</label>
               <input
-                type="number" step="0.01" placeholder="0,00"
+                type="text" inputMode="decimal" placeholder="Ex: 15.000,00"
                 value={metricaForm[campo]}
                 onChange={e => setMetricaForm(f => ({ ...f, [campo]: e.target.value }))}
                 style={{ width:'100%', fontSize:12, padding:'6px 8px', border:'1px solid var(--bo)', borderRadius:6, background:'var(--sur)', color:'var(--tx)', boxSizing:'border-box' }}

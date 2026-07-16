@@ -127,11 +127,11 @@ export default function RadarRelatorio360({ clienteId }) {
             {metricaServer && (
               <>
                 <tr>
-                  <td style={tdLabel}>A receber no mês</td><td style={tdVal}>{fmtR(metricaServer.valor_a_receber || 0)}</td>
+                  <td style={tdLabel}>Em aberto a receber</td><td style={tdVal}>{fmtR(metricaServer.valor_a_receber || 0)}</td>
                   <td style={tdLabel}>Recebido</td><td style={tdVal}>{fmtR(metricaServer.valor_recebido || 0)}</td>
                 </tr>
                 <tr>
-                  <td style={tdLabel}>A pagar no mês</td><td style={tdVal}>{fmtR(metricaServer.valor_a_pagar || 0)}</td>
+                  <td style={tdLabel}>Em aberto a pagar</td><td style={tdVal}>{fmtR(metricaServer.valor_a_pagar || 0)}</td>
                   <td style={tdLabel}>Pago</td><td style={tdVal}>{fmtR(metricaServer.valor_pago || 0)}</td>
                 </tr>
                 <tr>
