@@ -8,14 +8,16 @@ export const CUSTO_HORA_PADRAO = 65 // R$65/h — mesma referência usada em Ren
 
 // Categorias de tarefa (ver TasksPage.jsx CATEGORIAS) que alimentam cada
 // área do radar que dá pra calcular hoje. As demais áreas da planilha
-// original (Caixa, Impostos, Equipe, Comercial, Tecnol., Dono) não têm
-// nenhum dado equivalente no Fluxe ainda — ficam marcadas "sem_dado" em
-// vez de fingir um valor.
+// original (Caixa, Impostos, Tecnol., Dono) dependem de integração externa
+// (banco, Receita) que o Fluxe ainda não tem — ficam marcadas "sem_dado" em
+// vez de fingir um valor. Equipe e Comercial usam dado que o Fluxe já tem
+// (responsável do cliente + ocupação do time, tempo de contrato).
 const CATEGORIAS_RECEB = ['Contas a Receber', 'Cobrança / Inadimplência']
 const CATEGORIAS_PAGTOS = ['Contas a Pagar', 'Pagamentos']
 const CATEGORIAS_FLUXO_CAIXA = ['Fluxo de Caixa']
+const HORAS_MES_PADRAO = 160
 
-export const AREAS_SEM_DADO = ['caixa', 'impostos', 'equipe', 'comercial', 'tecnol', 'dono']
+export const AREAS_SEM_DADO = ['caixa', 'impostos', 'tecnol', 'dono']
 
 const AREA_LABEL = {
   margem: 'Margem', lucro: 'Lucro', custos: 'Custos',
@@ -55,9 +57,11 @@ function statusPorContagem(n) {
   return 'critico'
 }
 
-// ── Status das 7 áreas calculáveis + composto ─────────────────────────
-// Retorna { areas: { margem:{status,...}, ... }, camposSemDado: [...] }
-export function computeAreaStatusPorCliente(cliente, tarefasDoCliente, margemInfo) {
+// ── Status das 9 áreas calculáveis + composto ─────────────────────────
+// usuarios/apontamentosEquipe são opcionais (dados da empresa toda, não só
+// deste cliente) — sem eles, Equipe cai pra "sem_dado" em vez de mentir.
+// Retorna { margem:{status,...}, ... }
+export function computeAreaStatusPorCliente(cliente, tarefasDoCliente, margemInfo, usuarios = null, apontamentosEquipe = null) {
   const hoje = new Date().toISOString().slice(0, 10)
   const abertas = tarefasDoCliente.filter(t => !t.deleted_at)
   const atrasadas = abertas.filter(t => isAtrasada(t, hoje))
@@ -75,15 +79,48 @@ export function computeAreaStatusPorCliente(cliente, tarefasDoCliente, margemInf
   const receita = margemInfo?.receita ?? 0
   const custoPct = receita > 0 ? (margemInfo.custo / receita) * 100 : 0
 
+  const statusMargem = margemPct > 40 ? 'saudavel' : margemPct > 0 ? 'atencao' : 'critico'
+  const statusProcessos = statusPorContagem(nProcessos)
+
   const areas = {
-    margem: { status: margemPct > 40 ? 'saudavel' : margemPct > 0 ? 'atencao' : 'critico', valor: `${margemPct.toFixed(0)}%` },
+    margem: { status: statusMargem, valor: `${margemPct.toFixed(0)}%` },
     lucro: { status: margem > 0 ? 'saudavel' : margem > -(receita * 0.1) ? 'atencao' : 'critico', valor: margem },
     custos: { status: custoPct < 60 ? 'saudavel' : custoPct <= 100 ? 'atencao' : 'critico', valor: `${custoPct.toFixed(0)}%` },
     receb: { status: statusPorContagem(nReceb), valor: nReceb },
     pagtos: { status: statusPorContagem(nPagtos), valor: nPagtos },
     fluxo_caixa: { status: statusPorContagem(nFluxo), valor: nFluxo },
-    processos: { status: statusPorContagem(nProcessos), valor: nProcessos },
+    processos: { status: statusProcessos, valor: nProcessos },
   }
+
+  // ── Equipe: cliente tem dono definido e esse dono não está sobrecarregado ──
+  if (usuarios && apontamentosEquipe) {
+    if (!cliente.responsavel_id) {
+      areas.equipe = { status: 'critico', valor: 'sem responsável' }
+    } else {
+      const resp = usuarios.find(u => u.id === cliente.responsavel_id)
+      const horasRespMes = resp?.horas_mes || HORAS_MES_PADRAO
+      const horasRespUsadas = apontamentosEquipe
+        .filter(a => a.usuario_id === cliente.responsavel_id)
+        .reduce((s, a) => s + (a.segundos || 0), 0) / 3600
+      const ocupacaoResp = horasRespMes > 0 ? (horasRespUsadas / horasRespMes) * 100 : 0
+      areas.equipe = {
+        status: ocupacaoResp >= 100 ? 'critico' : ocupacaoResp >= 85 ? 'atencao' : 'saudavel',
+        valor: `${Math.round(ocupacaoResp)}% ocupação do resp.`,
+      }
+    }
+  } else {
+    areas.equipe = { status: 'sem_dado', valor: null }
+  }
+
+  // ── Comercial: relação em risco de churn, em formação, ou estável ──────────
+  const seisMesesMs = 1000 * 60 * 60 * 24 * 30 * 6
+  const tempoContratoMs = cliente.inicio_contrato ? Date.now() - new Date(cliente.inicio_contrato).getTime() : null
+  let statusComercial
+  if (statusMargem === 'critico' && statusProcessos === 'critico') statusComercial = 'critico'
+  else if (tempoContratoMs !== null && tempoContratoMs < seisMesesMs) statusComercial = 'atencao'
+  else statusComercial = 'saudavel'
+  areas.comercial = { status: statusComercial, valor: null }
+
   AREAS_SEM_DADO.forEach(id => { areas[id] = { status: 'sem_dado', valor: null } })
 
   return areas

@@ -182,7 +182,7 @@ export default function InsightsDash() {
     clients.forEach(c => {
       const m = margensPorCliente.find(x => x.clienteId === c.id)
       const tarefasCliente = tasks.filter(t => t.cliente_id === c.id && !t.deleted_at)
-      const areas = computeAreaStatusPorCliente(c, tarefasCliente, m)
+      const areas = computeAreaStatusPorCliente(c, tarefasCliente, m, usuarios, apontamentos)
       const { semaforo } = computeRadarScore(areas)
       if (semaforo === 'vermelho') emRisco.push(c)
     })

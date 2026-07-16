@@ -29,7 +29,7 @@ export default function ExecPage() {
   function radarDoCliente(cl) {
     const m = margensPorCliente.find(x => x.clienteId === cl.id)
     const tarefasCliente = tasks.filter(t => t.cliente_id === cl.id && !t.deleted_at)
-    const areas = computeAreaStatusPorCliente(cl, tarefasCliente, m)
+    const areas = computeAreaStatusPorCliente(cl, tarefasCliente, m, usuarios, aponts)
     return computeRadarScore(areas)
   }
   const emRisco = ativos.filter(c => radarDoCliente(c).semaforo === 'vermelho')

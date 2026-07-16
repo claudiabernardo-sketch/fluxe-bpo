@@ -9,7 +9,7 @@ import {
   useUpdateClienteModelo, useTogglePauseModelo,
   useUpdateClienteStatus, useIniciarOperacao, useGerarTarefas,
   useAcessos, useSaveAcesso, useDeleteAcesso,
-  useApontamentos, useUsuarios,
+  useApontamentos, useApontamentosMes, useUsuarios,
 } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
@@ -99,13 +99,15 @@ export default function ClientePage() {
 
   // Radar de saúde do cliente
   const { data: apontamentosCliente = [] } = useApontamentos({ clientId: clienteId })
+  // Horas do time inteiro (não só deste cliente) — só pra medir a ocupação do responsável na área "Equipe".
+  const { data: apontamentosEquipeMes = [] } = useApontamentosMes()
   const { data: usuariosRadar = [] } = useUsuarios()
   const custoHoraRadar = (() => {
     const comCusto = usuariosRadar.filter(u => u.custo_hora)
     return comCusto.length ? Math.round(comCusto.reduce((a,u)=>a+u.custo_hora,0)/comCusto.length) : CUSTO_HORA_PADRAO
   })()
   const margemRadar = cliente ? computeMargemPorCliente([cliente], apontamentosCliente, custoHoraRadar)[0] : null
-  const areasRadar = cliente ? computeAreaStatusPorCliente(cliente, tarefasCliente, margemRadar) : null
+  const areasRadar = cliente ? computeAreaStatusPorCliente(cliente, tarefasCliente, margemRadar, usuariosRadar, apontamentosEquipeMes) : null
   const scoreRadar = areasRadar ? computeRadarScore(areasRadar) : null
   const alertaRadar = areasRadar ? gerarAlertaComposto(areasRadar) : null
   const oportunidadeRadar = areasRadar ? gerarOportunidadeComercial(areasRadar, cliente) : null
