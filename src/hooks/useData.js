@@ -1379,3 +1379,92 @@ export function useSalvarMetaCrescimento() {
     onError: (err) => console.error('[Fluxe]', err),
   })
 }
+
+// ── PAINEL ADMIN (só staff Fluxe) ────────────────────────
+// Registro interno de bugs — RLS já restringe a linhas a quem tem
+// usuarios.fluxe_staff = true, não precisa passar por Edge Function.
+export function useFluxeBugs() {
+  return useQuery({
+    queryKey: ['fluxe_bugs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('fluxe_bugs')
+        .select('*, usuarios(nome)')
+        .order('criado_em', { ascending: false })
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 15_000,
+  })
+}
+
+export function useCreateFluxeBug() {
+  const qc = useQueryClient()
+  const { user } = useAuthStore()
+  return useMutation({
+    mutationFn: async ({ empresa_nome, reportado_por, descricao, prioridade }) => {
+      const { data, error } = await supabase
+        .from('fluxe_bugs')
+        .insert({ empresa_nome, reportado_por, descricao, prioridade: prioridade || 'media', criado_por: user?.id })
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fluxe_bugs'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+export function useUpdateFluxeBug() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ...updates }) => {
+      if (updates.status === 'resolvido') updates.resolvido_em = new Date().toISOString()
+      const { error } = await supabase.from('fluxe_bugs').update(updates).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fluxe_bugs'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+// Lista de empresas + ações (bloquear/desbloquear/estender trial) — passa
+// pela Edge Function admin-painel, que faz a checagem de fluxe_staff no
+// servidor antes de atravessar o isolamento normal por empresa.
+export function useAdminEmpresas() {
+  return useQuery({
+    queryKey: ['admin_empresas'],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-painel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'list_empresas' }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      return data.empresas ?? []
+    },
+    staleTime: 15_000,
+  })
+}
+
+export function useAdminAcaoEmpresa() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ action, ...payload }) => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-painel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...payload }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin_empresas'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, lazy, Suspense, Component } from 'react'
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import LOGO_SRC from '../../assets/logo-fluxe.png'
 import TimerBar from './TimerBar'
@@ -51,6 +51,7 @@ const ClientePage     = lazy(() => import('../../pages/ClientePage'))
 const MeuPainelPage      = lazy(() => import('../../pages/MeuPainelPage'))
 const AjudaPage          = lazy(() => import('../../pages/AjudaPage'))
 const PrecificacaoPage   = lazy(() => import('../../pages/PrecificacaoPage'))
+const AdminPage          = lazy(() => import('../../pages/AdminPage'))
 
 const PageLoader = () => (
   <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'60vh' }}>
@@ -108,6 +109,7 @@ const TITLES = {
   '/modelos':    'Modelos',
   '/meu-painel': 'Meu Painel',
   '/ajuda':      'Central de Ajuda',
+  '/admin':      'Painel Admin Fluxe',
 }
 
 const MOB_NAV = [
@@ -126,6 +128,9 @@ export default function AppShell() {
   const menuRef = useRef(null)
   const title = TITLES[loc.pathname] || 'Fluxe BPO'
   const initials = profile?.nome?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?'
+  const navItems = profile?.fluxe_staff
+    ? [...NAV, { grp:'FLUXE STAFF' }, { path:'/admin', icon:'fa-solid fa-user-shield', label:'Admin' }]
+    : NAV
 
   // Fecha menu ao clicar fora
   useEffect(() => {
@@ -161,7 +166,7 @@ export default function AppShell() {
 
         {/* Navegação */}
         <nav style={{ flex:1, overflowY:'auto', padding:'2px 0', scrollbarWidth:'none' }}>
-          {NAV.map((item, i) => {
+          {navItems.map((item, i) => {
             if (item.grp) return (
               <div key={i} style={{ padding:'8px 0 2px' }}>
                 <div className="sb-grp-sep" />
@@ -274,6 +279,7 @@ export default function AppShell() {
                 <Route path="/config"     element={<ConfigPage />} />
                 <Route path="/meu-painel" element={<MeuPainelPage />} />
                 <Route path="/ajuda"      element={<AjudaPage />} />
+                <Route path="/admin"      element={profile?.fluxe_staff ? <AdminPage /> : <Navigate to="/" replace />} />
               </Routes>
             </Suspense>
           </PageErrorBoundary>
