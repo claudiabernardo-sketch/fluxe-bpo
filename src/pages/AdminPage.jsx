@@ -25,6 +25,20 @@ function LinhaEmpresa({ emp, onAcao, pendente }) {
       <td style={{ padding: '10px 8px' }}>
         <Badge label={PLANO_LABEL[emp.plano] || emp.plano || '—'} color={PLANO_COLOR[emp.plano] || 'gray'} />
       </td>
+      <td style={{ padding: '10px 8px' }}>
+        {!emp.pagamento ? (
+          <span style={{ fontSize: 11, color: 'var(--tx3)' }}>Sem assinatura</span>
+        ) : emp.pagamento.em_dia ? (
+          <Badge label="Em dia" color="green" />
+        ) : (
+          <div>
+            <Badge label={`Atrasado ${emp.pagamento.dias_atraso}d`} color="red" />
+            <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 2 }}>
+              R$ {emp.pagamento.valor_devido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} · {emp.pagamento.faturas_vencidas} fatura{emp.pagamento.faturas_vencidas > 1 ? 's' : ''}
+            </div>
+          </div>
+        )}
+      </td>
       <td style={{ padding: '10px 8px', fontSize: 12 }}>
         {emp.trial_expira_em
           ? (dias >= 0 ? `${dias} dia${dias === 1 ? '' : 's'} restantes` : `expirou há ${Math.abs(dias)}d`)
@@ -88,6 +102,7 @@ function SecaoEmpresas() {
             <tr style={{ textAlign: 'left', fontSize: 10, color: 'var(--tx3)', textTransform: 'uppercase' }}>
               <th style={{ padding: '6px 8px' }}>Empresa</th>
               <th style={{ padding: '6px 8px' }}>Plano</th>
+              <th style={{ padding: '6px 8px' }}>Pagamento</th>
               <th style={{ padding: '6px 8px' }}>Trial</th>
               <th style={{ padding: '6px 8px', textAlign: 'center' }}>Usuários</th>
               <th style={{ padding: '6px 8px', textAlign: 'center' }}>Clientes</th>
