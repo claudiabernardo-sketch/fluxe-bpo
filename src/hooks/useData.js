@@ -1400,12 +1400,19 @@ export function useFluxeBugs() {
 
 export function useCreateFluxeBug() {
   const qc = useQueryClient()
-  const { user } = useAuthStore()
+  const { user, empresa } = useAuthStore()
   return useMutation({
     mutationFn: async ({ empresa_nome, reportado_por, descricao, prioridade }) => {
       const { data, error } = await supabase
         .from('fluxe_bugs')
-        .insert({ empresa_nome, reportado_por, descricao, prioridade: prioridade || 'media', criado_por: user?.id })
+        .insert({
+          empresa_nome: empresa_nome || empresa?.nome || null,
+          empresa_id: empresa?.id || null,
+          reportado_por: reportado_por || user?.email || null,
+          descricao,
+          prioridade: prioridade || 'media',
+          criado_por: user?.id,
+        })
         .select()
         .single()
       if (error) throw error
@@ -1465,6 +1472,55 @@ export function useAdminAcaoEmpresa() {
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin_empresas'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+// ── MENTORIA (links) ─────────────────────────────────
+export function useMentoriaLinks() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['mentoria_links', empresa?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('mentoria_links')
+        .select('*, usuarios(nome)')
+        .eq('empresa_id', empresa?.id)
+        .order('criado_em', { ascending: false })
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 30_000,
+    enabled: !!empresa?.id,
+  })
+}
+
+export function useCreateMentoriaLink() {
+  const qc = useQueryClient()
+  const { empresa, user } = useAuthStore()
+  return useMutation({
+    mutationFn: async ({ titulo, url, descricao }) => {
+      const { data, error } = await supabase
+        .from('mentoria_links')
+        .insert({ empresa_id: empresa?.id, titulo, url, descricao: descricao || null, criado_por: user?.id })
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['mentoria_links'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+export function useDeleteMentoriaLink() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('mentoria_links').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['mentoria_links'] }),
     onError: (err) => console.error('[Fluxe]', err),
   })
 }
