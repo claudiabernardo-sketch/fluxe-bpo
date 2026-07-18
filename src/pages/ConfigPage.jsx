@@ -1387,8 +1387,8 @@ export default function ConfigPage() {
         const diasRestantes = expira ? Math.max(0, Math.ceil((expira - new Date()) / (1000*60*60*24))) : 0
         const paymentUrl = empresa?.asaas_payment_url
         const PLANOS = [
-          { id:'essencial', nome:'Essencial', preco:'R$ 59/mês', desc:'Até 3 usuários · Tarefas, cofre, precificação · Suporte por e-mail' },
-          { id:'pro',       nome:'Pro',       preco:'R$ 97/mês', desc:'Usuários ilimitados · CRM · Relatórios · Suporte WhatsApp', destaque:true },
+          { id:'essencial', nome:'Essencial', preco:'R$ 97/mês',  desc:'Sistema completo (Radar, CRM, Capacidade, Meta de crescimento) · Usuários ilimitados · Sem WhatsApp integrado' },
+          { id:'pro',       nome:'Completo',  preco:'R$ 197/mês', desc:'Tudo do Essencial + WhatsApp integrado (oficial da Meta ou conexão rápida) · Suporte prioritário', destaque:true },
         ]
         return (
           <Card>
@@ -1400,7 +1400,7 @@ export default function ConfigPage() {
                 <div>
                   <div style={{ fontSize:11, fontWeight:700, color:'#64748B', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:4 }}>Plano atual</div>
                   <div style={{ fontSize:16, fontWeight:800, color:'#0F172A', textTransform:'capitalize' }}>
-                    {plano === 'trial' ? `Trial gratuito` : plano}
+                    {plano === 'trial' ? 'Trial gratuito' : plano === 'pro' ? 'Completo' : plano === 'essencial' ? 'Essencial' : plano}
                   </div>
                   {plano === 'trial' && expira && (
                     <div style={{ fontSize:12, color: diasRestantes<=2?'#EF4444':'#0369A1', marginTop:2 }}>
@@ -1438,7 +1438,7 @@ export default function ConfigPage() {
                     onClick={handleAssinar}
                     disabled={assinando}
                     style={{ display:'block', width:'100%', textAlign:'center', background: assinando ? '#A5B4FC' : 'linear-gradient(135deg,#6366F1,#8B5CF6)', color:'#fff', padding:'13px', borderRadius:10, fontSize:14, fontWeight:700, border:'none', cursor: assinando ? 'not-allowed' : 'pointer' }}>
-                    {assinando ? 'Gerando link...' : `Assinar plano ${planSel === 'pro' ? 'Pro' : 'Essencial'} →`}
+                    {assinando ? 'Gerando link...' : `Assinar plano ${planSel === 'pro' ? 'Completo' : 'Essencial'} →`}
                   </button>
                 </>
               )}
