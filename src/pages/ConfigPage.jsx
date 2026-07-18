@@ -768,17 +768,38 @@ export default function ConfigPage() {
       )}
 
       {/* ABA EQUIPE */}
-      {tab === 'equipe' && (
+      {tab === 'equipe' && (() => {
+        const limiteUsuarios = empresa?.plano === 'essencial' ? 3 : null
+        const ativos = usuarios.filter(u => u.ativo).length
+        const noLimite = limiteUsuarios != null && ativos >= limiteUsuarios
+        return (
         <div>
           <Card style={{ marginBottom:14 }}>
-            <div style={{ padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <div style={{ fontWeight:700, fontSize:14, color:'#0F172A' }}>👥 Membros da equipe</div>
-              <Btn variant="primary" onClick={()=>setShowNovoUser(v=>!v)}>
-                {showNovoUser ? '✕ Cancelar' : '+ Convidar membro'}
-              </Btn>
+            <div style={{ padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
+              <div>
+                <div style={{ fontWeight:700, fontSize:14, color:'#0F172A' }}>👥 Membros da equipe</div>
+                {limiteUsuarios != null && (
+                  <div style={{ fontSize:11, color: noLimite ? '#991B1B' : '#94A3B8', marginTop:2 }}>
+                    {ativos} de {limiteUsuarios} usuários do plano Essencial
+                  </div>
+                )}
+              </div>
+              {noLimite ? (
+                <Btn variant="primary" onClick={()=>setTab('plano')}>⭐ Fazer upgrade para adicionar mais</Btn>
+              ) : (
+                <Btn variant="primary" onClick={()=>setShowNovoUser(v=>!v)}>
+                  {showNovoUser ? '✕ Cancelar' : '+ Convidar membro'}
+                </Btn>
+              )}
             </div>
 
-            {showNovoUser && (
+            {noLimite && (
+              <div style={{ margin:'0 16px 12px', padding:'10px 14px', background:'#FFF7ED', border:'1px solid #FED7AA', borderRadius:8, fontSize:12, color:'#92400E' }}>
+                Você atingiu o limite de {limiteUsuarios} usuários do plano Essencial. Faça upgrade para o Completo para ter usuários ilimitados.
+              </div>
+            )}
+
+            {showNovoUser && !noLimite && (
               <div style={{ padding:'0 16px 16px', borderTop:'1px solid #F1F5F9' }}>
                 <div style={{ background:'#F8FAFC', borderRadius:10, padding:14, marginTop:14 }}>
                   <div style={{ fontWeight:700, fontSize:12, color:'#0F172A', marginBottom:12 }}>✉️ Novo convite por e-mail</div>
@@ -885,7 +906,8 @@ export default function ConfigPage() {
             )}
           </Card>
         </div>
-      )}
+        )
+      })()}
 
       {/* ABA CUSTO/HORA */}
       {tab === 'custoHora' && <CalculadoraCustoHora usuarios={usuarios} editarUser={editarUser} />}
