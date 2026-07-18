@@ -68,8 +68,8 @@ serve(async (req) => {
       const nextDueDate = dueDate.toISOString().split('T')[0]
 
       // 3. Valor do plano
-      const valor = empresa.plano === 'pro' ? 97.00 : 59.00
-      const descPlano = empresa.plano === 'pro' ? 'Plano Pro' : 'Plano Essencial'
+      const valor = empresa.plano === 'pro' ? 197.00 : 97.00
+      const descPlano = empresa.plano === 'pro' ? 'Plano Completo' : 'Plano Essencial'
 
       // 4. Criar assinatura
       const subscription = await asaas('/subscriptions', 'POST', {
