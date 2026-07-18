@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useCreateFluxeBug } from '../hooks/useData'
 
 const CATS = [
   {
@@ -15,8 +16,62 @@ const CATS = [
     titulo:'Clientes', artigos:[
       { titulo:'Cadastrar e editar clientes', tempo:'3 min', conteudo:'No módulo Clientes, clique em "Novo Cliente". Após salvar, configure o Escopo vinculando modelos de tarefa ao cliente e clique em "Iniciar Operação" para ativar a geração automática.' },
       { titulo:'Vincular modelos ao cliente', tempo:'2 min', conteudo:'Dentro do cadastro do cliente, acesse a aba "Escopo". Vincule os modelos contratados. Cada modelo pode ter configurações específicas para aquele cliente sem alterar o template original.' },
-      { titulo:'Score de saúde do cliente', tempo:'3 min', conteudo:'O score (0–100) reflete a situação operacional de cada cliente. É calculado pela quantidade de tarefas em atraso e pendências sem justificativa. Verde ≥ 80, amarelo ≥ 60, vermelho < 60.' },
       { titulo:'Arquivar e reativar clientes', tempo:'2 min', conteudo:'Clientes inativos podem ser arquivados para não poluir a lista. O histórico de tarefas é preservado. Para reativar, acesse Clientes > Arquivados.' },
+    ]
+  },
+  {
+    id:'radar', icon:'fa-solid fa-satellite-dish', cor:'#EC4899', bg:'#FDF2F8',
+    titulo:'Radar do Cliente', artigos:[
+      { titulo:'O que é o Radar', tempo:'4 min', conteudo:'O Radar mostra a saúde de cada cliente em até 13 áreas (Recebíveis, Pagamentos, Fluxo de Caixa, Equipe, Comercial, entre outras), cada uma com um semáforo verde/amarelo/vermelho. Ele calcula automaticamente a partir das tarefas em dia, mas fica mais preciso quando você preenche os números reais.', video:null },
+      { titulo:'Preencher os números reais do mês', tempo:'4 min', conteudo:'Abra o cliente, aba Radar, e preencha "Em aberto a receber", "Recebido", "Em aberto a pagar", "Pago" e "Saldo em caixa" daquele mês. O Radar passa a calcular Recebíveis, Pagamentos, Caixa e Fluxo de Caixa com base nesses valores reais, em vez de só olhar tarefa em dia.', video:null },
+      { titulo:'Ajuste manual de uma área', tempo:'2 min', conteudo:'Se você sabe que uma área está diferente do que o sistema calculou (ex: o cliente avisou de um problema que ainda não virou tarefa), edite o semáforo daquela área manualmente direto na aba Radar, com uma observação. O ajuste manual sempre tem prioridade sobre o cálculo automático.' },
+      { titulo:'Relatório 360°', tempo:'3 min', conteudo:'Na aba "Relatório 360" do cliente, o Fluxe monta um relatório pronto pra imprimir ou salvar como PDF (usando "Salvar como PDF" na tela de impressão do navegador), com o histórico do Radar dos últimos meses — ideal pra levar pra reunião com o cliente.' },
+    ]
+  },
+  {
+    id:'precificacao', icon:'fa-solid fa-tag', cor:'#F59E0B', bg:'#FFFBEB',
+    titulo:'Precificação', artigos:[
+      { titulo:'Como funciona a Precificação consultiva', tempo:'4 min', conteudo:'A calculadora monta uma proposta em etapas: escopo do cliente, horas estimadas, custo real da equipe e valor final. Ela já usa o custo/hora configurado em Equipe pra sugerir uma margem saudável.' },
+      { titulo:'Aviso de capacidade ao fechar proposta', tempo:'2 min', conteudo:'Na última etapa, o Fluxe mostra se fechar aquele cliente cabe na capacidade atual da sua equipe (verde, amarelo ou vermelho), com base nas horas disponíveis e já comprometidas. Ajuda a não aceitar cliente demais pro time atual.' },
+    ]
+  },
+  {
+    id:'capacidade', icon:'fa-solid fa-users-gear', cor:'#6366F1', bg:'#EEF2FF',
+    titulo:'Capacidade da Equipe', artigos:[
+      { titulo:'Ocupação da equipe', tempo:'2 min', conteudo:'Mostra quantas horas cada analista já usou no mês frente às horas configuradas dele. Configure horas/mês e custo/hora de cada um em Configurações > Equipe pra esse cálculo ficar preciso.' },
+      { titulo:'Previsão de crescimento e quando contratar', tempo:'3 min', conteudo:'Com base no ritmo real de novos clientes dos últimos 6 meses, o Fluxe projeta em quantos meses a equipe deve estourar 85% de ocupação, e sugere a data limite pra começar o processo seletivo (o tempo de contratação é configurável).' },
+      { titulo:'Simule um cenário ("e se")', tempo:'3 min', conteudo:'Teste hipóteses antes de decidir: "e se eu fechar mais 3 clientes de R$1.200 cada?" mostra o impacto na ocupação, no MRR e na margem da carteira, sem gravar nada — é só uma calculadora.' },
+    ]
+  },
+  {
+    id:'crm', icon:'fa-solid fa-chart-line', cor:'#8B5CF6', bg:'#F5F3FF',
+    titulo:'CRM Comercial', artigos:[
+      { titulo:'Pipeline de leads', tempo:'3 min', conteudo:'Cadastre leads e acompanhe cada um pelas etapas do funil comercial (prospecção, proposta, negociação, fechado). Vincule direto com uma proposta gerada na Precificação.' },
+    ]
+  },
+  {
+    id:'cofre', icon:'fa-solid fa-shield-halved', cor:'#0EA5E9', bg:'#F0F9FF',
+    titulo:'Cofre Digital', artigos:[
+      { titulo:'Guardar senhas e acessos de clientes', tempo:'2 min', conteudo:'No Cofre, cadastre sistema, login e senha de cada acesso do cliente (banco, ERP, portal da prefeitura, etc.), com criptografia. Assim, quando um analista sai da equipe, ninguém perde acesso a nada.' },
+    ]
+  },
+  {
+    id:'whatsapp', icon:'fa-brands fa-whatsapp', cor:'#22C55E', bg:'#ECFDF5',
+    titulo:'WhatsApp', artigos:[
+      { titulo:'Conectar o WhatsApp ao Fluxe', tempo:'5 min', conteudo:'Em Configurações > Integrações, você escolhe entre a API oficial da Meta (mais segura, sem risco de bloqueio) ou a conexão rápida via QR Code (mais simples de configurar, mas não-oficial — a Meta pode bloquear o número a qualquer momento). Depois de conectado, a tela Mensagens passa a mostrar as conversas.' },
+      { titulo:'Atender pelo Fluxe', tempo:'2 min', conteudo:'Toda a equipe vê a mesma caixa de mensagens compartilhada, vinculada ao número da empresa. Cada mensagem enviada registra qual analista respondeu. Documentos recebidos (boletos, notas fiscais) são lidos automaticamente por IA.' },
+    ]
+  },
+  {
+    id:'crescimento', icon:'fa-solid fa-arrow-trend-up', cor:'#10B981', bg:'#ECFDF5',
+    titulo:'Meta de Crescimento', artigos:[
+      { titulo:'Definir e acompanhar sua meta', tempo:'3 min', conteudo:'No Executivo, defina uma meta de MRR ou de número de clientes ativos, com prazo. O Fluxe projeta se você está no ritmo de bater a meta, com base no seu crescimento real dos últimos 6 meses.' },
+    ]
+  },
+  {
+    id:'mentoria', icon:'fa-solid fa-graduation-cap', cor:'#A855F7', bg:'#FAF5FF',
+    titulo:'Mentoria', artigos:[
+      { titulo:'Materiais de mentoria', tempo:'2 min', conteudo:'Na aba Mentoria, você encontra vídeos e materiais de apoio cadastrados pela sua liderança — links de aulas, planilhas e conteúdos de treinamento da equipe.' },
     ]
   },
   {
@@ -88,6 +143,17 @@ export default function AjudaPage() {
   const [busca, setBusca]           = useState('')
   const [catAtiva, setCatAtiva]     = useState(null)
   const [artigo, setArtigo]         = useState(null)
+  const [chamadoAberto, setChamadoAberto] = useState(false)
+  const [chamadoTexto, setChamadoTexto]   = useState('')
+  const [chamadoOk, setChamadoOk]         = useState(false)
+  const criarChamado = useCreateFluxeBug()
+
+  async function enviarChamado() {
+    if (!chamadoTexto.trim()) return
+    await criarChamado.mutateAsync({ descricao: chamadoTexto.trim() })
+    setChamadoTexto(''); setChamadoAberto(false); setChamadoOk(true)
+    setTimeout(() => setChamadoOk(false), 4000)
+  }
 
   const todoArtigos = CATS.flatMap(c => c.artigos.map(a => ({ ...a, cat: c })))
   const resultados  = busca.trim().length > 1
@@ -115,6 +181,12 @@ export default function AjudaPage() {
           </div>
           <h1 style={{ fontSize:18, fontWeight:800, color:'var(--tx)', letterSpacing:'-.4px', marginBottom:16 }}>{artigo.titulo}</h1>
           <p style={{ fontSize:13, color:'var(--tx2)', lineHeight:1.75 }}>{artigo.conteudo}</p>
+          {artigo.video && (
+            <a href={artigo.video} target="_blank" rel="noopener noreferrer"
+              style={{ display:'inline-flex', alignItems:'center', gap:8, marginTop:16, padding:'9px 16px', background:'#EEF2FF', color:'#4338CA', borderRadius:8, fontSize:12, fontWeight:700, textDecoration:'none' }}>
+              <i className="fa-solid fa-circle-play"></i> Assistir vídeo
+            </a>
+          )}
         </div>
       </div>
     )
@@ -197,8 +269,8 @@ export default function AjudaPage() {
           <div style={{ background:'var(--s2)', border:'1px solid var(--bo)', borderRadius:'var(--rl)', padding:'18px 20px' }}>
             <div style={{ fontSize:13, fontWeight:700, color:'var(--tx)', marginBottom:4 }}>Precisa de mais ajuda?</div>
             <div style={{ fontSize:12, color:'var(--tx3)', marginBottom:14 }}>Nossa equipe atende de segunda a sexta, das 8h às 18h.</div>
-            <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
-              <a href="https://wa.me/5511999999999?text=Ol%C3%A1%2C+preciso+de+ajuda+com+o+Fluxe+BPO"
+            <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom: chamadoAberto ? 14 : 0 }}>
+              <a href="https://wa.me/5511917101173?text=Ol%C3%A1%2C+preciso+de+ajuda+com+o+Fluxe+BPO"
                 target="_blank" rel="noopener noreferrer"
                 style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 16px', background:'#25D366', color:'#fff', borderRadius:'var(--r)', fontSize:12, fontWeight:700, textDecoration:'none' }}
               >
@@ -209,7 +281,28 @@ export default function AjudaPage() {
               >
                 <i className="fa-solid fa-envelope"></i> E-mail
               </a>
+              <button onClick={() => setChamadoAberto(v => !v)}
+                style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 16px', background:'var(--sur)', border:'1px solid var(--bo)', color:'var(--tx)', borderRadius:'var(--r)', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'var(--fn)' }}
+              >
+                <i className="fa-solid fa-triangle-exclamation"></i> Abrir chamado
+              </button>
             </div>
+            {chamadoAberto && (
+              <div>
+                <textarea
+                  className="fi" value={chamadoTexto} onChange={e => setChamadoTexto(e.target.value)}
+                  placeholder="Descreva o problema que você encontrou..."
+                  style={{ width:'100%', minHeight:70, resize:'vertical', fontSize:13, marginBottom:8, boxSizing:'border-box' }}
+                />
+                <button onClick={enviarChamado} disabled={criarChamado.isPending || !chamadoTexto.trim()}
+                  style={{ padding:'8px 16px', background:'var(--br)', color:'#fff', border:'none', borderRadius:'var(--r)', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'var(--fn)' }}>
+                  {criarChamado.isPending ? 'Enviando...' : 'Enviar chamado'}
+                </button>
+              </div>
+            )}
+            {chamadoOk && (
+              <div style={{ marginTop:10, fontSize:12, color:'#15803D', fontWeight:600 }}>✓ Chamado registrado! Nossa equipe vai analisar.</div>
+            )}
           </div>
         </>
       )}

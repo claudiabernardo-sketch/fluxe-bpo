@@ -52,6 +52,7 @@ const MeuPainelPage      = lazy(() => import('../../pages/MeuPainelPage'))
 const AjudaPage          = lazy(() => import('../../pages/AjudaPage'))
 const PrecificacaoPage   = lazy(() => import('../../pages/PrecificacaoPage'))
 const AdminPage          = lazy(() => import('../../pages/AdminPage'))
+const MentoriaPage       = lazy(() => import('../../pages/MentoriaPage'))
 
 const PageLoader = () => (
   <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'60vh' }}>
@@ -83,6 +84,7 @@ const NAV = [
   { grp:'FERRAMENTAS' },
   { path:'/mensagens',  icon:'fa-brands fa-whatsapp',           label:'Mensagens' },
   { path:'/relatorios', icon:'fa-solid fa-chart-column',        label:'Relatórios'},
+  { path:'/mentoria',   icon:'fa-solid fa-graduation-cap',      label:'Mentoria'  },
   { path:'/meu-painel', icon:'fa-solid fa-circle-user',         label:'Meu Painel'},
   { path:'/ajuda',      icon:'fa-solid fa-circle-question',     label:'Ajuda'     },
   { path:'/config',     icon:'fa-solid fa-gear',                label:'Config'    },
@@ -110,6 +112,7 @@ const TITLES = {
   '/meu-painel': 'Meu Painel',
   '/ajuda':      'Central de Ajuda',
   '/admin':      'Painel Admin Fluxe',
+  '/mentoria':   'Mentoria',
 }
 
 const MOB_NAV = [
@@ -279,6 +282,7 @@ export default function AppShell() {
                 <Route path="/config"     element={<ConfigPage />} />
                 <Route path="/meu-painel" element={<MeuPainelPage />} />
                 <Route path="/ajuda"      element={<AjudaPage />} />
+                <Route path="/mentoria"   element={<MentoriaPage />} />
                 <Route path="/admin"      element={profile?.fluxe_staff ? <AdminPage /> : <Navigate to="/" replace />} />
               </Routes>
             </Suspense>
