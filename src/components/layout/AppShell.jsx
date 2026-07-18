@@ -308,6 +308,7 @@ export default function AppShell() {
     </nav>
 
     <RadarPanelOverlay />
+    <TrialGuard />
     </>
   )
 }
