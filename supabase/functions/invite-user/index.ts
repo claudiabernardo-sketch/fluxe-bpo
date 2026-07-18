@@ -36,6 +36,34 @@ serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
+    // ── Limite de usuários do plano Essencial (3 usuários) ────────────────
+    const { data: empresaRow } = await supabaseAdmin
+      .from('empresas')
+      .select('plano')
+      .eq('id', empresa_id)
+      .single()
+
+    if (empresaRow?.plano === 'essencial') {
+      const { data: existingUser } = await supabaseAdmin
+        .from('usuarios')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle()
+
+      // Só bloqueia se for usuário NOVO (editar/reenviar convite de quem já existe não deve travar)
+      if (!existingUser) {
+        const { count } = await supabaseAdmin
+          .from('usuarios')
+          .select('id', { count: 'exact', head: true })
+          .eq('empresa_id', empresa_id)
+          .eq('ativo', true)
+
+        if ((count ?? 0) >= 3) {
+          return ok({ error: 'O plano Essencial permite até 3 usuários. Faça upgrade para o plano Completo para adicionar mais membros à equipe.' })
+        }
+      }
+    }
+
     const siteUrl = Deno.env.get('SITE_URL') || 'https://fluxebpo.com.br'
     const resendKey = Deno.env.get('RESEND_API_KEY')
     const resendFrom = Deno.env.get('RESEND_FROM') || 'Fluxe BPO <noreply@fluxebpo.com.br>'

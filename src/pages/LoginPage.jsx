@@ -21,7 +21,7 @@ const PLANS = [
     name: 'Essencial', price: 'R$ 97', period: '/mês', highlight: false, badge: null,
     idealPara: 'Ideal para: quem quer todo o sistema e ainda não precisa de WhatsApp integrado',
     features: [
-      'Usuários ilimitados',
+      'Até 3 usuários',
       'Tarefas, checklists e modelos de processo (SOP)',
       'Agenda e Central operacional',
       'Cofre digital de senhas',
@@ -40,23 +40,34 @@ const PLANS = [
     name: 'Completo', price: 'R$ 197', period: '/mês', highlight: true, badge: 'Mais popular',
     idealPara: 'Ideal para: quem quer atender o cliente pelo WhatsApp direto de dentro do Fluxe',
     features: [
-      'Tudo do Essencial',
+      'Usuários ilimitados',
       'WhatsApp integrado (API oficial da Meta ou conexão rápida)',
       'Leitura automática de boletos e notas fiscais recebidas, por IA',
       'Suporte prioritário via WhatsApp',
+      'Tarefas, checklists e modelos de processo (SOP)',
+      'Agenda e Central operacional',
+      'Cofre digital de senhas',
+      'Cadastro de clientes com Esteiras operacionais',
+      'Radar de saúde do cliente + Relatório 360° em PDF',
+      'Precificação consultiva com aviso de capacidade',
+      'CRM com pipeline comercial',
+      'Executivo, Rentabilidade e Capacidade da equipe',
+      'Previsão de contratação e simulação "e se"',
+      'Meta de crescimento',
     ],
     cta: 'Assinar agora',
   },
   {
-    name: 'Fluxe + Mentoria BPO Lucrativo', price: 'R$ 5.970', period: '/ano', highlight: false, badge: 'Cobrança anual',
-    idealPara: 'Ideal para: quem quer o sistema e alguém guiando o crescimento junto',
+    name: 'Fluxe + Mentoria BPO Lucrativo', price: 'Sob consulta', period: '', highlight: false, badge: 'Cobrança anual',
+    idealPara: 'Ideal para: empresas que querem crescer com acompanhamento direto da fundadora',
     features: [
-      'Tudo do Completo, por 1 ano',
-      '12 encontros individuais de mentoria (1h/mês) com a fundadora',
-      'Plano de crescimento acompanhado de perto, mês a mês',
+      'Tudo do Completo',
+      '12 mentorias individuais',
+      'Plano estratégico',
+      'Prioridade máxima',
     ],
-    cta: 'Falar com vendas',
-    href: 'https://wa.me/5511917101173?text=Quero+saber+sobre+o+plano+Fluxe+%2B+Mentoria+BPO+Lucrativo',
+    cta: 'Agendar diagnóstico',
+    href: 'https://wa.me/5511917101173?text=Quero+agendar+um+diagn%C3%B3stico+sobre+o+plano+Fluxe+%2B+Mentoria+BPO+Lucrativo',
   },
 ]
 
@@ -65,8 +76,8 @@ const FAQS = [
   { q: 'Como funciona o período de teste?', a: 'Você cria a conta gratuitamente e tem 14 dias completos para explorar todas as funcionalidades, sem precisar de cartão de crédito.' },
   { q: 'Posso convidar minha equipe?', a: 'Sim. O administrador convida analistas, supervisores e gestores. Cada perfil tem permissões configuráveis de acordo com a hierarquia do seu BPO.' },
   { q: 'Meus dados ficam seguros?', a: 'Sim. Cada empresa tem dados completamente isolados. Usamos criptografia em repouso e em trânsito, hospedado em infraestrutura Supabase/AWS.' },
-  { q: 'Funciona para qualquer tamanho de BPO?', a: 'Sim, do BPO solo ao escritório com 30+ analistas — todos os planos têm usuários ilimitados. A diferença entre Essencial e Completo é só o WhatsApp integrado; o Fluxe + Mentoria BPO Lucrativo soma acompanhamento individual pra quem quer escalar mais rápido.' },
-  { q: 'Qual a diferença entre os planos?', a: 'Essencial e Completo têm exatamente o mesmo sistema — a única diferença é o WhatsApp integrado, disponível a partir do Completo. O Fluxe + Mentoria BPO Lucrativo inclui tudo do Completo por 1 ano, mais 12 encontros individuais de mentoria com a fundadora.' },
+  { q: 'Funciona para qualquer tamanho de BPO?', a: 'Sim, do BPO solo ao escritório com equipe maior. O Essencial atende até 3 usuários; a partir do Completo, os usuários são ilimitados. O Fluxe + Mentoria BPO Lucrativo soma acompanhamento individual pra quem quer escalar mais rápido.' },
+  { q: 'Qual a diferença entre os planos?', a: 'O Essencial tem todo o sistema para até 3 usuários. O Completo libera usuários ilimitados e o WhatsApp integrado. O Fluxe + Mentoria BPO Lucrativo inclui tudo do Completo por 1 ano, mais 12 encontros individuais de mentoria com a fundadora.' },
 ]
 
 // ── Componente principal ───────────────────────────────────────────────────
