@@ -25,6 +25,37 @@ function ok(data: object, status = 200) {
   })
 }
 
+const ASAAS_BASE = Deno.env.get('ASAAS_SANDBOX') === 'true'
+  ? 'https://sandbox.asaas.com/api/v3'
+  : 'https://api.asaas.com/v3'
+
+async function asaasGet(path: string) {
+  const key = Deno.env.get('ASAAS_API_KEY')
+  if (!key) return null
+  try {
+    const res = await fetch(`${ASAAS_BASE}${path}`, { headers: { 'access_token': key } })
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
+}
+
+// Consulta faturas vencidas do cliente na Asaas — some faturas em aberto =
+// inadimplente de verdade, com valor e há quantos dias. Sem faturas vencidas
+// (mesmo com fatura pendente futura) = em dia.
+async function statusPagamento(customerId: string) {
+  const overdue = await asaasGet(`/payments?customer=${customerId}&status=OVERDUE&limit=100`)
+  const vencidas = overdue?.data ?? []
+  if (vencidas.length > 0) {
+    const maisAntiga = vencidas.reduce((min: any, p: any) => (p.dueDate < min.dueDate ? p : min), vencidas[0])
+    const diasAtraso = Math.floor((Date.now() - new Date(maisAntiga.dueDate).getTime()) / 86400000)
+    const valorDevido = vencidas.reduce((s: number, p: any) => s + (p.value || 0), 0)
+    return { em_dia: false, dias_atraso: diasAtraso, valor_devido: valorDevido, faturas_vencidas: vencidas.length }
+  }
+  return { em_dia: true, dias_atraso: 0, valor_devido: 0, faturas_vencidas: 0 }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -54,7 +85,7 @@ serve(async (req) => {
     if (action === 'list_empresas') {
       const { data: empresas, error } = await supabase
         .from('empresas')
-        .select('id, nome, email, cnpj, plano, trial_expira_em, criado_em')
+        .select('id, nome, email, cnpj, plano, trial_expira_em, criado_em, asaas_customer_id')
         .order('criado_em', { ascending: false })
       if (error) return ok({ error: error.message })
 
@@ -66,10 +97,18 @@ serve(async (req) => {
       const clientesPorEmpresa: Record<string, number> = {}
       for (const c of clientesRows ?? []) clientesPorEmpresa[c.empresa_id] = (clientesPorEmpresa[c.empresa_id] || 0) + 1
 
-      const resultado = (empresas ?? []).map(e => ({
+      // Consulta a Asaas em paralelo só pra quem já tem cliente criado lá —
+      // é o que da a resposta real de "em dia x deve", além do que o plano
+      // (que só é atualizado quando o webhook do Asaas dispara) já mostra.
+      const pagamentos = await Promise.all(
+        (empresas ?? []).map(e => e.asaas_customer_id ? statusPagamento(e.asaas_customer_id) : Promise.resolve(null))
+      )
+
+      const resultado = (empresas ?? []).map((e, i) => ({
         ...e,
         usuarios_count: usuariosPorEmpresa[e.id] || 0,
         clientes_count: clientesPorEmpresa[e.id] || 0,
+        pagamento: pagamentos[i],
       }))
 
       return ok({ success: true, empresas: resultado })
