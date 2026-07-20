@@ -2,12 +2,8 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   useClients, useUpdateClient,
-  useTasks, useCreateTask, useDeleteTask,
   useRotinas, useCreateRotina, useUpdateRotina, useDeleteRotina,
-  useTarefaModelos, useUpdateModelo,
-  useClienteModelos, useVincularModelo, useDesvincularModelo,
-  useUpdateClienteModelo, useTogglePauseModelo,
-  useUpdateClienteStatus, useIniciarOperacao, useGerarTarefas,
+  useUpdateClienteStatus, useIniciarOperacao,
   useAcessos, useSaveAcesso, useDeleteAcesso, useUsuarios,
 } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
@@ -25,7 +21,6 @@ const STATUS_LABEL = { ativo:'Ativo', inativo:'Inativo', pausado:'Pausado', onbo
 const STATUS_OP_COLOR = { em_configuracao:'yw', operacional:'gr', pausado:'or', encerrado:'gy' }
 const STATUS_OP_LABEL = { em_configuracao:'Em Configuração', operacional:'Operacional', pausado:'Pausado', encerrado:'Encerrado' }
 
-const RECORRENCIA_LABEL = { diaria:'Diária', dias_uteis:'Dias úteis', semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal', bimestral:'Bimestral', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual', dias_especificos:'Dias específicos' }
 const DIAS_SEMANA_R = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 
 const BANCOS_LIST = [
@@ -111,14 +106,6 @@ export default function ClientePage() {
   const [searchParams] = useSearchParams()
   const [tab, setTab] = useState(searchParams.get('tab') || 'dados')
 
-  // Tarefas
-  const { data: tarefas = [] } = useTasks()
-  const tarefasCliente = tarefas.filter(t => t.cliente_id === clienteId && !t.deleted_at)
-  const createTask = useCreateTask()
-  const deleteTask = useDeleteTask()
-  const [taskForm, setTaskForm] = useState({ titulo:'', prazo:'', status:'aberta', prioridade:'media' })
-  const [taskErr, setTaskErr] = useState('')
-
   // Rotinas
   const { data: rotinas = [] } = useRotinas(clienteId)
   const createRotina = useCreateRotina()
@@ -130,32 +117,13 @@ export default function ClientePage() {
   const [rotinaForm, setRotinaForm] = useState({ titulo:'', tipo:'diaria', hora:'', observacao:'', dia_mes:1, dias_semana:[] })
   const [rotinaErr, setRotinaErr] = useState('')
 
-  // Modelos / Escopo
-  const { data: clienteModelos = [] } = useClienteModelos(clienteId)
-  const { data: todosModelos = [] } = useTarefaModelos()
-  const updateModelo = useUpdateModelo()
-  const vincularModelo = useVincularModelo()
-  const desvincularModelo = useDesvincularModelo()
-  const updateClienteModelo = useUpdateClienteModelo()
-  const togglePauseModelo = useTogglePauseModelo()
-  const [showAddModelo, setShowAddModelo] = useState(false)
-  const [editandoModelo, setEditandoModelo] = useState(null)
-  const [editModeloForm, setEditModeloForm] = useState({ recorrencia:'', dia_mes:'', hora:'', config:{} })
-  const [configModeloId, setConfigModeloId] = useState(null)
-
   // Status operacional
   const updateClienteStatus = useUpdateClienteStatus()
   const iniciarOperacao = useIniciarOperacao()
-  const gerarTarefas = useGerarTarefas()
   const [iniciarOpModal, setIniciarOpModal] = useState(false)
   const [iniciarOpData, setIniciarOpData] = useState(() => new Date().toISOString().slice(0,10))
   const [iniciarOpLoading, setIniciarOpLoading] = useState(false)
   const [iniciarOpErr, setIniciarOpErr] = useState('')
-  const [gerarModal, setGerarModal] = useState(false)
-  const [gerarForm, setGerarForm] = useState({ dataInicio:'', dataFim:'', dryRun:false })
-  const [gerarResult, setGerarResult] = useState(null)
-  const [gerarLoading, setGerarLoading] = useState(false)
-  const [gerarErr, setGerarErr] = useState('')
 
   // Cofre
   const { data: acessosCliente = [], isLoading: acessosLoading } = useAcessos(clienteId)
@@ -229,13 +197,6 @@ export default function ClientePage() {
     setTimeout(() => setSaveOk(false), 2500)
   }
 
-  async function salvarTarefa() {
-    if (!taskForm.titulo.trim()) { setTaskErr('Informe o título'); return }
-    setTaskErr('')
-    await createTask.mutateAsync({ ...taskForm, prazo: taskForm.prazo || null, cliente_id: clienteId, data_execucao: new Date().toLocaleDateString('en-CA') })
-    setTaskForm({ titulo:'', prazo:'', status:'aberta', prioridade:'media' })
-  }
-
   async function salvarRotina() {
     if (!rotinaForm.titulo.trim()) { setRotinaErr('Informe o título'); return }
     if (rotinaForm.tipo === 'semanal' && rotinaForm.dias_semana.length === 0) { setRotinaErr('Selecione ao menos um dia da semana'); return }
@@ -267,33 +228,6 @@ export default function ClientePage() {
     setSelectedBancos(prev => prev.includes(banco) ? prev.filter(b => b !== banco) : [...prev, banco])
   }
 
-  async function desvincularEExcluir(cm) {
-    const temTarefa = tarefasCliente.some(t => t.modelo_id === cm.modelo_id && t.status !== 'concluida')
-    const msg = temTarefa
-      ? 'Remover este modelo do escopo? A tarefa aberta criada por ele também será excluída.'
-      : 'Remover este modelo do escopo?'
-    if (!confirm(msg)) return
-    const alvo = tarefasCliente.filter(t => t.modelo_id === cm.modelo_id && t.status !== 'concluida')
-    for (const t of alvo) await deleteTask.mutateAsync(t.id)
-    desvincularModelo.mutate({ id: cm.id, clienteId })
-  }
-
-  async function desativarModeloDireto(m) {
-    const temTarefa = tarefasCliente.some(t => t.modelo_id === m.id && t.status !== 'concluida')
-    const msg = temTarefa
-      ? 'Remover este modelo do escopo? A tarefa aberta criada por ele também será excluída.'
-      : 'Remover este modelo do escopo?'
-    if (!confirm(msg)) return
-    const alvo = tarefasCliente.filter(t => t.modelo_id === m.id && t.status !== 'concluida')
-    for (const t of alvo) await deleteTask.mutateAsync(t.id)
-    updateModelo.mutate({ id: m.id, ativo: false })
-  }
-
-  async function vincularEAplicarModelo(modelo) {
-    await vincularModelo.mutateAsync({ clienteId, modeloId: modelo.id })
-    setShowAddModelo(false)
-  }
-
   async function executarIniciarOperacao() {
     if (!iniciarOpData) { setIniciarOpErr('Selecione a data de início'); return }
     setIniciarOpLoading(true); setIniciarOpErr('')
@@ -304,23 +238,6 @@ export default function ClientePage() {
       setIniciarOpErr(e?.message || 'Erro ao iniciar operação')
     }
     setIniciarOpLoading(false)
-  }
-
-  async function executarGerarTarefas() {
-    setGerarLoading(true); setGerarErr(''); setGerarResult(null)
-    try {
-      const result = await gerarTarefas.mutateAsync({
-        clienteId,
-        empresaId: empresa?.id,
-        dataInicio: gerarForm.dataInicio || undefined,
-        dataFim: gerarForm.dataFim || undefined,
-        dryRun: gerarForm.dryRun,
-      })
-      setGerarResult(result)
-    } catch (e) {
-      setGerarErr(e?.message || 'Erro ao gerar tarefas')
-    }
-    setGerarLoading(false)
   }
 
   function openNewAcesso() {
@@ -373,10 +290,6 @@ export default function ClientePage() {
   )
 
   const statusOp = cliente.status_operacional || 'em_configuracao'
-  const modelosDiretos = todosModelos.filter(m =>
-    m.ativo && m.cliente_id === clienteId && !clienteModelos.find(cm => cm.modelo_id === m.id)
-  )
-  const totalModelos = clienteModelos.length + modelosDiretos.length
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
@@ -457,7 +370,6 @@ export default function ClientePage() {
             ['bancos','🏦 Bancos'],
             ['cofre','🔐 Cofre'],
             ['rotina','🔁 Rotina'],
-            ['escopo','📦 Escopo'],
             ['radar','🩺 Radar'],
             ['relatorio360','📄 Relatório 360'],
           ].map(([id, label]) => (
@@ -884,217 +796,6 @@ export default function ClientePage() {
             </div>
           )}
 
-          {/* ── ABA ESCOPO ───────────────────────────────────────────────────── */}
-          {tab === 'escopo' && (
-            <div style={{ maxWidth:800 }}>
-              {/* Tarefas abertas */}
-              {tarefasCliente.length > 0 && (
-                <div style={{ marginBottom:16 }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:8 }}>
-                    {tarefasCliente.length} tarefa{tarefasCliente.length!==1?'s':''} · detalhes em <strong>Tarefas</strong>
-                  </div>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
-                    {tarefasCliente.map(t => {
-                      const concluida = t.status === 'concluida'
-                      return (
-                        <div key={t.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--s2)', opacity: concluida ? .5 : 1 }}>
-                          <div style={{ width:7, height:7, borderRadius:'50%', background: concluida ? '#22C55E' : '#6366F1', flexShrink:0 }} />
-                          <div style={{ flex:1, fontSize:12, color:'var(--tx)', textDecoration: concluida ? 'line-through' : 'none' }}>{t.titulo}</div>
-                          <button onClick={() => { if(confirm('Remover esta tarefa?')) deleteTask.mutate(t.id) }}
-                            style={{ border:'none', background:'none', cursor:'pointer', color:'#CBD5E1', fontSize:16, lineHeight:1 }}>×</button>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Nova tarefa avulsa */}
-              <div style={{ display:'flex', gap:8, marginBottom:16 }}>
-                <input value={taskForm.titulo} onChange={e=>setTaskForm(f=>({...f,titulo:e.target.value}))}
-                  onKeyDown={e => e.key==='Enter' && salvarTarefa()}
-                  className="fi" placeholder="+ Nova tarefa avulsa..." style={{ flex:1 }} />
-                <button className="btn bp bsm" onClick={salvarTarefa} disabled={createTask.isPending}>
-                  {createTask.isPending ? '…' : 'Add'}
-                </button>
-              </div>
-              {taskErr && <div style={{ fontSize:11, color:'var(--rdt)', marginBottom:8 }}>{taskErr}</div>}
-
-              <div style={{ borderTop:'1px solid var(--bo)', paddingTop:16, marginBottom:12, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em' }}>
-                  {totalModelos} modelo(s) vinculado(s)
-                </div>
-                <button onClick={() => { setGerarForm({ dataInicio:'', dataFim:'', dryRun:false }); setGerarResult(null); setGerarErr(''); setGerarModal(true) }}
-                  className="btn bo bsm" style={{ fontSize:10 }}>
-                  ⚙ Gerenciar geração
-                </button>
-              </div>
-
-              {/* Modelos diretos */}
-              {modelosDiretos.map(m => (
-                <div key={`direto-${m.id}`} style={{ border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--s2)', marginBottom:6 }}>
-                  <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'10px 12px' }}>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{m.titulo}</div>
-                      <div style={{ fontSize:10, color:'var(--tx3)', marginTop:2 }}>{m.categoria} · {RECORRENCIA_LABEL[m.recorrencia] || m.recorrencia}</div>
-                    </div>
-                    <button onClick={() => desativarModeloDireto(m)} title="Remover do escopo"
-                      style={{ border:'1px solid #FECDD3', background:'#FEF2F2', color:'#EF4444', borderRadius:5, cursor:'pointer', fontSize:13, padding:'2px 7px', lineHeight:1, flexShrink:0 }}>×</button>
-                  </div>
-                </div>
-              ))}
-
-              {/* Modelos via cliente_modelos */}
-              {clienteModelos.map(cm => {
-                const modelo = cm.tarefa_modelos || {}
-                const bancosConfig = cm.config?.bancos || []
-                const isPausado = cm.pausado
-                const isEditing = editandoModelo === cm.id
-                const recEfetiva = cm.recorrencia || modelo.recorrencia
-                return (
-                  <div key={cm.id} style={{ border: isPausado ? '1px dashed #CBD5E1' : '1px solid var(--bo)', borderRadius:'var(--r)', background: isPausado ? '#F8FAFC' : 'var(--s2)', opacity: isPausado ? .65 : 1, marginBottom:6 }}>
-                    <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'10px 12px' }}>
-                      {isPausado && <span title="Modelo pausado" style={{ fontSize:14, flexShrink:0, marginTop:1 }}>⏸</span>}
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{modelo.titulo}</div>
-                        <div style={{ fontSize:10, color:'var(--tx3)', marginTop:2, display:'flex', flexWrap:'wrap', gap:4 }}>
-                          <span>{modelo.categoria}</span><span>·</span>
-                          <span style={{ color: cm.recorrencia?'#6366F1':'inherit', fontWeight: cm.recorrencia?600:400 }}>
-                            {RECORRENCIA_LABEL[recEfetiva]||recEfetiva}{cm.recorrencia && <span title="Override ativo"> ✱</span>}
-                          </span>
-                          {cm.dia_mes && <span>· dia {cm.dia_mes}</span>}
-                          {cm.hora && <span>· {cm.hora.slice(0,5)}</span>}
-                          {bancosConfig.length>0 && <span style={{ color:'#6366F1', fontWeight:600 }}>· 🏦 {bancosConfig.join(', ')}</span>}
-                          {isPausado && <span style={{ color:'#EF4444', fontWeight:600 }}>· Pausado</span>}
-                        </div>
-                      </div>
-                      <div style={{ display:'flex', gap:4, flexShrink:0 }}>
-                        <button onClick={() => {
-                            if (isEditing) { setEditandoModelo(null); return }
-                            setEditModeloForm({ recorrencia: cm.recorrencia||'', dia_mes: cm.dia_mes||'', hora: cm.hora||'', config: cm.config||{} })
-                            setEditandoModelo(cm.id); setConfigModeloId(null)
-                          }}
-                          title="Editar override"
-                          style={{ border:'1px solid var(--bo)', background: isEditing?'#EEF2FF':'transparent', color: isEditing?'#6366F1':'var(--tx3)', borderRadius:5, cursor:'pointer', fontSize:11, padding:'3px 7px', lineHeight:1 }}>✏</button>
-                        <button onClick={() => togglePauseModelo.mutate({ id:cm.id, clienteId, pausado:!isPausado })}
-                          title={isPausado?'Reativar':'Pausar'}
-                          style={{ border:'1px solid var(--bo)', background:'transparent', color:'var(--tx3)', borderRadius:5, cursor:'pointer', fontSize:11, padding:'3px 7px', lineHeight:1 }}>
-                          {isPausado?'▶':'⏸'}
-                        </button>
-                        <button onClick={() => desvincularEExcluir(cm)} title="Remover do escopo"
-                          style={{ border:'1px solid #FECDD3', background:'#FEF2F2', color:'#EF4444', borderRadius:5, cursor:'pointer', fontSize:13, padding:'2px 7px', lineHeight:1 }}>×</button>
-                      </div>
-                    </div>
-                    {/* Painel de override */}
-                    {isEditing && (
-                      <div style={{ padding:'12px', borderTop:'1px solid var(--bo)', background:'#F8FAFC', display:'flex', flexDirection:'column', gap:10 }}>
-                        <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.06em' }}>
-                          Configurações deste cliente (sem alterar o modelo original)
-                        </div>
-                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
-                          <div>
-                            <label style={{ fontSize:10, fontWeight:600, color:'var(--tx3)', display:'block', marginBottom:3 }}>Recorrência</label>
-                            <select value={editModeloForm.recorrencia} onChange={e=>setEditModeloForm(f=>({...f,recorrencia:e.target.value}))}
-                              style={{ width:'100%', fontSize:11, padding:'5px 6px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--sur)', color:'var(--tx)' }}>
-                              <option value="">Padrão ({RECORRENCIA_LABEL[modelo.recorrencia]||modelo.recorrencia})</option>
-                              {Object.entries(RECORRENCIA_LABEL).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
-                            </select>
-                          </div>
-                          <div>
-                            <label style={{ fontSize:10, fontWeight:600, color:'var(--tx3)', display:'block', marginBottom:3 }}>Dia do mês</label>
-                            <input type="number" min={1} max={31} value={editModeloForm.dia_mes}
-                              onChange={e=>setEditModeloForm(f=>({...f,dia_mes:e.target.value}))}
-                              placeholder={`Padrão: ${modelo.dia_mes||1}`}
-                              style={{ width:'100%', fontSize:11, padding:'5px 6px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--sur)', color:'var(--tx)' }} />
-                          </div>
-                          <div>
-                            <label style={{ fontSize:10, fontWeight:600, color:'var(--tx3)', display:'block', marginBottom:3 }}>Horário</label>
-                            <input type="time" value={editModeloForm.hora}
-                              onChange={e=>setEditModeloForm(f=>({...f,hora:e.target.value}))}
-                              style={{ width:'100%', fontSize:11, padding:'5px 6px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--sur)', color:'var(--tx)' }} />
-                          </div>
-                        </div>
-                        {(cliente?.bancos||[]).length > 0 && (
-                          <div>
-                            <label style={{ fontSize:10, fontWeight:600, color:'var(--tx3)', display:'block', marginBottom:4 }}>🏦 Bancos</label>
-                            <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
-                              {(cliente?.bancos||[]).map(banco => {
-                                const sel = editModeloForm.config?.bancos?.includes(banco)
-                                return (
-                                  <button key={banco} onClick={() => {
-                                    const novos = sel
-                                      ? (editModeloForm.config?.bancos||[]).filter(b=>b!==banco)
-                                      : [...(editModeloForm.config?.bancos||[]), banco]
-                                    setEditModeloForm(f=>({...f, config:{...f.config, bancos:novos}}))
-                                  }}
-                                    style={{ padding:'3px 8px', borderRadius:99, fontSize:11, cursor:'pointer', fontWeight:600, border:'none',
-                                      background: sel?'#6366F1':'#E2E8F0', color: sel?'#fff':'#475569' }}>
-                                    {sel?'✓ ':''}{banco}
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        )}
-                        <div style={{ display:'flex', gap:6, justifyContent:'flex-end' }}>
-                          <button onClick={() => setEditandoModelo(null)} className="btn bo bsm" style={{ fontSize:11 }}>Cancelar</button>
-                          <button onClick={async () => {
-                              const updates = { config: editModeloForm.config || cm.config }
-                              updates.recorrencia = editModeloForm.recorrencia || null
-                              updates.dia_mes = editModeloForm.dia_mes ? parseInt(editModeloForm.dia_mes) : null
-                              updates.hora = editModeloForm.hora || null
-                              await updateClienteModelo.mutateAsync({ id:cm.id, clienteId, ...updates })
-                              setEditandoModelo(null)
-                            }}
-                            disabled={updateClienteModelo.isPending}
-                            className="btn bp bsm" style={{ fontSize:11 }}>
-                            {updateClienteModelo.isPending ? '…' : 'Salvar'}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-
-              {totalModelos === 0 && !showAddModelo && (
-                <div style={{ padding:'20px', textAlign:'center', color:'var(--tx3)', fontSize:12, border:'1px dashed var(--bo)', borderRadius:'var(--r)', marginBottom:10 }}>
-                  Nenhum modelo vinculado ainda.
-                </div>
-              )}
-
-              {/* Adicionar modelo */}
-              {!showAddModelo ? (
-                <button onClick={() => setShowAddModelo(true)}
-                  style={{ padding:'9px 16px', borderRadius:'var(--r)', border:'1px dashed var(--bo)', background:'transparent', cursor:'pointer', fontSize:12, fontWeight:600, color:'var(--br)', width:'100%', marginTop:8 }}>
-                  + Vincular modelo de tarefa
-                </button>
-              ) : (
-                <div style={{ border:'1px solid var(--bo)', borderRadius:'var(--r)', padding:'14px', background:'var(--sur)', marginTop:8 }}>
-                  <div style={{ fontSize:11, fontWeight:700, color:'var(--tx3)', marginBottom:10, textTransform:'uppercase' }}>Selecionar modelo</div>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, maxHeight:360, overflowY:'auto' }}>
-                    {todosModelos
-                      .filter(m => m.ativo && !clienteModelos.find(cm => cm.modelo_id === m.id))
-                      .filter(m => !m.software_alvo || m.software_alvo.toLowerCase() === (cliente?.software_contabil||'').trim().toLowerCase())
-                      .map(m => (
-                        <button key={m.id} onClick={() => vincularEAplicarModelo(m)}
-                          style={{ padding:'10px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', cursor:'pointer', background:'var(--s2)', textAlign:'left' }}
-                          onMouseEnter={e => e.currentTarget.style.background='var(--s3)'}
-                          onMouseLeave={e => e.currentTarget.style.background='var(--s2)'}>
-                          <div style={{ fontSize:12, fontWeight:600, color:'var(--tx)' }}>{m.titulo}</div>
-                          <div style={{ fontSize:10, color:'var(--tx3)', marginTop:2 }}>{m.categoria} · {RECORRENCIA_LABEL[m.recorrencia]||m.recorrencia}</div>
-                        </button>
-                      ))}
-                  </div>
-                  <button onClick={() => setShowAddModelo(false)}
-                    style={{ marginTop:10, padding:'6px 14px', borderRadius:'var(--r)', border:'1px solid var(--bo)', background:'transparent', cursor:'pointer', fontSize:11, color:'var(--tx3)' }}>
-                    Fechar
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* ── ABA RADAR ─────────────────────────────────────────────────────── */}
           {tab === 'radar' && (
             <div style={{ maxWidth:800 }}>
@@ -1140,48 +841,6 @@ export default function ClientePage() {
               <button className="btn bo bsm" onClick={() => setIniciarOpModal(false)}>Cancelar</button>
               <button className="btn bp bsm" onClick={executarIniciarOperacao} disabled={iniciarOpLoading}>
                 {iniciarOpLoading ? 'Iniciando…' : '▶ Confirmar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL: GERENCIAR GERAÇÃO ─────────────────────────────────────────── */}
-      {gerarModal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1100, padding:16 }}>
-          <div style={{ background:'var(--sur)', borderRadius:'var(--rx)', width:'100%', maxWidth:480, boxShadow:'var(--sh3)', overflow:'hidden' }}>
-            <div style={{ padding:'14px 18px', borderBottom:'1px solid var(--bo)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <div style={{ fontWeight:700, fontSize:14 }}>⚙ Gerenciar Geração de Tarefas</div>
-              <button onClick={() => setGerarModal(false)} style={{ border:'none', background:'none', cursor:'pointer', fontSize:20, color:'var(--tx3)' }}>×</button>
-            </div>
-            <div style={{ padding:18, display:'flex', flexDirection:'column', gap:12 }}>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                <div>
-                  <label className="lbl">Data início</label>
-                  <input type="date" value={gerarForm.dataInicio} onChange={e=>setGerarForm(f=>({...f,dataInicio:e.target.value}))} className="fi" />
-                </div>
-                <div>
-                  <label className="lbl">Data fim</label>
-                  <input type="date" value={gerarForm.dataFim} onChange={e=>setGerarForm(f=>({...f,dataFim:e.target.value}))} className="fi" />
-                </div>
-              </div>
-              <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12 }}>
-                <input type="checkbox" checked={gerarForm.dryRun} onChange={e=>setGerarForm(f=>({...f,dryRun:e.target.checked}))}
-                  style={{ width:14, height:14, accentColor:'var(--br)' }} />
-                Dry run (simular sem salvar)
-              </label>
-              {gerarErr && <div style={{ padding:'8px 10px', background:'#FEF2F2', border:'1px solid #FECDD3', borderRadius:'var(--r)', fontSize:11, color:'#EF4444' }}>{gerarErr}</div>}
-              {gerarResult && (
-                <div style={{ padding:'10px 12px', background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:'var(--r)', fontSize:12, color:'#15803D' }}>
-                  ✓ {gerarResult.geradas ?? 0} tarefa(s) gerada(s) · {gerarResult.duplicidade_evitada ?? 0} já existiam
-                  {gerarForm.dryRun && <span style={{ fontWeight:700 }}> (dry run — nada foi salvo)</span>}
-                </div>
-              )}
-            </div>
-            <div style={{ padding:'12px 18px', borderTop:'1px solid var(--bo)', display:'flex', justifyContent:'flex-end', gap:8 }}>
-              <button className="btn bo bsm" onClick={() => setGerarModal(false)}>Fechar</button>
-              <button className="btn bp bsm" onClick={executarGerarTarefas} disabled={gerarLoading}>
-                {gerarLoading ? 'Gerando…' : gerarForm.dryRun ? '🔍 Simular' : '⚡ Gerar tarefas'}
               </button>
             </div>
           </div>
