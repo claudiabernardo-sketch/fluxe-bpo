@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   useClients, useUpdateClient,
@@ -8,7 +8,7 @@ import {
   useClienteModelos, useVincularModelo, useDesvincularModelo,
   useUpdateClienteModelo, useTogglePauseModelo,
   useUpdateClienteStatus, useIniciarOperacao, useGerarTarefas,
-  useAcessos, useSaveAcesso, useDeleteAcesso,
+  useAcessos, useSaveAcesso, useDeleteAcesso, useUsuarios,
 } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
@@ -55,6 +55,7 @@ export default function ClientePage() {
 
   const { data: clients = [], isLoading: clientesLoading } = useClients()
   const updateClient = useUpdateClient()
+  const { data: usuarios = [] } = useUsuarios()
 
   const cliente = clients.find(c => c.id === clienteId)
 
@@ -65,6 +66,36 @@ export default function ClientePage() {
   const [saveOk, setSaveOk] = useState(false)
   const [cnpjLoading, setCnpjLoading] = useState(false)
   const [cnpjError, setCnpjError] = useState('')
+
+  // Contrato assinado
+  const [contratoUploading, setContratoUploading] = useState(false)
+  const [contratoErr, setContratoErr] = useState('')
+  const [contratoSignedUrl, setContratoSignedUrl] = useState(null)
+
+  useEffect(() => {
+    setContratoSignedUrl(null)
+    if (!form?.contrato_url) return
+    supabase.storage.from('documentos').createSignedUrl(form.contrato_url, 60 * 60 * 24 * 30)
+      .then(({ data }) => { if (data?.signedUrl) setContratoSignedUrl(data.signedUrl) })
+  }, [form?.contrato_url])
+
+  async function uploadContrato(file) {
+    if (!file || !clienteId) return
+    setContratoUploading(true)
+    setContratoErr('')
+    try {
+      const ext = file.name.split('.').pop().toLowerCase()
+      const path = `${empresa?.id}/${clienteId}/contrato_${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('documentos').upload(path, file, { upsert: true })
+      if (upErr) throw upErr
+      await updateClient.mutateAsync({ id: clienteId, contrato_url: path })
+      setForm(f => ({ ...f, contrato_url: path }))
+    } catch (e) {
+      setContratoErr(e?.message || 'Erro ao fazer upload do contrato.')
+    } finally {
+      setContratoUploading(false)
+    }
+  }
 
   // Inicializa form quando cliente carrega
   if (cliente && form === null) {
@@ -191,6 +222,7 @@ export default function ClientePage() {
       uf: form.uf || null,
       cep: form.cep || null,
       bancos: selectedBancos,
+      responsavel_id: form.responsavel_id || null,
     }
     await updateClient.mutateAsync({ id: clienteId, ...payload })
     setSaveOk(true)
@@ -478,12 +510,52 @@ export default function ClientePage() {
                 <label className="lbl">WhatsApp</label>
                 <input value={form.whatsapp||''} onChange={e=>setForm(f=>({...f,whatsapp:e.target.value}))} className="fi" placeholder="(11) 99999-0000" />
               </div>
+              <div>
+                <label className="lbl">Responsável (equipe)</label>
+                <select value={form.responsavel_id||''} onChange={e=>setForm(f=>({...f,responsavel_id:e.target.value||null}))} className="fi">
+                  <option value="">— Sem responsável —</option>
+                  {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome || u.email}</option>)}
+                </select>
+              </div>
               {form.municipio && (
                 <div style={{ gridColumn:'1/-1', background:'var(--s2)', borderRadius:'var(--r)', padding:'10px 12px', fontSize:11, color:'var(--tx2)' }}>
                   <i className="fa-solid fa-location-dot" style={{ color:'var(--br)', marginRight:6 }} />
                   {form.logradouro && `${form.logradouro}, `}{form.municipio} — {form.uf} · CEP {form.cep}
                 </div>
               )}
+
+              <div style={{ gridColumn:'1/-1', borderTop:'1px solid var(--bo)', paddingTop:14, marginTop:2 }}>
+                <label className="lbl" style={{ display:'block', marginBottom:8 }}>📄 Contrato Assinado</label>
+                {form.contrato_url ? (
+                  <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+                    {contratoSignedUrl
+                      ? <a href={contratoSignedUrl} target="_blank" rel="noreferrer"
+                          style={{ fontSize:12, color:'var(--br)', fontWeight:600, textDecoration:'none', display:'flex', alignItems:'center', gap:5, padding:'6px 12px', border:'1px solid var(--br)', borderRadius:'var(--r)', background:'var(--brl)' }}>
+                          📄 Visualizar / baixar contrato
+                        </a>
+                      : <span style={{ fontSize:12, color:'var(--tx3)' }}>Gerando link…</span>
+                    }
+                    <button className="btn bo" style={{ fontSize:11, padding:'5px 12px' }}
+                      onClick={() => document.getElementById('contrato-upload-input').click()}
+                      disabled={contratoUploading}>
+                      {contratoUploading ? '⏳ Enviando…' : '🔄 Substituir'}
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                    <button className="btn bo" style={{ fontSize:11, padding:'6px 14px' }}
+                      onClick={() => document.getElementById('contrato-upload-input').click()}
+                      disabled={contratoUploading}>
+                      {contratoUploading ? '⏳ Enviando…' : '📎 Anexar contrato assinado'}
+                    </button>
+                    <span style={{ fontSize:11, color:'var(--tx3)' }}>PDF ou imagem • máx. 10 MB</span>
+                  </div>
+                )}
+                <input id="contrato-upload-input" type="file" accept=".pdf,image/*" style={{ display:'none' }}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) uploadContrato(f); e.target.value = '' }} />
+                {contratoErr && <div style={{ fontSize:11, color:'var(--rdt)', marginTop:6 }}>{contratoErr}</div>}
+              </div>
+
               <div style={{ gridColumn:'1/-1', display:'flex', gap:8, alignItems:'center' }}>
                 <button className="btn bp" onClick={salvar} disabled={updateClient.isPending}>
                   {updateClient.isPending ? 'Salvando…' : 'Salvar dados'}
