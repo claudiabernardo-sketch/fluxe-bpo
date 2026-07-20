@@ -1,10 +1,13 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useTarefaModelos, useCreateModelo, useUpdateModelo, useDeleteModelo, useClients,
          useClienteModelos, useVincularModelo, useDesvincularModelo, useGerarTarefas,
          useRotinas } from '../hooks/useData'
 import { Card, Btn, Loader } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 import { supabase } from '../lib/supabase'
+
+const STATUS_OP_LABEL = { em_configuracao:'Em Configuração', pausado:'Pausado', encerrado:'Encerrado' }
 
 const CATEGORIAS = ['Contas a Pagar','Contas a Receber','Conciliação Bancária','Emissão de NF','Emissão de Boletos','Cobrança / Inadimplência','Fluxo de Caixa','Pagamentos','DRE Gerencial / Relatórios','Implantação','Onboarding','Estratégico','Relacionamento','Outro']
 const PRIORIDADES = [{ v:'baixa', label:'Baixa' }, { v:'media', label:'Média' }, { v:'alta', label:'Alta' }]
@@ -192,9 +195,10 @@ export default function ModelosPage() {
 
   // Dados calculados
   const linkedModelIds = new Set(clienteModelos.map(cm => cm.modelo_id))
-  const clienteNome = isSpecificClient
-    ? (clients.find(c => c.id === fCliente)?.fantasia || clients.find(c => c.id === fCliente)?.razao_social || '')
-    : ''
+  const clienteAtual = isSpecificClient ? clients.find(c => c.id === fCliente) : null
+  const clienteNome = clienteAtual?.fantasia || clienteAtual?.razao_social || ''
+  const statusOpAtual = clienteAtual?.status_operacional || 'em_configuracao'
+  const naoOperacional = isSpecificClient && statusOpAtual !== 'operacional'
 
   // Cruzamento rotinas × modelos
   const cruzamento = matchRotinasModelos(rotinas, modelos)
@@ -263,6 +267,16 @@ export default function ModelosPage() {
               Após isso, o sistema continua gerando automaticamente todo dia.
             </div>
 
+            {naoOperacional && (
+              <div style={{ fontSize:12, padding:'10px 12px', borderRadius:8, marginBottom:12,
+                background:'#FFFBEB', color:'#92400E', border:'1px solid #FDE68A' }}>
+                ⚠️ Este cliente está <strong>{STATUS_OP_LABEL[statusOpAtual] || statusOpAtual}</strong>, não Operacional — por isso nenhuma tarefa é gerada pra ele, mesmo clicando em "Gerar tarefas".{' '}
+                <Link to={`/clientes/${fCliente}`} style={{ color:'#92400E', fontWeight:700, textDecoration:'underline' }}>
+                  Abrir cliente e Iniciar Operação →
+                </Link>
+              </div>
+            )}
+
             <div style={{ display:'flex', alignItems:'flex-end', gap:10, flexWrap:'wrap' }}>
               <div>
                 <div style={{ fontSize:11, fontWeight:700, color:'#4338CA', marginBottom:4 }}>A PARTIR DE</div>
@@ -270,7 +284,7 @@ export default function ModelosPage() {
                   onChange={e => { setDataInicio(e.target.value); setGeracaoMsg(null) }}
                   style={{ ...fi, width:160, borderColor:'#C7D2FE' }} />
               </div>
-              <Btn variant="primary" onClick={handleGerar} disabled={gerarTarefas.isPending || !linkedModelIds.size}>
+              <Btn variant="primary" onClick={handleGerar} disabled={gerarTarefas.isPending || !linkedModelIds.size || naoOperacional}>
                 {gerarTarefas.isPending ? 'Gerando...' : '▶ Gerar tarefas'}
               </Btn>
               {!linkedModelIds.size && (
