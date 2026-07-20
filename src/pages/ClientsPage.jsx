@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useUpdateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTarefaModelos, useAcessos, useSaveAcesso, useDeleteAcesso, useUsuarios } from '../hooks/useData'
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useUpdateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTarefaModelos, useAcessos, useSaveAcesso, useDeleteAcesso, useUsuarios, useIniciarOperacao } from '../hooks/useData'
 import { useRadarPanelStore } from '../store/radarPanelStore'
 import { useQueryClient } from '@tanstack/react-query'
 import { Card, CardHeader, Badge, Btn, Loader, EmptyState, fmt, fmtR } from '../components/ui'
@@ -47,6 +47,7 @@ export default function ClientsPage() {
   const createClient = useCreateClient()
   const updateClient = useUpdateClient()
   const deleteClient = useDeleteClient()
+  const iniciarOperacao = useIniciarOperacao()
   const { temPermissao, empresa } = useAuthStore()
 
   const [search, setSearch] = useState('')
@@ -586,9 +587,20 @@ export default function ClientsPage() {
                               ⚙️ {form.status_operacional === 'em_configuracao' ? 'Em configuração' : form.status_operacional}
                             </span>
                             <button className="btn gr" style={{ fontSize:11, padding:'4px 14px' }}
-                              onClick={() => setForm(f => ({ ...f, status_operacional:'operacional', operacao_iniciada_em: new Date().toISOString().slice(0,10) }))}>
-                              🚀 Iniciar Operação
+                              disabled={iniciarOperacao.isPending}
+                              onClick={() => {
+                                const hoje = new Date().toISOString().slice(0, 10)
+                                iniciarOperacao.mutate({ clienteId: form.id, dataInicio: hoje }, {
+                                  onSuccess: () => setForm(f => ({ ...f, status_operacional: 'operacional', operacao_iniciada_em: hoje })),
+                                })
+                              }}>
+                              {iniciarOperacao.isPending ? '⏳ Iniciando...' : '🚀 Iniciar Operação'}
                             </button>
+                            {iniciarOperacao.isError && (
+                              <div style={{ width:'100%', fontSize:11, color:'#991B1B', marginTop:6 }}>
+                                Erro ao iniciar operação: {iniciarOperacao.error?.message}
+                              </div>
+                            )}
                           </>
                       }
                     </div>
