@@ -1,6 +1,6 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useUpdateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTarefaModelos, useAcessos, useSaveAcesso, useDeleteAcesso, useUsuarios, useIniciarOperacao } from '../hooks/useData'
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient, useRotinas, useCreateRotina, useUpdateRotina, useDeleteRotina, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTarefaModelos, useAcessos, useSaveAcesso, useDeleteAcesso, useUsuarios } from '../hooks/useData'
 import { useRadarPanelStore } from '../store/radarPanelStore'
 import { useQueryClient } from '@tanstack/react-query'
 import { Card, CardHeader, Badge, Btn, Loader, EmptyState, fmt, fmtR } from '../components/ui'
@@ -47,7 +47,6 @@ export default function ClientsPage() {
   const createClient = useCreateClient()
   const updateClient = useUpdateClient()
   const deleteClient = useDeleteClient()
-  const iniciarOperacao = useIniciarOperacao()
   const { temPermissao, empresa } = useAuthStore()
 
   const [search, setSearch] = useState('')
@@ -59,19 +58,6 @@ export default function ClientsPage() {
   const [cnpjError, setCnpjError] = useState('')
   const [selectedBancos, setSelectedBancos] = useState([])
   const [tab, setTab] = useState('dados') // dados | financeiro | bancos | cofre | rotina
-
-  // Contrato assinado — upload/download
-  const [contratoUploading, setContratoUploading] = useState(false)
-  const [contratoErr, setContratoErr] = useState('')
-  const [contratoSignedUrl, setContratoSignedUrl] = useState(null)
-
-  // Gera URL assinada (30 dias) toda vez que o path do contrato muda
-  useEffect(() => {
-    setContratoSignedUrl(null)
-    if (!form.contrato_url) return
-    supabase.storage.from('documentos').createSignedUrl(form.contrato_url, 60 * 60 * 24 * 30)
-      .then(({ data }) => { if (data?.signedUrl) setContratoSignedUrl(data.signedUrl) })
-  }, [form.contrato_url])
 
   // Cofre (acessos) — escopado ao cliente aberto
   const canSeeSenhas = temPermissao('ver_senhas')
@@ -290,35 +276,14 @@ export default function ClientsPage() {
   }
 
   function openEdit(cl) {
-    const valorFormatado = cl.valor_mrr
-      ? Number(cl.valor_mrr).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-      : ''
-    setForm({ ...cl, valor_mrr: valorFormatado })
-    setSelectedBancos(cl.bancos || [])
-    setTab('dados')
-    setModal({ mode:'edit', id: cl.id })
-    setCnpjError('')
+    // Editar um cliente existente sempre acontece na página completa do
+    // cliente (/clientes/:id) — esse modal fica só para a criação de
+    // clientes novos, pra não ter duas telas diferentes editando o mesmo
+    // registro.
+    navigate(`/clientes/${cl.id}`)
   }
 
-  function close() { setModal(null); setForm({}); setSelectedBancos([]); setContratoErr(''); setContratoSignedUrl(null) }
-
-  async function uploadContrato(file) {
-    if (!file || !modal?.id) return
-    setContratoUploading(true)
-    setContratoErr('')
-    try {
-      const ext = file.name.split('.').pop().toLowerCase()
-      const path = `${empresa?.id}/${modal.id}/contrato_${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from('documentos').upload(path, file, { upsert: true })
-      if (upErr) throw upErr
-      await updateClient.mutateAsync({ id: modal.id, contrato_url: path })
-      setForm(f => ({ ...f, contrato_url: path }))
-    } catch (e) {
-      setContratoErr(e?.message || 'Erro ao fazer upload do contrato.')
-    } finally {
-      setContratoUploading(false)
-    }
-  }
+  function close() { setModal(null); setForm({}); setSelectedBancos([]) }
 
   // Busca CNPJ na BrasilAPI
   async function buscarCNPJ() {
@@ -387,11 +352,16 @@ export default function ClientsPage() {
     }
     try {
       if (modal.mode === 'new') {
-        await createClient.mutateAsync(payload)
+        const criado = await createClient.mutateAsync(payload)
+        close()
+        // Depois de criado, segue direto pra página completa do cliente —
+        // é lá que todo o resto (Rotina, Bancos, Cofre, Iniciar Operação
+        // etc.) é gerenciado, sem duplicar telas.
+        if (criado?.[0]?.id) navigate(`/clientes/${criado[0].id}`)
       } else {
         await updateClient.mutateAsync({ id: modal.id, ...payload })
+        close()
       }
-      close()
     } catch (err) {
       alert('Erro ao salvar cliente: ' + (err?.message || JSON.stringify(err) || 'erro desconhecido'))
     }
@@ -574,72 +544,6 @@ export default function ClientsPage() {
                     </div>
                   )}
 
-                  {/* ── STATUS OPERACIONAL ── só em modo edição */}
-                  {modal?.mode === 'edit' && (
-                    <div style={{ borderTop:'1px solid var(--bo)', paddingTop:14, marginTop:2, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
-                      <div style={{ fontSize:11, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.07em' }}>Status operacional:</div>
-                      {form.status_operacional === 'operacional'
-                        ? <span style={{ fontSize:11, fontWeight:700, color:'#166534', background:'#DCFCE7', border:'1px solid #BBF7D0', borderRadius:6, padding:'3px 10px' }}>
-                            ✅ Operacional desde {form.operacao_iniciada_em || '—'}
-                          </span>
-                        : <>
-                            <span style={{ fontSize:11, color:'#92400E', background:'#FEF3C7', border:'1px solid #FDE68A', borderRadius:6, padding:'3px 10px', fontWeight:600 }}>
-                              ⚙️ {form.status_operacional === 'em_configuracao' ? 'Em configuração' : form.status_operacional}
-                            </span>
-                            <button className="btn gr" style={{ fontSize:11, padding:'4px 14px' }}
-                              disabled={iniciarOperacao.isPending}
-                              onClick={() => {
-                                const hoje = new Date().toISOString().slice(0, 10)
-                                iniciarOperacao.mutate({ clienteId: form.id, dataInicio: hoje }, {
-                                  onSuccess: () => setForm(f => ({ ...f, status_operacional: 'operacional', operacao_iniciada_em: hoje })),
-                                })
-                              }}>
-                              {iniciarOperacao.isPending ? '⏳ Iniciando...' : '🚀 Iniciar Operação'}
-                            </button>
-                            {iniciarOperacao.isError && (
-                              <div style={{ width:'100%', fontSize:11, color:'#991B1B', marginTop:6 }}>
-                                Erro ao iniciar operação: {iniciarOperacao.error?.message}
-                              </div>
-                            )}
-                          </>
-                      }
-                    </div>
-                  )}
-
-                  {/* ── CONTRATO ASSINADO ── só em modo edição */}
-                  {modal?.mode === 'edit' && (
-                    <div style={{ borderTop:'1px solid var(--bo)', paddingTop:14, marginTop:2 }}>
-                      <label style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', display:'block', marginBottom:8, textTransform:'uppercase', letterSpacing:'.07em' }}>📄 Contrato Assinado</label>
-                      {form.contrato_url ? (
-                        <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
-                          {contratoSignedUrl
-                            ? <a href={contratoSignedUrl} target="_blank" rel="noreferrer"
-                                style={{ fontSize:12, color:'var(--br)', fontWeight:600, textDecoration:'none', display:'flex', alignItems:'center', gap:5, padding:'6px 12px', border:'1px solid var(--br)', borderRadius:'var(--r)', background:'var(--brl)' }}>
-                                📄 Visualizar / baixar contrato
-                              </a>
-                            : <span style={{ fontSize:12, color:'var(--tx3)' }}>Gerando link…</span>
-                          }
-                          <button className="btn bo" style={{ fontSize:11, padding:'5px 12px' }}
-                            onClick={() => document.getElementById('contrato-upload-input').click()}
-                            disabled={contratoUploading}>
-                            {contratoUploading ? '⏳ Enviando…' : '🔄 Substituir'}
-                          </button>
-                        </div>
-                      ) : (
-                        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                          <button className="btn bo" style={{ fontSize:11, padding:'6px 14px' }}
-                            onClick={() => document.getElementById('contrato-upload-input').click()}
-                            disabled={contratoUploading}>
-                            {contratoUploading ? '⏳ Enviando…' : '📎 Anexar contrato assinado'}
-                          </button>
-                          <span style={{ fontSize:11, color:'var(--tx3)' }}>PDF ou imagem • máx. 10 MB</span>
-                        </div>
-                      )}
-                      <input id="contrato-upload-input" type="file" accept=".pdf,image/*" style={{ display:'none' }}
-                        onChange={e => { const f = e.target.files?.[0]; if (f) uploadContrato(f); e.target.value = '' }} />
-                      {contratoErr && <div style={{ fontSize:11, color:'var(--rdt)', marginTop:6 }}>{contratoErr}</div>}
-                    </div>
-                  )}
                 </div>
               )}
 
