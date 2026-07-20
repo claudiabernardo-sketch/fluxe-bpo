@@ -41,6 +41,32 @@ async function asaasGet(path: string) {
   }
 }
 
+async function asaasCall(path: string, method: string, body?: object) {
+  const key = Deno.env.get('ASAAS_API_KEY')
+  if (!key) return { error: 'ASAAS_API_KEY não configurada' }
+  try {
+    const res = await fetch(`${ASAAS_BASE}${path}`, {
+      method,
+      headers: { 'access_token': key, 'Content-Type': 'application/json' },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    })
+    const json = await res.json()
+    if (!res.ok) return { error: json?.errors?.[0]?.description || `HTTP ${res.status}` }
+    return json
+  } catch (e) {
+    return { error: String(e) }
+  }
+}
+
+// Busca o valor real da assinatura ativa desse cliente na Asaas — o que
+// está sendo cobrado de verdade, que pode divergir do plano cadastrado no
+// Fluxe se a assinatura foi criada antes de uma mudança de preço.
+async function valorAssinatura(subscriptionId: string) {
+  const sub = await asaasGet(`/subscriptions/${subscriptionId}`)
+  if (!sub || sub.deleted) return null
+  return { valor: sub.value ?? null, ciclo: sub.cycle ?? null, status: sub.status ?? null }
+}
+
 // Consulta faturas vencidas do cliente na Asaas — some faturas em aberto =
 // inadimplente de verdade, com valor e há quantos dias. Sem faturas vencidas
 // (mesmo com fatura pendente futura) = em dia.
@@ -85,7 +111,7 @@ serve(async (req) => {
     if (action === 'list_empresas') {
       const { data: empresas, error } = await supabase
         .from('empresas')
-        .select('id, nome, email, cnpj, plano, trial_expira_em, criado_em, asaas_customer_id')
+        .select('id, nome, email, cnpj, plano, trial_expira_em, criado_em, asaas_customer_id, asaas_subscription_id')
         .order('criado_em', { ascending: false })
       if (error) return ok({ error: error.message })
 
@@ -103,12 +129,16 @@ serve(async (req) => {
       const pagamentos = await Promise.all(
         (empresas ?? []).map(e => e.asaas_customer_id ? statusPagamento(e.asaas_customer_id) : Promise.resolve(null))
       )
+      const assinaturas = await Promise.all(
+        (empresas ?? []).map(e => e.asaas_subscription_id ? valorAssinatura(e.asaas_subscription_id) : Promise.resolve(null))
+      )
 
       const resultado = (empresas ?? []).map((e, i) => ({
         ...e,
         usuarios_count: usuariosPorEmpresa[e.id] || 0,
         clientes_count: clientesPorEmpresa[e.id] || 0,
         pagamento: pagamentos[i],
+        assinatura: assinaturas[i],
       }))
 
       return ok({ success: true, empresas: resultado })
@@ -151,7 +181,23 @@ serve(async (req) => {
       return ok({ success: true, novo_trial_expira_em: base.toISOString() })
     }
 
-    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | estender_trial' })
+    // ── Ação: atualizar valor da assinatura na Asaas ───────────────────────
+    if (action === 'atualizar_valor_assinatura') {
+      const { empresa_id, novo_valor } = payload
+      if (!empresa_id || !novo_valor) return ok({ error: 'empresa_id e novo_valor são obrigatórios' })
+
+      const { data: emp } = await supabase.from('empresas').select('asaas_subscription_id').eq('id', empresa_id).single()
+      if (!emp?.asaas_subscription_id) return ok({ error: 'Esta empresa não tem assinatura Asaas vinculada' })
+
+      const result = await asaasCall(`/subscriptions/${emp.asaas_subscription_id}`, 'PUT', {
+        value: Number(novo_valor),
+        updatePendingPayments: false, // só afeta faturas futuras, não a que já está em aberto
+      })
+      if (result?.error) return ok({ error: result.error })
+      return ok({ success: true, novo_valor: result.value })
+    }
+
+    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | estender_trial | atualizar_valor_assinatura' })
 
   } catch (e) {
     return ok({ error: e.message || 'Erro interno' })
