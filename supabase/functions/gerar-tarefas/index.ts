@@ -312,8 +312,9 @@ serve(async (req) => {
               continue
             }
 
-            // Expandir por banco se for conciliação bancária
-            const isConciliacao = /concilia/i.test(modelo.titulo)
+            // Expandir por banco se for conciliação bancária — usa a categoria
+            // (campo fixo e confiável), não o título (texto livre, pode variar)
+            const isConciliacao = modelo.categoria === 'Conciliação Bancária'
             const bancosCliente: string[] = (isConciliacao && Array.isArray(cliente.bancos) && cliente.bancos.length > 0)
               ? cliente.bancos
               : []
