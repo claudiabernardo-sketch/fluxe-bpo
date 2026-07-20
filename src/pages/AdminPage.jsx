@@ -4,6 +4,7 @@ import { Card, CardHeader, Btn, Badge, Loader } from '../components/ui'
 
 const PLANO_COLOR = { trial:'yellow', trial_expirado:'orange', bloqueado:'red', essencial:'green', pro:'green' }
 const PLANO_LABEL = { trial:'Trial', trial_expirado:'Trial expirado', bloqueado:'Bloqueada', essencial:'Essencial', pro:'Pro' }
+const VALOR_ESPERADO = { essencial: 97, pro: 197 }
 
 function diasTrial(trial_expira_em) {
   if (!trial_expira_em) return null
@@ -14,7 +15,24 @@ function diasTrial(trial_expira_em) {
 function LinhaEmpresa({ emp, onAcao, pendente }) {
   const [confirmBloquear, setConfirmBloquear] = useState(false)
   const [planoRestaurar, setPlanoRestaurar] = useState('trial')
+  const [editandoValor, setEditandoValor] = useState(false)
+  const [novoValor, setNovoValor] = useState('')
   const dias = diasTrial(emp.trial_expira_em)
+
+  const valorAtual = emp.assinatura?.valor
+  const valorEsperado = VALOR_ESPERADO[emp.plano]
+  const valorDivergente = valorAtual != null && valorEsperado != null && valorAtual !== valorEsperado
+
+  function iniciarEdicao() {
+    setNovoValor(valorAtual != null ? String(valorAtual) : '')
+    setEditandoValor(true)
+  }
+  function confirmarValor() {
+    const v = Number(novoValor)
+    if (!v || v <= 0) return
+    onAcao('atualizar_valor_assinatura', emp.id, { novo_valor: v })
+    setEditandoValor(false)
+  }
 
   return (
     <tr style={{ borderBottom: '1px solid var(--bo)' }}>
@@ -36,6 +54,26 @@ function LinhaEmpresa({ emp, onAcao, pendente }) {
             <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 2 }}>
               R$ {emp.pagamento.valor_devido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} · {emp.pagamento.faturas_vencidas} fatura{emp.pagamento.faturas_vencidas > 1 ? 's' : ''}
             </div>
+          </div>
+        )}
+      </td>
+      <td style={{ padding: '10px 8px' }}>
+        {!emp.asaas_subscription_id ? (
+          <span style={{ fontSize: 11, color: 'var(--tx3)' }}>—</span>
+        ) : editandoValor ? (
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <input type="number" step="0.01" autoFocus value={novoValor} onChange={e => setNovoValor(e.target.value)}
+              style={{ width: 70, fontSize: 12, padding: '3px 5px', borderRadius: 5, border: '1px solid var(--bo)' }} />
+            <Btn small variant="success" disabled={pendente} onClick={confirmarValor}>✓</Btn>
+            <Btn small variant="outline" onClick={() => setEditandoValor(false)}>✕</Btn>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: valorDivergente ? '#B45309' : 'var(--tx1)' }}>
+              {valorAtual != null ? `R$ ${valorAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
+            </span>
+            {valorDivergente && <span title={`Esperado R$ ${valorEsperado} pro plano ${emp.plano}`} style={{ fontSize: 11 }}>⚠️</span>}
+            <button onClick={iniciarEdicao} title="Editar valor" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--tx3)', padding: 0 }}>✏️</button>
           </div>
         )}
       </td>
@@ -97,12 +135,13 @@ function SecaoEmpresas() {
       <CardHeader title={`Empresas usando o Fluxe (${empresas.length})`} icon="fa-solid fa-building" />
       <div style={{ padding: '4px 16px 16px', overflowX: 'auto' }}>
         {acao.isError && <div style={{ color: '#991B1B', fontSize: 12, marginBottom: 8 }}>Erro: {acao.error?.message}</div>}
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
           <thead>
             <tr style={{ textAlign: 'left', fontSize: 10, color: 'var(--tx3)', textTransform: 'uppercase' }}>
               <th style={{ padding: '6px 8px' }}>Empresa</th>
               <th style={{ padding: '6px 8px' }}>Plano</th>
               <th style={{ padding: '6px 8px' }}>Pagamento</th>
+              <th style={{ padding: '6px 8px' }}>Valor cobrado</th>
               <th style={{ padding: '6px 8px' }}>Trial</th>
               <th style={{ padding: '6px 8px', textAlign: 'center' }}>Usuários</th>
               <th style={{ padding: '6px 8px', textAlign: 'center' }}>Clientes</th>
