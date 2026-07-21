@@ -29,7 +29,8 @@ const DIAS_SEMANA_R = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 const BANCOS_LIST = [
   'Banco do Brasil','Bradesco','Itaú','Santander','Caixa',
   'Nubank','Inter','Sicoob','Sicredi','BTG','C6 Bank','XP','Safra',
-  'BV','Banrisul','Original','Neon','PicPay','Mercado Pago',
+  'BV','Banrisul','Original','Neon','PicPay','Mercado Pago','Conta Azul',
+  'Outros',
 ]
 
 const CATEGORIAS_COFRE = [
@@ -40,7 +41,7 @@ const CATEGORIAS_COFRE = [
   { id:'outro', icon:'🔑', label:'Outro' },
 ]
 
-const SOFTWARES = ['Domínio','Questor','Alterdata','Totvs Protheus','Omie','Nibo','Bling','Sankhya','SAP','Outro']
+const SOFTWARES = ['Domínio','Questor','Alterdata','Totvs Protheus','Omie','Nibo','Bling','Sankhya','SAP','Conta Azul','Bom Controle','Meu Dinheiro Web','Outro']
 
 function getCatCofre(id) { return CATEGORIAS_COFRE.find(c => c.id === id) || CATEGORIAS_COFRE[4] }
 function fmtCNPJ(v) { return v.replace(/\D/g,'').slice(0,14).replace(/(\d{2})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1/$2').replace(/(\d{4})(\d)/,'$1-$2') }
