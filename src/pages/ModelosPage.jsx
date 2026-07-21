@@ -271,9 +271,15 @@ export default function ModelosPage() {
               <div style={{ fontSize:12, padding:'10px 12px', borderRadius:8, marginBottom:12,
                 background:'#FFFBEB', color:'#92400E', border:'1px solid #FDE68A' }}>
                 ⚠️ Este cliente está <strong>{STATUS_OP_LABEL[statusOpAtual] || statusOpAtual}</strong>, não Operacional — por isso nenhuma tarefa é gerada pra ele, mesmo clicando em "Gerar tarefas".{' '}
-                <Link to={`/clientes/${fCliente}`} style={{ color:'#92400E', fontWeight:700, textDecoration:'underline' }}>
-                  Abrir cliente e Iniciar Operação →
-                </Link>
+                {statusOpAtual === 'pausado' ? (
+                  <Link to={`/clientes/${fCliente}`} style={{ color:'#92400E', fontWeight:700, textDecoration:'underline' }}>
+                    Abrir cliente e Reativar →
+                  </Link>
+                ) : statusOpAtual === 'encerrado' ? (
+                  'Contrato encerrado — não é possível gerar tarefas pra ele.'
+                ) : (
+                  'Vincule um modelo abaixo — a operação ativa sozinha assim que o primeiro modelo é vinculado.'
+                )}
               </div>
             )}
 
