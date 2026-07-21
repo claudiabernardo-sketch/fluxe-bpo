@@ -29,7 +29,7 @@ const DIAS_SEMANA_R = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 const BANCOS_LIST = [
   'Banco do Brasil','Bradesco','Itaú','Santander','Caixa',
   'Nubank','Inter','Sicoob','Sicredi','BTG','C6 Bank','XP','Safra',
-  'BV','Banrisul','Original','Neon','PicPay','Mercado Pago','Conta Azul',
+  'BV','Banrisul','Original','Neon','PicPay','Mercado Pago','CPJ Conta Azul',
   'Outros',
 ]
 
@@ -268,7 +268,7 @@ export default function ClientePage() {
       return
     }
     setRevealedAcesso(r => ({ ...r, [ac.id]:'loading' }))
-    const { data, error } = await supabase.rpc('cofre_decrypt', { ciphertext: ac.senha_enc })
+    const { data, error } = await supabase.rpc('cofre_decrypt', { acesso_id: ac.id })
     setRevealedAcesso(r => ({ ...r, [ac.id]: error ? '(erro)' : data }))
   }
 
