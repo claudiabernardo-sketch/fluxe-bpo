@@ -201,6 +201,110 @@ export default function AvulsasPage() {
 
   const salvando = create.isPending || createBatch.isPending
 
+  // ── Página cheia: Nova tarefa livre ───────────────────────────────────────
+  // Antes era um modal centralizado — ficou apertado depois que a recorrência
+  // ganhou mais campos (repetir a cada / frequência / término). Página cheia
+  // dá espaço, ao custo de perder a sensação de "ação rápida" de um modal.
+  if (modal) {
+    return (
+      <div>
+        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
+          <button onClick={resetForm}
+            style={{ border:'1px solid #E2E8F0', background:'#fff', color:'#64748B', borderRadius:8, cursor:'pointer', fontSize:12, padding:'7px 12px', display:'flex', alignItems:'center', gap:5 }}>
+            ← Voltar
+          </button>
+          <div style={{ fontWeight:700, fontSize:16 }}>Nova tarefa livre</div>
+        </div>
+
+        <Card>
+          <div style={{ maxWidth:640, margin:'0 auto', padding:'8px 4px 4px' }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:14 }}>
+                <div><label style={lbl}>Título *</label>
+                  <input style={fi} value={form.titulo||''} onChange={e=>setForm(f=>({...f,titulo:e.target.value}))} placeholder="Descreva a tarefa..." /></div>
+                <div><label style={lbl}>Cliente</label>
+                  <select style={fi} value={form.cliente_id||''} onChange={e=>setForm(f=>({...f,cliente_id:e.target.value||null}))}>
+                    <option value="">— Sem cliente —</option>
+                    {clients.map(c=><option key={c.id} value={c.id}>{c.razao_social}</option>)}
+                  </select></div>
+              </div>
+              <div><label style={lbl}>Observações</label>
+                <textarea style={{ ...fi, minHeight:80, resize:'vertical' }} value={form.obs||''} onChange={e=>setForm(f=>({...f,obs:e.target.value}))} placeholder="Detalhes do lote, contexto, o que ainda falta..." /></div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+                <div><label style={lbl}>{recorrencia ? 'Data de início' : 'Prazo'}</label>
+                  <input type="date" style={fi} value={form.prazo||''} onChange={e=>setForm(f=>({...f,prazo:e.target.value||null}))} /></div>
+                <div><label style={lbl}>Prioridade</label>
+                  <select style={fi} value={form.prioridade||'media'} onChange={e=>setForm(f=>({...f,prioridade:e.target.value}))}>
+                    <option value="alta">🔴 Alta</option><option value="media">🟡 Média</option><option value="baixa">🟢 Baixa</option>
+                  </select></div>
+              </div>
+              <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, fontWeight:600, color:'#334155' }}>
+                <input type="checkbox" checked={isAgend} onChange={e=>setIsAgend(e.target.checked)} style={{ width:14, height:14, accentColor:'#6366F1' }} />
+                Este é um pagamento avulso para agendamento bancário
+              </label>
+              {isAgend && (
+                <div style={{ background:'#ECFEFF', border:'1px solid #A5F3FC', borderRadius:8, padding:14 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:'#0E7490', marginBottom:8 }}>🏦 Agendamento bancário</div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+                    <div><label style={lbl}>Agendar para</label>
+                      <select style={fi} value={form.agend_dia||''} onChange={e=>setForm(f=>({...f,agend_dia:e.target.value}))}>
+                        <option value="">Próximo agendamento</option>
+                        {DIAS_AG.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
+                      </select></div>
+                    <div><label style={lbl}>Forma</label>
+                      <select style={fi} value={form.agend_forma||'pix'} onChange={e=>setForm(f=>({...f,agend_forma:e.target.value}))}>
+                        {FORMAS.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
+                      </select></div>
+                  </div>
+                  <div style={{ marginTop:10 }}><label style={lbl}>Valor (R$)</label>
+                    <input type="text" inputMode="decimal" style={fi} value={form.agend_valor||''} onChange={e=>setForm(f=>({...f,agend_valor:e.target.value}))} placeholder="Ex: 1.500,00" /></div>
+                </div>
+              )}
+              <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, fontWeight:600, color:'#334155' }}>
+                <input type="checkbox" checked={recorrencia} onChange={e=>setRecorrencia(e.target.checked)} style={{ width:14, height:14, accentColor:'#7C3AED' }} />
+                Repetir (gera várias tarefas, espaçadas pela frequência escolhida)
+              </label>
+              {recorrencia && (
+                <div style={{ background:'#F5F3FF', border:'1px solid #DDD6FE', borderRadius:8, padding:14 }}>
+                  <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:14, alignItems:'end', marginBottom:10 }}>
+                    <div><label style={lbl}>Repetir a cada</label>
+                      <input type="number" min={1} max={31} style={{ ...fi, width:80 }}
+                        value={intervalo} onChange={e=>setIntervalo(Math.max(1, parseInt(e.target.value,10)||1))} /></div>
+                    <div><label style={lbl}>Frequência</label>
+                      <select style={fi} value={frequencia} onChange={e=>setFrequencia(e.target.value)}>
+                        {FREQUENCIAS.map(f => <option key={f.v} value={f.v}>{f.label}</option>)}
+                      </select></div>
+                  </div>
+                  <label style={lbl}>Término da recorrência</label>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={{ fontSize:12, color:'#334155' }}>Após</span>
+                    <input type="number" min={2} max={freqInfo.max} style={{ ...fi, width:80 }}
+                      value={ocorrencias} onChange={e=>setOcorrencias(Math.max(2, parseInt(e.target.value,10)||2))} />
+                    <span style={{ fontSize:12, color:'#334155' }}>ocorrências</span>
+                  </div>
+                  <div style={{ fontSize:11, marginTop:8, color:'#7C3AED' }}>
+                    {!form.prazo
+                      ? 'Escolha a data de início (acima).'
+                      : `Cria ${vezesClamp} tarefas, a cada ${intervalo} ${freqInfo.label.toLowerCase()} a partir de ${fmt(form.prazo)} — cada uma numerada "(1/${vezesClamp})", "(2/${vezesClamp})" etc.`}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div style={{ display:'flex', gap:8, marginTop:24, justifyContent:'flex-end' }}>
+              <Btn onClick={resetForm}>Cancelar</Btn>
+              <Btn variant="primary" disabled={salvando || (recorrencia && (!form.prazo || vezesClamp < 2))} onClick={() => {
+                if (!form.titulo) return alert('Título obrigatório')
+                const payload = { ...form, is_agendamento:isAgend, agend_valor: parseBRL(form.agend_valor) }
+                if (recorrencia) createBatch.mutate({ av: payload, vezes: vezesClamp, frequencia, intervalo })
+                else create.mutate(payload)
+              }}>{salvando?'Salvando…':'Salvar'}</Btn>
+            </div>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:16 }}>
@@ -240,94 +344,6 @@ export default function AvulsasPage() {
           ))
         }
       </Card>
-
-      {/* ── Modal: nova tarefa livre ─────────────────────────────────────────── */}
-      {modal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}>
-          <div style={{ background:'#fff', borderRadius:16, width:'100%', maxWidth:500, maxHeight:'90vh', overflow:'auto', padding:24 }}>
-            <div style={{ fontWeight:700, fontSize:15, marginBottom:16 }}>Nova tarefa livre</div>
-            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-              <div><label style={lbl}>Título *</label>
-                <input style={fi} value={form.titulo||''} onChange={e=>setForm(f=>({...f,titulo:e.target.value}))} placeholder="Descreva a tarefa..." /></div>
-              <div><label style={lbl}>Cliente</label>
-                <select style={fi} value={form.cliente_id||''} onChange={e=>setForm(f=>({...f,cliente_id:e.target.value||null}))}>
-                  <option value="">— Sem cliente —</option>
-                  {clients.map(c=><option key={c.id} value={c.id}>{c.razao_social}</option>)}
-                </select></div>
-              <div><label style={lbl}>Observações</label>
-                <textarea style={{ ...fi, minHeight:60, resize:'vertical' }} value={form.obs||''} onChange={e=>setForm(f=>({...f,obs:e.target.value}))} placeholder="Detalhes do lote, contexto, o que ainda falta..." /></div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                <div><label style={lbl}>{recorrencia ? 'Data de início' : 'Prazo'}</label>
-                  <input type="date" style={fi} value={form.prazo||''} onChange={e=>setForm(f=>({...f,prazo:e.target.value||null}))} /></div>
-                <div><label style={lbl}>Prioridade</label>
-                  <select style={fi} value={form.prioridade||'media'} onChange={e=>setForm(f=>({...f,prioridade:e.target.value}))}>
-                    <option value="alta">🔴 Alta</option><option value="media">🟡 Média</option><option value="baixa">🟢 Baixa</option>
-                  </select></div>
-              </div>
-              <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, fontWeight:600, color:'#334155' }}>
-                <input type="checkbox" checked={isAgend} onChange={e=>setIsAgend(e.target.checked)} style={{ width:14, height:14, accentColor:'#6366F1' }} />
-                Este é um pagamento avulso para agendamento bancário
-              </label>
-              {isAgend && (
-                <div style={{ background:'#ECFEFF', border:'1px solid #A5F3FC', borderRadius:8, padding:12 }}>
-                  <div style={{ fontSize:11, fontWeight:700, color:'#0E7490', marginBottom:8 }}>🏦 Agendamento bancário</div>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                    <div><label style={lbl}>Agendar para</label>
-                      <select style={fi} value={form.agend_dia||''} onChange={e=>setForm(f=>({...f,agend_dia:e.target.value}))}>
-                        <option value="">Próximo agendamento</option>
-                        {DIAS_AG.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
-                      </select></div>
-                    <div><label style={lbl}>Forma</label>
-                      <select style={fi} value={form.agend_forma||'pix'} onChange={e=>setForm(f=>({...f,agend_forma:e.target.value}))}>
-                        {FORMAS.map(d=><option key={d.value} value={d.value}>{d.label}</option>)}
-                      </select></div>
-                  </div>
-                  <div style={{ marginTop:8 }}><label style={lbl}>Valor (R$)</label>
-                    <input type="text" inputMode="decimal" style={fi} value={form.agend_valor||''} onChange={e=>setForm(f=>({...f,agend_valor:e.target.value}))} placeholder="Ex: 1.500,00" /></div>
-                </div>
-              )}
-              <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, fontWeight:600, color:'#334155' }}>
-                <input type="checkbox" checked={recorrencia} onChange={e=>setRecorrencia(e.target.checked)} style={{ width:14, height:14, accentColor:'#7C3AED' }} />
-                Repetir (gera várias tarefas, espaçadas pela frequência escolhida)
-              </label>
-              {recorrencia && (
-                <div style={{ background:'#F5F3FF', border:'1px solid #DDD6FE', borderRadius:8, padding:12 }}>
-                  <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:10, alignItems:'end', marginBottom:10 }}>
-                    <div><label style={lbl}>Repetir a cada</label>
-                      <input type="number" min={1} max={31} style={{ ...fi, width:70 }}
-                        value={intervalo} onChange={e=>setIntervalo(Math.max(1, parseInt(e.target.value,10)||1))} /></div>
-                    <div><label style={lbl}>Frequência</label>
-                      <select style={fi} value={frequencia} onChange={e=>setFrequencia(e.target.value)}>
-                        {FREQUENCIAS.map(f => <option key={f.v} value={f.v}>{f.label}</option>)}
-                      </select></div>
-                  </div>
-                  <label style={lbl}>Término da recorrência</label>
-                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    <span style={{ fontSize:12, color:'#334155' }}>Após</span>
-                    <input type="number" min={2} max={freqInfo.max} style={{ ...fi, width:70 }}
-                      value={ocorrencias} onChange={e=>setOcorrencias(Math.max(2, parseInt(e.target.value,10)||2))} />
-                    <span style={{ fontSize:12, color:'#334155' }}>ocorrências</span>
-                  </div>
-                  <div style={{ fontSize:10, marginTop:6, color:'#7C3AED' }}>
-                    {!form.prazo
-                      ? 'Escolha a data de início (acima).'
-                      : `Cria ${vezesClamp} tarefas, a cada ${intervalo} ${freqInfo.label.toLowerCase()} a partir de ${fmt(form.prazo)} — cada uma numerada "(1/${vezesClamp})", "(2/${vezesClamp})" etc.`}
-                  </div>
-                </div>
-              )}
-            </div>
-            <div style={{ display:'flex', gap:8, marginTop:16, justifyContent:'flex-end' }}>
-              <Btn onClick={resetForm}>Cancelar</Btn>
-              <Btn variant="primary" disabled={salvando || (recorrencia && (!form.prazo || vezesClamp < 2))} onClick={() => {
-                if (!form.titulo) return alert('Título obrigatório')
-                const payload = { ...form, is_agendamento:isAgend, agend_valor: parseBRL(form.agend_valor) }
-                if (recorrencia) createBatch.mutate({ av: payload, vezes: vezesClamp, frequencia, intervalo })
-                else create.mutate(payload)
-              }}>{salvando?'Salvando…':'Salvar'}</Btn>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── Painel lateral: ver/editar tarefa avulsa ─────────────────────────── */}
       <div style={{
