@@ -193,7 +193,6 @@ export default function ClientePage() {
       inicio_contrato: form.inicio_contrato || null,
       escopo: form.escopo || null,
       software_erp: form.software_erp || null,
-      software_contabil: form.software_contabil || null,
       logradouro: form.logradouro || null,
       municipio: form.municipio || null,
       uf: form.uf || null,
