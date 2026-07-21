@@ -369,7 +369,10 @@ export default function ClientePage() {
       </div>
 
       {/* ── TABS ────────────────────────────────────────────────────────────────── */}
-      <div style={{ background:'var(--sur)', border:'1px solid var(--bo)', borderRadius:'var(--rx)', overflow:'hidden', flex:1 }}>
+      {/* overflow:visible (não 'hidden') — conteúdo de aba como o Relatório 360
+          pode ficar mais alto que a tela; precisa poder crescer e rolar pela
+          área de scroll da página (.pgs no AppShell), não ser cortado aqui. */}
+      <div style={{ background:'var(--sur)', border:'1px solid var(--bo)', borderRadius:'var(--rx)', overflow:'visible', flex:1 }}>
 
         <div style={{ display:'flex', borderBottom:'1px solid var(--bo)', padding:'0 16px', overflowX:'auto' }}>
           {[
