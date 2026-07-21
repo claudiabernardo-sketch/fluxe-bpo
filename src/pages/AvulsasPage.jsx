@@ -8,21 +8,42 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { parseBRL, formatBRL } from '../utils/currency'
 
 // Uma tarefa avulsa "repetida" vira N linhas na tabela, criadas de uma vez só,
-// uma por mês a partir da data de início — não é uma rotina permanente (isso
-// já existe em Modelos), é uma série finita com começo e fim conhecidos.
-function addMonths(dateStr, n) {
+// espaçadas pela frequência escolhida a partir da data de início — não é uma
+// rotina permanente (isso já existe em Modelos), é uma série finita com
+// começo e fim conhecidos.
+const FREQUENCIAS = [
+  { v:'diaria',  label:'Dia(s)',    max:90 },
+  { v:'semanal', label:'Semana(s)', max:52 },
+  { v:'mensal',  label:'Mês(es)',   max:24 },
+  { v:'anual',   label:'Ano(s)',    max:10 },
+]
+
+// Soma N ocorrências (já multiplicadas pelo intervalo "repetir a cada X") a uma data
+function addPeriodo(dateStr, n, frequencia, intervalo) {
   if (!dateStr) return null
   const d = new Date(dateStr + 'T12:00:00')
-  d.setMonth(d.getMonth() + n)
+  const passos = n * (intervalo || 1)
+  if (frequencia === 'diaria') d.setDate(d.getDate() + passos)
+  else if (frequencia === 'semanal') d.setDate(d.getDate() + passos * 7)
+  else if (frequencia === 'anual') d.setFullYear(d.getFullYear() + passos)
+  else d.setMonth(d.getMonth() + passos) // mensal
   return d.toISOString().slice(0, 10)
 }
 
-// Quantos meses cabem entre início e fim, incluindo os dois — 01/08 a 01/10 = 3
-function monthsBetween(startStr, endStr) {
-  if (!startStr || !endStr) return 0
+// Quantas ocorrências cabem entre início e fim (inclusive), dado o intervalo —
+// "a cada 2 semanas" de 01/08 a 01/10 conta só as datas que realmente caem nesse passo
+function periodosEntre(startStr, endStr, frequencia, intervalo) {
+  if (!startStr || !endStr || !intervalo) return 0
   const a = new Date(startStr + 'T12:00:00')
   const b = new Date(endStr + 'T12:00:00')
-  return (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth()) + 1
+  if (b < a) return 0
+  const mesesDiff = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth())
+  let unidades
+  if (frequencia === 'diaria') unidades = Math.round((b - a) / 86400000)
+  else if (frequencia === 'semanal') unidades = Math.round((b - a) / (86400000 * 7))
+  else if (frequencia === 'anual') unidades = mesesDiff / 12
+  else unidades = mesesDiff
+  return Math.floor(unidades / intervalo) + 1
 }
 
 export default function AvulsasPage() {
@@ -35,6 +56,8 @@ export default function AvulsasPage() {
   const [isAgend, setIsAgend] = useState(false)
   const [recorrencia, setRecorrencia] = useState(false)
   const [dataFim, setDataFim] = useState('')
+  const [frequencia, setFrequencia] = useState('mensal')
+  const [intervalo, setIntervalo] = useState(1)
 
   const { data: avulsas = [], isLoading } = useQuery({
     queryKey: ['avulsas', empresa?.id],
@@ -55,10 +78,13 @@ export default function AvulsasPage() {
     setIsAgend(false)
     setRecorrencia(false)
     setDataFim('')
+    setFrequencia('mensal')
+    setIntervalo(1)
   }
 
-  const vezesCalc = recorrencia ? monthsBetween(form.prazo, dataFim) : 0
-  const vezesClamp = Math.max(2, Math.min(24, vezesCalc || 0))
+  const freqInfo = FREQUENCIAS.find(f => f.v === frequencia) || FREQUENCIAS[2]
+  const vezesCalc = recorrencia ? periodosEntre(form.prazo, dataFim, frequencia, intervalo) : 0
+  const vezesClamp = Math.max(2, Math.min(freqInfo.max, vezesCalc || 0))
 
   const create = useMutation({
     mutationFn: async (av) => {
@@ -73,13 +99,13 @@ export default function AvulsasPage() {
 
   // Cria as N parcelas de uma vez só (1 requisição), cada uma um mês depois da anterior
   const createBatch = useMutation({
-    mutationFn: async ({ av, vezes }) => {
+    mutationFn: async ({ av, vezes, frequencia, intervalo }) => {
       const grupoId = crypto.randomUUID()
       const rows = Array.from({ length: vezes }, (_, i) => ({
         ...av,
         empresa_id: empresa?.id,
         titulo: `${av.titulo} (${i+1}/${vezes})`,
-        prazo: addMonths(av.prazo, i),
+        prazo: addPeriodo(av.prazo, i, frequencia, intervalo),
         recorrencia_grupo_id: grupoId,
         lote_atual: i + 1,
         lote_total: vezes,
@@ -278,18 +304,27 @@ export default function AvulsasPage() {
               )}
               <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, fontWeight:600, color:'#334155' }}>
                 <input type="checkbox" checked={recorrencia} onChange={e=>setRecorrencia(e.target.checked)} style={{ width:14, height:14, accentColor:'#7C3AED' }} />
-                Repetir mensalmente (gera várias tarefas, uma por mês)
+                Repetir (gera várias tarefas, espaçadas pela frequência escolhida)
               </label>
               {recorrencia && (
                 <div style={{ background:'#F5F3FF', border:'1px solid #DDD6FE', borderRadius:8, padding:12 }}>
+                  <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:10, alignItems:'end', marginBottom:10 }}>
+                    <div><label style={lbl}>Repetir a cada</label>
+                      <input type="number" min={1} max={31} style={{ ...fi, width:70 }}
+                        value={intervalo} onChange={e=>setIntervalo(Math.max(1, parseInt(e.target.value,10)||1))} /></div>
+                    <div><label style={lbl}>Frequência</label>
+                      <select style={fi} value={frequencia} onChange={e=>setFrequencia(e.target.value)}>
+                        {FREQUENCIAS.map(f => <option key={f.v} value={f.v}>{f.label}</option>)}
+                      </select></div>
+                  </div>
                   <label style={lbl}>Data de término</label>
                   <input type="date" style={fi} value={dataFim} onChange={e=>setDataFim(e.target.value)} />
                   <div style={{ fontSize:10, marginTop:6, color: vezesCalc>=2 ? '#7C3AED' : '#EF4444' }}>
                     {!form.prazo || !dataFim
                       ? 'Escolha a data de início (acima) e a data de término.'
                       : vezesCalc < 2
-                        ? 'A data de término precisa ser pelo menos 1 mês depois da data de início.'
-                        : `Cria ${vezesClamp} tarefas, uma por mês de ${fmt(form.prazo)} até ${fmt(dataFim)} — cada uma numerada "(1/${vezesClamp})", "(2/${vezesClamp})" etc.`}
+                        ? `A data de término precisa ser pelo menos ${intervalo} ${freqInfo.label.toLowerCase()} depois da data de início.`
+                        : `Cria ${vezesClamp} tarefas, a cada ${intervalo} ${freqInfo.label.toLowerCase()} de ${fmt(form.prazo)} até ${fmt(dataFim)} — cada uma numerada "(1/${vezesClamp})", "(2/${vezesClamp})" etc.`}
                   </div>
                 </div>
               )}
@@ -299,7 +334,7 @@ export default function AvulsasPage() {
               <Btn variant="primary" disabled={salvando || (recorrencia && vezesCalc < 2)} onClick={() => {
                 if (!form.titulo) return alert('Título obrigatório')
                 const payload = { ...form, is_agendamento:isAgend, agend_valor: parseBRL(form.agend_valor) }
-                if (recorrencia) createBatch.mutate({ av: payload, vezes: vezesClamp })
+                if (recorrencia) createBatch.mutate({ av: payload, vezes: vezesClamp, frequencia, intervalo })
                 else create.mutate(payload)
               }}>{salvando?'Salvando…':'Salvar'}</Btn>
             </div>
