@@ -906,6 +906,26 @@ export function useClienteModelos(clienteId) {
   })
 }
 
+// Ativa a rotina de um cliente (status_operacional='operacional' +
+// operacao_iniciada_em=hoje) e dispara a geração de tarefas do dia — usada
+// tanto ao vincular o primeiro modelo (automático) quanto pelo botão manual
+// de correção (cliente com modelo(s) já vinculado(s) de antes dessa
+// automação existir, que por isso nunca ativou sozinho).
+// toLocaleDateString('en-CA'), não toISOString() — à noite no horário de
+// Brasília (BRT = UTC-3) o toISOString() já está em UTC do dia seguinte, e o
+// gerar-tarefas (que calcula "hoje" em BRT) bloqueia a geração porque vê
+// operacao_iniciada_em como "no futuro" em relação à data pedida.
+async function ativarOperacaoCliente(clienteId, empresaId, motivo) {
+  const hoje = new Date().toLocaleDateString('en-CA')
+  await supabase.from('clientes').update({ status_operacional: 'operacional', operacao_iniciada_em: hoje }).eq('id', clienteId)
+  await logAudit('UPDATE', 'clientes', clienteId, { status_operacional: 'operacional', operacao_iniciada_em: hoje, motivo })
+  fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gerar-tarefas`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+    body: JSON.stringify({ cliente_id: clienteId, empresa_id: empresaId, data_inicio: hoje, data_fim: hoje }),
+  }).catch(() => {})
+}
+
 // Vincular modelo a um cliente. Se for o primeiro vínculo do cliente (ainda
 // "em configuração"), ativa a operação automaticamente — não faz sentido
 // pedir um clique manual separado em "Iniciar Operação" se a pessoa já está
@@ -929,24 +949,31 @@ export function useVincularModelo() {
 
       const { data: cliente } = await supabase.from('clientes').select('status_operacional').eq('id', clienteId).single()
       if (cliente && cliente.status_operacional !== 'operacional') {
-        // toLocaleDateString('en-CA'), não toISOString() — à noite no horário de
-        // Brasília (BRT = UTC-3) o toISOString() já está em UTC do dia seguinte,
-        // e o gerar-tarefas (que calcula "hoje" em BRT) bloqueia a geração porque
-        // vê operacao_iniciada_em como "no futuro" em relação à data pedida.
-        const hoje = new Date().toLocaleDateString('en-CA')
-        await supabase.from('clientes').update({ status_operacional: 'operacional', operacao_iniciada_em: hoje }).eq('id', clienteId)
-        await logAudit('UPDATE', 'clientes', clienteId, { status_operacional: 'operacional', operacao_iniciada_em: hoje, motivo: 'ativação automática ao vincular modelo' })
-        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gerar-tarefas`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
-          body: JSON.stringify({ cliente_id: clienteId, empresa_id: empresa?.id, data_inicio: hoje, data_fim: hoje }),
-        }).catch(() => {})
+        await ativarOperacaoCliente(clienteId, empresa?.id, 'ativação automática ao vincular modelo')
       }
 
       return data?.[0]
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['cliente_modelos', vars.clienteId] })
+      qc.invalidateQueries({ queryKey: ['clients'] })
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+    },
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+// Correção manual pra clientes que já têm modelo(s) vinculado(s) mas ficaram
+// presos em "Em Configuração" — normalmente dados de antes da ativação
+// automática existir, quando o vínculo nunca disparou essa lógica.
+export function useAtivarOperacaoManual() {
+  const qc = useQueryClient()
+  const { empresa } = useAuthStore()
+  return useMutation({
+    mutationFn: async ({ clienteId }) => {
+      await ativarOperacaoCliente(clienteId, empresa?.id, 'ativação manual — cliente já tinha modelo vinculado mas rotina não tinha ativado')
+    },
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['clients'] })
       qc.invalidateQueries({ queryKey: ['tasks'] })
     },

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTarefaModelos, useCreateModelo, useUpdateModelo, useDeleteModelo, useClients,
          useClienteModelos, useVincularModelo, useDesvincularModelo, useGerarTarefas,
-         useRotinas, useUpdateClienteModelo } from '../hooks/useData'
+         useRotinas, useUpdateClienteModelo, useAtivarOperacaoManual } from '../hooks/useData'
 import { Card, Btn, Loader } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 import { supabase } from '../lib/supabase'
@@ -95,6 +95,7 @@ export default function ModelosPage() {
   const vincularModelo    = useVincularModelo()
   const desvincularModelo = useDesvincularModelo()
   const updateVinculo     = useUpdateClienteModelo()
+  const ativarOperacao    = useAtivarOperacaoManual()
   const gerarTarefas      = useGerarTarefas()
 
   // Override de recorrência só para este cliente (não mexe no modelo geral)
@@ -333,6 +334,15 @@ export default function ModelosPage() {
                   </Link>
                 ) : statusOpAtual === 'encerrado' ? (
                   'Contrato encerrado — não é possível gerar tarefas pra ele.'
+                ) : linkedModelIds.size > 0 ? (
+                  <>
+                    Este cliente já tem {linkedModelIds.size} modelo(s) vinculado(s), mas a rotina nunca ativou — provavelmente
+                    foram vinculados antes dessa automação existir.{' '}
+                    <button onClick={() => ativarOperacao.mutate({ clienteId: fCliente })} disabled={ativarOperacao.isPending}
+                      style={{ border:'none', background:'none', color:'#92400E', fontWeight:700, textDecoration:'underline', cursor:'pointer', padding:0, font:'inherit' }}>
+                      {ativarOperacao.isPending ? 'Ativando…' : '▶ Ativar rotina agora'}
+                    </button>
+                  </>
                 ) : (
                   'Vincule um modelo abaixo — a operação ativa sozinha assim que o primeiro modelo é vinculado.'
                 )}
