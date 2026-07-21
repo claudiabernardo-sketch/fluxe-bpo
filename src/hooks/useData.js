@@ -64,6 +64,10 @@ export function useUpdateClient() {
       const { data, error } = await supabase
         .from('clientes').update(clean).eq('id', id).select()
       if (error) throw error
+      // Quando a política de RLS barra a atualização, o Postgrest não
+      // devolve "error" — só afeta 0 linhas. Sem essa checagem, isso passava
+      // como sucesso silencioso: nada era salvo e ninguém via aviso nenhum.
+      if (!data || data.length === 0) throw new Error('Nada foi salvo — você pode não ter permissão para editar esse cliente.')
       await logAudit('UPDATE', 'clientes', id, { id })
       return data
     },
