@@ -30,21 +30,6 @@ function addPeriodo(dateStr, n, frequencia, intervalo) {
   return d.toISOString().slice(0, 10)
 }
 
-// Quantas ocorrências cabem entre início e fim (inclusive), dado o intervalo —
-// "a cada 2 semanas" de 01/08 a 01/10 conta só as datas que realmente caem nesse passo
-function periodosEntre(startStr, endStr, frequencia, intervalo) {
-  if (!startStr || !endStr || !intervalo) return 0
-  const a = new Date(startStr + 'T12:00:00')
-  const b = new Date(endStr + 'T12:00:00')
-  if (b < a) return 0
-  const mesesDiff = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth())
-  let unidades
-  if (frequencia === 'diaria') unidades = Math.round((b - a) / 86400000)
-  else if (frequencia === 'semanal') unidades = Math.round((b - a) / (86400000 * 7))
-  else if (frequencia === 'anual') unidades = mesesDiff / 12
-  else unidades = mesesDiff
-  return Math.floor(unidades / intervalo) + 1
-}
 
 export default function AvulsasPage() {
   const { data: clients = [] } = useClients()
@@ -55,9 +40,9 @@ export default function AvulsasPage() {
   const [form, setForm] = useState({ prioridade:'media', status:'aberta' })
   const [isAgend, setIsAgend] = useState(false)
   const [recorrencia, setRecorrencia] = useState(false)
-  const [dataFim, setDataFim] = useState('')
   const [frequencia, setFrequencia] = useState('mensal')
   const [intervalo, setIntervalo] = useState(1)
+  const [ocorrencias, setOcorrencias] = useState(2)
 
   const { data: avulsas = [], isLoading } = useQuery({
     queryKey: ['avulsas', empresa?.id],
@@ -77,14 +62,13 @@ export default function AvulsasPage() {
     setForm({ prioridade:'media', status:'aberta' })
     setIsAgend(false)
     setRecorrencia(false)
-    setDataFim('')
     setFrequencia('mensal')
     setIntervalo(1)
+    setOcorrencias(2)
   }
 
   const freqInfo = FREQUENCIAS.find(f => f.v === frequencia) || FREQUENCIAS[2]
-  const vezesCalc = recorrencia ? periodosEntre(form.prazo, dataFim, frequencia, intervalo) : 0
-  const vezesClamp = Math.max(2, Math.min(freqInfo.max, vezesCalc || 0))
+  const vezesClamp = Math.max(2, Math.min(freqInfo.max, ocorrencias || 0))
 
   const create = useMutation({
     mutationFn: async (av) => {
@@ -317,21 +301,24 @@ export default function AvulsasPage() {
                         {FREQUENCIAS.map(f => <option key={f.v} value={f.v}>{f.label}</option>)}
                       </select></div>
                   </div>
-                  <label style={lbl}>Data de término</label>
-                  <input type="date" style={fi} value={dataFim} onChange={e=>setDataFim(e.target.value)} />
-                  <div style={{ fontSize:10, marginTop:6, color: vezesCalc>=2 ? '#7C3AED' : '#EF4444' }}>
-                    {!form.prazo || !dataFim
-                      ? 'Escolha a data de início (acima) e a data de término.'
-                      : vezesCalc < 2
-                        ? `A data de término precisa ser pelo menos ${intervalo} ${freqInfo.label.toLowerCase()} depois da data de início.`
-                        : `Cria ${vezesClamp} tarefas, a cada ${intervalo} ${freqInfo.label.toLowerCase()} de ${fmt(form.prazo)} até ${fmt(dataFim)} — cada uma numerada "(1/${vezesClamp})", "(2/${vezesClamp})" etc.`}
+                  <label style={lbl}>Término da recorrência</label>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={{ fontSize:12, color:'#334155' }}>Após</span>
+                    <input type="number" min={2} max={freqInfo.max} style={{ ...fi, width:70 }}
+                      value={ocorrencias} onChange={e=>setOcorrencias(Math.max(2, parseInt(e.target.value,10)||2))} />
+                    <span style={{ fontSize:12, color:'#334155' }}>ocorrências</span>
+                  </div>
+                  <div style={{ fontSize:10, marginTop:6, color:'#7C3AED' }}>
+                    {!form.prazo
+                      ? 'Escolha a data de início (acima).'
+                      : `Cria ${vezesClamp} tarefas, a cada ${intervalo} ${freqInfo.label.toLowerCase()} a partir de ${fmt(form.prazo)} — cada uma numerada "(1/${vezesClamp})", "(2/${vezesClamp})" etc.`}
                   </div>
                 </div>
               )}
             </div>
             <div style={{ display:'flex', gap:8, marginTop:16, justifyContent:'flex-end' }}>
               <Btn onClick={resetForm}>Cancelar</Btn>
-              <Btn variant="primary" disabled={salvando || (recorrencia && vezesCalc < 2)} onClick={() => {
+              <Btn variant="primary" disabled={salvando || (recorrencia && (!form.prazo || vezesClamp < 2))} onClick={() => {
                 if (!form.titulo) return alert('Título obrigatório')
                 const payload = { ...form, is_agendamento:isAgend, agend_valor: parseBRL(form.agend_valor) }
                 if (recorrencia) createBatch.mutate({ av: payload, vezes: vezesClamp, frequencia, intervalo })
