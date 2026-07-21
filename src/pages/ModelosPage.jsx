@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTarefaModelos, useCreateModelo, useUpdateModelo, useDeleteModelo, useClients,
          useClienteModelos, useVincularModelo, useDesvincularModelo, useGerarTarefas,
-         useRotinas } from '../hooks/useData'
+         useRotinas, useUpdateClienteModelo } from '../hooks/useData'
 import { Card, Btn, Loader } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 import { supabase } from '../lib/supabase'
@@ -94,7 +94,13 @@ export default function ModelosPage() {
   const { data: rotinas = [], isLoading: rotLoad } = useRotinas(isSpecificClient ? fCliente : null)
   const vincularModelo    = useVincularModelo()
   const desvincularModelo = useDesvincularModelo()
+  const updateVinculo     = useUpdateClienteModelo()
   const gerarTarefas      = useGerarTarefas()
+
+  // Override de recorrência só para este cliente (não mexe no modelo geral)
+  const [overrideId, setOverrideId] = useState(null)
+  const [overrideForm, setOverrideForm] = useState(null)
+  const [overrideErr, setOverrideErr] = useState('')
 
   // Geração
   const [dataInicio, setDataInicio] = useState(() => new Date().toLocaleDateString('en-CA'))
@@ -171,12 +177,60 @@ export default function ModelosPage() {
     desvincularModelo.mutate({ id: cm.id, clienteId: fCliente })
   }
 
+  function abrirOverride(vinculo, modelo) {
+    setOverrideErr('')
+    setOverrideForm({
+      recorrencia: vinculo.recorrencia || modelo.recorrencia,
+      dias_semana: vinculo.dias_semana || modelo.dias_semana || [],
+      dia_mes: vinculo.dia_mes || modelo.dia_mes || 5,
+      hora: vinculo.hora || '',
+    })
+    setOverrideId(vinculo.id)
+  }
+
+  async function salvarOverride() {
+    try {
+      setOverrideErr('')
+      await updateVinculo.mutateAsync({
+        id: overrideId, clienteId: fCliente,
+        recorrencia: overrideForm.recorrencia,
+        dias_semana: overrideForm.recorrencia === 'semanal' ? overrideForm.dias_semana : null,
+        dia_mes: ['mensal','quinzenal','bimestral','trimestral','semestral','anual'].includes(overrideForm.recorrencia) ? overrideForm.dia_mes : null,
+        hora: overrideForm.hora || null,
+      })
+      setOverrideId(null)
+    } catch (err) { setOverrideErr(err.message || 'Erro ao salvar') }
+  }
+
+  async function usarPadraoModelo() {
+    try {
+      setOverrideErr('')
+      await updateVinculo.mutateAsync({ id: overrideId, clienteId: fCliente, recorrencia: null, dias_semana: null, dia_mes: null, hora: null })
+      setOverrideId(null)
+    } catch (err) { setOverrideErr(err.message || 'Erro ao limpar') }
+  }
+
   async function handleGerar() {
     setGeracaoMsg(null)
     try {
       const resultado = await gerarTarefas.mutateAsync({ clienteId: fCliente, dataInicio, dataFim: lastDayOfMonth() })
-      const criadas = resultado?.tarefas_geradas ?? resultado?.criadas ?? resultado?.total_criadas ?? '?'
-      setGeracaoMsg({ ok: true, texto: `${criadas} tarefa(s) gerada(s) com sucesso!` })
+      const criadas     = resultado?.tarefas_geradas ?? resultado?.criadas ?? resultado?.total_criadas ?? 0
+      const duplicadas  = resultado?.duplicadas_evitadas ?? 0
+      const semRecorr   = resultado?.nao_bateu_recorrencia ?? 0
+
+      let texto
+      if (criadas > 0 && duplicadas > 0) {
+        texto = `${criadas} tarefa(s) nova(s) gerada(s). ${duplicadas} já existiam pra esse período — não foram duplicadas.`
+      } else if (criadas > 0) {
+        texto = `${criadas} tarefa(s) gerada(s) com sucesso!`
+      } else if (duplicadas > 0) {
+        texto = `Nenhuma tarefa nova — as ${duplicadas} tarefa(s) desse período já tinham sido geradas antes. Sem duplicar, pode clicar em Gerar de novo sempre que quiser.`
+      } else if (semRecorr > 0) {
+        texto = `Nenhuma tarefa gerada — a recorrência dos modelos vinculados não bate com nenhum dia desse período (ex: um modelo "Mensal" só gera no dia configurado do mês).`
+      } else {
+        texto = `Nenhuma tarefa gerada. Confira se o cliente está com a Rotina ativa e se há modelos vinculados.`
+      }
+      setGeracaoMsg({ ok: true, texto })
     } catch (err) {
       setGeracaoMsg({ ok: false, texto: 'Erro: ' + (err.message || 'falha ao gerar') })
     }
@@ -364,8 +418,11 @@ export default function ModelosPage() {
                 {cruzamento.map(({ rotina, modelo }) => {
                   const vinculo = modelo ? clienteModelos.find(cm => cm.modelo_id === modelo.id) : null
                   const vinculado = !!vinculo
+                  const temOverride = vinculado && !!vinculo.recorrencia
+                  const recorrenciaEfetiva = temOverride ? vinculo.recorrencia : modelo?.recorrencia
                   return (
-                    <div key={rotina.id} style={{ background:'#fff', border:`1px solid ${vinculado ? '#BBF7D0' : '#E2E8F0'}`,
+                    <div key={rotina.id}>
+                    <div style={{ background:'#fff', border:`1px solid ${vinculado ? '#BBF7D0' : '#E2E8F0'}`,
                       borderRadius:10, padding:'12px 16px', display:'flex', alignItems:'center', gap:12 }}>
 
                       {/* Status indicator */}
@@ -383,8 +440,14 @@ export default function ModelosPage() {
                             <span style={{ marginLeft:6, padding:'2px 8px', borderRadius:99,
                               background: vinculado ? '#DCFCE7' : '#FEF3C7', color: vinculado ? '#15803D' : '#92400E',
                               fontSize:10, fontWeight:600 }}>
-                              {recLabel[modelo.recorrencia] || modelo.recorrencia}
+                              {recLabel[recorrenciaEfetiva] || recorrenciaEfetiva}
                             </span>
+                            {temOverride && (
+                              <span style={{ marginLeft:4, padding:'2px 8px', borderRadius:99,
+                                background:'#EEF2FF', color:'#4338CA', fontSize:10, fontWeight:600 }} title="Recorrência diferente do padrão do modelo, só pra este cliente">
+                                🔧 só p/ este cliente
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <div style={{ fontSize:11, color:'#94A3B8', marginTop:2 }}>
@@ -395,10 +458,17 @@ export default function ModelosPage() {
 
                       {/* Ações */}
                       <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                        {vinculado && (
+                          <button onClick={() => abrirOverride(vinculo, modelo)}
+                            style={{ padding:'5px 8px', borderRadius:6, border:'1px solid #E2E8F0',
+                              background:'#fff', cursor:'pointer', fontSize:11 }} title="Ajustar recorrência só para este cliente">
+                            🔁
+                          </button>
+                        )}
                         {modelo && (
                           <button onClick={() => abrirEditar(modelo)}
                             style={{ padding:'5px 8px', borderRadius:6, border:'1px solid #E2E8F0',
-                              background:'#fff', cursor:'pointer', fontSize:11 }} title="Editar modelo">
+                              background:'#fff', cursor:'pointer', fontSize:11 }} title="Editar modelo (afeta todos os clientes)">
                             ✏
                           </button>
                         )}
@@ -428,6 +498,71 @@ export default function ModelosPage() {
                           </button>
                         )}
                       </div>
+                    </div>
+
+                    {/* Inline: ajustar recorrência só para este cliente */}
+                    {vinculado && overrideId === vinculo.id && overrideForm && (
+                      <div style={{ background:'#F8FAFF', border:'1px solid #C7D2FE', borderRadius:10, padding:'12px 16px', marginTop:4 }}>
+                        <div style={{ fontSize:11, fontWeight:700, color:'#3730A3', marginBottom:8 }}>
+                          🔁 Recorrência de "{modelo.titulo}" só para {clienteNome}
+                        </div>
+                        <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'flex-end' }}>
+                          <div>
+                            <div style={{ fontSize:10, fontWeight:600, color:'#4338CA', marginBottom:4 }}>RECORRÊNCIA</div>
+                            <select value={overrideForm.recorrencia}
+                              onChange={e => setOverrideForm(f => ({ ...f, recorrencia: e.target.value }))}
+                              style={{ ...fi, width:180, borderColor:'#C7D2FE' }}>
+                              {RECORRENCIAS.filter(r => r.v !== 'dias_especificos').map(r => <option key={r.v} value={r.v}>{r.label}</option>)}
+                            </select>
+                          </div>
+                          {overrideForm.recorrencia === 'semanal' && (
+                            <div>
+                              <div style={{ fontSize:10, fontWeight:600, color:'#4338CA', marginBottom:4 }}>DIAS</div>
+                              <div style={{ display:'flex', gap:4 }}>
+                                {DIAS_SEMANA.map(d => (
+                                  <button key={d.v} type="button"
+                                    onClick={() => setOverrideForm(f => ({ ...f, dias_semana: f.dias_semana.includes(d.v) ? f.dias_semana.filter(x=>x!==d.v) : [...f.dias_semana, d.v] }))}
+                                    style={{ padding:'6px 8px', borderRadius:6, border:'1px solid #C7D2FE', fontSize:11, cursor:'pointer',
+                                      background: overrideForm.dias_semana.includes(d.v) ? '#6366F1' : '#fff',
+                                      color: overrideForm.dias_semana.includes(d.v) ? '#fff' : '#475569' }}>
+                                    {d.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {['mensal','quinzenal','bimestral','trimestral','semestral','anual'].includes(overrideForm.recorrencia) && (
+                            <div>
+                              <div style={{ fontSize:10, fontWeight:600, color:'#4338CA', marginBottom:4 }}>DIA DO MÊS</div>
+                              <input type="number" min={1} max={31} value={overrideForm.dia_mes}
+                                onChange={e => setOverrideForm(f => ({ ...f, dia_mes: parseInt(e.target.value, 10) || 1 }))}
+                                style={{ ...fi, width:80, borderColor:'#C7D2FE' }} />
+                            </div>
+                          )}
+                          <div>
+                            <div style={{ fontSize:10, fontWeight:600, color:'#4338CA', marginBottom:4 }}>HORÁRIO (opcional)</div>
+                            <input type="time" value={overrideForm.hora}
+                              onChange={e => setOverrideForm(f => ({ ...f, hora: e.target.value }))}
+                              style={{ ...fi, width:100, borderColor:'#C7D2FE' }} />
+                          </div>
+                          <button onClick={salvarOverride} disabled={updateVinculo.isPending}
+                            style={{ padding:'8px 14px', borderRadius:8, border:'none', background:'#6366F1', color:'#fff', cursor:'pointer', fontSize:12, fontWeight:600 }}>
+                            {updateVinculo.isPending ? 'Salvando…' : 'Salvar'}
+                          </button>
+                          {temOverride && (
+                            <button onClick={usarPadraoModelo} disabled={updateVinculo.isPending}
+                              style={{ padding:'8px 14px', borderRadius:8, border:'1px solid #E2E8F0', background:'#fff', color:'#64748B', cursor:'pointer', fontSize:12 }}>
+                              Usar padrão do modelo
+                            </button>
+                          )}
+                          <button onClick={() => setOverrideId(null)}
+                            style={{ padding:'8px 14px', borderRadius:8, border:'1px solid #E2E8F0', background:'#fff', color:'#64748B', cursor:'pointer', fontSize:12 }}>
+                            Cancelar
+                          </button>
+                        </div>
+                        {overrideErr && <div style={{ fontSize:11, color:'#EF4444', marginTop:6 }}>{overrideErr}</div>}
+                      </div>
+                    )}
                     </div>
                   )
                 })}
@@ -557,6 +692,14 @@ export default function ModelosPage() {
                 </select>
               </div>
             </div>
+            {form.categoria === 'Conciliação Bancária' && (
+              <div style={{ marginBottom:12, padding:'10px 12px', borderRadius:8, background:'#EFF6FF', border:'1px solid #BFDBFE', fontSize:12, color:'#1E40AF' }}>
+                💡 Não precisa incluir o nome do banco no título — pra clientes com bancos cadastrados,
+                o Fluxe gera uma tarefa por banco automaticamente (ex: "{form.titulo || 'Conciliação bancária'} — Nubank"),
+                usando a lista de <strong>Bancos</strong> do cadastro do cliente. Só inclua o nome de um banco
+                manualmente no título se ele ainda não estiver naquela lista.
+              </div>
+            )}
             <div style={{ marginBottom:12 }}>
               <label style={{ fontSize:11, fontWeight:700, color:'#64748B', display:'block', marginBottom:6, textTransform:'uppercase' }}>Recorrência</label>
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
