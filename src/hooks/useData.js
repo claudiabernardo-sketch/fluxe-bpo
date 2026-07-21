@@ -906,6 +906,11 @@ export function useClienteModelos(clienteId) {
   })
 }
 
+// Vincular modelo a um cliente. Se for o primeiro vínculo do cliente (ainda
+// "em configuração"), ativa a operação automaticamente — não faz sentido
+// pedir um clique manual separado em "Iniciar Operação" se a pessoa já está
+// aqui montando a rotina do cliente. "Pausar" continua manual, pra quando
+// alguém quiser deliberadamente suspender um cliente já operacional.
 export function useVincularModelo() {
   const qc = useQueryClient()
   const { empresa } = useAuthStore()
@@ -921,9 +926,26 @@ export function useVincularModelo() {
         }, { onConflict: 'cliente_id,modelo_id' })
         .select()
       if (error) throw error
+
+      const { data: cliente } = await supabase.from('clientes').select('status_operacional').eq('id', clienteId).single()
+      if (cliente && cliente.status_operacional !== 'operacional') {
+        const hoje = new Date().toISOString().slice(0, 10)
+        await supabase.from('clientes').update({ status_operacional: 'operacional', operacao_iniciada_em: hoje }).eq('id', clienteId)
+        await logAudit('UPDATE', 'clientes', clienteId, { status_operacional: 'operacional', operacao_iniciada_em: hoje, motivo: 'ativação automática ao vincular modelo' })
+        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gerar-tarefas`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ cliente_id: clienteId, empresa_id: empresa?.id, data_inicio: hoje, data_fim: hoje }),
+        }).catch(() => {})
+      }
+
       return data?.[0]
     },
-    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['cliente_modelos', vars.clienteId] }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['cliente_modelos', vars.clienteId] })
+      qc.invalidateQueries({ queryKey: ['clients'] })
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+    },
     onError: (err) => console.error('[Fluxe]', err),
   })
 }
@@ -996,57 +1018,6 @@ export function useUpdateClienteStatus() {
       return data?.[0]
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
-    onError: (err) => console.error('[Fluxe]', err),
-  })
-}
-
-// Iniciar operação: define data de início, muda status para operacional
-// e dispara geração das tarefas a partir da data escolhida
-export function useIniciarOperacao() {
-  const qc = useQueryClient()
-  const { empresa } = useAuthStore()
-  return useMutation({
-    mutationFn: async ({ clienteId, dataInicio }) => {
-      // 1. Atualizar cliente
-      const { error: errCli } = await supabase
-        .from('clientes')
-        .update({
-          status_operacional: 'operacional',
-          operacao_iniciada_em: dataInicio,
-        })
-        .eq('id', clienteId)
-      if (errCli) throw errCli
-
-      await logAudit('UPDATE', 'clientes', clienteId, {
-        status_operacional: 'operacional',
-        operacao_iniciada_em: dataInicio,
-      })
-
-      // 2. Chamar Edge Function para gerar tarefas do período
-      const hoje = new Date().toISOString().slice(0, 10)
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gerar-tarefas`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            cliente_id:   clienteId,
-            empresa_id:   empresa?.id,
-            data_inicio:  dataInicio,
-            data_fim:     hoje,
-          }),
-        }
-      )
-      const resultado = await res.json()
-      return resultado
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['clients'] })
-      qc.invalidateQueries({ queryKey: ['tasks'] })
-    },
     onError: (err) => console.error('[Fluxe]', err),
   })
 }

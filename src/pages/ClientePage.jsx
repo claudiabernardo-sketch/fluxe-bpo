@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   useClients, useUpdateClient,
   useRotinas, useCreateRotina, useUpdateRotina, useDeleteRotina,
-  useUpdateClienteStatus, useIniciarOperacao,
+  useUpdateClienteStatus,
   useAcessos, useSaveAcesso, useDeleteAcesso, useUsuarios,
 } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
@@ -125,13 +125,10 @@ export default function ClientePage() {
   const [rotinaForm, setRotinaForm] = useState({ titulo:'', tipo:'diaria', hora:'', observacao:'', dia_mes:1, dias_semana:[] })
   const [rotinaErr, setRotinaErr] = useState('')
 
-  // Status operacional
+  // Status operacional — "Iniciar Operação" não existe mais como passo manual:
+  // a operação ativa sozinha assim que o primeiro modelo é vinculado (ver
+  // useVincularModelo). Só "Pausar"/"Reativar" continuam manuais.
   const updateClienteStatus = useUpdateClienteStatus()
-  const iniciarOperacao = useIniciarOperacao()
-  const [iniciarOpModal, setIniciarOpModal] = useState(false)
-  const [iniciarOpData, setIniciarOpData] = useState(() => new Date().toISOString().slice(0,10))
-  const [iniciarOpLoading, setIniciarOpLoading] = useState(false)
-  const [iniciarOpErr, setIniciarOpErr] = useState('')
 
   // Cofre
   const { data: acessosCliente = [], isLoading: acessosLoading } = useAcessos(clienteId)
@@ -236,18 +233,6 @@ export default function ClientePage() {
     setSelectedBancos(prev => prev.includes(banco) ? prev.filter(b => b !== banco) : [...prev, banco])
   }
 
-  async function executarIniciarOperacao() {
-    if (!iniciarOpData) { setIniciarOpErr('Selecione a data de início'); return }
-    setIniciarOpLoading(true); setIniciarOpErr('')
-    try {
-      await iniciarOperacao.mutateAsync({ clienteId, dataInicio: iniciarOpData })
-      setIniciarOpModal(false)
-    } catch (e) {
-      setIniciarOpErr(e?.message || 'Erro ao iniciar operação')
-    }
-    setIniciarOpLoading(false)
-  }
-
   function openNewAcesso() {
     setCofreForm({ sistema:'', login:'', url:'', categoria:'outro', obs:'', _temSenha:false, _novaSenha:'' })
     setCofreModal(true)
@@ -347,12 +332,6 @@ export default function ClientePage() {
 
         {/* Ações operacionais */}
         <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignSelf:'center' }}>
-          {statusOp === 'em_configuracao' && (
-            <button onClick={() => { setIniciarOpData(new Date().toISOString().slice(0,10)); setIniciarOpModal(true) }}
-              className="btn bp bsm" style={{ fontSize:11 }}>
-              ▶ Iniciar Operação
-            </button>
-          )}
           {statusOp === 'operacional' && (
             <button onClick={() => { if(confirm('Pausar a operação deste cliente? A geração de tarefas será suspensa.')) updateClienteStatus.mutate({ id: clienteId, status_operacional:'pausado' }) }}
               className="btn bo bsm" style={{ fontSize:11 }}>
@@ -821,42 +800,6 @@ export default function ClientePage() {
 
         </div>
       </div>
-
-      {/* ── MODAL: INICIAR OPERAÇÃO ──────────────────────────────────────────── */}
-      {iniciarOpModal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1100, padding:16 }}>
-          <div style={{ background:'var(--sur)', borderRadius:'var(--rx)', width:'100%', maxWidth:420, boxShadow:'var(--sh3)', overflow:'hidden' }}>
-            <div style={{ padding:'14px 18px', borderBottom:'1px solid var(--bo)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <div>
-                <div style={{ fontWeight:700, fontSize:14 }}>▶ Iniciar Operação</div>
-                <div style={{ fontSize:11, color:'var(--tx3)', marginTop:2 }}>Define a data de início e gera as tarefas do período</div>
-              </div>
-              <button onClick={() => setIniciarOpModal(false)} style={{ border:'none', background:'none', cursor:'pointer', fontSize:20, color:'var(--tx3)' }}>×</button>
-            </div>
-            <div style={{ padding:18 }}>
-              <label style={{ fontSize:11, fontWeight:600, color:'var(--tx3)', display:'block', marginBottom:6 }}>
-                A partir de qual data deseja iniciar a operação?
-              </label>
-              <input type="date" value={iniciarOpData} onChange={e => setIniciarOpData(e.target.value)}
-                style={{ width:'100%', fontSize:13, padding:'8px 10px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background:'var(--sur)', color:'var(--tx)', outline:'none', boxSizing:'border-box' }} />
-              <div style={{ fontSize:10, color:'var(--tx3)', marginTop:6 }}>
-                Tarefas serão geradas de <strong>{iniciarOpData||'—'}</strong> até hoje.
-              </div>
-              {iniciarOpErr && (
-                <div style={{ marginTop:8, padding:'8px 10px', background:'#FEF2F2', border:'1px solid #FECDD3', borderRadius:'var(--r)', fontSize:11, color:'#EF4444' }}>
-                  {iniciarOpErr}
-                </div>
-              )}
-            </div>
-            <div style={{ padding:'12px 18px', borderTop:'1px solid var(--bo)', display:'flex', justifyContent:'flex-end', gap:8 }}>
-              <button className="btn bo bsm" onClick={() => setIniciarOpModal(false)}>Cancelar</button>
-              <button className="btn bp bsm" onClick={executarIniciarOperacao} disabled={iniciarOpLoading}>
-                {iniciarOpLoading ? 'Iniciando…' : '▶ Confirmar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── MODAL: COFRE — NOVO/EDITAR ACESSO ──────────────────────────────── */}
       {cofreModal && (
