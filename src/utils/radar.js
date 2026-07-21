@@ -202,29 +202,63 @@ export function computeRadarScore(areas) {
   return { score, semaforo, areasCalculadas: n, areasTotal: Object.keys(areas).length }
 }
 
-// ── Alerta em texto simples ─────────────────────────────────────────────
-// Baseado em status (não no formato de "valor", que muda conforme a área
-// vem do proxy de tarefa ou de metricaMes — número de tarefas num caso,
-// percentual/R$ no outro).
-export function gerarAlertaComposto(areas) {
-  const problemas = []
-  if (areas.margem.status === 'critico') problemas.push('margem negativa')
-  else if (areas.margem.status === 'atencao') problemas.push('margem baixa')
-  if (areas.pagtos.status === 'critico') problemas.push('pagamentos atrasados')
-  else if (areas.pagtos.status === 'atencao') problemas.push('pagamentos parcialmente em dia')
-  if (areas.receb.status === 'critico') problemas.push('recebíveis atrasados')
-  else if (areas.receb.status === 'atencao') problemas.push('recebíveis parcialmente em dia')
-  if (areas.fluxo_caixa.status === 'critico') problemas.push('fluxo de caixa negativo')
-  if (problemas.length === 0) return null
-  return `Atenção: ${problemas.join(', ')}.`
+// ── Projeção de caixa e runway ───────────────────────────────────────────
+// A partir das métricas reais do mês (radar_metricas_mensais). Sem dado do
+// mês, retorna null — o chamador decide como mostrar "sem dado".
+export function computeProjecaoCaixa(metricaMes) {
+  if (!metricaMes) return null
+  const caixaAtual = metricaMes.saldo_caixa ?? 0
+  const fluxoLiquido = (metricaMes.valor_recebido ?? 0) - (metricaMes.valor_pago ?? 0)
+  const caixaProjetado90d = caixaAtual + fluxoLiquido * 3
+  // Caixa não está encolhendo — sem risco de esgotar, não faz sentido "runway"
+  const runwayDias = fluxoLiquido >= 0 ? null : Math.round((caixaAtual / -fluxoLiquido) * 30)
+  return { caixaAtual, fluxoLiquido, caixaProjetado90d, runwayDias }
 }
 
-// ── Sugestão comercial (upsell) ────────────────────────────────────────
-export function gerarOportunidadeComercial(areas, cliente) {
-  const estavel = areas.margem.status === 'saudavel' && areas.processos.status === 'saudavel'
-  if (!estavel) return null
-  const inicio = cliente?.inicio_contrato ? new Date(cliente.inicio_contrato) : null
-  const seiseMeses = 1000 * 60 * 60 * 24 * 30 * 6
-  if (inicio && Date.now() - inicio.getTime() < seiseMeses) return null
-  return 'Cliente rentável e estável — bom candidato pra oferecer um upsell ou serviço adicional.'
+// ── Alerta composto ───────────────────────────────────────────────────────
+// Cascata de prioridade (o primeiro que bater, vence) — mesmo modelo do
+// BPO_RADAR.xlsx original, adaptado pro vocabulário do Fluxe (saudavel/
+// atencao/critico) e pro semáforo do Fluxe (score alto = saudável, ao
+// contrário do score de risco da planilha). "Concentração no maior
+// cliente" e "Próximo marco" ficaram de fora — o Fluxe não tem esse dado.
+export function gerarAlertaComposto(areas, { runwayDias, semaforo } = {}) {
+  if (areas.caixa.status === 'critico' && areas.fluxo_caixa.status === 'critico')
+    return 'Risco de ruptura de caixa iminente.'
+  if (runwayDias != null && runwayDias <= 30)
+    return `Caixa esgota em ${runwayDias} dias, no ritmo atual.`
+  if (areas.receb.status === 'critico' && areas.margem.status !== 'saudavel')
+    return 'Inadimplência corroendo a margem.'
+  if (areas.dono.status === 'critico' && areas.equipe.status !== 'saudavel')
+    return 'Risco de continuidade sem o dono — equipe não sustenta sozinha.'
+  if (areas.impostos.status === 'critico')
+    return 'Exposição fiscal relevante.'
+  if (semaforo === 'vermelho')
+    return 'Múltiplos riscos críticos — revisão geral urgente.'
+  if (semaforo === 'amarelo')
+    return 'Atenção pontual — monitorar.'
+  return null
+}
+
+// ── Sugestão comercial (upsell) ──────────────────────────────────────────
+// Também em cascata de prioridade, ligada ao ponto de dor mais forte do
+// momento — não mais "cliente estável há 6 meses", que sugeria upsell
+// justamente quando não havia nada pra vender ainda.
+export function gerarOportunidadeComercial(areas) {
+  if (areas.caixa.status === 'critico' || areas.fluxo_caixa.status === 'critico')
+    return 'Fluxo de caixa como serviço (gestão diária).'
+  if (areas.margem.status === 'critico' || areas.custos.status === 'critico')
+    return 'Controladoria e precificação estratégica.'
+  if (areas.receb.status === 'critico')
+    return 'Gestão de cobrança / análise de crédito.'
+  if (areas.impostos.status === 'critico')
+    return 'Planejamento tributário.'
+  if (areas.comercial.status === 'critico')
+    return 'BI comercial / gestão de funil.'
+  if (areas.dono.status === 'critico')
+    return 'Consultoria de governança e sucessão.'
+  if (areas.processos.status === 'critico' || areas.tecnol.status === 'critico')
+    return 'Implantação de ERP / automação de processos.'
+  if (areas.equipe.status === 'critico')
+    return 'Estruturação de equipe financeira.'
+  return null
 }

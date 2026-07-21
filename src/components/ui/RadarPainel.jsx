@@ -13,7 +13,8 @@ import {
 } from '../../hooks/useData'
 import {
   computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore,
-  gerarAlertaComposto, gerarOportunidadeComercial, aplicarAjustesManuais, aplicarMetricaMes, AREA_LABEL, CUSTO_HORA_PADRAO,
+  gerarAlertaComposto, gerarOportunidadeComercial, computeProjecaoCaixa,
+  aplicarAjustesManuais, aplicarMetricaMes, AREA_LABEL, CUSTO_HORA_PADRAO,
 } from '../../utils/radar'
 import { Loader } from './index'
 import { parseBRL, formatBRL } from '../../utils/currency'
@@ -63,8 +64,9 @@ export default function RadarPainel({ clienteId }) {
   })
   const areasRadar = areasComMetrica ? aplicarAjustesManuais(areasComMetrica, ajustesManuais) : null
   const scoreRadar = areasRadar ? computeRadarScore(areasRadar) : null
-  const alertaRadar = areasRadar ? gerarAlertaComposto(areasRadar) : null
-  const oportunidadeRadar = areasRadar ? gerarOportunidadeComercial(areasRadar, cliente) : null
+  const projecaoCaixa = computeProjecaoCaixa(metricaServer)
+  const alertaRadar = areasRadar ? gerarAlertaComposto(areasRadar, { runwayDias: projecaoCaixa?.runwayDias, semaforo: scoreRadar?.semaforo }) : null
+  const oportunidadeRadar = areasRadar ? gerarOportunidadeComercial(areasRadar) : null
 
   const [editandoArea, setEditandoArea] = useState(null)
   const [ajusteForm, setAjusteForm] = useState({ status: 'saudavel', observacao: '' })
