@@ -14,7 +14,7 @@ import {
 import {
   computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore,
   gerarAlertaComposto, gerarOportunidadeComercial, computeProjecaoCaixa,
-  aplicarAjustesManuais, aplicarMetricaMes, AREA_LABEL, CUSTO_HORA_PADRAO,
+  aplicarAjustesManuais, aplicarMetricaMes, AREA_LABEL, AREA_EXPLICACAO, CUSTO_HORA_PADRAO,
 } from '../../utils/radar'
 import { Loader } from './index'
 import { parseBRL, formatBRL } from '../../utils/currency'
@@ -24,6 +24,14 @@ const SEMAFORO_LABEL = { verde:'Saudável', amarelo:'Atenção', vermelho:'Crít
 const SEMAFORO_BADGE = { verde:'gr', amarelo:'yw', vermelho:'rd', sem_dado:'gy' }
 const STATUS_LABEL_RADAR = { saudavel:'Saudável', atencao:'Atenção', critico:'Crítico' }
 const STATUS_BADGE_RADAR = { saudavel:'gr', atencao:'yw', critico:'rd' }
+
+const METRICA_EXPLICACAO = {
+  valor_a_receber: 'Quanto esse cliente ainda tem pra receber dos clientes dele, agora — o que está pendente hoje, não uma previsão do que vai receber no futuro.',
+  valor_recebido: 'Quanto esse cliente já recebeu dos clientes dele, nesse mês.',
+  valor_a_pagar: 'Quanto esse cliente ainda tem pra pagar (fornecedores, despesas), agora — pendente hoje, não previsão futura.',
+  valor_pago: 'Quanto esse cliente já pagou de despesas, nesse mês.',
+  saldo_caixa: 'Quanto esse cliente tem em caixa/conta hoje. Pode ser negativo (conta no vermelho) — nesse caso a área "Caixa" do radar, abaixo, acende crítica.',
+}
 
 export default function RadarPainel({ clienteId }) {
   const navigate = useNavigate()
@@ -156,7 +164,9 @@ export default function RadarPainel({ clienteId }) {
             ['saldo_caixa', 'Saldo em caixa (R$)'],
           ].map(([campo, label]) => (
             <div key={campo}>
-              <label style={{ fontSize:10, color:'var(--tx3)', display:'block', marginBottom:3 }}>{label}</label>
+              <label style={{ fontSize:10, color:'var(--tx3)', display:'block', marginBottom:3 }}>
+                {label} <span title={METRICA_EXPLICACAO[campo]} style={{ cursor:'help' }}>ⓘ</span>
+              </label>
               <input
                 type="text" inputMode="decimal" placeholder="Ex: 15.000,00"
                 value={metricaForm[campo]}
@@ -211,7 +221,10 @@ export default function RadarPainel({ clienteId }) {
         {Object.entries(areasRadar).map(([id, a]) => (
           <div key={id} style={{ padding:'10px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background: a.status==='sem_dado' ? 'var(--s2)' : 'var(--sur)', opacity: a.status==='sem_dado' && editandoArea!==id ? .6 : 1 }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
-              <div style={{ fontSize:11, fontWeight:600, color:'var(--tx)' }}>{AREA_LABEL[id]}</div>
+              <div style={{ fontSize:11, fontWeight:600, color:'var(--tx)', display:'flex', alignItems:'center', gap:4 }}>
+                {AREA_LABEL[id]}
+                <span title={AREA_EXPLICACAO[id]} style={{ fontSize:10, color:'var(--tx3)', fontWeight:400, cursor:'help' }}>ⓘ</span>
+              </div>
               <button
                 onClick={() => {
                   if (editandoArea === id) { setEditandoArea(null); return }
