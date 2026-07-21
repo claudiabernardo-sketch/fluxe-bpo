@@ -249,7 +249,11 @@ export default function ClientePage() {
 
   async function salvarAcessoCliente() {
     if (!cofreForm.sistema?.trim()) return alert('Informe o nome do sistema')
-    const { _temSenha, _novaSenha, ...dados } = cofreForm
+    // "clientes" vem do JOIN de useAcessos (select '*, clientes!inner(empresa_id)')
+    // e entra em cofreForm ao editar um acesso existente (openEditAcesso espalha
+    // ...ac) — não é uma coluna real de "acessos", então mandar ele no update
+    // quebra o Salvar com erro de coluna inexistente.
+    const { _temSenha, _novaSenha, clientes, ...dados } = cofreForm
     const payload = { ...dados, cliente_id: clienteId, empresa_id: empresa?.id }
     if (_novaSenha?.trim()) {
       const { data: enc, error: encErr } = await supabase.rpc('cofre_encrypt', { plaintext: _novaSenha })

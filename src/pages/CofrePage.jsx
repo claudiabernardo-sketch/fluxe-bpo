@@ -91,7 +91,10 @@ export default function CofrePage() {
       delete payload._novaSenha
 
       if (payload.id) {
-        const { id, ...rest } = payload
+        // "clientes" vem do JOIN da listagem (select '*, clientes(...)') e entra
+        // aqui ao editar (openEdit espalha ...rest) — não é coluna de "acessos",
+        // mandar no update quebra com erro de coluna inexistente.
+        const { id, clientes, ...rest } = payload
         // Se não mudou a senha (campo vazio no form de edição), não atualizar senha_enc
         if ('senha_enc' in rest && rest.senha_enc === undefined) {
           delete rest.senha_enc
