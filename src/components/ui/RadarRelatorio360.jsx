@@ -1,6 +1,8 @@
 // ── RadarRelatorio360 ────────────────────────────────────────────────────
-// Relatório 360 do cliente pronto pra levar numa reunião: score, 13 áreas,
-// resumo financeiro (com as métricas reais do mês) e histórico do score.
+// Relatório 360 do cliente pronto pra levar numa reunião: score, runway de
+// caixa, alerta composto, oportunidade comercial, projeção de caixa, as 13
+// áreas (em pares, no mesmo layout do BPO_RADAR.xlsx original) e histórico
+// do score.
 // Botão "Imprimir / Salvar PDF" usa window.print() — mesmo padrão já usado
 // em RelatoriosPage.jsx e nas propostas/contratos de PrecificacaoPage.jsx
 // (o CSS global @media print já esconde sidebar/topbar via .sb/.topbar).
@@ -11,7 +13,8 @@ import {
 } from '../../hooks/useData'
 import {
   computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore,
-  gerarAlertaComposto, gerarOportunidadeComercial, aplicarAjustesManuais, aplicarMetricaMes, AREA_LABEL, CUSTO_HORA_PADRAO,
+  gerarAlertaComposto, gerarOportunidadeComercial, computeProjecaoCaixa,
+  aplicarAjustesManuais, aplicarMetricaMes, AREA_LABEL, CUSTO_HORA_PADRAO,
 } from '../../utils/radar'
 import { Loader, fmtR } from './index'
 
@@ -19,6 +22,17 @@ const SEMAFORO_COR = { verde:'#15803D', amarelo:'#B45309', vermelho:'#DC2626', s
 const SEMAFORO_LABEL = { verde:'Saudável', amarelo:'Atenção', vermelho:'Crítico', sem_dado:'Sem dado suficiente' }
 const STATUS_LABEL_RADAR = { saudavel:'Saudável', atencao:'Atenção', critico:'Crítico', sem_dado:'Sem dado' }
 const STATUS_COR_RADAR = { saudavel:'#15803D', atencao:'#B45309', critico:'#DC2626', sem_dado:'#94A3B8' }
+
+// Pares de área — mesma ordem/agrupamento do BPO_RADAR.xlsx original
+const PARES_AREAS = [
+  ['caixa', 'fluxo_caixa'],
+  ['lucro', 'margem'],
+  ['custos', 'receb'],
+  ['pagtos', 'impostos'],
+  ['processos', 'equipe'],
+  ['comercial', 'tecnol'],
+  ['dono', null],
+]
 
 export default function RadarRelatorio360({ clienteId }) {
   const { empresa } = useAuthStore()
@@ -50,8 +64,9 @@ export default function RadarRelatorio360({ clienteId }) {
   })
   const areasRadar = areasComMetrica ? aplicarAjustesManuais(areasComMetrica, ajustesManuais) : null
   const scoreRadar = areasRadar ? computeRadarScore(areasRadar) : null
-  const alertaRadar = areasRadar ? gerarAlertaComposto(areasRadar) : null
-  const oportunidadeRadar = areasRadar ? gerarOportunidadeComercial(areasRadar, cliente) : null
+  const projecaoCaixa = computeProjecaoCaixa(metricaServer)
+  const alertaRadar = areasRadar ? gerarAlertaComposto(areasRadar, { runwayDias: projecaoCaixa?.runwayDias, semaforo: scoreRadar?.semaforo }) : null
+  const oportunidadeRadar = areasRadar ? gerarOportunidadeComercial(areasRadar) : null
 
   const { data: historico = [] } = useRadarScoreHistorico(clienteId, 6)
 
@@ -94,12 +109,26 @@ export default function RadarRelatorio360({ clienteId }) {
           </div>
         </div>
 
-        {/* Score geral */}
-        <div style={{ display:'flex', alignItems:'center', gap:20, padding:'18px 22px', border:'1px solid #E2E8F0', borderRadius:10, marginBottom:16 }}>
-          <div style={{ fontSize:44, fontWeight:800, color: SEMAFORO_COR[scoreRadar.semaforo] }}>{scoreRadar.score ?? '—'}</div>
-          <div>
-            <div style={{ fontSize:14, fontWeight:700, color: SEMAFORO_COR[scoreRadar.semaforo] }}>{SEMAFORO_LABEL[scoreRadar.semaforo]}</div>
-            <div style={{ fontSize:11, color:'#64748B' }}>Score de saúde geral · {scoreRadar.areasCalculadas} de {scoreRadar.areasTotal} áreas calculadas</div>
+        {/* Score + Semáforo + Runway */}
+        <div style={{ display:'grid', gridTemplateColumns:'auto 1fr 1fr', gap:0, border:'1px solid #E2E8F0', borderRadius:10, marginBottom:16, overflow:'hidden' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:16, padding:'18px 22px', borderRight:'1px solid #E2E8F0' }}>
+            <div style={{ fontSize:44, fontWeight:800, color: SEMAFORO_COR[scoreRadar.semaforo] }}>{scoreRadar.score ?? '—'}</div>
+            <div>
+              <div style={{ fontSize:14, fontWeight:700, color: SEMAFORO_COR[scoreRadar.semaforo] }}>{SEMAFORO_LABEL[scoreRadar.semaforo]}</div>
+              <div style={{ fontSize:11, color:'#64748B' }}>Score de saúde · {scoreRadar.areasCalculadas} de {scoreRadar.areasTotal} áreas</div>
+            </div>
+          </div>
+          <div style={{ padding:'18px 20px', borderRight:'1px solid #E2E8F0', textAlign:'center' }}>
+            <div style={{ fontSize:10, fontWeight:700, color:'#94A3B8', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:6 }}>Runway de caixa</div>
+            <div style={{ fontSize:22, fontWeight:800, color: projecaoCaixa?.runwayDias != null && projecaoCaixa.runwayDias <= 30 ? '#DC2626' : '#0F172A' }}>
+              {projecaoCaixa == null ? '—' : projecaoCaixa.runwayDias == null ? 'Estável' : `${projecaoCaixa.runwayDias}d`}
+            </div>
+          </div>
+          <div style={{ padding:'18px 20px', textAlign:'center' }}>
+            <div style={{ fontSize:10, fontWeight:700, color:'#94A3B8', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:6 }}>Fluxo líquido/mês</div>
+            <div style={{ fontSize:22, fontWeight:800, color: projecaoCaixa && projecaoCaixa.fluxoLiquido < 0 ? '#DC2626' : '#15803D' }}>
+              {projecaoCaixa == null ? '—' : fmtR(projecaoCaixa.fluxoLiquido)}
+            </div>
           </div>
         </div>
 
@@ -114,12 +143,19 @@ export default function RadarRelatorio360({ clienteId }) {
           </div>
         )}
 
-        {/* Resumo financeiro */}
+        {/* Projeção de caixa */}
         <div style={{ fontSize:11, fontWeight:700, color:'#64748B', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:8, marginTop:20 }}>
-          Resumo financeiro
+          Projeção de caixa
         </div>
         <table style={{ width:'100%', borderCollapse:'collapse', marginBottom:20, fontSize:12 }}>
           <tbody>
+            <tr>
+              <td style={tdLabel}>Caixa atual</td><td style={tdVal}>{projecaoCaixa ? fmtR(projecaoCaixa.caixaAtual) : '—'}</td>
+              <td style={tdLabel}>Caixa projetado (+90d)</td>
+              <td style={{ ...tdVal, color: projecaoCaixa && projecaoCaixa.caixaProjetado90d < 0 ? '#DC2626' : '#0F172A' }}>
+                {projecaoCaixa ? fmtR(projecaoCaixa.caixaProjetado90d) : '—'}
+              </td>
+            </tr>
             <tr>
               <td style={tdLabel}>Valor mensal (MRR)</td><td style={tdVal}>{fmtR(cliente.valor_mrr || 0)}</td>
               <td style={tdLabel}>Margem</td><td style={tdVal}>{margemRadar ? `${margemRadar.margemPct.toFixed(0)}% (${fmtR(margemRadar.margem)})` : '—'}</td>
@@ -134,27 +170,37 @@ export default function RadarRelatorio360({ clienteId }) {
                   <td style={tdLabel}>Em aberto a pagar</td><td style={tdVal}>{fmtR(metricaServer.valor_a_pagar || 0)}</td>
                   <td style={tdLabel}>Pago</td><td style={tdVal}>{fmtR(metricaServer.valor_pago || 0)}</td>
                 </tr>
-                <tr>
-                  <td style={tdLabel}>Saldo em caixa</td><td style={tdVal}>{fmtR(metricaServer.saldo_caixa || 0)}</td>
-                  <td style={tdLabel}></td><td style={tdVal}></td>
-                </tr>
               </>
             )}
           </tbody>
         </table>
 
-        {/* 13 áreas */}
+        {/* 13 áreas — em pares, mesmo layout do BPO_RADAR.xlsx */}
         <div style={{ fontSize:11, fontWeight:700, color:'#64748B', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:8 }}>
-          13 áreas de saúde
+          Radar — 13 áreas
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6, marginBottom:20 }}>
-          {Object.entries(areasRadar).map(([id, a]) => (
-            <div key={id} style={{ padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:6, background: a.status==='sem_dado' ? '#F8FAFC' : '#fff' }}>
-              <div style={{ fontSize:10, fontWeight:600, color:'#334155' }}>{AREA_LABEL[id]}</div>
-              <div style={{ fontSize:10, fontWeight:700, color: STATUS_COR_RADAR[a.status] }}>{STATUS_LABEL_RADAR[a.status]}</div>
-            </div>
-          ))}
-        </div>
+        <table style={{ width:'100%', borderCollapse:'collapse', marginBottom:20, fontSize:12, border:'1px solid #E2E8F0' }}>
+          <tbody>
+            {PARES_AREAS.map(([id1, id2], i) => (
+              <tr key={i} style={{ borderTop: i>0 ? '1px solid #F1F5F9' : 'none' }}>
+                <td style={{ ...tdArea, fontWeight:600 }}>{AREA_LABEL[id1]}</td>
+                <td style={{ ...tdArea, textAlign:'right', color: STATUS_COR_RADAR[areasRadar[id1].status], fontWeight:700 }}>
+                  {STATUS_LABEL_RADAR[areasRadar[id1].status]}
+                </td>
+                {id2 ? (
+                  <>
+                    <td style={{ ...tdArea, fontWeight:600, borderLeft:'1px solid #F1F5F9' }}>{AREA_LABEL[id2]}</td>
+                    <td style={{ ...tdArea, textAlign:'right', color: STATUS_COR_RADAR[areasRadar[id2].status], fontWeight:700 }}>
+                      {STATUS_LABEL_RADAR[areasRadar[id2].status]}
+                    </td>
+                  </>
+                ) : (
+                  <td colSpan={2} style={{ ...tdArea, borderLeft:'1px solid #F1F5F9' }} />
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
         {/* Histórico do score */}
         {historico.length > 0 && (
@@ -190,5 +236,6 @@ export default function RadarRelatorio360({ clienteId }) {
 
 const tdLabel = { padding:'6px 10px', color:'#64748B', width:'20%' }
 const tdVal = { padding:'6px 10px', fontWeight:700, width:'30%' }
+const tdArea = { padding:'8px 10px', width:'25%' }
 const thHist = { padding:'6px 10px', textAlign:'left', fontSize:10, fontWeight:700, color:'#94A3B8', textTransform:'uppercase', letterSpacing:'.05em', borderBottom:'1px solid #E2E8F0' }
 const tdHist = { padding:'6px 10px', borderBottom:'1px solid #F1F5F9' }
