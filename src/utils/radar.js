@@ -27,6 +27,25 @@ const AREA_LABEL = {
 }
 export { AREA_LABEL }
 
+// Explicação de cada área — mostrada como tooltip (ⓘ) no card, pra quem não
+// acompanhou a criação do radar entender o que está sendo medido e o que
+// fazer quando o cálculo automático não bate com a realidade.
+export const AREA_EXPLICACAO = {
+  margem: 'Margem de lucro sobre a receita: (receita − custo das horas trabalhadas) ÷ receita. Saudável acima de 40%, atenção até 40%, crítico se zero ou negativa. Calculado automaticamente pelas horas apontadas nesse cliente — clique no ✏️ se quiser sobrepor manualmente.',
+  lucro: 'Lucro em R$ desse cliente: receita menos o custo das horas trabalhadas nele. Saudável se positivo, crítico se o prejuízo passar de 10% da receita. Calculado automaticamente.',
+  custos: 'Quanto do valor cobrado do cliente é consumido pelo custo das horas trabalhadas nele. Saudável até 60%, atenção até 100%, crítico acima de 100% (custa mais atender do que ele paga). Calculado automaticamente.',
+  receb: 'Sem "Métricas reais do mês" preenchidas: conta tarefas de Contas a Receber/Cobrança atrasadas. Preenchendo as métricas acima, passa a mostrar o % do valor em aberto que já foi recebido.',
+  pagtos: 'Sem "Métricas reais do mês" preenchidas: conta tarefas de Contas a Pagar/Pagamentos atrasadas. Preenchendo as métricas acima, passa a mostrar o % do valor em aberto que já foi pago.',
+  fluxo_caixa: 'Sem "Métricas reais do mês" preenchidas: conta tarefas de Fluxo de Caixa atrasadas. Preenchendo as métricas acima, passa a mostrar recebido menos pago no mês — negativo demais (mais de 10% da receita) fica crítico.',
+  processos: 'Total de tarefas atrasadas desse cliente, de qualquer categoria. 0 = saudável, até 2 = atenção, 3 ou mais = crítico.',
+  caixa: 'Saldo em caixa informado em "Métricas reais do mês", acima. Sem preencher esse campo fica "Sem dado". Saudável se o saldo cobre a receita mensal do cliente, crítico se estiver negativo.',
+  impostos: 'O Fluxe ainda não calcula isso sozinho (precisaria de integração com a Receita/contabilidade). Fica "Sem dado" até você registrar a situação manualmente pelo ✏️.',
+  equipe: 'Ocupação do responsável por esse cliente no mês: horas dele apontadas ÷ carga horária dele. Sem responsável definido = crítico. Acima de 100% da carga = crítico (sobrecarregado).',
+  comercial: 'Risco da relação comercial: crítico se Margem e Processos estiverem críticos ao mesmo tempo; atenção nos primeiros 6 meses de contrato (relação ainda em formação); saudável depois disso.',
+  tecnol: 'O Fluxe ainda não tem esse dado automaticamente. Fica "Sem dado" até você registrar a situação manualmente pelo ✏️.',
+  dono: 'Dependência do dono do cliente (não do Fluxe) na operação dele — o Fluxe não tem como medir isso sozinho. Fica "Sem dado" até você registrar a situação manualmente pelo ✏️.',
+}
+
 // ── Margem por cliente ────────────────────────────────────────────────
 // Uma única versão do cálculo que RentPage.jsx e InsightsDash.jsx faziam
 // cada um do seu jeito (com custo/hora padrão diferente — corrigido aqui
