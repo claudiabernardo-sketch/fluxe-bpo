@@ -8,17 +8,19 @@
 // continua em excel.js e deve ser carregado via import() dinâmico.
 
 // ── TEMPLATE DE IMPORTAÇÃO — CLIENTES ────────────────────────────────
+// "Telefone"/"WhatsApp" mapeiam pra whatsapp — não existe coluna "telefone"
+// nem "software_contabil" na tabela clientes (só em empresas). Essas duas
+// colunas quebravam a importação/exportação com "column not found".
 export const CLIENTES_IMPORT_COLS = [
   { label: 'Razão Social *',   key: 'razao_social',      required: true },
   { label: 'Fantasia',          key: 'fantasia',           required: false },
   { label: 'CNPJ',              key: 'cnpj',               required: false },
   { label: 'Email',             key: 'email',              required: false },
-  { label: 'Telefone',          key: 'telefone',           required: false },
+  { label: 'WhatsApp',          key: 'whatsapp',           required: false },
   { label: 'Status',            key: 'status',             required: false, default: 'ativo' },
   { label: 'Etapa',             key: 'etapa',              required: false, default: 'operacional' },
   { label: 'MRR (R$)',          key: 'valor_mrr',          required: false, type: 'number' },
   { label: 'Segmento',          key: 'segmento',           required: false },
-  { label: 'Software Contábil', key: 'software_contabil',  required: false },
   { label: 'Responsável',       key: 'responsavel_nome',   required: false },
 ]
 
@@ -27,12 +29,11 @@ export const CLIENTES_EXPORT_COLS = [
   { label: 'Fantasia',          get: r => r.fantasia },
   { label: 'CNPJ',              get: r => r.cnpj },
   { label: 'Email',             get: r => r.email },
-  { label: 'Telefone',          get: r => r.telefone },
+  { label: 'WhatsApp',          get: r => r.whatsapp },
   { label: 'Status',            get: r => r.status },
   { label: 'Etapa',             get: r => r.etapa },
   { label: 'MRR (R$)',          get: r => r.valor_mrr || 0 },
   { label: 'Segmento',          get: r => r.segmento },
-  { label: 'Software Contábil', get: r => r.software_contabil },
   { label: 'Responsável',       get: r => r.usuarios?.nome || '' },
 ]
 
@@ -80,12 +81,11 @@ export function mapRowToCliente(row) {
     fantasia:         String(row['Fantasia'] || '').trim(),
     cnpj:             String(row['CNPJ'] || '').replace(/\D/g, ''),
     email:            String(row['Email'] || '').trim(),
-    telefone:         String(row['Telefone'] || '').trim(),
+    whatsapp:         String(row['WhatsApp'] || row['Telefone'] || '').trim(),
     status:           String(row['Status'] || 'ativo').toLowerCase(),
     etapa:            String(row['Etapa'] || 'operacional').toLowerCase(),
     valor_mrr:        mrr,
     segmento:         String(row['Segmento'] || '').trim(),
-    software_contabil:String(row['Software Contábil'] || row['Software Contabil'] || '').trim(),
   }
 }
 
