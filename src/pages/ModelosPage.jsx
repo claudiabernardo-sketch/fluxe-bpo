@@ -214,8 +214,23 @@ export default function ModelosPage() {
     setGeracaoMsg(null)
     try {
       const resultado = await gerarTarefas.mutateAsync({ clienteId: fCliente, dataInicio, dataFim: lastDayOfMonth() })
-      const criadas = resultado?.tarefas_geradas ?? resultado?.criadas ?? resultado?.total_criadas ?? '?'
-      setGeracaoMsg({ ok: true, texto: `${criadas} tarefa(s) gerada(s) com sucesso!` })
+      const criadas     = resultado?.tarefas_geradas ?? resultado?.criadas ?? resultado?.total_criadas ?? 0
+      const duplicadas  = resultado?.duplicadas_evitadas ?? 0
+      const semRecorr   = resultado?.nao_bateu_recorrencia ?? 0
+
+      let texto
+      if (criadas > 0 && duplicadas > 0) {
+        texto = `${criadas} tarefa(s) nova(s) gerada(s). ${duplicadas} já existiam pra esse período — não foram duplicadas.`
+      } else if (criadas > 0) {
+        texto = `${criadas} tarefa(s) gerada(s) com sucesso!`
+      } else if (duplicadas > 0) {
+        texto = `Nenhuma tarefa nova — as ${duplicadas} tarefa(s) desse período já tinham sido geradas antes. Sem duplicar, pode clicar em Gerar de novo sempre que quiser.`
+      } else if (semRecorr > 0) {
+        texto = `Nenhuma tarefa gerada — a recorrência dos modelos vinculados não bate com nenhum dia desse período (ex: um modelo "Mensal" só gera no dia configurado do mês).`
+      } else {
+        texto = `Nenhuma tarefa gerada. Confira se o cliente está com a Rotina ativa e se há modelos vinculados.`
+      }
+      setGeracaoMsg({ ok: true, texto })
     } catch (err) {
       setGeracaoMsg({ ok: false, texto: 'Erro: ' + (err.message || 'falha ao gerar') })
     }
@@ -677,6 +692,14 @@ export default function ModelosPage() {
                 </select>
               </div>
             </div>
+            {form.categoria === 'Conciliação Bancária' && (
+              <div style={{ marginBottom:12, padding:'10px 12px', borderRadius:8, background:'#EFF6FF', border:'1px solid #BFDBFE', fontSize:12, color:'#1E40AF' }}>
+                💡 Não precisa incluir o nome do banco no título — pra clientes com bancos cadastrados,
+                o Fluxe gera uma tarefa por banco automaticamente (ex: "{form.titulo || 'Conciliação bancária'} — Nubank"),
+                usando a lista de <strong>Bancos</strong> do cadastro do cliente. Só inclua o nome de um banco
+                manualmente no título se ele ainda não estiver naquela lista.
+              </div>
+            )}
             <div style={{ marginBottom:12 }}>
               <label style={{ fontSize:11, fontWeight:700, color:'#64748B', display:'block', marginBottom:6, textTransform:'uppercase' }}>Recorrência</label>
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>

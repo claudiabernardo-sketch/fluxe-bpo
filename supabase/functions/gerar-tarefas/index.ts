@@ -301,14 +301,14 @@ serve(async (req) => {
             // Verificar recorrência
             const { deve, motivo: motivoData } = deveGerarNaData(modeloEfetivo, dataAlvo, feriadosSet)
             if (!deve) {
-              // Registrar apenas em dry_run ou para "feriado" (relevante para auditoria)
-              if (dryRun || motivoData?.startsWith('feriado')) {
-                const resultado: ResultadoGeração = motivoData?.startsWith('feriado') ? 'feriado' : 'data_incompativel'
-                detalhes.push({
-                  empresa_id: empId, cliente_id: clienteId, modelo_id: vinculo.modelo_id,
-                  data_alvo: dataAlvo, resultado, motivo: motivoData ?? null, tarefa_id: null,
-                })
-              }
+              // Sempre registra (não só em dry_run) — o frontend usa essa
+              // contagem pra explicar por que "0 tarefas" não é bug, é a
+              // recorrência do modelo não bater com a data pedida.
+              const resultado: ResultadoGeração = motivoData?.startsWith('feriado') ? 'feriado' : 'data_incompativel'
+              detalhes.push({
+                empresa_id: empId, cliente_id: clienteId, modelo_id: vinculo.modelo_id,
+                data_alvo: dataAlvo, resultado, motivo: motivoData ?? null, tarefa_id: null,
+              })
               continue
             }
 
@@ -437,6 +437,12 @@ serve(async (req) => {
       }
     }
 
+    // Resumo do que aconteceu com quem NÃO gerou tarefa — pra tela poder
+    // explicar "0 tarefas" em vez de deixar parecer que travou/deu erro.
+    const duplicadasEvitadas   = detalhes.filter(d => d.resultado === 'duplicidade_evitada').length
+    const naoBateuRecorrencia  = detalhes.filter(d => d.resultado === 'data_incompativel' || d.resultado === 'feriado').length
+    const clientesNaoProntos   = detalhes.filter(d => d.resultado === 'cliente_nao_iniciado').length
+
     const resultado = {
       ok:                   true,
       dry_run:              dryRun,
@@ -444,6 +450,9 @@ serve(async (req) => {
       empresas_processadas: empresasProcessadas,
       clientes_processados: clientesProcessados,
       tarefas_geradas:      tarefasGeradas,
+      duplicadas_evitadas:  duplicadasEvitadas,
+      nao_bateu_recorrencia: naoBateuRecorrencia,
+      clientes_nao_prontos: clientesNaoProntos,
       erros,
       log_id:               logId,
       // Em dry_run, inclui preview dos detalhes (máx 200)
