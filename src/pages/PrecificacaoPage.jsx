@@ -2016,7 +2016,7 @@ export default function PrecificacaoPage() {
                 {filtradas.map(p => {
                   const st = { rascunho:'#94A3B8', enviada:'#6366F1', em_negociacao:'#F59E0B', aprovada:'#22C55E', rejeitada:'#EF4444', expirada:'#94A3B8', cancelada:'#DC2626' }[p.status] || '#94A3B8'
                   return (
-                    <div key={p.id} style={{ border:'1px solid var(--pborder)', borderRadius:10, padding:'12px 14px', display:'flex', alignItems:'center', gap:10 }}>
+                    <div key={p.id} style={{ border:'1px solid var(--pborder)', borderRadius:10, padding:'12px 14px', display:'flex', flexWrap:'wrap', alignItems:'center', gap:10 }}>
                       <span style={{ fontFamily:'DM Mono,monospace', fontSize:10, color:'var(--ptext3)', flexShrink:0 }}>#{String(p.numero).padStart(6,'0')}</span>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontWeight:600, fontSize:13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
