@@ -102,9 +102,17 @@ export default function ClientePage() {
     setSelectedBancos(cliente.bancos || [])
   }
 
-  // Tab ativa — aceita ?tab= na URL (ex: link do Radar no Dashboard)
+  // Tab ativa — aceita ?tab= na URL (ex: link do Radar no Dashboard). Como a
+  // página já pode estar aberta (ex: clicar em "Relatório 360" estando na
+  // aba Radar do mesmo cliente), o useState sozinho não reagiria — só roda
+  // uma vez, na primeira montagem. O useEffect sincroniza sempre que a URL
+  // muda, mesmo sem remontar o componente.
   const [searchParams] = useSearchParams()
   const [tab, setTab] = useState(searchParams.get('tab') || 'dados')
+  useEffect(() => {
+    const tabNaUrl = searchParams.get('tab')
+    if (tabNaUrl) setTab(tabNaUrl)
+  }, [searchParams])
 
   // Rotinas
   const { data: rotinas = [] } = useRotinas(clienteId)
