@@ -7,7 +7,9 @@ import { Card, Btn, Loader } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 import { supabase } from '../lib/supabase'
 
-const STATUS_OP_LABEL = { em_configuracao:'Em Configuração', pausado:'Pausado', encerrado:'Encerrado' }
+// Prefixo "Rotina:" pra não confundir com a etapa da esteira, que também
+// tem um valor "Operacional" (coisa completamente diferente).
+const STATUS_OP_LABEL = { em_configuracao:'Rotina: Em Configuração', pausado:'Rotina: Pausada', encerrado:'Rotina: Encerrada' }
 
 const CATEGORIAS = ['Contas a Pagar','Contas a Receber','Conciliação Bancária','Emissão de NF','Emissão de Boletos','Cobrança / Inadimplência','Fluxo de Caixa','Pagamentos','DRE Gerencial / Relatórios','Implantação','Onboarding','Estratégico','Relacionamento','Outro']
 const PRIORIDADES = [{ v:'baixa', label:'Baixa' }, { v:'media', label:'Média' }, { v:'alta', label:'Alta' }]
@@ -270,7 +272,7 @@ export default function ModelosPage() {
             {naoOperacional && (
               <div style={{ fontSize:12, padding:'10px 12px', borderRadius:8, marginBottom:12,
                 background:'#FFFBEB', color:'#92400E', border:'1px solid #FDE68A' }}>
-                ⚠️ Este cliente está <strong>{STATUS_OP_LABEL[statusOpAtual] || statusOpAtual}</strong>, não Operacional — por isso nenhuma tarefa é gerada pra ele, mesmo clicando em "Gerar tarefas".{' '}
+                ⚠️ <strong>{STATUS_OP_LABEL[statusOpAtual] || statusOpAtual}</strong> — por isso nenhuma tarefa é gerada pra ele, mesmo clicando em "Gerar tarefas".{' '}
                 {statusOpAtual === 'pausado' ? (
                   <Link to={`/clientes/${fCliente}`} style={{ color:'#92400E', fontWeight:700, textDecoration:'underline' }}>
                     Abrir cliente e Reativar →

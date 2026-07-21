@@ -19,7 +19,10 @@ const ETAPA_LABEL = { comercial:'Comercial', pre_ob:'Pré-Onb.', onboarding:'Onb
 const STATUS_COLOR = { ativo:'gr', onboarding:'bl', implantacao:'or', inativo:'gy', pausado:'yw' }
 const STATUS_LABEL = { ativo:'Ativo', inativo:'Inativo', pausado:'Pausado', onboarding:'Onboarding', implantacao:'Implantação' }
 const STATUS_OP_COLOR = { em_configuracao:'yw', operacional:'gr', pausado:'or', encerrado:'gy' }
-const STATUS_OP_LABEL = { em_configuracao:'Em Configuração', operacional:'Operacional', pausado:'Pausado', encerrado:'Encerrado' }
+// Prefixo "Rotina:" pra não confundir com a etapa da esteira (ETAPA_LABEL
+// também tem um valor "operacional" — sem o prefixo, os dois badges mostram
+// a mesma palavra "Operacional" significando coisas completamente diferentes.
+const STATUS_OP_LABEL = { em_configuracao:'Rotina: Em Configuração', operacional:'Rotina: Ativa', pausado:'Rotina: Pausada', encerrado:'Rotina: Encerrada' }
 
 const DIAS_SEMANA_R = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 
