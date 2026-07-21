@@ -201,9 +201,13 @@ export default function ClientePage() {
       bancos: selectedBancos,
       responsavel_id: form.responsavel_id || null,
     }
-    await updateClient.mutateAsync({ id: clienteId, ...payload })
-    setSaveOk(true)
-    setTimeout(() => setSaveOk(false), 2500)
+    try {
+      await updateClient.mutateAsync({ id: clienteId, ...payload })
+      setSaveOk(true)
+      setTimeout(() => setSaveOk(false), 2500)
+    } catch (err) {
+      setSaveErr('Erro ao salvar: ' + (err?.message || 'tente novamente'))
+    }
   }
 
   async function salvarRotina() {
