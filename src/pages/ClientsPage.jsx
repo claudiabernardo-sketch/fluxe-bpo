@@ -239,23 +239,6 @@ export default function ClientsPage() {
     }
   }
 
-  async function salvarEdicaoRotina() {
-    if (!rotinaEditForm.titulo?.trim()) { setRotinaEditErr('Informe o título'); return }
-    setRotinaEditErr('')
-    try {
-      await updateRotina.mutateAsync({
-        id: editandoRotina,
-        titulo: rotinaEditForm.titulo,
-        hora: rotinaEditForm.hora,
-        observacao: rotinaEditForm.observacao || null,
-      })
-      setEditandoRotina(null)
-      setRotinaEditForm({})
-    } catch (err) {
-      setRotinaEditErr('Erro: ' + (err?.message || 'tente novamente'))
-    }
-  }
-
   function toggleDiaSemana(i) {
     setRotinaForm(f => ({
       ...f,
