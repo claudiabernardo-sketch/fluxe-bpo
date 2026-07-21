@@ -17,6 +17,7 @@ import {
   aplicarAjustesManuais, aplicarMetricaMes, AREA_LABEL, AREA_EXPLICACAO, CUSTO_HORA_PADRAO,
 } from '../../utils/radar'
 import { Loader } from './index'
+import InfoTip from './InfoTip'
 import { parseBRL, formatBRL } from '../../utils/currency'
 
 const SEMAFORO_COR = { verde:'#15803D', amarelo:'#B45309', vermelho:'#DC2626', sem_dado:'#94A3B8' }
@@ -164,8 +165,8 @@ export default function RadarPainel({ clienteId }) {
             ['saldo_caixa', 'Saldo em caixa (R$)'],
           ].map(([campo, label]) => (
             <div key={campo}>
-              <label style={{ fontSize:10, color:'var(--tx3)', display:'block', marginBottom:3 }}>
-                {label} <span title={METRICA_EXPLICACAO[campo]} style={{ cursor:'help' }}>ⓘ</span>
+              <label style={{ fontSize:10, color:'var(--tx3)', display:'flex', alignItems:'center', gap:4, marginBottom:3 }}>
+                {label} <InfoTip text={METRICA_EXPLICACAO[campo]} width={220} />
               </label>
               <input
                 type="text" inputMode="decimal" placeholder="Ex: 15.000,00"
@@ -223,7 +224,7 @@ export default function RadarPainel({ clienteId }) {
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
               <div style={{ fontSize:11, fontWeight:600, color:'var(--tx)', display:'flex', alignItems:'center', gap:4 }}>
                 {AREA_LABEL[id]}
-                <span title={AREA_EXPLICACAO[id]} style={{ fontSize:10, color:'var(--tx3)', fontWeight:400, cursor:'help' }}>ⓘ</span>
+                <InfoTip text={AREA_EXPLICACAO[id]} />
               </div>
               <button
                 onClick={() => {

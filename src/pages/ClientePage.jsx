@@ -19,7 +19,10 @@ const ETAPA_LABEL = { comercial:'Comercial', pre_ob:'Pré-Onb.', onboarding:'Onb
 const STATUS_COLOR = { ativo:'gr', onboarding:'bl', implantacao:'or', inativo:'gy', pausado:'yw' }
 const STATUS_LABEL = { ativo:'Ativo', inativo:'Inativo', pausado:'Pausado', onboarding:'Onboarding', implantacao:'Implantação' }
 const STATUS_OP_COLOR = { em_configuracao:'yw', operacional:'gr', pausado:'or', encerrado:'gy' }
-const STATUS_OP_LABEL = { em_configuracao:'Em Configuração', operacional:'Operacional', pausado:'Pausado', encerrado:'Encerrado' }
+// Prefixo "Rotina:" pra não confundir com a etapa da esteira (ETAPA_LABEL
+// também tem um valor "operacional" — sem o prefixo, os dois badges mostram
+// a mesma palavra "Operacional" significando coisas completamente diferentes.
+const STATUS_OP_LABEL = { em_configuracao:'Rotina: Em Configuração', operacional:'Rotina: Ativa', pausado:'Rotina: Pausada', encerrado:'Rotina: Encerrada' }
 
 const DIAS_SEMANA_R = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 
@@ -419,6 +422,22 @@ export default function ClientePage() {
                   {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome || u.email}</option>)}
                 </select>
               </div>
+              <div>
+                <label className="lbl">Status</label>
+                <select value={form.status||'ativo'} onChange={e=>setForm(f=>({...f,status:e.target.value}))} className="fi">
+                  <option value="ativo">Ativo</option>
+                  <option value="onboarding">Onboarding</option>
+                  <option value="implantacao">Implantação</option>
+                  <option value="inativo">Inativo</option>
+                  <option value="pausado">Pausado</option>
+                </select>
+              </div>
+              <div>
+                <label className="lbl">Etapa BPO</label>
+                <select value={form.etapa||'operacional'} onChange={e=>setForm(f=>({...f,etapa:e.target.value}))} className="fi">
+                  {Object.entries(ETAPA_LABEL).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </div>
               {form.municipio && (
                 <div style={{ gridColumn:'1/-1', background:'var(--s2)', borderRadius:'var(--r)', padding:'10px 12px', fontSize:11, color:'var(--tx2)' }}>
                   <i className="fa-solid fa-location-dot" style={{ color:'var(--br)', marginRight:6 }} />
@@ -487,22 +506,6 @@ export default function ClientePage() {
               <div>
                 <label className="lbl">Vencimento (dia do mês)</label>
                 <input type="number" value={form.vencimento_dia||''} onChange={e=>setForm(f=>({...f,vencimento_dia:e.target.value}))} className="fi" placeholder="10" min={1} max={28} />
-              </div>
-              <div>
-                <label className="lbl">Status</label>
-                <select value={form.status||'ativo'} onChange={e=>setForm(f=>({...f,status:e.target.value}))} className="fi">
-                  <option value="ativo">Ativo</option>
-                  <option value="onboarding">Onboarding</option>
-                  <option value="implantacao">Implantação</option>
-                  <option value="inativo">Inativo</option>
-                  <option value="pausado">Pausado</option>
-                </select>
-              </div>
-              <div>
-                <label className="lbl">Etapa BPO</label>
-                <select value={form.etapa||'operacional'} onChange={e=>setForm(f=>({...f,etapa:e.target.value}))} className="fi">
-                  {Object.entries(ETAPA_LABEL).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
-                </select>
               </div>
               <div>
                 <label className="lbl">Software / ERP</label>

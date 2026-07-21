@@ -929,7 +929,11 @@ export function useVincularModelo() {
 
       const { data: cliente } = await supabase.from('clientes').select('status_operacional').eq('id', clienteId).single()
       if (cliente && cliente.status_operacional !== 'operacional') {
-        const hoje = new Date().toISOString().slice(0, 10)
+        // toLocaleDateString('en-CA'), não toISOString() — à noite no horário de
+        // Brasília (BRT = UTC-3) o toISOString() já está em UTC do dia seguinte,
+        // e o gerar-tarefas (que calcula "hoje" em BRT) bloqueia a geração porque
+        // vê operacao_iniciada_em como "no futuro" em relação à data pedida.
+        const hoje = new Date().toLocaleDateString('en-CA')
         await supabase.from('clientes').update({ status_operacional: 'operacional', operacao_iniciada_em: hoje }).eq('id', clienteId)
         await logAudit('UPDATE', 'clientes', clienteId, { status_operacional: 'operacional', operacao_iniciada_em: hoje, motivo: 'ativação automática ao vincular modelo' })
         fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gerar-tarefas`, {
