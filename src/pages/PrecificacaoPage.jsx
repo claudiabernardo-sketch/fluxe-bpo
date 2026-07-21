@@ -298,6 +298,11 @@ function calcularMetodologia(d) {
 
   if (d.lembrete) add('Lembrete de vencimento (WhatsApp)', 0.3, 'baixo', 'Avisos automáticos')
 
+  // Nenhuma atividade real configurada (ex: cliente só de licença/repasse,
+  // sem nenhuma hora de BPO) — verifica antes da linha fixa abaixo, que
+  // senão mascara esse caso e deixa parecer que o cálculo é válido.
+  const semAtividadeReal = items.length === 0
+
   add('Gestão de documentos', 0.5, 'baixo', 'Organização e arquivamento')
 
   if (d.cnpjs > 1) {
@@ -351,7 +356,7 @@ function calcularMetodologia(d) {
   const vRecomendado = custoReal / ((1 - d.aliquota) * (1 - d.margem))
   const vPremium = vRecomendado * 1.30
 
-  return { items, totalHoras, complexidade, complexLabel, complexColor, riscoLabel, risco, custoReal, overheadCliente, licencaEmbutida, licencaRepasse, vMinimo, vRecomendado, vPremium, d }
+  return { items, totalHoras, complexidade, complexLabel, complexColor, riscoLabel, risco, custoReal, overheadCliente, licencaEmbutida, licencaRepasse, vMinimo, vRecomendado, vPremium, semAtividadeReal, d }
 }
 
 // ─── ACADEMIA ───────────────────────────────────────────────
@@ -677,6 +682,11 @@ export default function PrecificacaoPage() {
   const avaliarProposta = (v) => {
     if (!v || !calc) return null
     const val = parseBRL(v)
+    // custoReal (e por consequência vMinimo/vRecomendado/vPremium, todos
+    // derivados dele) só chega a zero quando nenhuma atividade de BPO foi
+    // configurada — ex: cliente só de licença/repasse. Sem essa checagem, as
+    // divisões abaixo geram "Infinity%"/"NaN%" na tela em vez de uma mensagem.
+    if (calc.custoReal <= 0) return { cls: 'prec-fb-yellow', icon: '⚠️', titulo: 'Sem atividade de BPO configurada', texto: 'Nenhuma hora de trabalho foi configurada pra esse cliente, então não há custo real pra calcular margem. Se for um cliente só de licença/repasse (sem serviço de BPO), essa calculadora não se aplica — cobre um valor fixo à parte.' }
     if (val < calc.vMinimo) return { cls: 'prec-fb-red', icon: '🔴', titulo: 'Abaixo do mínimo sustentável', texto: `Você está ${fmt(calc.vMinimo - val)} abaixo do custo real. Com essa precificação, cada mês gera prejuízo. O mínimo é ${fmt(calc.vMinimo)}.` }
     if (val < calc.vRecomendado * 0.85) {
       const m = Math.round(((val - calc.custoReal) / val) * 100)
@@ -1078,6 +1088,13 @@ export default function PrecificacaoPage() {
               <div className="prec-card-num">Etapa 02</div>
               <div className="prec-card-title">Análise da Metodologia Fluxe</div>
               <div className="prec-card-desc">O sistema calculou a complexidade e as horas estimadas. Veja o raciocínio antes de ver a recomendação.</div>
+
+              {calc.semAtividadeReal && (
+                <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E', fontSize: 12 }}>
+                  ⚠️ Nenhuma atividade de BPO foi marcada na Etapa 01 — esse cliente parece ser só de licença/repasse, sem serviço de BPO.
+                  Essa calculadora foi feita pra estimar horas de trabalho; pra esse tipo de cliente, ela não se aplica — cobre um valor fixo à parte.
+                </div>
+              )}
 
               <div className="prec-stats">
                 <div className="prec-stat"><div className="prec-stat-label">Horas estimadas</div><div className="prec-stat-value">{calc.totalHoras}h</div><div className="prec-stat-sub">por mês</div></div>
