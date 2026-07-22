@@ -433,7 +433,7 @@ export default function ModelosPage() {
                   return (
                     <div key={rotina.id}>
                     <div style={{ background:'#fff', border:`1px solid ${vinculado ? '#BBF7D0' : '#E2E8F0'}`,
-                      borderRadius:10, padding:'12px 16px', display:'flex', alignItems:'center', gap:12 }}>
+                      borderRadius:10, padding:'12px 16px', display:'flex', flexWrap:'wrap', alignItems:'center', gap:12 }}>
 
                       {/* Status indicator */}
                       <div style={{ width:8, height:8, borderRadius:'50%', flexShrink:0,
@@ -470,16 +470,16 @@ export default function ModelosPage() {
                       <div style={{ display:'flex', gap:6, flexShrink:0 }}>
                         {vinculado && (
                           <button onClick={() => abrirOverride(vinculo, modelo)}
-                            style={{ padding:'5px 8px', borderRadius:6, border:'1px solid #E2E8F0',
-                              background:'#fff', cursor:'pointer', fontSize:11 }} title="Ajustar recorrência só para este cliente">
-                            🔁
+                            style={{ padding:'5px 10px', borderRadius:6, border:'1px solid #E2E8F0',
+                              background:'#fff', color:'#475569', cursor:'pointer', fontSize:11, fontWeight:600, whiteSpace:'nowrap' }} title="Ajustar recorrência só para este cliente">
+                            🔁 Recorrência
                           </button>
                         )}
                         {modelo && (
                           <button onClick={() => abrirEditar(modelo)}
-                            style={{ padding:'5px 8px', borderRadius:6, border:'1px solid #E2E8F0',
-                              background:'#fff', cursor:'pointer', fontSize:11 }} title="Editar modelo (afeta todos os clientes)">
-                            ✏
+                            style={{ padding:'5px 10px', borderRadius:6, border:'1px solid #E2E8F0',
+                              background:'#fff', color:'#475569', cursor:'pointer', fontSize:11, fontWeight:600, whiteSpace:'nowrap' }} title="Editar modelo (afeta todos os clientes)">
+                            ✏️ Editar
                           </button>
                         )}
                         {!modelo && (
