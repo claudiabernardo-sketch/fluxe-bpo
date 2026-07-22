@@ -299,11 +299,15 @@ function calcularMetodologia(d) {
   if (d.lembrete) add('Lembrete de vencimento (WhatsApp)', 0.3, 'baixo', 'Avisos automáticos')
 
   // Nenhuma atividade real configurada (ex: cliente só de licença/repasse,
-  // sem nenhuma hora de BPO) — verifica antes da linha fixa abaixo, que
-  // senão mascara esse caso e deixa parecer que o cálculo é válido.
+  // sem nenhuma hora de BPO) — verifica antes da linha condicional abaixo,
+  // que senão mascara esse caso e deixa parecer que o cálculo é válido.
   const semAtividadeReal = items.length === 0
 
-  add('Gestão de documentos', 0.5, 'baixo', 'Organização e arquivamento')
+  // Antes entrava sempre, sem condição nenhuma — mesmo respondendo "Não" em
+  // "Envia documentos para contabilidade?", o item continuava aparecendo no
+  // escopo. Agora usa o mesmo campo (são a mesma responsabilidade: organizar
+  // e enviar documentos), então a resposta realmente controla o escopo.
+  if (d.contab) add('Gestão de documentos', 0.5, 'baixo', 'Organização e arquivamento')
 
   if (d.cnpjs > 1) {
     const hBase = items.reduce((s, i) => s + i.horas, 0)
@@ -907,7 +911,7 @@ export default function PrecificacaoPage() {
                   {d.capag > 0 && <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>≈ {(0.5 + d.capag * 0.05).toFixed(1)}h/mês de gestão CP</div>}
                   {d.capag > 200 && <div style={{ fontSize:10, color:'#EF4444', marginTop:2 }}>⚠ Mais de 200 pagamentos/mês é incomum. Confira se preencheu certo.</div>}
                 </Campo>
-                <Campo label="Clientes que pagam manualmente / mês" hint="Quantos clientes do seu cliente pagam por boleto ou PIX avulso, e você precisa conferir um por um. NÃO inclua vendas por maquininha, Mercado Pago ou outras plataformas — essas vão no campo 'Outras plataformas' abaixo.">
+                <Campo label="Clientes que pagam manualmente / mês" hint="Quantos clientes do seu cliente pagam por boleto ou PIX avulso, e você precisa conferir um por um. NÃO inclua vendas por maquininha, Mercado Pago ou outras plataformas — essas vão no campo 'Outras plataformas' abaixo. Preencher aqui também inclui no escopo o follow-up de cobrança desses inadimplentes — não tem como separar os dois.">
                   <input className="prec-input" type="number" value={d.carec} onChange={num('carec')} min="0" />
                   {d.carec > 0 && <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>≈ {(0.5 + d.carec * 0.04).toFixed(1)}h/mês de gestão CR</div>}
                   {d.carec > 500 && <div style={{ fontSize:10, color:'#EF4444', marginTop:2 }}>⚠ Mais de 500 cobranças individuais é muito alto. Vendas por plataforma (Mercado Pago, cartão) não entram aqui.</div>}
