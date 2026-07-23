@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug } from '../hooks/useData'
+import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados } from '../hooks/useData'
 import { Card, CardHeader, Btn, Badge, Loader } from '../components/ui'
 
 const PLANO_COLOR = { trial:'yellow', trial_expirado:'orange', bloqueado:'red', essencial:'green', pro:'green' }
@@ -87,6 +87,16 @@ function LinhaEmpresa({ emp, onAcao, pendente }) {
       <td style={{ padding: '10px 8px', fontSize: 11, color: 'var(--tx3)' }}>
         {emp.criado_em ? new Date(emp.criado_em).toLocaleDateString('pt-BR') : '—'}
       </td>
+      <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+        <button
+          title={emp.mentorado_bpo_lucrativo ? 'Remover do BPO Lucrativo' : 'Marcar como mentorado do BPO Lucrativo'}
+          onClick={() => onAcao('toggle_mentorado', emp.id, { valor: !emp.mentorado_bpo_lucrativo })}
+          disabled={pendente}
+          style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 16, opacity: emp.mentorado_bpo_lucrativo ? 1 : .25 }}
+        >
+          🎓
+        </button>
+      </td>
       <td style={{ padding: '10px 8px' }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
           {emp.plano === 'bloqueado' ? (
@@ -146,6 +156,7 @@ function SecaoEmpresas() {
               <th style={{ padding: '6px 8px', textAlign: 'center' }}>Usuários</th>
               <th style={{ padding: '6px 8px', textAlign: 'center' }}>Clientes</th>
               <th style={{ padding: '6px 8px' }}>Criada em</th>
+              <th style={{ padding: '6px 8px', textAlign: 'center' }}>Mentoria</th>
               <th style={{ padding: '6px 8px' }}>Ações</th>
             </tr>
           </thead>
@@ -231,12 +242,88 @@ function SecaoBugs() {
   )
 }
 
+const ETAPA_LABEL = {
+  cliente_ideal: 'Cliente Ideal',
+  dor: 'Dor / Problema',
+  entregaveis: 'Entregáveis',
+  processo: 'Processo / Rotina',
+  custo_existir: 'Custo de Existir',
+  meta_faturamento: 'Meta de Faturamento',
+}
+const SEMAFORO_COLOR = { verde: 'green', amarelo: 'yellow', vermelho: 'red', sem_dado: 'gray' }
+const SEMAFORO_LABEL = { verde: 'Radar OK', amarelo: 'Radar de atenção', vermelho: 'Radar crítico', sem_dado: 'Sem Radar ainda' }
+
+function CardMentorado({ m }) {
+  const dificuldades = m.plano_negocio
+    ? Object.keys(ETAPA_LABEL).filter(k => m.plano_negocio[`${k}_dificuldade`])
+    : []
+
+  return (
+    <div style={{ border: '1px solid var(--bo)', borderRadius: 10, padding: '14px 16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{m.nome || '—'}</div>
+          <div style={{ fontSize: 11, color: 'var(--tx3)' }}>{m.email || ''}</div>
+        </div>
+        {m.radar ? (
+          <Badge label={`${SEMAFORO_LABEL[m.radar.pior_semaforo]}${m.radar.score_medio != null ? ` (${m.radar.score_medio})` : ''}`} color={SEMAFORO_COLOR[m.radar.pior_semaforo]} />
+        ) : (
+          <Badge label="Sem Radar ainda" color="gray" />
+        )}
+      </div>
+
+      {!m.plano_negocio ? (
+        <div style={{ fontSize: 12, color: 'var(--tx3)' }}>Ainda não preencheu o Plano de Negócio.</div>
+      ) : dificuldades.length === 0 ? (
+        <div style={{ fontSize: 12, color: 'var(--tx3)' }}>Sem dificuldades marcadas no Plano de Negócio.</div>
+      ) : (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#B45309', marginBottom: 6 }}>🤔 Travando em:</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {dificuldades.map(k => (
+              <div key={k} style={{ fontSize: 12 }}>
+                <span style={{ fontWeight: 600 }}>{ETAPA_LABEL[k]}</span>
+                {m.plano_negocio[`${k}_obs`] && <span style={{ color: 'var(--tx2)' }}> — {m.plano_negocio[`${k}_obs`]}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SecaoMentorados() {
+  const { data: mentorados = [], isLoading } = useMentorados()
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <CardHeader title={`Painel do Mentor — BPO Lucrativo (${mentorados.length})`} icon="fa-solid fa-graduation-cap" />
+      <div style={{ padding: 16 }}>
+        <div style={{ fontSize: 12, color: 'var(--tx3)', marginBottom: 14 }}>
+          Empresas marcadas com 🎓 na lista abaixo. Mostra onde cada mentorado está travando no Plano de Negócio e o estado geral do Radar.
+        </div>
+        {isLoading ? <Loader /> : mentorados.length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>
+            Nenhuma empresa marcada como mentorada ainda — clique no 🎓 na lista de empresas abaixo.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {mentorados.map(m => <CardMentorado key={m.id} m={m} />)}
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 export default function AdminPage() {
   return (
     <div>
       <div style={{ fontSize: 12, color: 'var(--tx3)', marginBottom: 16 }}>
         Visível só pra você — controle de todas as empresas que usam o Fluxe e registro interno de bugs.
       </div>
+      <SecaoMentorados />
       <SecaoEmpresas />
       <SecaoBugs />
     </div>

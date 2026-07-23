@@ -197,7 +197,65 @@ serve(async (req) => {
       return ok({ success: true, novo_valor: result.value })
     }
 
-    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | estender_trial | atualizar_valor_assinatura' })
+    // ── Ação: marcar/desmarcar empresa como mentorada do BPO Lucrativo ─────
+    if (action === 'toggle_mentorado') {
+      const { empresa_id, valor } = payload
+      if (!empresa_id) return ok({ error: 'empresa_id é obrigatório' })
+      const { error } = await supabase.from('empresas').update({ mentorado_bpo_lucrativo: !!valor }).eq('id', empresa_id)
+      if (error) return ok({ error: error.message })
+      return ok({ success: true })
+    }
+
+    // ── Ação: painel do mentor — Radar + Plano de Negócio de cada mentorado ─
+    if (action === 'list_mentorados') {
+      const { data: empresas, error } = await supabase
+        .from('empresas')
+        .select('id, nome, email, criado_em')
+        .eq('mentorado_bpo_lucrativo', true)
+        .order('nome')
+      if (error) return ok({ error: error.message })
+
+      const ids = (empresas ?? []).map(e => e.id)
+      if (ids.length === 0) return ok({ success: true, mentorados: [] })
+
+      const { data: planos } = await supabase
+        .from('plano_negocio')
+        .select('*')
+        .in('empresa_id', ids)
+
+      const { data: radares } = await supabase
+        .from('radar_scores_ultimo')
+        .select('empresa_id, score, semaforo')
+        .in('empresa_id', ids)
+
+      const planoPorEmpresa: Record<string, any> = {}
+      for (const p of planos ?? []) planoPorEmpresa[p.empresa_id] = p
+
+      const ORDEM_SEMAFORO: Record<string, number> = { vermelho: 3, amarelo: 2, verde: 1, sem_dado: 0 }
+      const radarPorEmpresa: Record<string, { scores: number[]; pior: string; totalClientes: number }> = {}
+      for (const r of radares ?? []) {
+        const cur = radarPorEmpresa[r.empresa_id] || { scores: [], pior: 'sem_dado', totalClientes: 0 }
+        cur.totalClientes += 1
+        if (r.score != null) cur.scores.push(r.score)
+        if ((ORDEM_SEMAFORO[r.semaforo] ?? 0) > (ORDEM_SEMAFORO[cur.pior] ?? 0)) cur.pior = r.semaforo
+        radarPorEmpresa[r.empresa_id] = cur
+      }
+
+      const resultado = (empresas ?? []).map(e => {
+        const rad = radarPorEmpresa[e.id]
+        return {
+          ...e,
+          plano_negocio: planoPorEmpresa[e.id] || null,
+          radar: rad
+            ? { pior_semaforo: rad.pior, score_medio: rad.scores.length ? Math.round(rad.scores.reduce((a, b) => a + b, 0) / rad.scores.length) : null, total_clientes: rad.totalClientes }
+            : null,
+        }
+      })
+
+      return ok({ success: true, mentorados: resultado })
+    }
+
+    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | estender_trial | atualizar_valor_assinatura | toggle_mentorado | list_mentorados' })
 
   } catch (e) {
     return ok({ error: e.message || 'Erro interno' })
