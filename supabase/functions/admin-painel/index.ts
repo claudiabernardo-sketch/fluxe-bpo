@@ -320,6 +320,7 @@ serve(async (req) => {
       if (Array.isArray(itens) && itens.length > 0) {
         const linhas = itens.filter((it: any) => it?.texto?.trim()).map((it: any) => ({
           sessao_id: data.id,
+          empresa_id: empresa_id || null,
           texto: it.texto.trim(),
           prazo: it.prazo || null,
         }))
