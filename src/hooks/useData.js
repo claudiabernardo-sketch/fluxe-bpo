@@ -1530,3 +1530,47 @@ export function useDeleteMentoriaLink() {
     onError: (err) => console.error('[Fluxe]', err),
   })
 }
+
+// ── PLANO DE NEGÓCIOS (6 etapas) ─────────────────────
+// Uma linha por empresa — busca com maybeSingle pois pode não existir ainda
+// (empresa nova que nunca preencheu).
+export function usePlanoNegocio() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['plano_negocio', empresa?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('plano_negocio')
+        .select('*')
+        .eq('empresa_id', empresa?.id)
+        .maybeSingle()
+      if (error) throw error
+      return data ?? null
+    },
+    staleTime: 30_000,
+    enabled: !!empresa?.id,
+    retry: false, // tabela pode ainda não existir (migração não rodada) — falha rápido em vez de re-tentar
+  })
+}
+
+export function useSalvarPlanoNegocio() {
+  const qc = useQueryClient()
+  const { empresa } = useAuthStore()
+  return useMutation({
+    mutationFn: async (campos) => {
+      const { data, error } = await supabase
+        .from('plano_negocio')
+        .upsert({
+          empresa_id: empresa?.id,
+          ...campos,
+          atualizado_em: new Date().toISOString(),
+        }, { onConflict: 'empresa_id' })
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['plano_negocio'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
