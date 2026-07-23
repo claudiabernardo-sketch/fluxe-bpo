@@ -301,11 +301,16 @@ function ListaCombinadosDaSessao({ combinados = [] }) {
   return (
     <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
       {combinados.map(c => (
-        <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, opacity: c.concluido ? .55 : 1, cursor: c.concluido ? 'default' : 'pointer' }}>
-          <input type="checkbox" checked={c.concluido} disabled={c.concluido || concluir.isPending} onChange={() => concluir.mutate(c.id)} />
-          <span style={{ textDecoration: c.concluido ? 'line-through' : 'none' }}>{c.texto}</span>
-          {c.prazo && <span style={{ color: 'var(--tx3)' }}>— {new Date(c.prazo + 'T12:00:00').toLocaleDateString('pt-BR')}</span>}
-        </label>
+        <div key={c.id}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, opacity: c.concluido ? .55 : 1, cursor: c.concluido ? 'default' : 'pointer' }}>
+            <input type="checkbox" checked={c.concluido} disabled={c.concluido || concluir.isPending} onChange={() => concluir.mutate(c.id)} />
+            <span style={{ textDecoration: c.concluido ? 'line-through' : 'none' }}>{c.texto}</span>
+            {c.prazo && <span style={{ color: 'var(--tx3)' }}>— {new Date(c.prazo + 'T12:00:00').toLocaleDateString('pt-BR')}</span>}
+          </label>
+          {c.status_mentorado && (
+            <div style={{ fontSize: 11, color: 'var(--tx2)', marginLeft: 20, marginTop: 2 }}>💬 {c.status_mentorado}</div>
+          )}
+        </div>
       ))}
     </div>
   )
@@ -503,6 +508,7 @@ function ItemCombinadoAberto({ c, nome, vencido }) {
           )}
         </div>
         <div style={{ color: 'var(--tx2)' }}>{c.texto}</div>
+        {c.status_mentorado && <div style={{ fontSize: 11, color: 'var(--tx3)', marginTop: 4 }}>💬 {c.status_mentorado}</div>}
       </div>
     </label>
   )

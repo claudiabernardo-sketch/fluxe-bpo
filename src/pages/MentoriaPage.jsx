@@ -1,6 +1,65 @@
 import { useState } from 'react'
-import { useMentoriaLinks, useCreateMentoriaLink, useDeleteMentoriaLink } from '../hooks/useData'
+import { useMentoriaLinks, useCreateMentoriaLink, useDeleteMentoriaLink, useMeusCombinados, useAtualizarMeuCombinado } from '../hooks/useData'
+import { useAuthStore } from '../store/authStore'
 import { Card, CardHeader, Btn, Loader } from '../components/ui'
+
+function ItemMeuCombinado({ c }) {
+  const atualizar = useAtualizarMeuCombinado()
+  const [status, setStatus] = useState(c.status_mentorado || '')
+  const hoje = new Date().toLocaleDateString('en-CA')
+  const vencido = !c.concluido && c.prazo && c.prazo < hoje
+
+  return (
+    <div style={{ border: '1px solid var(--bo)', borderRadius: 10, padding: '12px 14px', opacity: c.concluido ? .6 : 1 }}>
+      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: atualizar.isPending ? 'default' : 'pointer' }}>
+        <input type="checkbox" checked={c.concluido} disabled={atualizar.isPending} onChange={e => atualizar.mutate({ id: c.id, concluido: e.target.checked })} style={{ marginTop: 3 }} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, textDecoration: c.concluido ? 'line-through' : 'none' }}>{c.texto}</div>
+          {c.prazo && (
+            <div style={{ fontSize: 11, color: vencido ? '#DC2626' : 'var(--tx3)', fontWeight: vencido ? 700 : 400, marginTop: 2 }}>
+              {vencido ? 'Venceu em ' : 'Prazo: '}{new Date(c.prazo + 'T12:00:00').toLocaleDateString('pt-BR')}
+            </div>
+          )}
+        </div>
+      </label>
+      <div style={{ display: 'flex', gap: 6, marginTop: 8, marginLeft: 26 }}>
+        <input
+          style={{ flex: 1, padding: '6px 8px', border: '1px solid var(--bo)', borderRadius: 6, fontSize: 12, fontFamily: 'inherit' }}
+          placeholder="Como está indo? (opcional)"
+          value={status}
+          onChange={e => setStatus(e.target.value)}
+        />
+        {status !== (c.status_mentorado || '') && (
+          <Btn small variant="outline" disabled={atualizar.isPending} onClick={() => atualizar.mutate({ id: c.id, status_mentorado: status })}>
+            Salvar
+          </Btn>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SecaoMeusCombinados() {
+  const { empresa } = useAuthStore()
+  const { data: combinados = [], isLoading } = useMeusCombinados()
+
+  if (!empresa?.mentorado_bpo_lucrativo) return null
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <CardHeader title="Combinados com sua mentoria" icon="fa-solid fa-list-check" />
+      <div style={{ padding: 16 }}>
+        {isLoading ? <Loader /> : combinados.length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>Nenhum combinado registrado com você ainda.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {combinados.map(c => <ItemMeuCombinado key={c.id} c={c} />)}
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}
 
 export default function MentoriaPage() {
   const { data: links = [], isLoading } = useMentoriaLinks()
@@ -24,6 +83,8 @@ export default function MentoriaPage() {
       <div style={{ fontSize: 12, color: 'var(--tx3)', marginBottom: 16 }}>
         Vídeos e materiais de mentoria — cole aqui os links (YouTube, Google Drive, Canva, etc.) pra sua equipe acessar.
       </div>
+
+      <SecaoMeusCombinados />
 
       <Card style={{ marginBottom: 16 }}>
         <CardHeader title="Adicionar material" icon="fa-solid fa-plus" />

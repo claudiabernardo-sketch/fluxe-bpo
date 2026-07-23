@@ -1671,6 +1671,47 @@ export function useCreateMentoriaLink() {
   })
 }
 
+// Combinados que a mentora registrou com ESTA empresa — RLS libera só os da
+// própria empresa (Migration 22); a nota da sessão em si continua privada,
+// só isso aqui é visível pro mentorado.
+export function useMeusCombinados() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['meus_combinados', empresa?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('mentoria_combinados')
+        .select('*')
+        .eq('empresa_id', empresa?.id)
+        .order('prazo', { ascending: true, nullsFirst: false })
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!empresa?.id && !!empresa?.mentorado_bpo_lucrativo,
+    staleTime: 30_000,
+  })
+}
+
+export function useAtualizarMeuCombinado() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, concluido, status_mentorado }) => {
+      const updates = {}
+      if (concluido !== undefined) {
+        updates.concluido = concluido
+        updates.concluido_em = concluido ? new Date().toISOString() : null
+      }
+      if (status_mentorado !== undefined) updates.status_mentorado = status_mentorado
+      const { data, error } = await supabase.from('mentoria_combinados').update(updates).eq('id', id).select()
+      if (error) throw error
+      if (!data || data.length === 0) throw new Error('Não foi possível atualizar — tente novamente.')
+      return data[0]
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['meus_combinados'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
 export function useDeleteMentoriaLink() {
   const qc = useQueryClient()
   return useMutation({
