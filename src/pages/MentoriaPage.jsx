@@ -47,7 +47,7 @@ function SecaoMeusCombinados() {
 
   return (
     <Card style={{ marginBottom: 16 }}>
-      <CardHeader title="Combinados com sua mentoria" icon="fa-solid fa-list-check" />
+      <CardHeader title="Combinados com sua mentora" icon="fa-solid fa-list-check" />
       <div style={{ padding: 16 }}>
         {isLoading ? <Loader /> : combinados.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>Nenhum combinado registrado com você ainda.</div>
