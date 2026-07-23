@@ -1484,6 +1484,71 @@ export function useMentorados() {
   })
 }
 
+// Histórico de sessões 1:1 de mentoria de um mentorado específico — só
+// carrega quando o card é expandido no Painel do Mentor.
+export function useSessoesMentoria(empresaId) {
+  return useQuery({
+    queryKey: ['admin_sessoes_mentoria', empresaId],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-painel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'listar_sessoes_mentoria', empresa_id: empresaId }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      return data.sessoes ?? []
+    },
+    enabled: !!empresaId,
+    staleTime: 15_000,
+  })
+}
+
+export function useCriarSessaoMentoria() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ empresa_id, data, nota, combinados }) => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-painel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'criar_sessao_mentoria', empresa_id, data, nota, combinados }),
+      })
+      const result = await res.json()
+      if (result.error) throw new Error(result.error)
+      return result.sessao
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['admin_sessoes_mentoria', vars.empresa_id] })
+      qc.invalidateQueries({ queryKey: ['admin_mentorados'] })
+    },
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+export function useExcluirSessaoMentoria() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, empresa_id }) => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-painel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'excluir_sessao_mentoria', id }),
+      })
+      const result = await res.json()
+      if (result.error) throw new Error(result.error)
+      return empresa_id
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['admin_sessoes_mentoria', vars.empresa_id] })
+      qc.invalidateQueries({ queryKey: ['admin_mentorados'] })
+    },
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
 export function useAdminAcaoEmpresa() {
   const qc = useQueryClient()
   return useMutation({

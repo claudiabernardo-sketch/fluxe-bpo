@@ -228,8 +228,32 @@ serve(async (req) => {
         .select('empresa_id, score, semaforo')
         .in('empresa_id', ids)
 
+      const { data: propostasRows } = await supabase
+        .from('propostas')
+        .select('empresa_id, status')
+        .in('empresa_id', ids)
+        .eq('status', 'aprovada')
+
+      const { data: sessoesRows } = await supabase
+        .from('mentoria_sessoes')
+        .select('empresa_id, data')
+        .in('empresa_id', ids)
+        .order('data', { ascending: false })
+
       const planoPorEmpresa: Record<string, any> = {}
       for (const p of planos ?? []) planoPorEmpresa[p.empresa_id] = p
+
+      const propostaAprovadaPorEmpresa: Record<string, boolean> = {}
+      for (const p of propostasRows ?? []) propostaAprovadaPorEmpresa[p.empresa_id] = true
+
+      // sessoesRows já vem ordenado por data desc — a primeira ocorrência de
+      // cada empresa_id é a sessão mais recente dela.
+      const sessaoPorEmpresa: Record<string, { count: number; ultima: string }> = {}
+      for (const s of sessoesRows ?? []) {
+        const cur = sessaoPorEmpresa[s.empresa_id] || { count: 0, ultima: s.data }
+        cur.count += 1
+        sessaoPorEmpresa[s.empresa_id] = cur
+      }
 
       const ORDEM_SEMAFORO: Record<string, number> = { vermelho: 3, amarelo: 2, verde: 1, sem_dado: 0 }
       const radarPorEmpresa: Record<string, { scores: number[]; pior: string; totalClientes: number }> = {}
@@ -243,9 +267,12 @@ serve(async (req) => {
 
       const resultado = (empresas ?? []).map(e => {
         const rad = radarPorEmpresa[e.id]
+        const sess = sessaoPorEmpresa[e.id]
         return {
           ...e,
           plano_negocio: planoPorEmpresa[e.id] || null,
+          proposta_aprovada: !!propostaAprovadaPorEmpresa[e.id],
+          sessoes: sess ? { count: sess.count, ultima_data: sess.ultima } : { count: 0, ultima_data: null },
           radar: rad
             ? { pior_semaforo: rad.pior, score_medio: rad.scores.length ? Math.round(rad.scores.reduce((a, b) => a + b, 0) / rad.scores.length) : null, total_clientes: rad.totalClientes }
             : null,
@@ -255,7 +282,48 @@ serve(async (req) => {
       return ok({ success: true, mentorados: resultado })
     }
 
-    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | estender_trial | atualizar_valor_assinatura | toggle_mentorado | list_mentorados' })
+    // ── Ação: listar sessões de mentoria de um mentorado ───────────────────
+    if (action === 'listar_sessoes_mentoria') {
+      const { empresa_id } = payload
+      if (!empresa_id) return ok({ error: 'empresa_id é obrigatório' })
+      const { data, error } = await supabase
+        .from('mentoria_sessoes')
+        .select('*')
+        .eq('empresa_id', empresa_id)
+        .order('data', { ascending: false })
+      if (error) return ok({ error: error.message })
+      return ok({ success: true, sessoes: data ?? [] })
+    }
+
+    // ── Ação: registrar sessão de mentoria ──────────────────────────────────
+    if (action === 'criar_sessao_mentoria') {
+      const { empresa_id, data: dataSessao, nota, combinados } = payload
+      if (!empresa_id || !nota?.trim()) return ok({ error: 'empresa_id e nota são obrigatórios' })
+      const { data, error } = await supabase
+        .from('mentoria_sessoes')
+        .insert({
+          empresa_id,
+          data: dataSessao || new Date().toLocaleDateString('en-CA'),
+          nota: nota.trim(),
+          combinados: combinados?.trim() || null,
+          criado_por: user.id,
+        })
+        .select()
+        .single()
+      if (error) return ok({ error: error.message })
+      return ok({ success: true, sessao: data })
+    }
+
+    // ── Ação: excluir sessão de mentoria ────────────────────────────────────
+    if (action === 'excluir_sessao_mentoria') {
+      const { id } = payload
+      if (!id) return ok({ error: 'id é obrigatório' })
+      const { error } = await supabase.from('mentoria_sessoes').delete().eq('id', id)
+      if (error) return ok({ error: error.message })
+      return ok({ success: true })
+    }
+
+    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | estender_trial | atualizar_valor_assinatura | toggle_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria' })
 
   } catch (e) {
     return ok({ error: e.message || 'Erro interno' })
