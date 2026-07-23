@@ -1508,20 +1508,81 @@ export function useSessoesMentoria(empresaId) {
 export function useCriarSessaoMentoria() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ empresa_id, data, nota, combinados }) => {
+    mutationFn: async ({ empresa_id, nome_avulso, data, nota, combinados, itens }) => {
       const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-painel`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'criar_sessao_mentoria', empresa_id, data, nota, combinados }),
+        body: JSON.stringify({ action: 'criar_sessao_mentoria', empresa_id, nome_avulso, data, nota, combinados, itens }),
       })
       const result = await res.json()
       if (result.error) throw new Error(result.error)
       return result.sessao
     },
     onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: ['admin_sessoes_mentoria', vars.empresa_id] })
+      if (vars.empresa_id) qc.invalidateQueries({ queryKey: ['admin_sessoes_mentoria', vars.empresa_id] })
       qc.invalidateQueries({ queryKey: ['admin_mentorados'] })
+      qc.invalidateQueries({ queryKey: ['admin_sessoes_avulsas'] })
+      qc.invalidateQueries({ queryKey: ['admin_combinados_abertos'] })
+    },
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+export function useSessoesAvulsas() {
+  return useQuery({
+    queryKey: ['admin_sessoes_avulsas'],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-painel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'listar_sessoes_avulsas' }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      return data.sessoes ?? []
+    },
+    staleTime: 30_000,
+  })
+}
+
+export function useCombinadosAbertos() {
+  return useQuery({
+    queryKey: ['admin_combinados_abertos'],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-painel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'listar_combinados_abertos' }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      return data.combinados ?? []
+    },
+    staleTime: 15_000,
+  })
+}
+
+export function useConcluirCombinado() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-painel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'concluir_combinado', id }),
+      })
+      const result = await res.json()
+      if (result.error) throw new Error(result.error)
+      return result
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin_combinados_abertos'] })
+      qc.invalidateQueries({ queryKey: ['admin_sessoes_mentoria'] })
+      qc.invalidateQueries({ queryKey: ['admin_sessoes_avulsas'] })
     },
     onError: (err) => console.error('[Fluxe]', err),
   })
@@ -1542,8 +1603,10 @@ export function useExcluirSessaoMentoria() {
       return empresa_id
     },
     onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: ['admin_sessoes_mentoria', vars.empresa_id] })
+      if (vars.empresa_id) qc.invalidateQueries({ queryKey: ['admin_sessoes_mentoria', vars.empresa_id] })
       qc.invalidateQueries({ queryKey: ['admin_mentorados'] })
+      qc.invalidateQueries({ queryKey: ['admin_sessoes_avulsas'] })
+      qc.invalidateQueries({ queryKey: ['admin_combinados_abertos'] })
     },
     onError: (err) => console.error('[Fluxe]', err),
   })

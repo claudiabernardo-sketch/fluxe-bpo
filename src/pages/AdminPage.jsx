@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados, useSessoesMentoria, useCriarSessaoMentoria, useExcluirSessaoMentoria } from '../hooks/useData'
+import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados, useSessoesMentoria, useCriarSessaoMentoria, useExcluirSessaoMentoria, useSessoesAvulsas, useCombinadosAbertos, useConcluirCombinado } from '../hooks/useData'
 import { Card, CardHeader, Btn, Badge, Loader } from '../components/ui'
 
 const PLANO_COLOR = { trial:'yellow', trial_expirado:'orange', bloqueado:'red', essencial:'green', pro:'green' }
@@ -272,16 +272,57 @@ function urgencia(m) {
   return semaforoScore + dificuldades.length * 50 + Math.min(diasSemSessao, 365)
 }
 
+function CombinadosDraftEditor({ itens, setItens }) {
+  function add() { setItens(list => [...list, { texto: '', prazo: '' }]) }
+  function update(i, campo, valor) { setItens(list => list.map((it, idx) => idx === i ? { ...it, [campo]: valor } : it)) }
+  function remove(i) { setItens(list => list.filter((_, idx) => idx !== i)) }
+
+  const fi = { padding: '6px 8px', border: '1px solid var(--bo)', borderRadius: 6, fontSize: 12, fontFamily: 'inherit' }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+      {itens.map((it, i) => (
+        <div key={i} style={{ display: 'flex', gap: 6 }}>
+          <input style={{ ...fi, flex: 1 }} placeholder="Combinado com prazo (ex: definir ticket até sexta)" value={it.texto} onChange={e => update(i, 'texto', e.target.value)} />
+          <input type="date" style={{ ...fi, flex: '0 0 130px' }} value={it.prazo} onChange={e => update(i, 'prazo', e.target.value)} />
+          <button onClick={() => remove(i)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--tx3)' }}>✕</button>
+        </div>
+      ))}
+      <button onClick={add} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#6366F1', fontSize: 11, fontWeight: 600, textAlign: 'left', padding: 0 }}>
+        + combinado com prazo
+      </button>
+    </div>
+  )
+}
+
+function ListaCombinadosDaSessao({ combinados = [] }) {
+  const concluir = useConcluirCombinado()
+  if (combinados.length === 0) return null
+  return (
+    <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+      {combinados.map(c => (
+        <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, opacity: c.concluido ? .55 : 1, cursor: c.concluido ? 'default' : 'pointer' }}>
+          <input type="checkbox" checked={c.concluido} disabled={c.concluido || concluir.isPending} onChange={() => concluir.mutate(c.id)} />
+          <span style={{ textDecoration: c.concluido ? 'line-through' : 'none' }}>{c.texto}</span>
+          {c.prazo && <span style={{ color: 'var(--tx3)' }}>— {new Date(c.prazo + 'T12:00:00').toLocaleDateString('pt-BR')}</span>}
+        </label>
+      ))}
+    </div>
+  )
+}
+
 function SecaoSessoes({ empresaId }) {
   const { data: sessoes = [], isLoading } = useSessoesMentoria(empresaId)
   const criar = useCriarSessaoMentoria()
   const excluir = useExcluirSessaoMentoria()
   const [form, setForm] = useState({ data: new Date().toLocaleDateString('en-CA'), nota: '', combinados: '' })
+  const [itens, setItens] = useState([])
 
   async function salvar() {
     if (!form.nota.trim()) return
-    await criar.mutateAsync({ empresa_id: empresaId, ...form })
+    await criar.mutateAsync({ empresa_id: empresaId, ...form, itens })
     setForm({ data: new Date().toLocaleDateString('en-CA'), nota: '', combinados: '' })
+    setItens([])
   }
 
   const fi = { padding: '7px 9px', border: '1px solid var(--bo)', borderRadius: 7, fontSize: 12, fontFamily: 'inherit' }
@@ -291,7 +332,8 @@ function SecaoSessoes({ empresaId }) {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, background: 'var(--bg2)', padding: 10, borderRadius: 8 }}>
         <input type="date" style={{ ...fi, flex: '0 0 140px' }} value={form.data} onChange={e => setForm(f => ({ ...f, data: e.target.value }))} />
         <textarea style={{ ...fi, flex: '1 1 220px', minHeight: 44, resize: 'vertical' }} placeholder="O que foi conversado..." value={form.nota} onChange={e => setForm(f => ({ ...f, nota: e.target.value }))} />
-        <textarea style={{ ...fi, flex: '1 1 220px', minHeight: 44, resize: 'vertical' }} placeholder="Combinados / próximos passos (opcional)" value={form.combinados} onChange={e => setForm(f => ({ ...f, combinados: e.target.value }))} />
+        <textarea style={{ ...fi, flex: '1 1 220px', minHeight: 44, resize: 'vertical' }} placeholder="Contexto geral dos combinados (opcional)" value={form.combinados} onChange={e => setForm(f => ({ ...f, combinados: e.target.value }))} />
+        <CombinadosDraftEditor itens={itens} setItens={setItens} />
         <Btn small variant="primary" disabled={criar.isPending || !form.nota.trim()} onClick={salvar}>
           {criar.isPending ? 'Salvando...' : '+ Registrar sessão'}
         </Btn>
@@ -308,7 +350,8 @@ function SecaoSessoes({ empresaId }) {
                 <button onClick={() => excluir.mutate({ id: s.id, empresa_id: empresaId })} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--tx3)', fontSize: 11 }}>🗑</button>
               </div>
               <div style={{ marginTop: 4 }}>{s.nota}</div>
-              {s.combinados && <div style={{ marginTop: 4, color: 'var(--tx2)' }}><b>Combinados:</b> {s.combinados}</div>}
+              {s.combinados && <div style={{ marginTop: 4, color: 'var(--tx2)' }}><b>Contexto:</b> {s.combinados}</div>}
+              <ListaCombinadosDaSessao combinados={s.mentoria_combinados} />
             </div>
           ))}
         </div>
@@ -377,8 +420,26 @@ function CardMentorado({ m }) {
   )
 }
 
+function ResumoMentoria({ mentorados, combinadosAbertos }) {
+  if (mentorados.length === 0) return null
+  const criticos = mentorados.filter(m => m.radar?.pior_semaforo === 'vermelho').length
+  const semSessaoLonga = mentorados.filter(m => (diasDesde(m.sessoes?.ultima_data) ?? 9999) > 30).length
+  const hoje = new Date().toLocaleDateString('en-CA')
+  const vencidos = combinadosAbertos.filter(c => c.prazo && c.prazo < hoje).length
+
+  return (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+      {criticos > 0 && <Badge label={`🔴 ${criticos} com Radar crítico`} color="red" />}
+      {vencidos > 0 && <Badge label={`⏰ ${vencidos} combinado${vencidos > 1 ? 's' : ''} vencido${vencidos > 1 ? 's' : ''}`} color="orange" />}
+      {semSessaoLonga > 0 && <Badge label={`📅 ${semSessaoLonga} sem sessão há +30 dias`} color="yellow" />}
+      {criticos === 0 && vencidos === 0 && semSessaoLonga === 0 && <Badge label="✅ Tudo em dia" color="green" />}
+    </div>
+  )
+}
+
 function SecaoMentorados() {
   const { data: mentorados = [], isLoading } = useMentorados()
+  const { data: combinadosAbertos = [] } = useCombinadosAbertos()
   const ordenados = [...mentorados].sort((a, b) => urgencia(b) - urgencia(a))
 
   return (
@@ -388,6 +449,7 @@ function SecaoMentorados() {
         <div style={{ fontSize: 12, color: 'var(--tx3)', marginBottom: 14 }}>
           Empresas marcadas com 🎓 na lista abaixo, ordenadas por quem precisa de mais atenção primeiro. Selos: 🎯 Plano de Negócio completo · 🤝 primeiro cliente operacional · 📄 primeira proposta aprovada.
         </div>
+        <ResumoMentoria mentorados={mentorados} combinadosAbertos={combinadosAbertos} />
         {isLoading ? <Loader /> : mentorados.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>
             Nenhuma empresa marcada como mentorada ainda — clique no 🎓 na lista de empresas abaixo.
@@ -402,6 +464,106 @@ function SecaoMentorados() {
   )
 }
 
+function SecaoCombinadosAbertos() {
+  const { data: combinados = [], isLoading } = useCombinadosAbertos()
+  const hoje = new Date().toLocaleDateString('en-CA')
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <CardHeader title={`Combinados em aberto (${combinados.length})`} icon="fa-solid fa-list-check" />
+      <div style={{ padding: 16 }}>
+        {isLoading ? <Loader /> : combinados.length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>Nada em aberto — tudo em dia.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {combinados.map(c => {
+              const nome = c.mentoria_sessoes?.empresas?.nome || c.mentoria_sessoes?.nome_avulso || '—'
+              const vencido = c.prazo && c.prazo < hoje
+              return <ItemCombinadoAberto key={c.id} c={c} nome={nome} vencido={vencido} />
+            })}
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}
+
+function ItemCombinadoAberto({ c, nome, vencido }) {
+  const concluir = useConcluirCombinado()
+  return (
+    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, border: '1px solid var(--bo)', borderRadius: 8, padding: '8px 10px', cursor: concluir.isPending ? 'default' : 'pointer' }}>
+      <input type="checkbox" checked={false} disabled={concluir.isPending} onChange={() => concluir.mutate(c.id)} style={{ marginTop: 2 }} />
+      <div style={{ flex: 1 }}>
+        <div>
+          <b>{nome}</b>
+          {c.prazo && (
+            <span style={{ color: vencido ? '#DC2626' : 'var(--tx3)', fontWeight: vencido ? 700 : 400 }}>
+              {' '}· {vencido ? 'venceu em ' : 'até '}{new Date(c.prazo + 'T12:00:00').toLocaleDateString('pt-BR')}
+            </span>
+          )}
+        </div>
+        <div style={{ color: 'var(--tx2)' }}>{c.texto}</div>
+      </div>
+    </label>
+  )
+}
+
+function SecaoSessoesAvulsas() {
+  const { data: sessoes = [], isLoading } = useSessoesAvulsas()
+  const criar = useCriarSessaoMentoria()
+  const excluir = useExcluirSessaoMentoria()
+  const [form, setForm] = useState({ nome_avulso: '', data: new Date().toLocaleDateString('en-CA'), nota: '', combinados: '' })
+  const [itens, setItens] = useState([])
+
+  async function salvar() {
+    if (!form.nome_avulso.trim() || !form.nota.trim()) return
+    await criar.mutateAsync({ ...form, itens })
+    setForm({ nome_avulso: '', data: new Date().toLocaleDateString('en-CA'), nota: '', combinados: '' })
+    setItens([])
+  }
+
+  const fi = { padding: '7px 9px', border: '1px solid var(--bo)', borderRadius: 7, fontSize: 12, fontFamily: 'inherit' }
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <CardHeader title={`Sessões avulsas (${sessoes.length})`} icon="fa-solid fa-user-clock" />
+      <div style={{ padding: 16 }}>
+        <div style={{ fontSize: 12, color: 'var(--tx3)', marginBottom: 12 }}>
+          Pra quem comprou só uma sessão de mentoria e não virou mentorado oficial (sem 🎓 marcado).
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, background: 'var(--bg2)', padding: 10, borderRadius: 8 }}>
+          <input style={{ ...fi, flex: '1 1 160px' }} placeholder="Nome de quem participou" value={form.nome_avulso} onChange={e => setForm(f => ({ ...f, nome_avulso: e.target.value }))} />
+          <input type="date" style={{ ...fi, flex: '0 0 140px' }} value={form.data} onChange={e => setForm(f => ({ ...f, data: e.target.value }))} />
+          <textarea style={{ ...fi, flex: '1 1 220px', minHeight: 44, resize: 'vertical' }} placeholder="O que foi conversado..." value={form.nota} onChange={e => setForm(f => ({ ...f, nota: e.target.value }))} />
+          <textarea style={{ ...fi, flex: '1 1 220px', minHeight: 44, resize: 'vertical' }} placeholder="Contexto geral dos combinados (opcional)" value={form.combinados} onChange={e => setForm(f => ({ ...f, combinados: e.target.value }))} />
+          <CombinadosDraftEditor itens={itens} setItens={setItens} />
+          <Btn small variant="primary" disabled={criar.isPending || !form.nome_avulso.trim() || !form.nota.trim()} onClick={salvar}>
+            {criar.isPending ? 'Salvando...' : '+ Registrar sessão avulsa'}
+          </Btn>
+        </div>
+
+        {isLoading ? <Loader /> : sessoes.length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>Nenhuma sessão avulsa registrada ainda.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {sessoes.map(s => (
+              <div key={s.id} style={{ fontSize: 12, border: '1px solid var(--bo)', borderRadius: 8, padding: '8px 10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={{ fontWeight: 700 }}>{s.nome_avulso} · {new Date(s.data + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                  <button onClick={() => excluir.mutate({ id: s.id })} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--tx3)', fontSize: 11 }}>🗑</button>
+                </div>
+                <div style={{ marginTop: 4 }}>{s.nota}</div>
+                {s.combinados && <div style={{ marginTop: 4, color: 'var(--tx2)' }}><b>Contexto:</b> {s.combinados}</div>}
+                <ListaCombinadosDaSessao combinados={s.mentoria_combinados} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 export default function AdminPage() {
   return (
     <div>
@@ -409,6 +571,8 @@ export default function AdminPage() {
         Visível só pra você — controle de todas as empresas que usam o Fluxe e registro interno de bugs.
       </div>
       <SecaoMentorados />
+      <SecaoCombinadosAbertos />
+      <SecaoSessoesAvulsas />
       <SecaoEmpresas />
       <SecaoBugs />
     </div>
