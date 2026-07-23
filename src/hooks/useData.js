@@ -1463,6 +1463,27 @@ export function useAdminEmpresas() {
   })
 }
 
+// Painel do Mentor — lista as empresas marcadas como mentoradas do BPO
+// Lucrativo com o Radar e o Plano de Negócio de cada uma. Passa pela mesma
+// Edge Function admin-painel (checagem de fluxe_staff no servidor).
+export function useMentorados() {
+  return useQuery({
+    queryKey: ['admin_mentorados'],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-painel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'list_mentorados' }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      return data.mentorados ?? []
+    },
+    staleTime: 30_000,
+  })
+}
+
 export function useAdminAcaoEmpresa() {
   const qc = useQueryClient()
   return useMutation({
@@ -1477,7 +1498,10 @@ export function useAdminAcaoEmpresa() {
       if (data.error) throw new Error(data.error)
       return data
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin_empresas'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin_empresas'] })
+      qc.invalidateQueries({ queryKey: ['admin_mentorados'] })
+    },
     onError: (err) => console.error('[Fluxe]', err),
   })
 }
