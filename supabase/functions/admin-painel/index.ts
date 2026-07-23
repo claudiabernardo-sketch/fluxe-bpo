@@ -288,21 +288,26 @@ serve(async (req) => {
       if (!empresa_id) return ok({ error: 'empresa_id é obrigatório' })
       const { data, error } = await supabase
         .from('mentoria_sessoes')
-        .select('*')
+        .select('*, mentoria_combinados(*)')
         .eq('empresa_id', empresa_id)
         .order('data', { ascending: false })
       if (error) return ok({ error: error.message })
       return ok({ success: true, sessoes: data ?? [] })
     }
 
-    // ── Ação: registrar sessão de mentoria ──────────────────────────────────
+    // ── Ação: registrar sessão de mentoria (mentorado ou avulsa) ────────────
+    // "itens" é uma lista opcional de combinados rastreáveis [{texto, prazo}]
+    // — além do texto livre em "combinados", que continua existindo pra
+    // contexto geral da conversa.
     if (action === 'criar_sessao_mentoria') {
-      const { empresa_id, data: dataSessao, nota, combinados } = payload
-      if (!empresa_id || !nota?.trim()) return ok({ error: 'empresa_id e nota são obrigatórios' })
+      const { empresa_id, nome_avulso, data: dataSessao, nota, combinados, itens } = payload
+      if (!empresa_id && !nome_avulso?.trim()) return ok({ error: 'Informe empresa_id ou nome_avulso' })
+      if (!nota?.trim()) return ok({ error: 'nota é obrigatória' })
       const { data, error } = await supabase
         .from('mentoria_sessoes')
         .insert({
-          empresa_id,
+          empresa_id: empresa_id || null,
+          nome_avulso: empresa_id ? null : nome_avulso.trim(),
           data: dataSessao || new Date().toLocaleDateString('en-CA'),
           nota: nota.trim(),
           combinados: combinados?.trim() || null,
@@ -311,6 +316,19 @@ serve(async (req) => {
         .select()
         .single()
       if (error) return ok({ error: error.message })
+
+      if (Array.isArray(itens) && itens.length > 0) {
+        const linhas = itens.filter((it: any) => it?.texto?.trim()).map((it: any) => ({
+          sessao_id: data.id,
+          texto: it.texto.trim(),
+          prazo: it.prazo || null,
+        }))
+        if (linhas.length > 0) {
+          const { error: errItens } = await supabase.from('mentoria_combinados').insert(linhas)
+          if (errItens) return ok({ error: errItens.message })
+        }
+      }
+
       return ok({ success: true, sessao: data })
     }
 
@@ -323,7 +341,41 @@ serve(async (req) => {
       return ok({ success: true })
     }
 
-    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | estender_trial | atualizar_valor_assinatura | toggle_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria' })
+    // ── Ação: listar sessões avulsas (sem empresa cadastrada) ───────────────
+    if (action === 'listar_sessoes_avulsas') {
+      const { data, error } = await supabase
+        .from('mentoria_sessoes')
+        .select('*, mentoria_combinados(*)')
+        .is('empresa_id', null)
+        .order('data', { ascending: false })
+      if (error) return ok({ error: error.message })
+      return ok({ success: true, sessoes: data ?? [] })
+    }
+
+    // ── Ação: listar combinados em aberto de todo mundo (mentorados + avulsos) ─
+    if (action === 'listar_combinados_abertos') {
+      const { data, error } = await supabase
+        .from('mentoria_combinados')
+        .select('*, mentoria_sessoes(empresa_id, nome_avulso, empresas(nome))')
+        .eq('concluido', false)
+        .order('prazo', { ascending: true, nullsFirst: false })
+      if (error) return ok({ error: error.message })
+      return ok({ success: true, combinados: data ?? [] })
+    }
+
+    // ── Ação: marcar combinado como concluído ───────────────────────────────
+    if (action === 'concluir_combinado') {
+      const { id } = payload
+      if (!id) return ok({ error: 'id é obrigatório' })
+      const { error } = await supabase
+        .from('mentoria_combinados')
+        .update({ concluido: true, concluido_em: new Date().toISOString() })
+        .eq('id', id)
+      if (error) return ok({ error: error.message })
+      return ok({ success: true })
+    }
+
+    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | estender_trial | atualizar_valor_assinatura | toggle_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria | listar_sessoes_avulsas | listar_combinados_abertos | concluir_combinado' })
 
   } catch (e) {
     return ok({ error: e.message || 'Erro interno' })
