@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados } from '../hooks/useData'
+import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados, useSessoesMentoria, useCriarSessaoMentoria, useExcluirSessaoMentoria } from '../hooks/useData'
 import { Card, CardHeader, Btn, Badge, Loader } from '../components/ui'
 
 const PLANO_COLOR = { trial:'yellow', trial_expirado:'orange', bloqueado:'red', essencial:'green', pro:'green' }
@@ -253,10 +253,76 @@ const ETAPA_LABEL = {
 const SEMAFORO_COLOR = { verde: 'green', amarelo: 'yellow', vermelho: 'red', sem_dado: 'gray' }
 const SEMAFORO_LABEL = { verde: 'Radar OK', amarelo: 'Radar de atenção', vermelho: 'Radar crítico', sem_dado: 'Sem Radar ainda' }
 
+function planoCompleto(plano) {
+  if (!plano) return false
+  return Object.keys(ETAPA_LABEL).every(k => plano[k]?.trim?.())
+}
+
+function diasDesde(dataStr) {
+  if (!dataStr) return null
+  return Math.floor((Date.now() - new Date(dataStr + 'T12:00:00').getTime()) / 86400000)
+}
+
+// Prioridade de quem precisa de atenção primeiro: Radar crítico > tem
+// dificuldade marcada > mais tempo sem sessão registrada.
+function urgencia(m) {
+  const dificuldades = m.plano_negocio ? Object.keys(ETAPA_LABEL).filter(k => m.plano_negocio[`${k}_dificuldade`]) : []
+  const semaforoScore = { vermelho: 1000, amarelo: 500, verde: 0, sem_dado: 100 }[m.radar?.pior_semaforo || 'sem_dado']
+  const diasSemSessao = diasDesde(m.sessoes?.ultima_data) ?? 9999
+  return semaforoScore + dificuldades.length * 50 + Math.min(diasSemSessao, 365)
+}
+
+function SecaoSessoes({ empresaId }) {
+  const { data: sessoes = [], isLoading } = useSessoesMentoria(empresaId)
+  const criar = useCriarSessaoMentoria()
+  const excluir = useExcluirSessaoMentoria()
+  const [form, setForm] = useState({ data: new Date().toLocaleDateString('en-CA'), nota: '', combinados: '' })
+
+  async function salvar() {
+    if (!form.nota.trim()) return
+    await criar.mutateAsync({ empresa_id: empresaId, ...form })
+    setForm({ data: new Date().toLocaleDateString('en-CA'), nota: '', combinados: '' })
+  }
+
+  const fi = { padding: '7px 9px', border: '1px solid var(--bo)', borderRadius: 7, fontSize: 12, fontFamily: 'inherit' }
+
+  return (
+    <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--bo)' }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, background: 'var(--bg2)', padding: 10, borderRadius: 8 }}>
+        <input type="date" style={{ ...fi, flex: '0 0 140px' }} value={form.data} onChange={e => setForm(f => ({ ...f, data: e.target.value }))} />
+        <textarea style={{ ...fi, flex: '1 1 220px', minHeight: 44, resize: 'vertical' }} placeholder="O que foi conversado..." value={form.nota} onChange={e => setForm(f => ({ ...f, nota: e.target.value }))} />
+        <textarea style={{ ...fi, flex: '1 1 220px', minHeight: 44, resize: 'vertical' }} placeholder="Combinados / próximos passos (opcional)" value={form.combinados} onChange={e => setForm(f => ({ ...f, combinados: e.target.value }))} />
+        <Btn small variant="primary" disabled={criar.isPending || !form.nota.trim()} onClick={salvar}>
+          {criar.isPending ? 'Salvando...' : '+ Registrar sessão'}
+        </Btn>
+      </div>
+
+      {isLoading ? <Loader size={16} /> : sessoes.length === 0 ? (
+        <div style={{ fontSize: 12, color: 'var(--tx3)' }}>Nenhuma sessão registrada ainda.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {sessoes.map(s => (
+            <div key={s.id} style={{ fontSize: 12, border: '1px solid var(--bo)', borderRadius: 8, padding: '8px 10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ fontWeight: 700 }}>{new Date(s.data + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                <button onClick={() => excluir.mutate({ id: s.id, empresa_id: empresaId })} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--tx3)', fontSize: 11 }}>🗑</button>
+              </div>
+              <div style={{ marginTop: 4 }}>{s.nota}</div>
+              {s.combinados && <div style={{ marginTop: 4, color: 'var(--tx2)' }}><b>Combinados:</b> {s.combinados}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function CardMentorado({ m }) {
+  const [expandido, setExpandido] = useState(false)
   const dificuldades = m.plano_negocio
     ? Object.keys(ETAPA_LABEL).filter(k => m.plano_negocio[`${k}_dificuldade`])
     : []
+  const diasSemSessao = diasDesde(m.sessoes?.ultima_data)
 
   return (
     <div style={{ border: '1px solid var(--bo)', borderRadius: 10, padding: '14px 16px' }}>
@@ -264,6 +330,11 @@ function CardMentorado({ m }) {
         <div>
           <div style={{ fontWeight: 700, fontSize: 14 }}>{m.nome || '—'}</div>
           <div style={{ fontSize: 11, color: 'var(--tx3)' }}>{m.email || ''}</div>
+          <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+            {planoCompleto(m.plano_negocio) && <span title="Plano de Negócio completo" style={{ fontSize: 15 }}>🎯</span>}
+            {m.radar?.total_clientes > 0 && <span title="Primeiro cliente operacional" style={{ fontSize: 15 }}>🤝</span>}
+            {m.proposta_aprovada && <span title="Primeira proposta aprovada" style={{ fontSize: 15 }}>📄</span>}
+          </div>
         </div>
         {m.radar ? (
           <Badge label={`${SEMAFORO_LABEL[m.radar.pior_semaforo]}${m.radar.score_medio != null ? ` (${m.radar.score_medio})` : ''}`} color={SEMAFORO_COLOR[m.radar.pior_semaforo]} />
@@ -289,19 +360,33 @@ function CardMentorado({ m }) {
           </div>
         </div>
       )}
+
+      <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: 11, color: 'var(--tx3)' }}>
+          {m.sessoes?.count > 0
+            ? `${m.sessoes.count} sessão${m.sessoes.count > 1 ? 'ões' : ''} · última há ${diasSemSessao} dia${diasSemSessao === 1 ? '' : 's'}`
+            : 'Nenhuma sessão registrada'}
+        </div>
+        <button onClick={() => setExpandido(x => !x)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#6366F1', fontSize: 12, fontWeight: 600 }}>
+          {expandido ? 'Fechar sessões ▲' : 'Ver / registrar sessões ▼'}
+        </button>
+      </div>
+
+      {expandido && <SecaoSessoes empresaId={m.id} />}
     </div>
   )
 }
 
 function SecaoMentorados() {
   const { data: mentorados = [], isLoading } = useMentorados()
+  const ordenados = [...mentorados].sort((a, b) => urgencia(b) - urgencia(a))
 
   return (
     <Card style={{ marginBottom: 16 }}>
       <CardHeader title={`Painel do Mentor — BPO Lucrativo (${mentorados.length})`} icon="fa-solid fa-graduation-cap" />
       <div style={{ padding: 16 }}>
         <div style={{ fontSize: 12, color: 'var(--tx3)', marginBottom: 14 }}>
-          Empresas marcadas com 🎓 na lista abaixo. Mostra onde cada mentorado está travando no Plano de Negócio e o estado geral do Radar.
+          Empresas marcadas com 🎓 na lista abaixo, ordenadas por quem precisa de mais atenção primeiro. Selos: 🎯 Plano de Negócio completo · 🤝 primeiro cliente operacional · 📄 primeira proposta aprovada.
         </div>
         {isLoading ? <Loader /> : mentorados.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>
@@ -309,7 +394,7 @@ function SecaoMentorados() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {mentorados.map(m => <CardMentorado key={m.id} m={m} />)}
+            {ordenados.map(m => <CardMentorado key={m.id} m={m} />)}
           </div>
         )}
       </div>
