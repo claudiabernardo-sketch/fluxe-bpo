@@ -8,6 +8,7 @@ import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import ContextTooltip from '../components/ui/ContextTooltip'
 import { CLIENTES_EXPORT_COLS, mapRowToCliente } from '../utils/excelMappings'
+import { BANCOS_LIST, normalizarBancos } from '../utils/bancos'
 
 // ImportModal e downloadClienteTemplate puxam as libs de planilha (~800KB) —
 // só devem ser carregados quando o usuário realmente abrir o import/export,
@@ -28,7 +29,6 @@ const CATEGORIAS_COFRE = [
 ]
 function getCatCofre(id) { return CATEGORIAS_COFRE.find(c=>c.id===id) || CATEGORIAS_COFRE[4] }
 
-const BANCOS_LIST = ['Banco do Brasil','Santander','Caixa Econômica Federal','Bradesco','Itaú','Nubank','C6 Bank','Banco Inter','Mercado Pago','PagBank','Sicoob','Sicredi','Banco Original','BTG Pactual','Stone','Cora','Asaas','Outro']
 const SOFTWARES = ['Omie','Conta Azul','Meu Dinheiro Web','Nibo','Bom Controle','Bling','Nexaas','Gestão Fácil','Outro']
 
 function fmtCNPJ(v) {

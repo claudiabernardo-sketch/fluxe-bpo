@@ -13,6 +13,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-trigger',
 }
 
+// ── Bancos: normaliza nomes antigos/divergentes antes de expandir por banco
+// (ex.: "Banco Inter" salvo antes da lista de caixinhas ser unificada com
+// "Inter") — sem isso, o mesmo banco conta duas vezes e gera tarefa duplicada.
+const BANCOS_LIST = [
+  'Banco do Brasil','Bradesco','Itaú','Santander','Caixa',
+  'Nubank','Inter','Sicoob','Sicredi','BTG','C6 Bank','XP','Safra',
+  'BV','Banrisul','Original','Neon','PicPay','Mercado Pago','CPJ Conta Azul',
+  'PagBank','Stone','Cora','Asaas','Outros',
+]
+const BANCOS_ALIASES: Record<string, string> = {
+  'caixa econômica federal': 'Caixa',
+  'banco original': 'Original',
+  'btg pactual': 'BTG',
+  'outro': 'Outros',
+}
+function normalizarBanco(nome: string): string {
+  if (BANCOS_LIST.includes(nome)) return nome
+  const semPrefixo = nome.replace(/^Banco\s+/i, '').trim()
+  if (BANCOS_LIST.includes(semPrefixo)) return semPrefixo
+  return BANCOS_ALIASES[nome.trim().toLowerCase()] || nome
+}
+function normalizarBancos(lista: string[]): string[] {
+  return [...new Set((lista || []).map(normalizarBanco))]
+}
+
 // ── Timezone: Brasil (BRT = UTC-3) ──────────────────────────────────────────
 function getHojeBRT(): string {
   const now = new Date()
@@ -316,7 +341,7 @@ serve(async (req) => {
             // (campo fixo e confiável), não o título (texto livre, pode variar)
             const isConciliacao = modelo.categoria === 'Conciliação Bancária'
             const bancosCliente: string[] = (isConciliacao && Array.isArray(cliente.bancos) && cliente.bancos.length > 0)
-              ? cliente.bancos
+              ? normalizarBancos(cliente.bancos)
               : []
             const titulosParaGerar = bancosCliente.length > 0
               ? bancosCliente.map((b: string) => `${modelo.titulo} — ${b}`)

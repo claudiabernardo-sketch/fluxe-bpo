@@ -8,6 +8,7 @@ import {
 } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
+import { BANCOS_LIST, normalizarBancos } from '../utils/bancos'
 import { Badge, Loader, fmtR } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 import RadarPainel from '../components/ui/RadarPainel'
@@ -26,12 +27,6 @@ const STATUS_OP_LABEL = { em_configuracao:'Rotina: Em Configuração', operacion
 
 const DIAS_SEMANA_R = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 
-const BANCOS_LIST = [
-  'Banco do Brasil','Bradesco','Itaú','Santander','Caixa',
-  'Nubank','Inter','Sicoob','Sicredi','BTG','C6 Bank','XP','Safra',
-  'BV','Banrisul','Original','Neon','PicPay','Mercado Pago','CPJ Conta Azul',
-  'Outros',
-]
 
 const CATEGORIAS_COFRE = [
   { id:'banco', icon:'🏦', label:'Banco' },
@@ -103,7 +98,7 @@ export default function ClientePage() {
       ? mrrNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       : ''
     setForm({ ...cliente, valor_mrr: valorFormatado })
-    setSelectedBancos(cliente.bancos || [])
+    setSelectedBancos(normalizarBancos(cliente.bancos))
   }
 
   // Tab ativa — aceita ?tab= na URL (ex: link do Radar no Dashboard). Como a
