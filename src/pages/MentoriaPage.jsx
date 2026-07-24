@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import { useMentoriaLinks, useCreateMentoriaLink, useDeleteMentoriaLink, useMeusCombinados, useAtualizarMeuCombinado } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
+import { supabase } from '../lib/supabase'
 import { Card, CardHeader, Btn, Loader } from '../components/ui'
+
+function urlDoMaterial(l) {
+  if (l.arquivo_path) return supabase.storage.from('tarefas').getPublicUrl(l.arquivo_path).data.publicUrl
+  return l.url
+}
 
 function ItemMeuCombinado({ c }) {
   const atualizar = useAtualizarMeuCombinado()
@@ -47,7 +53,7 @@ function SecaoMeusCombinados() {
 
   return (
     <Card style={{ marginBottom: 16 }}>
-      <CardHeader title="Combinados com sua mentoria" icon="fa-solid fa-list-check" />
+      <CardHeader title="Combinados com sua mentora" icon="fa-solid fa-list-check" />
       <div style={{ padding: 16 }}>
         {isLoading ? <Loader /> : combinados.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>Nenhum combinado registrado com você ainda.</div>
@@ -65,13 +71,18 @@ export default function MentoriaPage() {
   const { data: links = [], isLoading } = useMentoriaLinks()
   const criar = useCreateMentoriaLink()
   const remover = useDeleteMentoriaLink()
+  const [tipo, setTipo] = useState('link') // 'link' | 'arquivo'
   const [form, setForm] = useState({ titulo: '', url: '', descricao: '' })
+  const [arquivo, setArquivo] = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
 
+  const podeSalvar = form.titulo.trim() && (tipo === 'link' ? form.url.trim() : arquivo)
+
   async function salvar() {
-    if (!form.titulo.trim() || !form.url.trim()) return
-    await criar.mutateAsync(form)
+    if (!podeSalvar) return
+    await criar.mutateAsync({ ...form, arquivo: tipo === 'arquivo' ? arquivo : null })
     setForm({ titulo: '', url: '', descricao: '' })
+    setArquivo(null)
   }
 
   const fi = { padding: '8px 10px', border: '1px solid var(--bo)', borderRadius: 8, fontSize: 13, fontFamily: 'inherit' }
@@ -81,7 +92,7 @@ export default function MentoriaPage() {
   return (
     <div style={{ maxWidth: 760, margin: '0 auto' }}>
       <div style={{ fontSize: 12, color: 'var(--tx3)', marginBottom: 16 }}>
-        Vídeos e materiais de mentoria — cole aqui os links (YouTube, Google Drive, Canva, etc.) pra sua equipe acessar.
+        Vídeos e materiais de mentoria — cole um link (YouTube, Google Drive, Canva, etc.) ou suba um arquivo direto pra sua equipe acessar.
       </div>
 
       <SecaoMeusCombinados />
@@ -89,11 +100,19 @@ export default function MentoriaPage() {
       <Card style={{ marginBottom: 16 }}>
         <CardHeader title="Adicionar material" icon="fa-solid fa-plus" />
         <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => setTipo('link')} style={{ flex: 1, padding: '7px 10px', borderRadius: 8, border: tipo === 'link' ? '2px solid #6366F1' : '1px solid var(--bo)', background: tipo === 'link' ? 'rgba(99,102,241,.08)' : 'transparent', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>🔗 Link</button>
+            <button onClick={() => setTipo('arquivo')} style={{ flex: 1, padding: '7px 10px', borderRadius: 8, border: tipo === 'arquivo' ? '2px solid #6366F1' : '1px solid var(--bo)', background: tipo === 'arquivo' ? 'rgba(99,102,241,.08)' : 'transparent', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>📎 Arquivo</button>
+          </div>
           <input style={fi} placeholder="Título (ex: Como precificar um novo cliente)" value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))} />
-          <input style={fi} placeholder="Link (https://...)" value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} />
+          {tipo === 'link' ? (
+            <input style={fi} placeholder="Link (https://...)" value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} />
+          ) : (
+            <input type="file" style={fi} onChange={e => setArquivo(e.target.files?.[0] || null)} />
+          )}
           <textarea style={{ ...fi, minHeight: 60, resize: 'vertical' }} placeholder="Descrição (opcional)" value={form.descricao} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} />
           <div>
-            <Btn variant="primary" disabled={criar.isPending || !form.titulo.trim() || !form.url.trim()} onClick={salvar}>
+            <Btn variant="primary" disabled={criar.isPending || !podeSalvar} onClick={salvar}>
               {criar.isPending ? 'Salvando...' : '+ Adicionar'}
             </Btn>
           </div>
@@ -109,9 +128,9 @@ export default function MentoriaPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {links.map(l => (
                 <div key={l.id} style={{ border: '1px solid var(--bo)', borderRadius: 10, padding: '12px 14px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <div style={{ fontSize: 18, marginTop: 2 }}>🎥</div>
+                  <div style={{ fontSize: 18, marginTop: 2 }}>{l.arquivo_path ? '📎' : '🎥'}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <a href={l.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, fontWeight: 600, color: '#6366F1', textDecoration: 'none' }}>{l.titulo}</a>
+                    <a href={urlDoMaterial(l)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, fontWeight: 600, color: '#6366F1', textDecoration: 'none' }}>{l.titulo}</a>
                     {l.descricao && <div style={{ fontSize: 12, color: 'var(--tx2)', marginTop: 2 }}>{l.descricao}</div>}
                     <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 4 }}>
                       Adicionado por {l.usuarios?.nome || '—'} em {new Date(l.criado_em).toLocaleDateString('pt-BR')}
@@ -119,7 +138,7 @@ export default function MentoriaPage() {
                   </div>
                   {confirmDel === l.id ? (
                     <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                      <Btn small variant="danger" onClick={() => { remover.mutate(l.id); setConfirmDel(null) }}>Excluir</Btn>
+                      <Btn small variant="danger" onClick={() => { remover.mutate({ id: l.id, arquivo_path: l.arquivo_path }); setConfirmDel(null) }}>Excluir</Btn>
                       <Btn small variant="outline" onClick={() => setConfirmDel(null)}>Cancelar</Btn>
                     </div>
                   ) : (

@@ -376,7 +376,45 @@ serve(async (req) => {
       return ok({ success: true })
     }
 
-    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | estender_trial | atualizar_valor_assinatura | toggle_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria | listar_sessoes_avulsas | listar_combinados_abertos | concluir_combinado' })
+    // ── Ação: excluir SÓ os dados de mentoria de uma empresa ────────────────
+    // Apaga Plano de Negócio, sessões (cascata: combinados) e materiais
+    // (+ arquivos no storage) — não toca em clientes/tarefas/usuarios, que
+    // continuam intactos caso a empresa também seja cliente pagante do Fluxe.
+    // Exige digitar o nome exato da empresa como confirmação, dado que é
+    // irreversível.
+    if (action === 'excluir_dados_mentoria') {
+      const { empresa_id, confirmacao_nome } = payload
+      if (!empresa_id) return ok({ error: 'empresa_id é obrigatório' })
+
+      const { data: emp, error: empErr } = await supabase.from('empresas').select('id, nome').eq('id', empresa_id).single()
+      if (empErr || !emp) return ok({ error: 'Empresa não encontrada' })
+      if (!confirmacao_nome || confirmacao_nome.trim() !== emp.nome) {
+        return ok({ error: 'Nome de confirmação não bate com o nome da empresa' })
+      }
+
+      // Apaga os arquivos de materiais no storage antes de apagar as linhas
+      const { data: arquivos } = await supabase.storage.from('tarefas').list(`${empresa_id}/mentoria-materiais`, { limit: 1000 })
+      if (arquivos && arquivos.length > 0) {
+        const paths = arquivos.map((f: any) => `${empresa_id}/mentoria-materiais/${f.name}`)
+        await supabase.storage.from('tarefas').remove(paths)
+      }
+
+      const { error: errLinks } = await supabase.from('mentoria_links').delete().eq('empresa_id', empresa_id)
+      if (errLinks) return ok({ error: errLinks.message })
+
+      const { error: errPlano } = await supabase.from('plano_negocio').delete().eq('empresa_id', empresa_id)
+      if (errPlano) return ok({ error: errPlano.message })
+
+      const { error: errSessoes } = await supabase.from('mentoria_sessoes').delete().eq('empresa_id', empresa_id)
+      if (errSessoes) return ok({ error: errSessoes.message })
+
+      const { error: errFlag } = await supabase.from('empresas').update({ mentorado_bpo_lucrativo: false }).eq('id', empresa_id)
+      if (errFlag) return ok({ error: errFlag.message })
+
+      return ok({ success: true })
+    }
+
+    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | estender_trial | atualizar_valor_assinatura | toggle_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria | listar_sessoes_avulsas | listar_combinados_abertos | concluir_combinado | excluir_dados_mentoria' })
 
   } catch (e) {
     return ok({ error: e.message || 'Erro interno' })
