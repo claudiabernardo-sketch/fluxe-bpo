@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados, useSessoesMentoria, useCriarSessaoMentoria, useExcluirSessaoMentoria, useSessoesAvulsas, useCombinadosAbertos, useConcluirCombinado } from '../hooks/useData'
+import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados, useSessoesMentoria, useCriarSessaoMentoria, useExcluirSessaoMentoria, useSessoesAvulsas, useCombinadosAbertos, useConcluirCombinado, useExcluirDadosMentoria } from '../hooks/useData'
 import { Card, CardHeader, Btn, Badge, Loader } from '../components/ui'
 
 const PLANO_COLOR = { trial:'yellow', trial_expirado:'orange', bloqueado:'red', essencial:'green', pro:'green' }
@@ -365,8 +365,35 @@ function SecaoSessoes({ empresaId }) {
   )
 }
 
+function ZonaPerigoMentorado({ m }) {
+  const excluir = useExcluirDadosMentoria()
+  const [nomeConfirmacao, setNomeConfirmacao] = useState('')
+  const podeExcluir = nomeConfirmacao.trim() === m.nome
+
+  return (
+    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px dashed #FCA5A5' }}>
+      <div style={{ fontSize: 11, color: '#991B1B', marginBottom: 6 }}>
+        Apaga Plano de Negócio, sessões, combinados e materiais dessa empresa (e desmarca 🎓). Não apaga clientes/tarefas/usuários dela. Não tem como desfazer.
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <input
+          style={{ flex: '1 1 180px', padding: '6px 8px', border: '1px solid var(--bo)', borderRadius: 6, fontSize: 12, fontFamily: 'inherit' }}
+          placeholder={`Digite "${m.nome}" pra confirmar`}
+          value={nomeConfirmacao}
+          onChange={e => setNomeConfirmacao(e.target.value)}
+        />
+        <Btn small variant="danger" disabled={!podeExcluir || excluir.isPending} onClick={() => excluir.mutate({ empresa_id: m.id, confirmacao_nome: nomeConfirmacao })}>
+          {excluir.isPending ? 'Excluindo...' : 'Excluir dados de mentoria'}
+        </Btn>
+      </div>
+      {excluir.isError && <div style={{ fontSize: 11, color: '#991B1B', marginTop: 6 }}>Erro: {excluir.error?.message}</div>}
+    </div>
+  )
+}
+
 function CardMentorado({ m }) {
   const [expandido, setExpandido] = useState(false)
+  const [zonaPerigo, setZonaPerigo] = useState(false)
   const dificuldades = m.plano_negocio
     ? Object.keys(ETAPA_LABEL).filter(k => m.plano_negocio[`${k}_dificuldade`])
     : []
@@ -421,6 +448,13 @@ function CardMentorado({ m }) {
       </div>
 
       {expandido && <SecaoSessoes empresaId={m.id} />}
+
+      <div style={{ marginTop: 8, textAlign: 'right' }}>
+        <button onClick={() => setZonaPerigo(x => !x)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--tx3)', fontSize: 10 }}>
+          {zonaPerigo ? 'Ocultar' : 'Encerrar mentoria / excluir dados'}
+        </button>
+      </div>
+      {zonaPerigo && <ZonaPerigoMentorado m={m} />}
     </div>
   )
 }

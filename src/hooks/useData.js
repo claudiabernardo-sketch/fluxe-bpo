@@ -1612,6 +1612,34 @@ export function useExcluirSessaoMentoria() {
   })
 }
 
+// Apaga só os dados de mentoria de uma empresa (Plano de Negócio, sessões,
+// combinados, materiais + arquivos no storage) e desmarca o 🎓 — NÃO toca em
+// clientes/tarefas/usuarios da empresa, que continuam intactos caso ela seja
+// também cliente pagante do Fluxe fora da mentoria.
+export function useExcluirDadosMentoria() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ empresa_id, confirmacao_nome }) => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-painel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'excluir_dados_mentoria', empresa_id, confirmacao_nome }),
+      })
+      const result = await res.json()
+      if (result.error) throw new Error(result.error)
+      return result
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin_mentorados'] })
+      qc.invalidateQueries({ queryKey: ['admin_empresas'] })
+      qc.invalidateQueries({ queryKey: ['admin_combinados_abertos'] })
+      qc.invalidateQueries({ queryKey: ['admin_sessoes_avulsas'] })
+    },
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
 export function useAdminAcaoEmpresa() {
   const qc = useQueryClient()
   return useMutation({
@@ -1657,10 +1685,17 @@ export function useCreateMentoriaLink() {
   const qc = useQueryClient()
   const { empresa, user } = useAuthStore()
   return useMutation({
-    mutationFn: async ({ titulo, url, descricao }) => {
+    mutationFn: async ({ titulo, url, descricao, arquivo }) => {
+      let arquivo_path = null
+      if (arquivo) {
+        const path = `${empresa?.id}/mentoria-materiais/${Date.now()}-${arquivo.name}`
+        const { error: upErr } = await supabase.storage.from('tarefas').upload(path, arquivo, { upsert: false, cacheControl: '3600' })
+        if (upErr) throw upErr
+        arquivo_path = path
+      }
       const { data, error } = await supabase
         .from('mentoria_links')
-        .insert({ empresa_id: empresa?.id, titulo, url, descricao: descricao || null, criado_por: user?.id })
+        .insert({ empresa_id: empresa?.id, titulo, url: url || null, arquivo_path, descricao: descricao || null, criado_por: user?.id })
         .select()
         .single()
       if (error) throw error
@@ -1715,9 +1750,10 @@ export function useAtualizarMeuCombinado() {
 export function useDeleteMentoriaLink() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (id) => {
+    mutationFn: async ({ id, arquivo_path }) => {
       const { error } = await supabase.from('mentoria_links').delete().eq('id', id)
       if (error) throw error
+      if (arquivo_path) await supabase.storage.from('tarefas').remove([arquivo_path])
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['mentoria_links'] }),
     onError: (err) => console.error('[Fluxe]', err),
