@@ -574,6 +574,44 @@ export default function PrecificacaoPage() {
 
   const irPara = (n) => { setEtapa(n); if (n < 6) setContratoGerado(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 
+  // Cria ou atualiza o rascunho da proposta no banco — chamado assim que o
+  // cálculo existe (passo 2), não só no passo 5 (Escopo). Antes disso, quem
+  // preenchia as atividades e saía sem chegar até o Escopo perdia tudo: a
+  // proposta nunca tinha sido salva, então "Importar proposta" não achava
+  // nada (ou achava uma versão antiga, sem as atividades mais recentes).
+  const salvarOuAtualizarProposta = async ({ dOverride, calcOverride, valorPropostaOverride, escopoOverride } = {}) => {
+    const dAtual = dOverride || d
+    const calcAtual = calcOverride !== undefined ? calcOverride : calc
+    const valorAtual = valorPropostaOverride !== undefined ? valorPropostaOverride : valorProposta
+    const escopoAtual = escopoOverride !== undefined ? escopoOverride : escopo
+    if (!calcAtual) return // nada pra salvar ainda (nenhuma atividade calculada)
+
+    const payload = {
+      lead_id: leadIdRef.current || undefined,
+      valor_mensal: parseBRL(valorAtual) || 0,
+      dados_cliente: {
+        nome: dAtual._clienteNome || dAtual.nome || '',
+        cnpj: dAtual._clienteCnpj || '',
+        contato: dAtual._clienteContato || '',
+        email: dAtual._clienteEmail || '',
+        whatsapp: dAtual._clienteWhatsapp || '',
+        segmento: dAtual._clienteSegmento || '',
+      },
+      dados_calculo: { d: dAtual, calc: calcAtual, valorProposta: valorAtual, escopo: escopoAtual },
+    }
+    try {
+      if (propostaIdRef.current) {
+        await updateProposta.mutateAsync({ id: propostaIdRef.current, ...payload })
+      } else {
+        const proposta = await createProposta.mutateAsync({ ...payload, status: 'rascunho' })
+        propostaIdRef.current = proposta.id
+      }
+    } catch (e) {
+      console.error('Erro ao salvar rascunho de proposta:', e)
+      // Não bloqueia o fluxo — usuário continua trabalhando mesmo sem salvar
+    }
+  }
+
   const irParaAnalise = useCallback(() => {
     const diag = {
       ...d,
@@ -587,6 +625,7 @@ export default function PrecificacaoPage() {
     const resultado = calcularMetodologia(diag)
     setCalc(resultado)
     irPara(2)
+    salvarOuAtualizarProposta({ calcOverride: resultado })
   }, [d])
 
   // Escopo editável (Responsabilidades / Limites / SLA) — padrão da empresa + edição por proposta
@@ -641,30 +680,9 @@ export default function PrecificacaoPage() {
       alert('Informe o valor da proposta antes de gerar o escopo.')
       return
     }
-    if (!escopo) setEscopo(montarEscopoPadrao(calc))
-    // Salva proposta no banco na primeira vez que chega no passo 5
-    if (!propostaIdRef.current) {
-      try {
-        const proposta = await createProposta.mutateAsync({
-          lead_id: leadIdRef.current || undefined,
-          status: 'rascunho',
-          valor_mensal: parseBRL(valorProposta),
-          dados_cliente: {
-            nome: d._clienteNome || d.nome || '',
-            cnpj: d._clienteCnpj || '',
-            contato: d._clienteContato || '',
-            email: d._clienteEmail || '',
-            whatsapp: d._clienteWhatsapp || '',
-            segmento: d._clienteSegmento || '',
-          },
-          dados_calculo: { d, calc, valorProposta, escopo: escopo || montarEscopoPadrao(calc) },
-        })
-        propostaIdRef.current = proposta.id
-      } catch (e) {
-        console.error('Erro ao salvar proposta:', e)
-        // Não bloqueia o fluxo — continua mesmo sem salvar
-      }
-    }
+    const escopoFinal = escopo || montarEscopoPadrao(calc)
+    if (!escopo) setEscopo(escopoFinal)
+    await salvarOuAtualizarProposta({ escopoOverride: escopoFinal })
     irPara(5)
   }
 
