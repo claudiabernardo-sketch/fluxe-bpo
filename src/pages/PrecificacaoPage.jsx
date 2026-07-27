@@ -687,13 +687,23 @@ export default function PrecificacaoPage() {
   }
 
   // Importa dados de uma proposta existente → restaura form e vai pro passo 4
-  const importarDeProposta = (proposta) => {
+  // modo 'editar': salvar atualiza a MESMA proposta (pra corrigir valor/escopo
+  // de algo já feito). modo 'modelo': salvar cria uma proposta NOVA, deixando
+  // a original intacta (pra reaproveitar os números como ponto de partida
+  // pra um cliente diferente).
+  const importarDeProposta = (proposta, modo = 'editar') => {
     const dc = proposta.dados_calculo || {}
     if (dc.d) setD(dc.d)
     if (dc.calc) setCalc(dc.calc)
     if (dc.valorProposta) setValorProposta(formatBRL(parseValorPropostaSalvo(dc.valorProposta)))
     setEscopo(dc.escopo || null)
-    propostaIdRef.current = null  // cria nova proposta ao salvar (não sobrescreve)
+    if (modo === 'editar') {
+      propostaIdRef.current = proposta.id
+      propostaStatusRef.current = proposta.status
+    } else {
+      propostaIdRef.current = null
+      propostaStatusRef.current = null
+    }
     if (proposta.dados_calculo?.d?._clienteEmail) setEmailCliente(proposta.dados_calculo.d._clienteEmail)
     setImportModal(false)
     setImportSearch('')
@@ -2049,10 +2059,18 @@ export default function PrecificacaoPage() {
                       <span style={{ padding:'2px 8px', borderRadius:99, fontSize:10, fontWeight:700, background:st+'22', color:st, flexShrink:0 }}>
                         {STATUS_LABEL[p.status] || p.status}
                       </span>
-                      <button onClick={() => importarDeProposta(p)}
-                        style={{ padding:'5px 14px', border:'none', borderRadius:7, background:'var(--pg)', color:'#fff', fontSize:11, fontWeight:700, cursor:'pointer', flexShrink:0 }}>
-                        Selecionar
-                      </button>
+                      <div style={{ display:'flex', gap:6, flexShrink:0, flexWrap:'wrap' }}>
+                        <button onClick={() => importarDeProposta(p, 'editar')}
+                          title="Abre esta proposta — salvar atualiza ela mesma, não cria outra"
+                          style={{ padding:'5px 12px', border:'none', borderRadius:7, background:'var(--pg)', color:'#fff', fontSize:11, fontWeight:700, cursor:'pointer' }}>
+                          ✏️ Editar
+                        </button>
+                        <button onClick={() => importarDeProposta(p, 'modelo')}
+                          title="Reaproveita os números pra uma proposta nova, sem mexer nesta"
+                          style={{ padding:'5px 12px', border:'1px solid var(--pborder)', borderRadius:7, background:'transparent', color:'var(--ptext2)', fontSize:11, fontWeight:700, cursor:'pointer' }}>
+                          📋 Usar como modelo
+                        </button>
+                      </div>
                     </div>
                   )
                 })}
