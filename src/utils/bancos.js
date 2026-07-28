@@ -4,11 +4,12 @@
 // e um cliente editado pelas duas telas acumulava valores "fantasma" que não
 // batiam com nenhuma caixinha — sem poder ser desmarcados, e contados em
 // dobro na geração de tarefas de conciliação bancária.
+// Em ordem alfabética — "Outros" sempre por último, como convenção de lista.
 export const BANCOS_LIST = [
-  'Banco do Brasil','Bradesco','Itaú','Santander','Caixa',
-  'Nubank','Inter','Sicoob','Sicredi','BTG','C6 Bank','XP','Safra',
-  'BV','Banrisul','Original','Neon','PicPay','Mercado Pago','CPJ Conta Azul',
-  'PagBank','Stone','Cora','Asaas','Outros',
+  'Asaas','Banco do Brasil','Banrisul','Bradesco','BTG','BV','C6 Bank','Caixa',
+  'Cora','CPJ Conta Azul','Inter','Itaú','Mercado Pago','Neon','Nubank',
+  'Original','PagBank','PicPay','Safra','Santander','Sicoob','Sicredi',
+  'Stone','Unicred','XP','Outros',
 ]
 
 // Mapeia nomes antigos/completos salvos antes da lista ser unificada pro

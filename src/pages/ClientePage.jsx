@@ -9,6 +9,7 @@ import {
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import { BANCOS_LIST, normalizarBancos } from '../utils/bancos'
+import { SOFTWARES } from '../utils/softwares'
 import { Badge, Loader, fmtR } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 import RadarPainel from '../components/ui/RadarPainel'
@@ -35,8 +36,6 @@ const CATEGORIAS_COFRE = [
   { id:'email', icon:'📧', label:'E-mail' },
   { id:'outro', icon:'🔑', label:'Outro' },
 ]
-
-const SOFTWARES = ['Domínio','Questor','Alterdata','Totvs Protheus','Omie','Nibo','Bling','Sankhya','SAP','Conta Azul','Bom Controle','Meu Dinheiro Web','Outro']
 
 function getCatCofre(id) { return CATEGORIAS_COFRE.find(c => c.id === id) || CATEGORIAS_COFRE[4] }
 function fmtCNPJ(v) { return v.replace(/\D/g,'').slice(0,14).replace(/(\d{2})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1/$2').replace(/(\d{4})(\d)/,'$1-$2') }

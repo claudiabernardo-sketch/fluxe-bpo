@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase'
 import ContextTooltip from '../components/ui/ContextTooltip'
 import { CLIENTES_EXPORT_COLS, mapRowToCliente } from '../utils/excelMappings'
 import { BANCOS_LIST, normalizarBancos } from '../utils/bancos'
+import { SOFTWARES } from '../utils/softwares'
 
 // ImportModal e downloadClienteTemplate puxam as libs de planilha (~800KB) —
 // só devem ser carregados quando o usuário realmente abrir o import/export,
@@ -29,7 +30,6 @@ const CATEGORIAS_COFRE = [
 ]
 function getCatCofre(id) { return CATEGORIAS_COFRE.find(c=>c.id===id) || CATEGORIAS_COFRE[4] }
 
-const SOFTWARES = ['Omie','Conta Azul','Meu Dinheiro Web','Nibo','Bom Controle','Bling','Nexaas','Gestão Fácil','Outro']
 
 function fmtCNPJ(v) {
   const n = v.replace(/\D/g, '').slice(0, 14)
