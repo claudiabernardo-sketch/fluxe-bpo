@@ -378,10 +378,18 @@ export default function LoginPage() {
       )}
 
       {/* ── QUEM SOU EU ─────────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '52px 20px' : '80px 48px' }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '300px 1fr', gap: isMobile ? 28 : 56, alignItems: 'center' }}>
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <img src={CLAUDIA_SRC} alt="Cláudia Bernardo" style={{ width: isMobile ? 200 : '100%', maxWidth: 260, borderRadius: 20, objectFit: 'cover', boxShadow: '0 24px 60px rgba(0,0,0,.45)', border: '1px solid rgba(255,255,255,.08)' }} />
+      <section style={{ padding: isMobile ? '52px 20px' : '80px 48px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '340px 1fr', gap: isMobile ? 32 : 64, alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: '10%', left: '50%', transform: 'translateX(-50%)', width: 340, height: 340, background: 'radial-gradient(ellipse, rgba(139,92,246,.28) 0%, transparent 70%)', filter: 'blur(30px)', pointerEvents: 'none' }} />
+            <div style={{ position: 'relative', width: isMobile ? 240 : '100%', maxWidth: 300 }}>
+              <img src={CLAUDIA_SRC} alt="Cláudia Bernardo" style={{
+                width: '100%', display: 'block', objectFit: 'cover',
+                WebkitMaskImage: 'radial-gradient(ellipse 72% 88% at 50% 38%, black 55%, transparent 92%)',
+                maskImage: 'radial-gradient(ellipse 72% 88% at 50% 38%, black 55%, transparent 92%)',
+              }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, rgba(99,102,241,.14), transparent 55%)', mixBlendMode: 'overlay', pointerEvents: 'none' }} />
+            </div>
           </div>
           <div style={{ textAlign: isMobile ? 'center' : 'left' }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>QUEM SOU EU</div>
