@@ -215,7 +215,7 @@ export default function LoginPage() {
 
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(99,102,241,.1)', border: '1px solid rgba(99,102,241,.22)', borderRadius: 99, padding: '6px 14px', marginBottom: 24 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', display: 'inline-block', boxShadow: '0 0 8px #22C55E80' }} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '.12em', textTransform: 'uppercase' }}>Mentoria BPO Lucrativo</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '.12em', textTransform: 'uppercase' }}>Mentoria individual</span>
           </div>
 
           <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 34 : 56, fontWeight: 900, lineHeight: 1.1, margin: '0 0 20px', color: '#F8FAFC', letterSpacing: '-.03em' }}>
@@ -674,7 +674,7 @@ export default function LoginPage() {
       <section id="precos" style={{ padding: isMobile ? '60px 20px' : '96px 48px', background: 'rgba(255,255,255,.015)' }}>
         <div style={{ maxWidth: 700, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 56 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>MENTORIA BPO LUCRATIVO</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>A MENTORIA</div>
             <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 16px', letterSpacing: '-.02em' }}>Acompanhamento individual, não um curso gravado.</h2>
             <p style={{ fontSize: isMobile ? 14 : 16, color: '#64748B', maxWidth: 520, margin: '0 auto' }}>Cada mentoria é única — formato, duração e investimento dependem do que você precisa. Sem tabela de preço fixa: a gente conversa primeiro.</p>
           </div>
