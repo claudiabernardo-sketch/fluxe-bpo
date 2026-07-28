@@ -207,14 +207,14 @@ export default function LoginPage() {
             </div>
 
             <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 34 : 54, fontWeight: 900, lineHeight: 1.1, margin: '0 0 20px', color: '#F8FAFC', letterSpacing: '-.03em' }}>
-              Estruture seu BPO<br />
+              Sua precificação está<br />
               <span style={{ fontStyle: 'italic', fontWeight: 600, background: 'linear-gradient(90deg,#818CF8,#A855F7,#22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                com quem já fez isso.
+                te dando prejuízo?
               </span>
             </h1>
 
             <p style={{ fontSize: isMobile ? 16 : 18, color: '#94A3B8', lineHeight: 1.75, margin: '0 0 32px', maxWidth: 520 }}>
-              Mentoria individual pra donos de BPO que querem parar de precificar no feeling e começar a gerir com dados reais — com o Fluxe, o sistema que uso pra te dar clareza da sua própria operação, incluso no acompanhamento.
+              Mentoria individual pra donos de BPO que querem parar de precificar no feeling e começar a cobrar (e gerir) com dados reais — com o Fluxe, o sistema que uso pra te dar clareza da sua própria operação, incluso no acompanhamento.
             </p>
 
             <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 40 }}>
