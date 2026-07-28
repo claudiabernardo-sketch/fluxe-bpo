@@ -6,24 +6,32 @@ import LOGO_SRC from '../assets/logo-fluxe-white.png'
 
 // ── Conteúdo ───────────────────────────────────────────────────────────────
 
-const FEATURES = [
-  { icon: 'fa-solid fa-calculator',    title: 'Saiba o custo real de cada analista.',        desc: 'Salário, encargos, benefícios, horas úteis reais. O Fluxe calcula o custo verdadeiro da sua hora — não a estimativa que todo mundo chuta.', color: '#818CF8' },
-  { icon: 'fa-solid fa-gauge-high',    title: 'Descubra quantos clientes você aguenta.',     desc: 'Com base nas horas disponíveis da equipe, o Fluxe projeta sua capacidade máxima. Saiba antes de aceitar um cliente que vai travar a operação.', color: '#22D3EE' },
-  { icon: 'fa-solid fa-chart-line',    title: 'Veja a margem real de cada cliente.',         desc: 'Horas gastas × custo da hora = custo real de atendimento. Compare com o que o cliente paga e descubra quem está te dando prejuízo.', color: '#34D399' },
-  { icon: 'fa-solid fa-list-check',    title: 'Nunca mais perca um prazo de cliente.',       desc: 'Cada obrigação tem responsável, data e alerta automático. Sua equipe sabe exatamente o que fazer — sem precisar perguntar no WhatsApp.', color: '#A78BFA' },
-  { icon: 'fa-solid fa-lock',          title: 'Fim da dependência de pessoas.',              desc: 'Senhas, logins e credenciais dos clientes centralizados com criptografia. Quando um analista sai, a operação não para.', color: '#FCD34D' },
-  { icon: 'fa-solid fa-route',         title: 'Toda a carteira sob controle.',               desc: 'Do onboarding ao estratégico. Acompanhe cada etapa de cada cliente com histórico, etapa e evolução visíveis de um lugar só.', color: '#F472B6' },
-  { icon: 'fa-brands fa-whatsapp',     title: 'Atenda pelo WhatsApp sem sair do Fluxe.',     desc: 'Conecte o WhatsApp oficial da sua empresa e responda clientes direto do sistema. A IA já lê boletos e notas fiscais recebidas e resume pra você.', color: '#22C55E' },
-]
-
 const WHATSAPP_DIAGNOSTICO = 'https://wa.me/5511917101173?text=Quero+agendar+um+diagn%C3%B3stico+sobre+a+mentoria+BPO+Lucrativo'
 
+const METODO = [
+  { num: '01', semana: 'SEMANA 1', titulo: 'Diagnóstico', desc: 'Mapeamos sua operação real dentro do Laboratório BPO: custo de hora, capacidade da equipe, clientes que dão prejuízo sem você saber.' },
+  { num: '02', semana: 'SEMANA 2', titulo: 'Precificação', desc: 'Você aprende a precificar com a Metodologia Fluxe — e já aplica no seu próximo orçamento.' },
+  { num: '03', semana: 'SEMANA 3', titulo: 'Organização', desc: 'Rotinas, prazos e senhas de cliente saem da cabeça (e do WhatsApp) e entram no Laboratório, documentados.' },
+  { num: '04', semana: 'SEMANA 4', titulo: 'Rentabilidade', desc: 'Você fecha a mentoria sabendo exatamente quem no seu book dá lucro — e com um plano pra crescer sem virar refém da operação.' },
+]
+
+const PARA_QUEM_SIM = [
+  'Já fatura com o BPO mas precifica no feeling',
+  'Tem equipe mas não sabe o custo real dela',
+  'Cansou de descobrir tarde que um cliente dá prejuízo',
+]
+
+const PARA_QUEM_NAO = [
+  'Procura só um software mais bonito, sem acompanhamento',
+  'Quer terceirizar a decisão em vez de aprender o método',
+]
+
 const FAQS = [
-  { q: 'Preciso saber mexer em sistema?', a: 'Não. A mentoria foi pensada pra quem opera BPO no dia a dia, não pra quem entende de tecnologia. O Fluxe já vem configurado junto com o acompanhamento — você aprende usando, na prática.' },
-  { q: 'Como funciona o acompanhamento?', a: 'Encontros individuais comigo, direto, olhando a operação real do seu BPO dentro do Fluxe — precificação, rotina, rentabilidade por cliente. Não é um curso gravado.' },
+  { q: 'Preciso saber mexer em sistema?', a: 'Não. A mentoria foi pensada pra quem opera BPO no dia a dia, não pra quem entende de tecnologia. O Laboratório BPO já vem configurado junto com o acompanhamento — você aprende usando, na prática.' },
+  { q: 'Como funciona o acompanhamento?', a: 'Encontros individuais comigo, direto, olhando a operação real do seu BPO dentro do Laboratório BPO — precificação, rotina, rentabilidade por cliente. Não é um curso gravado.' },
   { q: 'Quanto custa?', a: 'Depende do formato e da duração combinados no diagnóstico — por isso não coloco tabela de preço aqui. Agenda uma conversa sem compromisso.' },
-  { q: 'Já uso outro sistema pra gerir o BPO, dá pra participar?', a: 'Sim. A mentoria funciona em cima do que você já tem — o Fluxe é a ferramenta que uso pra dar clareza aos números, mas o foco é te ajudar a crescer, não trocar de sistema.' },
-  { q: 'Meus dados ficam seguros?', a: 'Sim. Cada BPO tem os dados completamente isolados dentro do Fluxe, com criptografia em repouso e em trânsito.' },
+  { q: 'Já uso outro sistema pra gerir o BPO, dá pra participar?', a: 'Sim. A mentoria funciona em cima do que você já tem — o Laboratório BPO é o ambiente que uso pra dar clareza aos números, mas o foco é te ajudar a crescer, não trocar de sistema.' },
+  { q: 'Meus dados ficam seguros?', a: 'Sim. Cada BPO tem os dados completamente isolados dentro do Laboratório BPO, com criptografia em repouso e em trânsito.' },
   { q: 'Serve pra qualquer tamanho de BPO?', a: 'Sim — do BPO solo que está começando ao que já tem equipe e quer organizar a operação pra crescer com previsibilidade.' },
 ]
 
@@ -39,8 +47,8 @@ export default function LoginPage() {
   const [navScrolled, setNavScrolled] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
   const [openFaq, setOpenFaq] = useState(null)
-  const [mockupTab, setMockupTab] = useState('dashboard')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [showLogin, setShowLogin] = useState(false)
   const formRef = useRef(null)
 
   const { signIn, resetPassword, mfaChallenge, mfaVerifyLogin, signInWithGoogle } = useAuthStore()
@@ -74,6 +82,10 @@ export default function LoginPage() {
       window.removeEventListener('resize', onResize)
     }
   }, [])
+
+  useEffect(() => {
+    if (showLogin) formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [showLogin])
 
   const toStr = (v) => {
     if (!v) return ''
@@ -124,8 +136,10 @@ export default function LoginPage() {
   function goLogin() {
     setFormMode('login')
     setMsg('')
-    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    setShowLogin(true)
   }
+
+  const NAV_ITEMS = [['metodo', 'Método'], ['para-quem', 'Para quem é'], ['precos', 'Mentoria'], ['faq', 'FAQ']]
 
   return (
     <div style={{ fontFamily: "'Inter','system-ui',sans-serif", background: '#060A14', color: '#F1F5F9', minHeight: '100vh', overflowX: 'hidden' }}>
@@ -143,7 +157,7 @@ export default function LoginPage() {
         <Logo />
         {!isMobile && (
           <div style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
-            {[['funcionalidades','Funcionalidades'],['como-funciona','Como funciona'],['precos','Mentoria'],['faq','FAQ']].map(([id, label]) => (
+            {NAV_ITEMS.map(([id, label]) => (
               <button key={id} onClick={() => scrollTo(id)}
                 style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: 13, fontWeight: 500, padding: 0, transition: 'color .2s' }}
                 onMouseOver={e => e.target.style.color = '#F1F5F9'} onMouseOut={e => e.target.style.color = '#94A3B8'}>
@@ -177,7 +191,7 @@ export default function LoginPage() {
       {/* ── MENU MOBILE ─────────────────────────────────────────── */}
       {isMobile && menuOpen && (
         <div style={{ position: 'fixed', top: 68, left: 0, right: 0, zIndex: 190, background: 'rgba(6,10,20,0.97)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,.08)', padding: '12px 20px 20px' }}>
-          {[['funcionalidades','Funcionalidades'],['como-funciona','Como funciona'],['precos','Mentoria'],['faq','FAQ']].map(([id, label]) => (
+          {NAV_ITEMS.map(([id, label]) => (
             <button key={id} onClick={() => { scrollTo(id); setMenuOpen(false) }}
               style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: 15, fontWeight: 500, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,.05)' }}>
               {label}
@@ -191,402 +205,176 @@ export default function LoginPage() {
       )}
 
       {/* ── HERO ────────────────────────────────────────────────── */}
-      <section id="hero" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', padding: isMobile ? '100px 20px 60px' : '100px 48px 80px', position: 'relative', overflow: 'hidden' }}>
+      <section id="hero" style={{ minHeight: '92vh', display: 'flex', alignItems: 'center', padding: isMobile ? '100px 20px 60px' : '120px 48px 80px', position: 'relative', overflow: 'hidden' }}>
         {/* Grid background */}
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(99,102,241,.05) 1px, transparent 1px)', backgroundSize: '32px 32px', pointerEvents: 'none' }} />
         {/* Glow */}
         <div style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)', width: 700, height: 500, background: 'radial-gradient(ellipse, rgba(99,102,241,.18) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
 
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 420px', gap: isMobile ? 48 : 72, width: '100%', maxWidth: 1200, margin: '0 auto', position: 'relative', zIndex: 1, alignItems: 'center' }}>
+        <div style={{ width: '100%', maxWidth: 760, margin: '0 auto', position: 'relative', zIndex: 1, textAlign: 'center' }}>
 
-          {/* Esquerda: copy */}
-          <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(99,102,241,.1)', border: '1px solid rgba(99,102,241,.22)', borderRadius: 99, padding: '6px 14px', marginBottom: 24, width: 'fit-content' }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', display: 'inline-block', boxShadow: '0 0 8px #22C55E80' }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '.12em', textTransform: 'uppercase' }}>Mentoria BPO Lucrativo — acompanhamento individual</span>
-            </div>
-
-            <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 34 : 54, fontWeight: 900, lineHeight: 1.1, margin: '0 0 20px', color: '#F8FAFC', letterSpacing: '-.03em' }}>
-              Sua precificação está<br />
-              <span style={{ fontStyle: 'italic', fontWeight: 600, background: 'linear-gradient(90deg,#818CF8,#A855F7,#22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                te dando prejuízo?
-              </span>
-            </h1>
-
-            <p style={{ fontSize: isMobile ? 16 : 18, color: '#94A3B8', lineHeight: 1.75, margin: '0 0 32px', maxWidth: 520 }}>
-              Mentoria individual pra donos de BPO que querem parar de precificar no feeling e começar a cobrar (e gerir) com dados reais — com o Fluxe, o sistema que uso pra te dar clareza da sua própria operação, incluso no acompanhamento.
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 40 }}>
-              <button onClick={abrirDiagnostico}
-                style={{ padding: '14px 28px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 24px rgba(99,102,241,.45)', textAlign: 'center', transition: 'all .2s' }}
-                onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 10px 32px rgba(99,102,241,.55)' }}
-                onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(99,102,241,.45)' }}>
-                Agendar diagnóstico →
-              </button>
-              <button onClick={() => scrollTo('como-funciona')}
-                style={{ padding: '14px 22px', borderRadius: 10, border: '1px solid rgba(255,255,255,.10)', background: 'transparent', color: '#CBD5E1', fontSize: 15, fontWeight: 600, cursor: 'pointer', textAlign: 'center', transition: 'all .2s' }}
-                onMouseOver={e => { e.currentTarget.style.background = 'rgba(255,255,255,.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,.2)' }}
-                onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(255,255,255,.10)' }}>
-                Como funciona
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-              {[['Acompanhamento', 'individual, direto comigo'], ['Sistema incluso', 'o Fluxe faz parte da mentoria'], ['Sem letra miúda', 'diagnóstico sem compromisso']].map(([t, s], i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(34,197,94,.13)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ color: '#22C55E', fontSize: 10, fontWeight: 800 }}>✓</span>
-                  </div>
-                  <span style={{ fontSize: 12, color: '#94A3B8' }}><strong style={{ color: '#CBD5E1' }}>{t}</strong> {s}</span>
-                </div>
-              ))}
-            </div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(99,102,241,.1)', border: '1px solid rgba(99,102,241,.22)', borderRadius: 99, padding: '6px 14px', marginBottom: 24 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', display: 'inline-block', boxShadow: '0 0 8px #22C55E80' }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '.12em', textTransform: 'uppercase' }}>Mentoria BPO Lucrativo</span>
           </div>
 
-          {/* Direita: formulário */}
-          <div ref={formRef}>
-            <div style={{ background: 'rgba(255,255,255,.03)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 20, padding: 32, boxShadow: '0 32px 80px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05)' }}>
+          <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 34 : 56, fontWeight: 900, lineHeight: 1.1, margin: '0 0 20px', color: '#F8FAFC', letterSpacing: '-.03em' }}>
+            Sua precificação está<br />
+            <span style={{ fontStyle: 'italic', fontWeight: 600, background: 'linear-gradient(90deg,#818CF8,#A855F7,#22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              te dando prejuízo?
+            </span>
+          </h1>
 
-              <div style={{ marginBottom: 22 }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#F1F5F9', marginBottom: 4 }}>
-                  {mfaStep ? '🔐 Verificação em duas etapas' : formMode === 'login' ? 'Bem-vindo(a) de volta' : 'Recuperar senha'}
-                </div>
-                <div style={{ fontSize: 12, color: '#64748B' }}>
-                  {mfaStep ? 'Abra o app autenticador e digite o código de 6 dígitos' : formMode === 'login' ? 'Acesse sua plataforma Fluxe BPO' : 'Enviaremos um link para seu e-mail'}
-                </div>
-              </div>
+          <p style={{ fontSize: isMobile ? 16 : 18, color: '#94A3B8', lineHeight: 1.75, margin: '0 auto 36px', maxWidth: 580 }}>
+            Mentoria individual pra donos de BPO financeiro que querem aprender, na prática, a precificar certo, organizar a operação e vender com lucro real — dentro do Laboratório BPO, o ambiente exclusivo onde você aplica cada etapa do método comigo.
+          </p>
 
-              {formMode === 'login' && !mfaStep && (
-                <div style={{ marginBottom:16 }}>
-                  <button type="button" onClick={signInWithGoogle}
-                    style={{ width:'100%', padding:'11px', borderRadius:10, border:'1px solid rgba(255,255,255,.15)', background:'rgba(255,255,255,.08)', cursor:'pointer', fontSize:13, fontWeight:600, color:'#F1F5F9', display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
-                    <svg width="18" height="18" viewBox="0 0 18 18">
-                      <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
-                      <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/>
-                      <path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18z"/>
-                      <path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.3z"/>
-                    </svg>
-                    Entrar com Google
-                  </button>
-                  <div style={{ display:'flex', alignItems:'center', gap:8, margin:'14px 0' }}>
-                    <div style={{ flex:1, height:1, background:'rgba(255,255,255,.1)' }} />
-                    <span style={{ fontSize:11, color:'#94A3B8' }}>ou com e-mail</span>
-                    <div style={{ flex:1, height:1, background:'rgba(255,255,255,.1)' }} />
-                  </div>
-                </div>
-              )}
-              {mfaStep ? (
-              <form onSubmit={handleMfa}>
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.07em' }}>Código do autenticador</label>
-                    <input
-                      type="text" inputMode="numeric" pattern="[0-9 ]*" maxLength={7}
-                      value={mfaCode} onChange={e => setMfaCode(e.target.value)}
-                      placeholder="000 000" autoFocus autoComplete="one-time-code"
-                      style={{ width: '100%', padding: '13px 14px', borderRadius: 10, border: '1.5px solid rgba(99,102,241,.3)', background: 'rgba(255,255,255,.08)', color: '#F1F5F9', fontSize: 24, fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box', textAlign: 'center', letterSpacing: '0.3em' }}
-                    />
-                  </div>
-                  {msg && <div style={{ fontSize: 12, color: '#F87171', marginBottom: 12 }}>{msg}</div>}
-                  <button type="submit" disabled={loading || mfaCode.replace(/\s/g,'').length < 6}
-                    style={{ width: '100%', padding: '13px', borderRadius: 10, border: 'none', background: mfaCode.replace(/\s/g,'').length >= 6 ? 'linear-gradient(135deg,#6366F1,#8B5CF6)' : '#334155', color: '#fff', fontWeight: 700, fontSize: 14, cursor: mfaCode.replace(/\s/g,'').length >= 6 ? 'pointer' : 'not-allowed' }}>
-                    {loading ? 'Verificando...' : 'Verificar e entrar →'}
-                  </button>
-                  <button type="button" onClick={() => { setMfaStep(null); setMfaCode(''); setMsg('') }}
-                    style={{ width: '100%', marginTop: 8, padding: '10px', borderRadius: 10, border: '1px solid #334155', background: 'transparent', color: '#64748B', fontSize: 12, cursor: 'pointer' }}>
-                    ← Voltar ao login
-                  </button>
-                </form>
-              ) : (
-              <form onSubmit={handleSubmit}>
-                <DarkField label="E-mail" value={email} onChange={setEmail} type="email" placeholder="seu@email.com" />
-                {formMode !== 'reset' && (
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={S.label}>Senha</label>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type={showPass ? 'text' : 'password'}
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        required
-                        style={{ ...S.input, paddingRight: 40 }}
-                        onFocus={e => e.target.style.borderColor = 'rgba(99,102,241,.6)'}
-                        onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,.08)'}
-                      />
-                      <button type="button" onClick={() => setShowPass(s => !s)}
-                        style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#475569', fontSize: 14, padding: 0 }}>
-                        {showPass ? '🙈' : '👁'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {msg && (
-                  <div style={{ padding: '10px 12px', borderRadius: 8, marginBottom: 14, fontSize: 12, fontWeight: 600,
-                    background: isSuccess ? 'rgba(34,197,94,.12)' : 'rgba(239,68,68,.12)',
-                    border: `1px solid ${isSuccess ? 'rgba(34,197,94,.25)' : 'rgba(239,68,68,.25)'}`,
-                    color: isSuccess ? '#86EFAC' : '#FCA5A5' }}>
-                    {toStr(msg)}
-                  </div>
-                )}
-
-                <button type="submit" disabled={loading}
-                  style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 700, color: '#fff',
-                    background: loading ? 'rgba(99,102,241,.35)' : 'linear-gradient(135deg,#6366F1,#8B5CF6)',
-                    boxShadow: loading ? 'none' : '0 4px 16px rgba(99,102,241,.4)', transition: 'all .2s', marginTop: 4 }}>
-                  {loading ? 'Aguarde...' : formMode === 'login' ? 'Entrar no Fluxe BPO →' : 'Enviar link de recuperação'}
-                </button>
-              </form>
-              )} {/* fim do ternário mfaStep */}
-
-              {!mfaStep && (
-                <div style={{ textAlign: 'center', marginTop: 14, fontSize: 12 }}>
-                {formMode === 'login' ? (
-                  <button onClick={() => { setFormMode('reset'); setMsg('') }}
-                    style={{ background: 'none', border: 'none', color: '#6366F1', cursor: 'pointer', fontSize: 12, padding: 0 }}>
-                    Esqueci minha senha
-                  </button>
-                ) : (
-                  <button onClick={() => { setFormMode('login'); setMsg('') }}
-                    style={{ background: 'none', border: 'none', color: '#6366F1', cursor: 'pointer', fontSize: 12, padding: 0 }}>
-                    ← Voltar ao login
-                  </button>
-                )}
-              </div>
-              )}
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,.05)' }}>
-                <span style={{ fontSize: 10, color: '#334155' }}>🔒 Dados protegidos e isolados por empresa</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── PRODUTO (mockup do app) ───────────────────────────── */}
-      <section style={{ padding: isMobile ? '0 20px 72px' : '0 48px 96px', position: 'relative' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          {/* Título */}
-          <div style={{ textAlign: 'center', marginBottom: 20 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#475569', letterSpacing: '.15em', textTransform: 'uppercase' }}>VEJA O FLUXE BPO EM AÇÃO</span>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 40 }}>
+            <button onClick={abrirDiagnostico}
+              style={{ padding: '15px 32px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 24px rgba(99,102,241,.45)', transition: 'all .2s' }}
+              onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 10px 32px rgba(99,102,241,.55)' }}
+              onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(99,102,241,.45)' }}>
+              Agendar diagnóstico →
+            </button>
           </div>
 
-          {/* Abas do mockup */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-            {[['dashboard','Central Operacional'],['agenda','Agenda'],['crm','Pipeline CRM'],['rent','Rentabilidade']].map(([tab, label]) => (
-              <button key={tab} onClick={() => setMockupTab(tab)}
-                style={{ padding: '7px 16px', borderRadius: 99, border: '1px solid', cursor: 'pointer', fontSize: 12, fontWeight: 600, transition: 'all .2s',
-                  borderColor: mockupTab === tab ? '#6366F1' : 'rgba(255,255,255,.1)',
-                  background: mockupTab === tab ? 'rgba(99,102,241,.15)' : 'transparent',
-                  color: mockupTab === tab ? '#A5B4FC' : '#475569' }}>
-                {label}
-              </button>
+          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {[['Acompanhamento', 'individual, direto comigo'], ['Laboratório incluso', 'ambiente de aplicação faz parte da mentoria'], ['Sem letra miúda', 'diagnóstico sem compromisso']].map(([t, s], i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(34,197,94,.13)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ color: '#22C55E', fontSize: 10, fontWeight: 800 }}>✓</span>
+                </div>
+                <span style={{ fontSize: 12, color: '#94A3B8' }}><strong style={{ color: '#CBD5E1' }}>{t}</strong> {s}</span>
+              </div>
             ))}
           </div>
+        </div>
+      </section>
 
-          {/* Janela do browser */}
-          <div style={{ background: '#0D1424', border: '1px solid rgba(255,255,255,.07)', borderRadius: 18, overflow: 'hidden', boxShadow: '0 48px 100px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.04)' }}>
-            {/* Chrome bar */}
-            <div style={{ background: '#1A2235', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {['#FF5F57','#FFBD2E','#28C940'].map(c => <div key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c }} />)}
+      {/* ── ENTRAR (compacto, só aparece quando clicado) ────────── */}
+      {showLogin && (
+        <section ref={formRef} style={{ padding: isMobile ? '0 20px 60px' : '0 48px 72px', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: '100%', maxWidth: 380, background: 'rgba(255,255,255,.03)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 18, padding: 28, boxShadow: '0 24px 64px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05)', position: 'relative' }}>
+
+            <button onClick={() => setShowLogin(false)}
+              style={{ position: 'absolute', top: 14, right: 14, background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: 14, padding: 4 }}>
+              ✕
+            </button>
+
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#F1F5F9', marginBottom: 4 }}>
+                {mfaStep ? '🔐 Verificação em duas etapas' : formMode === 'login' ? 'Já é aluno(a) da mentoria?' : 'Recuperar senha'}
               </div>
-              <div style={{ flex: 1, background: 'rgba(255,255,255,.04)', borderRadius: 6, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 8 }}>
-                <span style={{ fontSize: 11, color: '#475569' }}>fluxebpo.com.br</span>
+              <div style={{ fontSize: 12, color: '#64748B' }}>
+                {mfaStep ? 'Abra o app autenticador e digite o código de 6 dígitos' : formMode === 'login' ? 'Entre no Laboratório BPO' : 'Enviaremos um link para seu e-mail'}
               </div>
             </div>
 
-            {/* App shell */}
-            <div style={{ display: 'flex', height: isMobile ? 320 : 430 }}>
-              {/* Sidebar */}
-              {!isMobile && (
-                <div style={{ width: 176, background: '#F8FAFC', borderRight: '1px solid #E2E8F0', flexShrink: 0, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <div style={{ padding: '8px 10px 12px', marginBottom: 4, borderBottom: '1px solid #E2E8F0' }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: '#0F172A', letterSpacing: '-.3px' }}>Fluxe <span style={{ color: '#6366F1' }}>BPO</span></div>
-                    <div style={{ fontSize: 9, color: '#94A3B8', marginTop: 2 }}>Empreenda BPO Ltda</div>
+            {formMode === 'login' && !mfaStep && (
+              <div style={{ marginBottom:16 }}>
+                <button type="button" onClick={signInWithGoogle}
+                  style={{ width:'100%', padding:'11px', borderRadius:10, border:'1px solid rgba(255,255,255,.15)', background:'rgba(255,255,255,.08)', cursor:'pointer', fontSize:13, fontWeight:600, color:'#F1F5F9', display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
+                  <svg width="18" height="18" viewBox="0 0 18 18">
+                    <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
+                    <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/>
+                    <path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18z"/>
+                    <path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.3z"/>
+                  </svg>
+                  Entrar com Google
+                </button>
+                <div style={{ display:'flex', alignItems:'center', gap:8, margin:'14px 0' }}>
+                  <div style={{ flex:1, height:1, background:'rgba(255,255,255,.1)' }} />
+                  <span style={{ fontSize:11, color:'#94A3B8' }}>ou com e-mail</span>
+                  <div style={{ flex:1, height:1, background:'rgba(255,255,255,.1)' }} />
+                </div>
+              </div>
+            )}
+            {mfaStep ? (
+            <form onSubmit={handleSubmit}>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.07em' }}>Código do autenticador</label>
+                  <input
+                    type="text" inputMode="numeric" pattern="[0-9 ]*" maxLength={7}
+                    value={mfaCode} onChange={e => setMfaCode(e.target.value)}
+                    placeholder="000 000" autoFocus autoComplete="one-time-code"
+                    style={{ width: '100%', padding: '13px 14px', borderRadius: 10, border: '1.5px solid rgba(99,102,241,.3)', background: 'rgba(255,255,255,.08)', color: '#F1F5F9', fontSize: 24, fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box', textAlign: 'center', letterSpacing: '0.3em' }}
+                  />
+                </div>
+                {msg && <div style={{ fontSize: 12, color: '#F87171', marginBottom: 12 }}>{msg}</div>}
+                <button type="submit" disabled={loading || mfaCode.replace(/\s/g,'').length < 6}
+                  style={{ width: '100%', padding: '13px', borderRadius: 10, border: 'none', background: mfaCode.replace(/\s/g,'').length >= 6 ? 'linear-gradient(135deg,#6366F1,#8B5CF6)' : '#334155', color: '#fff', fontWeight: 700, fontSize: 14, cursor: mfaCode.replace(/\s/g,'').length >= 6 ? 'pointer' : 'not-allowed' }}>
+                  {loading ? 'Verificando...' : 'Verificar e entrar →'}
+                </button>
+                <button type="button" onClick={() => { setMfaStep(null); setMfaCode(''); setMsg('') }}
+                  style={{ width: '100%', marginTop: 8, padding: '10px', borderRadius: 10, border: '1px solid #334155', background: 'transparent', color: '#64748B', fontSize: 12, cursor: 'pointer' }}>
+                  ← Voltar ao login
+                </button>
+              </form>
+            ) : (
+            <form onSubmit={handleSubmit}>
+              <DarkField label="E-mail" value={email} onChange={setEmail} type="email" placeholder="seu@email.com" />
+              {formMode !== 'reset' && (
+                <div style={{ marginBottom: 16 }}>
+                  <label style={S.label}>Senha</label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showPass ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      style={{ ...S.input, paddingRight: 40 }}
+                      onFocus={e => e.target.style.borderColor = 'rgba(99,102,241,.6)'}
+                      onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,.08)'}
+                    />
+                    <button type="button" onClick={() => setShowPass(s => !s)}
+                      style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#475569', fontSize: 14, padding: 0 }}>
+                      {showPass ? '🙈' : '👁'}
+                    </button>
                   </div>
-                  {[
-                    { icon: 'fa-solid fa-house',       label: 'Dashboard',   tab: 'dashboard' },
-                    { icon: 'fa-solid fa-list-check',  label: 'Tarefas',     tab: null },
-                    { icon: 'fa-solid fa-building',    label: 'Clientes',    tab: null },
-                    { icon: 'fa-solid fa-calendar',    label: 'Agenda',      tab: 'agenda' },
-                    { icon: 'fa-solid fa-filter',      label: 'CRM',         tab: 'crm' },
-                    { icon: 'fa-solid fa-lock',        label: 'Cofre',       tab: null },
-                    { icon: 'fa-solid fa-chart-line',  label: 'Relatórios',  tab: 'rent' },
-                  ].map((item, i) => {
-                    const active = item.tab === mockupTab
-                    return (
-                      <div key={i} onClick={() => item.tab && setMockupTab(item.tab)}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 7, cursor: item.tab ? 'pointer' : 'default',
-                          background: active ? '#EEF2FF' : 'transparent',
-                          boxShadow: active ? 'inset 3px 0 0 #6366F1' : 'none',
-                          color: active ? '#6366F1' : '#64748B', fontSize: 11, fontWeight: active ? 600 : 500 }}>
-                        <i className={item.icon} style={{ fontSize: 10, width: 12, textAlign: 'center' }} />
-                        <span>{item.label}</span>
-                      </div>
-                    )
-                  })}
                 </div>
               )}
 
-              {/* Conteúdo principal */}
-              <div style={{ flex: 1, background: '#F1F5F9', padding: isMobile ? 12 : 18, overflow: 'hidden' }}>
+              {msg && (
+                <div style={{ padding: '10px 12px', borderRadius: 8, marginBottom: 14, fontSize: 12, fontWeight: 600,
+                  background: isSuccess ? 'rgba(34,197,94,.12)' : 'rgba(239,68,68,.12)',
+                  border: `1px solid ${isSuccess ? 'rgba(34,197,94,.25)' : 'rgba(239,68,68,.25)'}`,
+                  color: isSuccess ? '#86EFAC' : '#FCA5A5' }}>
+                  {toStr(msg)}
+                </div>
+              )}
 
-                {mockupTab === 'dashboard' && (
-                  <div>
-                    <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>Central Operacional</div>
-                        <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 1 }}>Sexta, 12 de junho de 2026</div>
-                      </div>
-                      <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#6366F1,#A855F7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#fff', fontWeight: 700 }}>MA</div>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: 8, marginBottom: 12 }}>
-                      {[{v:'R$18,4k',l:'Valor/mês',c:'#6366F1'},{v:'23',l:'Clientes',c:'#10B981'},{v:'12',l:'Tarefas hoje',c:'#F59E0B'},{v:'3',l:'Em atraso',c:'#EF4444'}].map((k,i)=>(
-                        <div key={i} style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: '10px 12px', position: 'relative', overflow: 'hidden' }}>
-                          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: k.c }} />
-                          <div style={{ fontSize: isMobile ? 14 : 18, fontWeight: 800, color: k.c, marginBottom: 2 }}>{k.v}</div>
-                          <div style={{ fontSize: 9, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '.05em' }}>{k.l}</div>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, overflow: 'hidden' }}>
-                      <div style={{ padding: '9px 12px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: '#334155' }}>Tarefas de Hoje</span>
-                        <span style={{ fontSize: 9, background: '#EEF2FF', color: '#6366F1', padding: '2px 8px', borderRadius: 99, fontWeight: 700 }}>12</span>
-                      </div>
-                      {[['Conciliação bancária — ABC Contabilidade','Em andamento','#3B82F6'],['DRE junho — Consultoria XYZ','A fazer','#94A3B8'],['Folha de pagamento — Tech Start','Concluída','#10B981']].map(([t,s,c],i)=>(
-                        <div key={i} style={{ padding: '8px 12px', borderBottom: i < 2 ? '1px solid #F8FAFC' : 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <div style={{ width: 7, height: 7, borderRadius: '50%', background: c, flexShrink: 0 }} />
-                          <div style={{ flex: 1, fontSize: 11, color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: s==='Concluída'?'line-through':'none', opacity: s==='Concluída'?.5:1 }}>{t}</div>
-                          <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: s==='Concluída'?'#ECFDF5':s==='Em andamento'?'#EFF6FF':'#F8FAFC', color: c, whiteSpace: 'nowrap' }}>{s}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+              <button type="submit" disabled={loading}
+                style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 700, color: '#fff',
+                  background: loading ? 'rgba(99,102,241,.35)' : 'linear-gradient(135deg,#6366F1,#8B5CF6)',
+                  boxShadow: loading ? 'none' : '0 4px 16px rgba(99,102,241,.4)', transition: 'all .2s', marginTop: 4 }}>
+                {loading ? 'Aguarde...' : formMode === 'login' ? 'Entrar →' : 'Enviar link de recuperação'}
+              </button>
+            </form>
+            )}
 
-                {mockupTab === 'agenda' && (
-                  <div>
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: '#0F172A', marginBottom: 2 }}>Agenda — Junho 2026</div>
-                      <div style={{ fontSize: 10, color: '#94A3B8' }}>12 compromissos este mês</div>
-                    </div>
-                    {/* Mini calendário */}
-                    <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: 12, marginBottom: 10 }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 3, marginBottom: 8 }}>
-                        {['D','S','T','Q','Q','S','S'].map((d,i)=>(
-                          <div key={i} style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: '#94A3B8' }}>{d}</div>
-                        ))}
-                        {Array.from({length:30},(_,i)=>i+1).map(d=>(
-                          <div key={d} style={{ textAlign: 'center', fontSize: 10, padding: '3px 2px', borderRadius: 4,
-                            background: d===12?'#6366F1':d===18||d===25?'#EEF2FF':'transparent',
-                            color: d===12?'#fff':d===18||d===25?'#6366F1':'#475569',
-                            fontWeight: d===12?700:'normal' }}>
-                            {d}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, overflow: 'hidden' }}>
-                      <div style={{ padding: '8px 12px', borderBottom: '1px solid #F1F5F9' }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: '#334155' }}>Próximos vencimentos</span>
-                      </div>
-                      {[['Hoje','IRPJ trimestral — Start Tech','#EF4444'],['18/06','Folha de pagamento — 3 clientes','#F59E0B'],['25/06','Conciliação mensal — ABC BPO','#6366F1']].map(([d,l,c],i)=>(
-                        <div key={i} style={{ padding: '8px 12px', borderBottom: i<2?'1px solid #F8FAFC':'none', display: 'flex', gap: 10, alignItems: 'center' }}>
-                          <div style={{ fontSize: 9, fontWeight: 700, color: c, background: c+'20', padding: '2px 7px', borderRadius: 4, whiteSpace: 'nowrap' }}>{d}</div>
-                          <div style={{ fontSize: 11, color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+            {!mfaStep && (
+              <div style={{ textAlign: 'center', marginTop: 14, fontSize: 12 }}>
+              {formMode === 'login' ? (
+                <button onClick={() => { setFormMode('reset'); setMsg('') }}
+                  style={{ background: 'none', border: 'none', color: '#6366F1', cursor: 'pointer', fontSize: 12, padding: 0 }}>
+                  Esqueci minha senha
+                </button>
+              ) : (
+                <button onClick={() => { setFormMode('login'); setMsg('') }}
+                  style={{ background: 'none', border: 'none', color: '#6366F1', cursor: 'pointer', fontSize: 12, padding: 0 }}>
+                  ← Voltar ao login
+                </button>
+              )}
+            </div>
+            )}
 
-                {mockupTab === 'crm' && (
-                  <div>
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: '#0F172A', marginBottom: 2 }}>Pipeline CRM</div>
-                      <div style={{ fontSize: 10, color: '#94A3B8' }}>6 leads · R$ 5.200 em negociação</div>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: 8, height: isMobile ? 240 : 310, overflowY: 'hidden' }}>
-                      {[
-                        { col: 'Prospecção', cor: '#64748B', leads: ['Empresa Alpha','Beta Serviços'] },
-                        { col: 'Qualificação', cor: '#F59E0B', leads: ['Gama Comércio'] },
-                        { col: 'Proposta', cor: '#6366F1', leads: ['Delta & Cia','Omega Group'] },
-                        { col: 'Fechado', cor: '#10B981', leads: ['Zeta Soluções'] },
-                      ].map((col, i) => (
-                        <div key={i} style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, overflow: 'hidden' }}>
-                          <div style={{ padding: '8px 10px', borderBottom: '1px solid #F1F5F9', background: col.cor+'12', display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: col.cor }} />
-                            <span style={{ fontSize: 10, fontWeight: 700, color: col.cor }}>{col.col}</span>
-                            <span style={{ marginLeft: 'auto', fontSize: 9, background: col.cor+'20', color: col.cor, padding: '1px 5px', borderRadius: 3, fontWeight: 700 }}>{col.leads.length}</span>
-                          </div>
-                          <div style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 5 }}>
-                            {col.leads.map((l,j)=>(
-                              <div key={j} style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 5, padding: '6px 8px', fontSize: 10, color: '#334155', fontWeight: 500 }}>{l}</div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {mockupTab === 'rent' && (
-                  <div>
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: '#0F172A', marginBottom: 2 }}>Rentabilidade</div>
-                      <div style={{ fontSize: 10, color: '#94A3B8' }}>Análise por cliente · Junho 2026</div>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(3,1fr)', gap: 8, marginBottom: 10 }}>
-                      {[{v:'R$18,4k',l:'Receita mensal',c:'#6366F1'},{v:'68,3%',l:'Margem Global',c:'#10B981'},{v:'R$35',l:'Custo/hora',c:'#F59E0B'}].map((k,i)=>(
-                        <div key={i} style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: '10px 12px' }}>
-                          <div style={{ fontSize: 15, fontWeight: 800, color: k.c }}>{k.v}</div>
-                          <div style={{ fontSize: 9, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', marginTop: 2 }}>{k.l}</div>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, overflow: 'hidden' }}>
-                      <div style={{ padding: '8px 12px 8px', borderBottom: '1px solid #F1F5F9', fontSize: 10, fontWeight: 700, color: '#94A3B8', display: 'grid', gridTemplateColumns: '1fr 60px 60px 60px' }}>
-                        <span>CLIENTE</span><span>Valor/mês</span><span>HORAS</span><span>MARGEM</span>
-                      </div>
-                      {[['ABC Contabilidade','R$2.200','18h','81%','#15803D'],['Gama Comércio','R$1.800','22h','54%','#92400E'],['Beta Serviços','R$900','28h','-12%','#991B1B']].map(([n,m,h,mg,c],i)=>(
-                        <div key={i} style={{ padding: '8px 12px', borderBottom: i<2?'1px solid #F8FAFC':'none', display: 'grid', gridTemplateColumns: '1fr 60px 60px 60px', alignItems: 'center' }}>
-                          <span style={{ fontSize: 11, color: '#334155', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n}</span>
-                          <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#334155' }}>{m}</span>
-                          <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#64748B' }}>{h}</span>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: c }}>{mg}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,.05)' }}>
+              <span style={{ fontSize: 10, color: '#334155' }}>🔒 Dados protegidos e isolados por empresa</span>
             </div>
           </div>
-
-          {/* Callouts abaixo do mockup */}
-          {!isMobile && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginTop: 24 }}>
-              {[
-                { icon: '⚡', title: 'Visão em tempo real', desc: 'Dashboard atualizado a cada ação da equipe' },
-                { icon: '🔒', title: 'Multi-empresa seguro', desc: 'Cada BPO tem seus dados completamente isolados' },
-                { icon: '📱', title: 'Qualquer dispositivo', desc: 'Acesse do computador, tablet ou celular' },
-              ].map((item, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: 16, background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 12 }}>
-                  <span style={{ fontSize: 20, flexShrink: 0 }}>{item.icon}</span>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#E2E8F0', marginBottom: 4 }}>{item.title}</div>
-                    <div style={{ fontSize: 12, color: '#64748B' }}>{item.desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ── PROBLEMA ────────────────────────────────────────────── */}
       <section style={{ padding: isMobile ? '60px 20px' : '80px 48px', background: 'rgba(255,255,255,.015)' }}>
@@ -597,7 +385,7 @@ export default function LoginPage() {
             <p style={{ fontSize: isMobile ? 14 : 16, color: '#64748B', maxWidth: 520, margin: '0 auto' }}>A maioria dos BPOs cresce rápido, mas sem uma operação estruturada o crescimento vira caos.</p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2,1fr)', gap: 14, maxWidth: 860, margin: '0 auto 44px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 14, maxWidth: 1000, margin: '0 auto 44px' }}>
             {[
               {
                 time: 'Na hora de precificar um novo cliente',
@@ -613,11 +401,6 @@ export default function LoginPage() {
                 time: 'Quando um lead pergunta seu preço',
                 icon: '🤷',
                 desc: 'Você não sabe quanto esse perfil de cliente vai custar para atender. Responde qualquer coisa. Ou perde o cliente por cobrar errado.',
-              },
-              {
-                time: 'Quando um analista sai',
-                icon: '🔑',
-                desc: 'Junto com ele vai o login do sistema do cliente, a senha do contador e o conhecimento de como aquela obrigação específica funciona.',
               },
             ].map((p, i) => (
               <div key={i} style={{ padding: '22px 24px', background: 'rgba(239,68,68,.04)', border: '1px solid rgba(239,68,68,.1)', borderRadius: 12 }}>
@@ -643,43 +426,225 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* ── COMO FUNCIONA ───────────────────────────────────────── */}
-      <section id="como-funciona" style={{ padding: isMobile ? '60px 20px' : '96px 48px' }}>
-        <div style={{ maxWidth: 1060, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 56 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>COMO FUNCIONA</div>
-            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>Da operação ao lucro, em um lugar só</h2>
-            <p style={{ fontSize: isMobile ? 14 : 16, color: '#64748B' }}>Sem implantação complexa. Sem consultores. Configure em menos de 30 minutos.</p>
+      {/* ── O MÉTODO ────────────────────────────────────────────── */}
+      <section id="metodo" style={{ padding: isMobile ? '60px 20px' : '96px 48px' }}>
+        <div style={{ maxWidth: 780, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: isMobile ? 40 : 60 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>O MÉTODO</div>
+            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>Quatro semanas pra sair do feeling e entrar nos dados.</h2>
+            <p style={{ fontSize: isMobile ? 14 : 16, color: '#64748B' }}>Um passo de cada vez, com acompanhamento individual em cada etapa.</p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: isMobile ? 20 : 28, position: 'relative' }}>
+          <div style={{ position: 'relative' }}>
             {!isMobile && (
-              <div style={{ position: 'absolute', top: 36, left: 'calc(16.66% + 20px)', right: 'calc(16.66% + 20px)', height: 1, background: 'linear-gradient(90deg,rgba(99,102,241,.35),rgba(139,92,246,.35))', zIndex: 0 }} />
+              <div style={{ position: 'absolute', top: 28, bottom: 28, left: 27, width: 1, background: 'linear-gradient(to bottom, rgba(99,102,241,.4), rgba(139,92,246,.4))' }} />
             )}
-            {[
-              { num: '01', emoji: '🧮', title: 'Cadastre sua equipe e calcule o custo real', desc: 'Informe salários, encargos e carga horária. O Fluxe calcula o custo real da sua hora — e projeta quantos clientes sua operação consegue atender.' },
-              { num: '02', emoji: '✅', title: 'Organize a operação por cliente', desc: 'Tarefas, prazos, checklists e cofre de senhas. Cada analista sabe exatamente o que fazer — sem perguntar no WhatsApp.' },
-              { num: '03', emoji: '📈', title: 'Veja a margem real e decida com dados', desc: 'MRR, horas gastas e rentabilidade por cliente. Você sabe quem está lucrando, quem está no limite — e qual o próximo passo para crescer.' },
-            ].map((step, i) => (
-              <div key={i} style={{ textAlign: 'center', padding: '32px 24px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 16, position: 'relative', zIndex: 1 }}>
-                <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,rgba(99,102,241,.18),rgba(139,92,246,.14))', border: '1px solid rgba(99,102,241,.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: 22 }}>
-                  {step.emoji}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 20 : 8 }}>
+              {METODO.map((m, i) => (
+                <div key={i} style={{ display: 'flex', gap: 24, alignItems: 'flex-start', padding: isMobile ? '18px' : '20px 8px', position: 'relative', zIndex: 1 }}>
+                  <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#0D1424', border: '1px solid rgba(99,102,241,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontFamily: "'Fraunces',serif", fontSize: 20, fontWeight: 700, color: '#A5B4FC' }}>{m.num}</span>
+                  </div>
+                  <div style={{ paddingTop: 4 }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#6366F1', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 6 }}>{m.semana}</div>
+                    <div style={{ fontFamily: "'Fraunces',serif", fontSize: 19, fontWeight: 700, color: '#F1F5F9', marginBottom: 8 }}>{m.titulo}</div>
+                    <div style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.7, maxWidth: 540 }}>{m.desc}</div>
+                  </div>
                 </div>
-                <div style={{ fontSize: 10, fontWeight: 800, color: '#6366F1', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 10 }}>PASSO {step.num}</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#F1F5F9', marginBottom: 10 }}>{step.title}</div>
-                <div style={{ fontSize: 13, color: '#64748B', lineHeight: 1.65 }}>{step.desc}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── LABORATÓRIO BPO ─────────────────────────────────────── */}
+      <section style={{ padding: isMobile ? '0 20px 72px' : '0 48px 96px', position: 'relative' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#475569', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>O AMBIENTE DA MENTORIA</div>
+            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 24 : 32, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>Onde você aplica cada etapa, com acompanhamento comigo do lado.</h2>
+          </div>
+
+          {/* Janela do browser */}
+          <div style={{ background: '#0D1424', border: '1px solid rgba(255,255,255,.07)', borderRadius: 18, overflow: 'hidden', boxShadow: '0 48px 100px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.04)' }}>
+            {/* Chrome bar */}
+            <div style={{ background: '#1A2235', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {['#FF5F57','#FFBD2E','#28C940'].map(c => <div key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c }} />)}
+              </div>
+              <div style={{ flex: 1, background: 'rgba(255,255,255,.04)', borderRadius: 6, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 8 }}>
+                <span style={{ fontSize: 11, color: '#475569' }}>fluxebpo.com.br</span>
+              </div>
+            </div>
+
+            {/* App shell */}
+            <div style={{ display: 'flex', height: isMobile ? 320 : 430 }}>
+              {/* Sidebar */}
+              {!isMobile && (
+                <div style={{ width: 176, background: '#F8FAFC', borderRight: '1px solid #E2E8F0', flexShrink: 0, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <div style={{ padding: '8px 10px 12px', marginBottom: 4, borderBottom: '1px solid #E2E8F0' }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#0F172A', letterSpacing: '-.3px' }}>Fluxe <span style={{ color: '#6366F1' }}>BPO</span></div>
+                    <div style={{ fontSize: 9, color: '#94A3B8', marginTop: 2 }}>Empreenda BPO Ltda</div>
+                  </div>
+                  {[
+                    { icon: 'fa-solid fa-house',       label: 'Dashboard',   active: true },
+                    { icon: 'fa-solid fa-list-check',  label: 'Tarefas' },
+                    { icon: 'fa-solid fa-building',    label: 'Clientes' },
+                    { icon: 'fa-solid fa-calendar',    label: 'Agenda' },
+                    { icon: 'fa-solid fa-filter',      label: 'CRM' },
+                    { icon: 'fa-solid fa-lock',        label: 'Cofre' },
+                    { icon: 'fa-solid fa-chart-line',  label: 'Relatórios' },
+                  ].map((item, i) => (
+                    <div key={i}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 7,
+                        background: item.active ? '#EEF2FF' : 'transparent',
+                        boxShadow: item.active ? 'inset 3px 0 0 #6366F1' : 'none',
+                        color: item.active ? '#6366F1' : '#64748B', fontSize: 11, fontWeight: item.active ? 600 : 500 }}>
+                      <i className={item.icon} style={{ fontSize: 10, width: 12, textAlign: 'center' }} />
+                      <span>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Conteúdo principal */}
+              <div style={{ flex: 1, background: '#F1F5F9', padding: isMobile ? 12 : 18, overflow: 'hidden' }}>
+                <div>
+                  <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>Central Operacional</div>
+                      <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 1 }}>Sexta, 12 de junho de 2026</div>
+                    </div>
+                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#6366F1,#A855F7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#fff', fontWeight: 700 }}>MA</div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: 8, marginBottom: 12 }}>
+                    {[{v:'R$18,4k',l:'Valor/mês',c:'#6366F1'},{v:'23',l:'Clientes',c:'#10B981'},{v:'12',l:'Tarefas hoje',c:'#F59E0B'},{v:'3',l:'Em atraso',c:'#EF4444'}].map((k,i)=>(
+                      <div key={i} style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: '10px 12px', position: 'relative', overflow: 'hidden' }}>
+                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: k.c }} />
+                        <div style={{ fontSize: isMobile ? 14 : 18, fontWeight: 800, color: k.c, marginBottom: 2 }}>{k.v}</div>
+                        <div style={{ fontSize: 9, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '.05em' }}>{k.l}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, overflow: 'hidden' }}>
+                    <div style={{ padding: '9px 12px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#334155' }}>Tarefas de Hoje</span>
+                      <span style={{ fontSize: 9, background: '#EEF2FF', color: '#6366F1', padding: '2px 8px', borderRadius: 99, fontWeight: 700 }}>12</span>
+                    </div>
+                    {[['Conciliação bancária — ABC Contabilidade','Em andamento','#3B82F6'],['DRE junho — Consultoria XYZ','A fazer','#94A3B8'],['Folha de pagamento — Tech Start','Concluída','#10B981']].map(([t,s,c],i)=>(
+                      <div key={i} style={{ padding: '8px 12px', borderBottom: i < 2 ? '1px solid #F8FAFC' : 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: c, flexShrink: 0 }} />
+                        <div style={{ flex: 1, fontSize: 11, color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: s==='Concluída'?'line-through':'none', opacity: s==='Concluída'?.5:1 }}>{t}</div>
+                        <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: s==='Concluída'?'#ECFDF5':s==='Em andamento'?'#EFF6FF':'#F8FAFC', color: c, whiteSpace: 'nowrap' }}>{s}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style={{ textAlign: 'center', marginTop: 14 }}>
+            <span style={{ fontSize: 12, color: '#475569' }}>Ambiente também chamado de Fluxe.</span>
+          </div>
+
+          {/* Callouts abaixo do mockup */}
+          {!isMobile && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginTop: 24 }}>
+              {[
+                { icon: '⚡', title: 'Visão em tempo real', desc: 'Painel atualizado a cada ação da equipe' },
+                { icon: '🔒', title: 'Multi-empresa seguro', desc: 'Cada BPO tem seus dados completamente isolados' },
+                { icon: '📱', title: 'Qualquer dispositivo', desc: 'Acesse do computador, tablet ou celular' },
+              ].map((item, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: 16, background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 12 }}>
+                  <span style={{ fontSize: 20, flexShrink: 0 }}>{item.icon}</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#E2E8F0', marginBottom: 4 }}>{item.title}</div>
+                    <div style={{ fontSize: 12, color: '#64748B' }}>{item.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── PARA QUEM É ─────────────────────────────────────────── */}
+      <section id="para-quem" style={{ padding: isMobile ? '60px 20px' : '96px 48px', background: 'rgba(255,255,255,.015)' }}>
+        <div style={{ maxWidth: 860, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: isMobile ? 32 : 48 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>PARA QUEM É</div>
+            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 24 : 34, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>Pra quem é (e pra quem não é) a mentoria</h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2,1fr)', gap: 16 }}>
+            <div style={{ padding: '26px 28px', background: 'rgba(34,197,94,.05)', border: '1px solid rgba(34,197,94,.18)', borderRadius: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#4ADE80', letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 16 }}>É pra você se</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {PARA_QUEM_SIM.map((t, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(34,197,94,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                      <span style={{ color: '#22C55E', fontSize: 10, fontWeight: 800 }}>✓</span>
+                    </div>
+                    <span style={{ fontSize: 14, color: '#CBD5E1', lineHeight: 1.55 }}>{t}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ padding: '26px 28px', background: 'rgba(239,68,68,.04)', border: '1px solid rgba(239,68,68,.14)', borderRadius: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#F87171', letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 16 }}>Não é pra você se</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {PARA_QUEM_NAO.map((t, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(239,68,68,.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                      <span style={{ color: '#F87171', fontSize: 10, fontWeight: 800 }}>✕</span>
+                    </div>
+                    <span style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.55 }}>{t}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── ANTES E DEPOIS DA MENTORIA ──────────────────────────── */}
+      <section style={{ padding: isMobile ? '60px 20px' : '80px 48px', background: 'rgba(255,255,255,.015)' }}>
+        <div style={{ maxWidth: 860, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: isMobile ? 32 : 48 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>POR QUE A MENTORIA</div>
+            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 22 : 32, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>Antes e depois da Mentoria Fluxe</h2>
+            <p style={{ fontSize: isMobile ? 13 : 15, color: '#64748B' }}>O que muda na prática quando você aplica o método</p>
+          </div>
+          <div style={{ border: '1px solid rgba(255,255,255,.08)', borderRadius: 16, overflow: 'hidden' }}>
+            {/* Header */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', background: 'rgba(99,102,241,.08)' }}>
+              <div style={{ padding: '14px 20px', fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '.1em', borderRight: '1px solid rgba(255,255,255,.06)' }}>Situação</div>
+              <div style={{ padding: '14px 20px', fontSize: 11, fontWeight: 700, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '.1em', borderRight: '1px solid rgba(255,255,255,.06)' }}>❌ Antes da mentoria</div>
+              <div style={{ padding: '14px 20px', fontSize: 11, fontWeight: 700, color: '#22C55E', textTransform: 'uppercase', letterSpacing: '.1em' }}>✓ Depois da mentoria</div>
+            </div>
+            {[
+              ['Precificar novo cliente',       'Chuta, torce para não dar prejuízo', 'Calcula com base no custo real da equipe'],
+              ['Rentabilidade por cliente',     'Só descobre quando o problema é grande', 'Acompanha em tempo real quem dá lucro'],
+              ['Prazos e obrigações',           'WhatsApp, post-it e memorização', 'Rotina organizada, nada esquecido'],
+              ['Senhas e acessos dos clientes', 'Planilha, e-mail ou dependente de um analista', 'Centralizado, ninguém trava a operação'],
+              ['Capacidade da equipe',          'Aceita cliente sem saber se aguenta',   'Sabe exatamente quantos novos clientes cabem'],
+              ['Decisão sobre o negócio',       'No feeling, sem dados', 'Com plano estratégico e números reais'],
+            ].map(([s, sem, com], i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderTop: '1px solid rgba(255,255,255,.05)', background: i%2===0 ? 'transparent' : 'rgba(255,255,255,.015)' }}>
+                <div style={{ padding: '14px 20px', fontSize: 13, fontWeight: 600, color: '#CBD5E1', borderRight: '1px solid rgba(255,255,255,.05)' }}>{s}</div>
+                <div style={{ padding: '14px 20px', fontSize: 13, color: '#64748B', borderRight: '1px solid rgba(255,255,255,.05)' }}>{sem}</div>
+                <div style={{ padding: '14px 20px', fontSize: 13, color: '#86EFAC' }}>{com}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── PROVA SOCIAL ────────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '60px 20px' : '80px 48px', background: 'rgba(255,255,255,.015)' }}>
+      {/* ── RESULTADOS ──────────────────────────────────────────── */}
+      <section style={{ padding: isMobile ? '60px 20px' : '80px 48px' }}>
         <div style={{ maxWidth: 1060, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 52 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>QUEM USA O FLUXE</div>
-            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 22 : 32, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>BPOs que pararam de adivinhar</h2>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>RESULTADOS</div>
+            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 22 : 32, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>Donos de BPO que pararam de adivinhar</h2>
             <p style={{ fontSize: isMobile ? 14 : 15, color: '#64748B' }}>e começaram a gerir com dados reais</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: isMobile ? 16 : 24 }}>
@@ -705,66 +670,8 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* ── FUNCIONALIDADES ─────────────────────────────────────── */}
-      <section id="funcionalidades" style={{ padding: isMobile ? '60px 20px' : '96px 48px', background: 'rgba(255,255,255,.015)' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 56 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>FUNCIONALIDADES</div>
-            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 16px', letterSpacing: '-.02em' }}>Feito para quem opera BPO no Brasil</h2>
-            <p style={{ fontSize: isMobile ? 14 : 16, color: '#64748B', maxWidth: 560, margin: '0 auto' }}>Não é um software genérico adaptado. Cada funcionalidade resolve um problema real de quem atende múltiplos clientes ao mesmo tempo.</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: isMobile ? 14 : 20 }}>
-            {FEATURES.map((f, i) => (
-              <div key={i}
-                style={{ background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 14, padding: '24px', transition: 'all .25s', cursor: 'default' }}
-                onMouseOver={e => { e.currentTarget.style.borderColor = 'rgba(99,102,241,.28)'; e.currentTarget.style.background = 'rgba(99,102,241,.05)' }}
-                onMouseOut={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.07)'; e.currentTarget.style.background = 'rgba(255,255,255,.03)' }}>
-                <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(99,102,241,.1)', border: '1px solid rgba(99,102,241,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
-                  <i className={f.icon} style={{ color: f.color, fontSize: 15 }} />
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#E2E8F0', marginBottom: 8 }}>{f.title}</div>
-                <div style={{ fontSize: 13, color: '#64748B', lineHeight: 1.65 }}>{f.desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── COMPARAÇÃO ──────────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '60px 20px' : '80px 48px', background: 'rgba(255,255,255,.015)' }}>
-        <div style={{ maxWidth: 860, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: isMobile ? 32 : 48 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>POR QUE O FLUXE</div>
-            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 22 : 32, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>Antes e depois do Fluxe</h2>
-            <p style={{ fontSize: isMobile ? 13 : 15, color: '#64748B' }}>O que muda na prática quando você para de improvisar</p>
-          </div>
-          <div style={{ border: '1px solid rgba(255,255,255,.08)', borderRadius: 16, overflow: 'hidden' }}>
-            {/* Header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', background: 'rgba(99,102,241,.08)' }}>
-              <div style={{ padding: '14px 20px', fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '.1em', borderRight: '1px solid rgba(255,255,255,.06)' }}>Situação</div>
-              <div style={{ padding: '14px 20px', fontSize: 11, fontWeight: 700, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '.1em', borderRight: '1px solid rgba(255,255,255,.06)' }}>❌ Sem sistema</div>
-              <div style={{ padding: '14px 20px', fontSize: 11, fontWeight: 700, color: '#22C55E', textTransform: 'uppercase', letterSpacing: '.1em' }}>✓ Com o Fluxe</div>
-            </div>
-            {[
-              ['Precificar novo cliente',       'Chuta, torce para não dar prejuízo', 'Calcula com base no custo real da equipe'],
-              ['Rentabilidade por cliente',     'Só descobre quando o problema é grande', 'Acompanha em tempo real todo mês'],
-              ['Prazos e obrigações',           'WhatsApp, post-it e memorização', 'Agenda inteligente com alertas automáticos'],
-              ['Senhas e acessos dos clientes', 'Planilha, e-mail ou dependente de um analista', 'Cofre criptografado centralizado'],
-              ['Capacidade da equipe',          'Aceita cliente sem saber se aguenta',   'Sabe exatamente quantos novos clientes cabem'],
-              ['Relatório de produtividade',    'Não existe ou demora horas para gerar', 'Um clique, exportação em Excel com branding'],
-            ].map(([s, sem, com], i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderTop: '1px solid rgba(255,255,255,.05)', background: i%2===0 ? 'transparent' : 'rgba(255,255,255,.015)' }}>
-                <div style={{ padding: '14px 20px', fontSize: 13, fontWeight: 600, color: '#CBD5E1', borderRight: '1px solid rgba(255,255,255,.05)' }}>{s}</div>
-                <div style={{ padding: '14px 20px', fontSize: 13, color: '#64748B', borderRight: '1px solid rgba(255,255,255,.05)' }}>{sem}</div>
-                <div style={{ padding: '14px 20px', fontSize: 13, color: '#86EFAC' }}>{com}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── MENTORIA ────────────────────────────────────────────── */}
-      <section id="precos" style={{ padding: isMobile ? '60px 20px' : '96px 48px' }}>
+      {/* ── MENTORIA EM DETALHE ─────────────────────────────────── */}
+      <section id="precos" style={{ padding: isMobile ? '60px 20px' : '96px 48px', background: 'rgba(255,255,255,.015)' }}>
         <div style={{ maxWidth: 700, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 56 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>MENTORIA BPO LUCRATIVO</div>
@@ -776,8 +683,8 @@ export default function LoginPage() {
             <div style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.08em' }}>O que está incluso</div>
             <div style={{ marginBottom: 28, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                'Encontros individuais comigo, olhando a operação real do seu BPO',
-                'O Fluxe incluso — o sistema que uso pra dar clareza aos seus números',
+                'Encontros individuais comigo, aplicando cada etapa dentro do Laboratório BPO',
+                'O Laboratório BPO incluso — o ambiente que uso pra dar clareza aos seus números',
                 'Precificação, rotina e rentabilidade organizadas junto com você',
                 'Plano estratégico pra sair do feeling e crescer com previsibilidade',
               ].map((f, j) => (
@@ -800,7 +707,7 @@ export default function LoginPage() {
             {[
               { icon: '🗣️', text: 'Diagnóstico sem compromisso' },
               { icon: '🎯', text: 'Acompanhamento individual, não em grupo' },
-              { icon: '🧮', text: 'Sistema incluso durante a mentoria' },
+              { icon: '🧮', text: 'Laboratório BPO incluso durante a mentoria' },
             ].map((g, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748B' }}>
                 <span>{g.icon}</span>
@@ -812,7 +719,7 @@ export default function LoginPage() {
       </section>
 
       {/* ── FAQ ─────────────────────────────────────────────────── */}
-      <section id="faq" style={{ padding: isMobile ? '60px 20px' : '96px 48px', background: 'rgba(255,255,255,.015)' }}>
+      <section id="faq" style={{ padding: isMobile ? '60px 20px' : '96px 48px' }}>
         <div style={{ maxWidth: 700, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 48 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>FAQ</div>
@@ -839,7 +746,7 @@ export default function LoginPage() {
       </section>
 
       {/* ── CTA FINAL ───────────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '60px 20px' : '96px 48px' }}>
+      <section style={{ padding: isMobile ? '60px 20px' : '96px 48px', background: 'rgba(255,255,255,.015)' }}>
         <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
           <div style={{ background: 'linear-gradient(135deg,rgba(99,102,241,.14),rgba(139,92,246,.09))', border: '1px solid rgba(99,102,241,.22)', borderRadius: 24, padding: isMobile ? '44px 24px' : '64px 52px', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,.18) 0%, transparent 70%)', pointerEvents: 'none' }} />
@@ -850,19 +757,13 @@ export default function LoginPage() {
               </h2>
               <p style={{ fontSize: isMobile ? 14 : 16, color: '#94A3B8', marginBottom: 12 }}>Diagnóstico individual, sem compromisso.</p>
               <p style={{ fontSize: isMobile ? 12 : 13, color: '#475569', marginBottom: 32 }}>A gente conversa primeiro pra ver se faz sentido pros dois lados.</p>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
                 <button onClick={abrirDiagnostico}
                   style={{ padding: '14px 32px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 32px rgba(99,102,241,.5)', transition: 'all .2s' }}
                   onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(99,102,241,.65)' }}
                   onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(99,102,241,.5)' }}>
                   Agendar diagnóstico →
                 </button>
-                <a href="https://wa.me/5511917101173?text=Quero+saber+mais+sobre+o+Fluxe+BPO" target="_blank" rel="noreferrer"
-                  style={{ padding: '14px 24px', borderRadius: 10, border: '1px solid rgba(255,255,255,.12)', background: 'transparent', color: '#CBD5E1', fontSize: 15, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, transition: 'all .2s' }}
-                  onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,.05)'}
-                  onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
-                  💬 Falar no WhatsApp
-                </a>
               </div>
             </div>
           </div>
