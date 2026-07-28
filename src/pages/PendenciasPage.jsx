@@ -1,14 +1,17 @@
 import { useState } from 'react'
-import { usePendencias, useCreatePendencia, useUpdatePendencia, useClients } from '../hooks/useData'
-import { Card, Btn, Loader, EmptyState, Badge, fmt } from '../components/ui'
+import { useNavigate } from 'react-router-dom'
+import { usePendencias, useCreatePendencia, useUpdatePendencia, useClients, useTasks } from '../hooks/useData'
+import { Card, Btn, Loader, EmptyState, Badge, fmt, isVencida } from '../components/ui'
 
 const fi = { padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'inherit', background:'#fff', width:'100%' }
 
 export default function PendenciasPage() {
   const { data: pends = [], isLoading } = usePendencias()
   const { data: clients = [] } = useClients()
+  const { data: tarefas = [] } = useTasks()
   const create = useCreatePendencia()
   const update = useUpdatePendencia()
+  const nav = useNavigate()
   const [modal, setModal] = useState(false)
   const [editId, setEditId] = useState(null)
   const [form, setForm] = useState({})
@@ -18,6 +21,11 @@ export default function PendenciasPage() {
 
   const abertas    = pends.filter(p => p.status === 'aberta')
   const resolvidas = pends.filter(p => p.status === 'resolvida')
+  // Tudo que está em aberto de verdade, junto num lugar só — não só o que
+  // foi cadastrado como "pendência", mas também tarefa normal que já venceu.
+  const tarefasAtrasadas = tarefas
+    .filter(t => isVencida(t.prazo, t.status))
+    .sort((a, b) => (a.prazo || '').localeCompare(b.prazo || ''))
 
   function openNew() { setForm({ prioridade:'media' }); setEditId(null); setModal(true) }
   function openEdit(p) {
@@ -61,7 +69,29 @@ export default function PendenciasPage() {
       <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:16 }}>
         <Btn variant="primary" onClick={openNew}>+ Nova pendência</Btn>
       </div>
-      <Card>
+
+      {tarefasAtrasadas.length > 0 && (
+        <div style={{ marginBottom:16 }}>
+          <div style={{ fontSize:12, fontWeight:700, color:'#991B1B', marginBottom:8 }}>🔴 Tarefas atrasadas ({tarefasAtrasadas.length})</div>
+          <Card style={{ borderLeft:'3px solid #EF4444' }}>
+            {tarefasAtrasadas.map(t => (
+              <div key={t.id} onClick={() => nav('/tasks')}
+                style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 16px', borderBottom:'1px solid #F8FAFC', cursor:'pointer' }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:12, fontWeight:600, color:'#991B1B' }}>{t.titulo}</div>
+                  <div style={{ fontSize:10, color:'#94A3B8', marginTop:2 }}>
+                    {t.clientes?.fantasia || t.clientes?.razao_social || '—'} · venceu {fmt(t.prazo)}
+                  </div>
+                </div>
+                <Badge label="atrasada" color="red" />
+              </div>
+            ))}
+          </Card>
+        </div>
+      )}
+
+      <div style={{ fontSize:12, fontWeight:700, color:'#B45309', marginBottom:8 }}>🟠 Pendências ({abertas.length})</div>
+      <Card style={{ borderLeft:'3px solid #F97316' }}>
         {abertas.length === 0
           ? <EmptyState icon="✅" title="Sem pendências abertas" sub="Todas as pendências foram resolvidas" />
           : abertas.map(p => <PendRow key={p.id} p={p} />)
