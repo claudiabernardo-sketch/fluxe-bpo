@@ -16,79 +16,23 @@ const FEATURES = [
   { icon: 'fa-brands fa-whatsapp',     title: 'Atenda pelo WhatsApp sem sair do Fluxe.',     desc: 'Conecte o WhatsApp oficial da sua empresa e responda clientes direto do sistema. A IA já lê boletos e notas fiscais recebidas e resume pra você.', color: '#22C55E' },
 ]
 
-const PLANS = [
-  {
-    name: 'Essencial', price: 'R$ 97', period: '/mês', highlight: false, badge: null,
-    idealPara: 'Ideal para: quem quer todo o sistema e ainda não precisa de WhatsApp integrado',
-    features: [
-      'Até 3 usuários',
-      'Tarefas, checklists e modelos de processo (SOP)',
-      'Agenda e Central operacional',
-      'Cofre digital de senhas',
-      'Cadastro de clientes com Esteiras operacionais',
-      'Radar de saúde do cliente + Relatório 360° em PDF',
-      'Precificação consultiva com aviso de capacidade',
-      'CRM com pipeline comercial',
-      'Executivo, Rentabilidade e Capacidade da equipe',
-      'Previsão de contratação e simulação "e se"',
-      'Meta de crescimento',
-      'Suporte por e-mail',
-    ],
-    cta: 'Começar grátis',
-  },
-  {
-    name: 'Completo', price: 'R$ 197', period: '/mês', highlight: true, badge: 'Mais popular',
-    idealPara: 'Ideal para: quem quer atender o cliente pelo WhatsApp direto de dentro do Fluxe',
-    features: [
-      'Usuários ilimitados',
-      'WhatsApp integrado (API oficial da Meta ou conexão rápida)',
-      'Leitura automática de boletos e notas fiscais recebidas, por IA',
-      'Suporte prioritário via WhatsApp',
-      'Tarefas, checklists e modelos de processo (SOP)',
-      'Agenda e Central operacional',
-      'Cofre digital de senhas',
-      'Cadastro de clientes com Esteiras operacionais',
-      'Radar de saúde do cliente + Relatório 360° em PDF',
-      'Precificação consultiva com aviso de capacidade',
-      'CRM com pipeline comercial',
-      'Executivo, Rentabilidade e Capacidade da equipe',
-      'Previsão de contratação e simulação "e se"',
-      'Meta de crescimento',
-    ],
-    cta: 'Assinar agora',
-  },
-  {
-    name: 'Fluxe + Mentoria BPO Lucrativo', price: 'Sob consulta', period: '', highlight: false, badge: 'Cobrança anual',
-    idealPara: 'Ideal para: empresas que querem crescer com acompanhamento direto da fundadora',
-    features: [
-      'Tudo do Completo',
-      '12 mentorias individuais',
-      'Plano estratégico',
-      'Prioridade máxima',
-    ],
-    cta: 'Agendar diagnóstico',
-    href: 'https://wa.me/5511917101173?text=Quero+agendar+um+diagn%C3%B3stico+sobre+o+plano+Fluxe+%2B+Mentoria+BPO+Lucrativo',
-  },
-]
+const WHATSAPP_DIAGNOSTICO = 'https://wa.me/5511917101173?text=Quero+agendar+um+diagn%C3%B3stico+sobre+a+mentoria+BPO+Lucrativo'
 
 const FAQS = [
-  { q: 'Preciso instalar algo?', a: 'Não. O Fluxe BPO é 100% web — funciona direto no navegador, sem instalação. Acesse de qualquer computador, tablet ou celular.' },
-  { q: 'Como funciona o período de teste?', a: 'Você cria a conta gratuitamente e tem 14 dias completos para explorar todas as funcionalidades, sem precisar de cartão de crédito.' },
-  { q: 'Posso convidar minha equipe?', a: 'Sim. O administrador convida analistas, supervisores e gestores. Cada perfil tem permissões configuráveis de acordo com a hierarquia do seu BPO.' },
-  { q: 'Meus dados ficam seguros?', a: 'Sim. Cada empresa tem dados completamente isolados. Usamos criptografia em repouso e em trânsito, hospedado em infraestrutura Supabase/AWS.' },
-  { q: 'Funciona para qualquer tamanho de BPO?', a: 'Sim, do BPO solo ao escritório com equipe maior. O Essencial atende até 3 usuários; a partir do Completo, os usuários são ilimitados. O Fluxe + Mentoria BPO Lucrativo soma acompanhamento individual pra quem quer escalar mais rápido.' },
-  { q: 'Qual a diferença entre os planos?', a: 'O Essencial tem todo o sistema para até 3 usuários. O Completo libera usuários ilimitados e o WhatsApp integrado. O Fluxe + Mentoria BPO Lucrativo inclui tudo do Completo por 1 ano, mais 12 encontros individuais de mentoria com a fundadora.' },
+  { q: 'Preciso saber mexer em sistema?', a: 'Não. A mentoria foi pensada pra quem opera BPO no dia a dia, não pra quem entende de tecnologia. O Fluxe já vem configurado junto com o acompanhamento — você aprende usando, na prática.' },
+  { q: 'Como funciona o acompanhamento?', a: 'Encontros individuais comigo, direto, olhando a operação real do seu BPO dentro do Fluxe — precificação, rotina, rentabilidade por cliente. Não é um curso gravado.' },
+  { q: 'Quanto custa?', a: 'Depende do formato e da duração combinados no diagnóstico — por isso não coloco tabela de preço aqui. Agenda uma conversa sem compromisso.' },
+  { q: 'Já uso outro sistema pra gerir o BPO, dá pra participar?', a: 'Sim. A mentoria funciona em cima do que você já tem — o Fluxe é a ferramenta que uso pra dar clareza aos números, mas o foco é te ajudar a crescer, não trocar de sistema.' },
+  { q: 'Meus dados ficam seguros?', a: 'Sim. Cada BPO tem os dados completamente isolados dentro do Fluxe, com criptografia em repouso e em trânsito.' },
+  { q: 'Serve pra qualquer tamanho de BPO?', a: 'Sim — do BPO solo que está começando ao que já tem equipe e quer organizar a operação pra crescer com previsibilidade.' },
 ]
 
 // ── Componente principal ───────────────────────────────────────────────────
 
 export default function LoginPage() {
-  const [formMode, setFormMode] = useState('signup')
+  const [formMode, setFormMode] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [nome, setNome] = useState('')
-  const [nomeEmpresa, setNomeEmpresa] = useState('')
-  const [aceitouTermos, setAceitouTermos] = useState(false)
   const [msg, setMsg] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPass, setShowPass] = useState(false)
@@ -99,7 +43,7 @@ export default function LoginPage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const formRef = useRef(null)
 
-  const { signIn, signUp, resetPassword, mfaChallenge, mfaVerifyLogin, signInWithGoogle } = useAuthStore()
+  const { signIn, resetPassword, mfaChallenge, mfaVerifyLogin, signInWithGoogle } = useAuthStore()
   const navigate = useNavigate()
   const [mfaStep, setMfaStep] = useState(null) // { factorId, challengeId }
   const [mfaCode, setMfaCode] = useState('')
@@ -161,13 +105,6 @@ export default function LoginPage() {
       const { error } = await mfaVerifyLogin(mfaStep.factorId, mfaStep.challengeId, mfaCode.replace(/\s/g, ''))
       if (error) { setMsg('Código incorreto ou expirado. Tente novamente.'); setLoading(false); return }
       navigate('/')
-    } else if (formMode === 'signup') {
-      if (!nome || !nomeEmpresa) { setMsg('Preencha todos os campos'); setLoading(false); return }
-      if (!aceitouTermos) { setMsg('Aceite os termos de uso para continuar'); setLoading(false); return }
-      const { error } = await signUp(email, password, nome, nomeEmpresa)
-      if (error) setMsg(toStr(error))
-      else setMsg('Conta criada! Verifique seu e-mail para confirmar.')
-      setLoading(false)
     } else {
       const { error } = await resetPassword(email)
       if (error) setMsg(toStr(error))
@@ -180,10 +117,8 @@ export default function LoginPage() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  function goSignup() {
-    setFormMode('signup')
-    setMsg('')
-    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  function abrirDiagnostico() {
+    window.open(WHATSAPP_DIAGNOSTICO, '_blank', 'noopener')
   }
 
   function goLogin() {
@@ -208,7 +143,7 @@ export default function LoginPage() {
         <Logo />
         {!isMobile && (
           <div style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
-            {[['funcionalidades','Funcionalidades'],['como-funciona','Como funciona'],['precos','Planos'],['faq','FAQ']].map(([id, label]) => (
+            {[['funcionalidades','Funcionalidades'],['como-funciona','Como funciona'],['precos','Mentoria'],['faq','FAQ']].map(([id, label]) => (
               <button key={id} onClick={() => scrollTo(id)}
                 style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: 13, fontWeight: 500, padding: 0, transition: 'color .2s' }}
                 onMouseOver={e => e.target.style.color = '#F1F5F9'} onMouseOut={e => e.target.style.color = '#94A3B8'}>
@@ -224,11 +159,11 @@ export default function LoginPage() {
             onMouseOut={e => { e.currentTarget.style.background = 'none' }}>
             Entrar
           </button>
-          <button onClick={goSignup}
+          <button onClick={abrirDiagnostico}
             style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', border: 'none', color: '#fff', padding: '8px 18px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700, boxShadow: '0 4px 14px rgba(99,102,241,.35)', transition: 'all .2s' }}
             onMouseOver={e => e.currentTarget.style.boxShadow = '0 6px 20px rgba(99,102,241,.55)'}
             onMouseOut={e => e.currentTarget.style.boxShadow = '0 4px 14px rgba(99,102,241,.35)'}>
-            {isMobile ? 'Grátis →' : 'Teste grátis →'}
+            {isMobile ? 'Agendar →' : 'Agendar diagnóstico →'}
           </button>
           {isMobile && (
             <button onClick={() => setMenuOpen(o => !o)}
@@ -242,15 +177,15 @@ export default function LoginPage() {
       {/* ── MENU MOBILE ─────────────────────────────────────────── */}
       {isMobile && menuOpen && (
         <div style={{ position: 'fixed', top: 68, left: 0, right: 0, zIndex: 190, background: 'rgba(6,10,20,0.97)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,.08)', padding: '12px 20px 20px' }}>
-          {[['funcionalidades','Funcionalidades'],['como-funciona','Como funciona'],['precos','Planos'],['faq','FAQ']].map(([id, label]) => (
+          {[['funcionalidades','Funcionalidades'],['como-funciona','Como funciona'],['precos','Mentoria'],['faq','FAQ']].map(([id, label]) => (
             <button key={id} onClick={() => { scrollTo(id); setMenuOpen(false) }}
               style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: 15, fontWeight: 500, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,.05)' }}>
               {label}
             </button>
           ))}
-          <button onClick={() => { goSignup(); setMenuOpen(false) }}
+          <button onClick={() => { abrirDiagnostico(); setMenuOpen(false) }}
             style={{ display: 'block', width: '100%', marginTop: 16, padding: '13px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
-            Começar 14 dias grátis →
+            Agendar diagnóstico →
           </button>
         </div>
       )}
@@ -268,26 +203,26 @@ export default function LoginPage() {
           <div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(99,102,241,.1)', border: '1px solid rgba(99,102,241,.22)', borderRadius: 99, padding: '6px 14px', marginBottom: 24, width: 'fit-content' }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', display: 'inline-block', boxShadow: '0 0 8px #22C55E80' }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '.12em', textTransform: 'uppercase' }}>Novo — 14 dias grátis, sem cartão de crédito</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '.12em', textTransform: 'uppercase' }}>Mentoria BPO Lucrativo — acompanhamento individual</span>
             </div>
 
             <h1 style={{ fontSize: isMobile ? 34 : 54, fontWeight: 900, lineHeight: 1.1, margin: '0 0 20px', color: '#F8FAFC', letterSpacing: '-.03em' }}>
-              Você sabe qual cliente<br />
+              Estruture seu BPO<br />
               <span style={{ background: 'linear-gradient(90deg,#818CF8,#A855F7,#22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                está te dando prejuízo?
+                com quem já fez isso.
               </span>
             </h1>
 
             <p style={{ fontSize: isMobile ? 16 : 18, color: '#94A3B8', lineHeight: 1.75, margin: '0 0 32px', maxWidth: 520 }}>
-              Quanto custa atender cada cliente? Qual analista está no limite? Quem está consumindo mais horas do que paga? O Fluxe responde essas perguntas em tempo real — para você parar de crescer no escuro.
+              Mentoria individual pra donos de BPO que querem parar de precificar no feeling e começar a gerir com dados reais — com o Fluxe, o sistema que uso pra te dar clareza da sua própria operação, incluso no acompanhamento.
             </p>
 
             <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 40 }}>
-              <button onClick={goSignup}
+              <button onClick={abrirDiagnostico}
                 style={{ padding: '14px 28px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 24px rgba(99,102,241,.45)', textAlign: 'center', transition: 'all .2s' }}
                 onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 10px 32px rgba(99,102,241,.55)' }}
                 onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(99,102,241,.45)' }}>
-                Começar 14 dias grátis →
+                Agendar diagnóstico →
               </button>
               <button onClick={() => scrollTo('como-funciona')}
                 style={{ padding: '14px 22px', borderRadius: 10, border: '1px solid rgba(255,255,255,.10)', background: 'transparent', color: '#CBD5E1', fontSize: 15, fontWeight: 600, cursor: 'pointer', textAlign: 'center', transition: 'all .2s' }}
@@ -298,7 +233,7 @@ export default function LoginPage() {
             </div>
 
             <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-              {[['14 dias grátis', 'sem cartão'], ['Preço fixo', 'não cobra por cliente'], ['Configuração', 'em menos de 30 min']].map(([t, s], i) => (
+              {[['Acompanhamento', 'individual, direto comigo'], ['Sistema incluso', 'o Fluxe faz parte da mentoria'], ['Sem letra miúda', 'diagnóstico sem compromisso']].map(([t, s], i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(34,197,94,.13)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <span style={{ color: '#22C55E', fontSize: 10, fontWeight: 800 }}>✓</span>
@@ -313,26 +248,12 @@ export default function LoginPage() {
           <div ref={formRef}>
             <div style={{ background: 'rgba(255,255,255,.03)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 20, padding: 32, boxShadow: '0 32px 80px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05)' }}>
 
-              {formMode !== 'reset' && (
-                <div style={{ display: 'flex', background: 'rgba(0,0,0,.3)', borderRadius: 10, padding: 3, marginBottom: 24 }}>
-                  {[['login', 'Entrar'], ['signup', 'Criar conta']].map(([m, l]) => (
-                    <button key={m} onClick={() => { setFormMode(m); setMsg('') }}
-                      style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all .2s',
-                        background: formMode === m ? 'linear-gradient(135deg,#6366F1,#8B5CF6)' : 'transparent',
-                        color: formMode === m ? '#fff' : '#475569',
-                        boxShadow: formMode === m ? '0 2px 10px rgba(99,102,241,.35)' : 'none' }}>
-                      {l}
-                    </button>
-                  ))}
-                </div>
-              )}
-
               <div style={{ marginBottom: 22 }}>
                 <div style={{ fontSize: 16, fontWeight: 700, color: '#F1F5F9', marginBottom: 4 }}>
-                  {mfaStep ? '🔐 Verificação em duas etapas' : formMode === 'login' ? 'Bem-vindo(a) de volta' : formMode === 'signup' ? 'Crie sua conta grátis' : 'Recuperar senha'}
+                  {mfaStep ? '🔐 Verificação em duas etapas' : formMode === 'login' ? 'Bem-vindo(a) de volta' : 'Recuperar senha'}
                 </div>
                 <div style={{ fontSize: 12, color: '#64748B' }}>
-                  {mfaStep ? 'Abra o app autenticador e digite o código de 6 dígitos' : formMode === 'login' ? 'Acesse sua plataforma Fluxe BPO' : formMode === 'signup' ? '14 dias grátis, sem cartão de crédito' : 'Enviaremos um link para seu e-mail'}
+                  {mfaStep ? 'Abra o app autenticador e digite o código de 6 dígitos' : formMode === 'login' ? 'Acesse sua plataforma Fluxe BPO' : 'Enviaremos um link para seu e-mail'}
                 </div>
               </div>
 
@@ -378,12 +299,6 @@ export default function LoginPage() {
                 </form>
               ) : (
               <form onSubmit={handleSubmit}>
-                {formMode === 'signup' && (
-                  <>
-                    <DarkField label="Seu nome" value={nome} onChange={setNome} placeholder="Maria Silva" />
-                    <DarkField label="Nome do BPO" value={nomeEmpresa} onChange={setNomeEmpresa} placeholder="Ex: Empreenda BPO" />
-                  </>
-                )}
                 <DarkField label="E-mail" value={email} onChange={setEmail} type="email" placeholder="seu@email.com" />
                 {formMode !== 'reset' && (
                   <div style={{ marginBottom: 16 }}>
@@ -407,20 +322,6 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                {formMode === 'signup' && (
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer' }}>
-                      <input type="checkbox" checked={aceitouTermos} onChange={e => setAceitouTermos(e.target.checked)}
-                        style={{ width: 14, height: 14, marginTop: 2, accentColor: '#6366F1', flexShrink: 0 }} />
-                      <span style={{ fontSize: 11, color: '#64748B', lineHeight: 1.5 }}>
-                        Concordo com os{' '}
-                        <a href="/termos" target="_blank" style={{ color: '#A5B4FC', textDecoration: 'none' }}>Termos de Uso</a>{' '}e{' '}
-                        <a href="/privacidade" target="_blank" style={{ color: '#A5B4FC', textDecoration: 'none' }}>Política de Privacidade</a>
-                      </span>
-                    </label>
-                  </div>
-                )}
-
                 {msg && (
                   <div style={{ padding: '10px 12px', borderRadius: 8, marginBottom: 14, fontSize: 12, fontWeight: 600,
                     background: isSuccess ? 'rgba(34,197,94,.12)' : 'rgba(239,68,68,.12)',
@@ -434,7 +335,7 @@ export default function LoginPage() {
                   style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 700, color: '#fff',
                     background: loading ? 'rgba(99,102,241,.35)' : 'linear-gradient(135deg,#6366F1,#8B5CF6)',
                     boxShadow: loading ? 'none' : '0 4px 16px rgba(99,102,241,.4)', transition: 'all .2s', marginTop: 4 }}>
-                  {loading ? 'Aguarde...' : formMode === 'login' ? 'Entrar no Fluxe BPO →' : formMode === 'signup' ? 'Criar conta grátis →' : 'Enviar link de recuperação'}
+                  {loading ? 'Aguarde...' : formMode === 'login' ? 'Entrar no Fluxe BPO →' : 'Enviar link de recuperação'}
                 </button>
               </form>
               )} {/* fim do ternário mfaStep */}
@@ -442,17 +343,10 @@ export default function LoginPage() {
               {!mfaStep && (
                 <div style={{ textAlign: 'center', marginTop: 14, fontSize: 12 }}>
                 {formMode === 'login' ? (
-                  <>
-                    <button onClick={() => { setFormMode('reset'); setMsg('') }}
-                      style={{ background: 'none', border: 'none', color: '#6366F1', cursor: 'pointer', fontSize: 12, padding: 0 }}>
-                      Esqueci minha senha
-                    </button>
-                    <span style={{ margin: '0 8px', color: '#2D3748' }}>·</span>
-                    <button onClick={() => { setFormMode('signup'); setMsg('') }}
-                      style={{ background: 'none', border: 'none', color: '#6366F1', cursor: 'pointer', fontSize: 12, padding: 0 }}>
-                      Criar conta grátis
-                    </button>
-                  </>
+                  <button onClick={() => { setFormMode('reset'); setMsg('') }}
+                    style={{ background: 'none', border: 'none', color: '#6366F1', cursor: 'pointer', fontSize: 12, padding: 0 }}>
+                    Esqueci minha senha
+                  </button>
                 ) : (
                   <button onClick={() => { setFormMode('login'); setMsg('') }}
                     style={{ background: 'none', border: 'none', color: '#6366F1', cursor: 'pointer', fontSize: 12, padding: 0 }}>
@@ -869,63 +763,44 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* ── PLANOS ──────────────────────────────────────────────── */}
+      {/* ── MENTORIA ────────────────────────────────────────────── */}
       <section id="precos" style={{ padding: isMobile ? '60px 20px' : '96px 48px' }}>
-        <div style={{ maxWidth: 1060, margin: '0 auto' }}>
+        <div style={{ maxWidth: 700, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 56 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>PLANOS</div>
-            <h2 style={{ fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 16px', letterSpacing: '-.02em' }}>Preço fixo. Sem cobrar por cliente.</h2>
-            <p style={{ fontSize: isMobile ? 14 : 16, color: '#64748B', maxWidth: 500, margin: '0 auto' }}>Você paga um valor fixo mensal — independente de quantos clientes sua carteira tiver. Comece grátis por 14 dias, sem cartão.</p>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>MENTORIA BPO LUCRATIVO</div>
+            <h2 style={{ fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 16px', letterSpacing: '-.02em' }}>Acompanhamento individual, não um curso gravado.</h2>
+            <p style={{ fontSize: isMobile ? 14 : 16, color: '#64748B', maxWidth: 520, margin: '0 auto' }}>Cada mentoria é única — formato, duração e investimento dependem do que você precisa. Sem tabela de preço fixa: a gente conversa primeiro.</p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: isMobile ? 16 : 20, maxWidth: 920, margin: '0 auto' }}>
-            {PLANS.map((p, i) => (
-              <div key={i}
-                style={{ background: p.highlight ? 'linear-gradient(160deg,rgba(99,102,241,.17),rgba(139,92,246,.12))' : 'rgba(255,255,255,.03)', border: `1px solid ${p.highlight ? 'rgba(99,102,241,.42)' : 'rgba(255,255,255,.07)'}`, borderRadius: 16, padding: '28px 24px', position: 'relative', transition: 'transform .2s' }}
-                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-4px)'}
-                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}>
-                {p.badge && (
-                  <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 10, fontWeight: 700, padding: '4px 14px', borderRadius: 99, whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(99,102,241,.45)' }}>
-                    {p.badge}
+
+          <div style={{ background: 'linear-gradient(160deg,rgba(99,102,241,.17),rgba(139,92,246,.12))', border: '1px solid rgba(99,102,241,.42)', borderRadius: 16, padding: isMobile ? '28px 24px' : '36px 40px' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.08em' }}>O que está incluso</div>
+            <div style={{ marginBottom: 28, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                'Encontros individuais comigo, olhando a operação real do seu BPO',
+                'O Fluxe incluso — o sistema que uso pra dar clareza aos seus números',
+                'Precificação, rotina e rentabilidade organizadas junto com você',
+                'Plano estratégico pra sair do feeling e crescer com previsibilidade',
+              ].map((f, j) => (
+                <div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(34,197,94,.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                    <span style={{ color: '#22C55E', fontSize: 9, fontWeight: 800 }}>✓</span>
                   </div>
-                )}
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.08em' }}>{p.name}</div>
-                {p.idealPara && <div style={{ fontSize: 11, color: '#475569', marginBottom: 8, lineHeight: 1.5 }}>{p.idealPara}</div>}
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 20 }}>
-                  <span style={{ fontSize: 34, fontWeight: 900, color: '#F8FAFC', letterSpacing: '-.03em' }}>{p.price}</span>
-                  <span style={{ fontSize: 13, color: '#64748B' }}>{p.period}</span>
+                  <span style={{ fontSize: 14, color: '#CBD5E1', lineHeight: 1.5 }}>{f}</span>
                 </div>
-                <div style={{ height: 1, background: 'rgba(255,255,255,.07)', marginBottom: 20 }} />
-                <div style={{ marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {p.features.map((f, j) => (
-                    <div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                      <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(34,197,94,.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
-                        <span style={{ color: '#22C55E', fontSize: 9, fontWeight: 800 }}>✓</span>
-                      </div>
-                      <span style={{ fontSize: 13, color: '#94A3B8', lineHeight: 1.5 }}>{f}</span>
-                    </div>
-                  ))}
-                </div>
-                {p.href ? (
-                  <a href={p.href} target="_blank" rel="noreferrer"
-                    style={{ display: 'block', textAlign: 'center', padding: '12px', borderRadius: 10, fontSize: 13, fontWeight: 700, textDecoration: 'none', background: 'rgba(255,255,255,.07)', color: '#CBD5E1', border: '1px solid rgba(255,255,255,.1)', transition: 'all .2s' }}>
-                    {p.cta}
-                  </a>
-                ) : (
-                  <button onClick={goSignup}
-                    style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, transition: 'all .2s', background: p.highlight ? 'linear-gradient(135deg,#6366F1,#8B5CF6)' : 'rgba(255,255,255,.07)', color: p.highlight ? '#fff' : '#CBD5E1', boxShadow: p.highlight ? '0 4px 16px rgba(99,102,241,.4)' : 'none' }}>
-                    {p.cta}
-                  </button>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
+            <button onClick={abrirDiagnostico}
+              style={{ width: '100%', padding: '14px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', boxShadow: '0 4px 16px rgba(99,102,241,.4)' }}>
+              Agendar diagnóstico →
+            </button>
           </div>
 
           {/* Garantia */}
           <div style={{ textAlign: 'center', marginTop: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 24 }}>
             {[
-              { icon: '🔓', text: 'Cancele quando quiser, sem multa' },
-              { icon: '💳', text: 'Sem cartão nos primeiros 14 dias' },
-              { icon: '⚡', text: 'Configure em menos de 30 minutos' },
+              { icon: '🗣️', text: 'Diagnóstico sem compromisso' },
+              { icon: '🎯', text: 'Acompanhamento individual, não em grupo' },
+              { icon: '🧮', text: 'Sistema incluso durante a mentoria' },
             ].map((g, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748B' }}>
                 <span>{g.icon}</span>
@@ -973,14 +848,14 @@ export default function LoginPage() {
               <h2 style={{ fontSize: isMobile ? 26 : 40, fontWeight: 900, color: '#F8FAFC', margin: '0 0 16px', letterSpacing: '-.03em', lineHeight: 1.12 }}>
                 Pare de crescer sem saber<br />se está lucrando.
               </h2>
-              <p style={{ fontSize: isMobile ? 14 : 16, color: '#94A3B8', marginBottom: 12 }}>14 dias grátis. Sem cartão. Configure em menos de 30 minutos.</p>
-              <p style={{ fontSize: isMobile ? 12 : 13, color: '#475569', marginBottom: 32 }}>Cancele quando quiser, sem multa, sem burocracia.</p>
+              <p style={{ fontSize: isMobile ? 14 : 16, color: '#94A3B8', marginBottom: 12 }}>Diagnóstico individual, sem compromisso.</p>
+              <p style={{ fontSize: isMobile ? 12 : 13, color: '#475569', marginBottom: 32 }}>A gente conversa primeiro pra ver se faz sentido pros dois lados.</p>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-                <button onClick={goSignup}
+                <button onClick={abrirDiagnostico}
                   style={{ padding: '14px 32px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 32px rgba(99,102,241,.5)', transition: 'all .2s' }}
                   onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(99,102,241,.65)' }}
                   onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(99,102,241,.5)' }}>
-                  Começar 14 dias grátis →
+                  Agendar diagnóstico →
                 </button>
                 <a href="https://wa.me/5511917101173?text=Quero+saber+mais+sobre+o+Fluxe+BPO" target="_blank" rel="noreferrer"
                   style={{ padding: '14px 24px', borderRadius: 10, border: '1px solid rgba(255,255,255,.12)', background: 'transparent', color: '#CBD5E1', fontSize: 15, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, transition: 'all .2s' }}

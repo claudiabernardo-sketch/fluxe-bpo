@@ -93,6 +93,7 @@ export default function DashPage() {
   const vencidas   = useMemo(() => tasks.filter(t=>isVencida(t.prazo,t.status)), [tasks])
   const abertas    = useMemo(() => tasks.filter(t=>!['concluida','cancelada'].includes(t.status)), [tasks])
   const hoje       = useMemo(() => tasks.filter(t=>(t.data_execucao===today||t.prazo===today)&&!['concluida','cancelada'].includes(t.status)), [tasks, today])
+  const impedidas  = useMemo(() => tasks.filter(t=>t.status==='impedimento'), [tasks])
   const proximos   = useMemo(() => {
     const proxSemana = new Date(); proxSemana.setDate(proxSemana.getDate()+7)
     return tasks.filter(t => (t.data_execucao||t.prazo) > today && (t.data_execucao||t.prazo) <= proxSemana.toISOString().slice(0,10) && !['concluida','cancelada'].includes(t.status))
@@ -289,9 +290,10 @@ export default function DashPage() {
       {/* KPIs */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:10 }}>
         <KPI icon="💰" label="MRR" value={mrr>=1000?`R$${(mrr/1000).toFixed(1)}k`:`R$${mrr.toFixed(0)}`} sub={`${ativos.length} clientes ativos`} color="blue" onClick={()=>nav('/clientes')} />
-        <KPI icon="✅" label="Tarefas abertas" value={abertas.length} sub={vencidas.length>0?`${vencidas.length} vencidas`:'Em dia'} color={vencidas.length>0?'red':'green'} onClick={()=>nav('/tasks')} />
         <KPI icon="☀️" label="Para hoje" value={hoje.length} sub="agendadas para hoje" color={hoje.length>0?'yellow':'gray'} onClick={()=>nav('/agenda')} />
+        <KPI icon="🔴" label="Atrasadas" value={vencidas.length} sub="precisam de atenção" color={vencidas.length>0?'red':'green'} onClick={()=>nav('/pendencias')} />
         <KPI icon="📋" label="Pendências" value={pends.length} sub="aguardando cliente" color={pends.length>3?'red':'yellow'} onClick={()=>nav('/pendencias')} />
+        <KPI icon="🚧" label="Impedidas" value={impedidas.length} sub="travadas, precisam ajuda" color={impedidas.length>0?'red':'gray'} onClick={()=>nav('/tasks')} />
         <KPI icon="🚀" label="Onboarding" value={onboarding.length} sub="em implantação" color="purple" onClick={()=>nav('/clientes')} />
         <KPI icon="⏱" label="Horas hoje" value={`${horasHoje.toFixed(1)}h`} sub="apontadas" color="blue" onClick={()=>nav('/exec')} />
       </div>
