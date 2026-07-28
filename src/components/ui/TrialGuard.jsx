@@ -80,7 +80,7 @@ export default function TrialGuard() {
         }}>
           <p style={{ color: '#64748B', fontSize: 13, marginBottom: 4 }}>Plano Essencial</p>
           <p style={{ color: '#F1F5F9', fontSize: 36, fontWeight: 800, lineHeight: 1 }}>
-            R$ 59<span style={{ fontSize: 18, fontWeight: 400, color: '#94A3B8' }}>/mês</span>
+            R$ 97<span style={{ fontSize: 18, fontWeight: 400, color: '#94A3B8' }}>/mês</span>
           </p>
           <p style={{ color: '#64748B', fontSize: 12, marginTop: 8 }}>Boleto, PIX ou cartão</p>
         </div>
