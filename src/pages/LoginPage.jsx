@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import LOGO_SRC from '../assets/logo-fluxe-white.png'
+import CLAUDIA_SRC from '../assets/claudia-mentora.jpg'
 
 // ── Conteúdo ───────────────────────────────────────────────────────────────
 
@@ -375,6 +376,27 @@ export default function LoginPage() {
           </div>
         </section>
       )}
+
+      {/* ── QUEM SOU EU ─────────────────────────────────────────── */}
+      <section style={{ padding: isMobile ? '52px 20px' : '80px 48px' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '300px 1fr', gap: isMobile ? 28 : 56, alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <img src={CLAUDIA_SRC} alt="Cláudia Bernardo" style={{ width: isMobile ? 200 : '100%', maxWidth: 260, borderRadius: 20, objectFit: 'cover', boxShadow: '0 24px 60px rgba(0,0,0,.45)', border: '1px solid rgba(255,255,255,.08)' }} />
+          </div>
+          <div style={{ textAlign: isMobile ? 'center' : 'left' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>QUEM SOU EU</div>
+            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 24 : 30, fontWeight: 800, color: '#F8FAFC', margin: '0 0 4px', letterSpacing: '-.02em' }}>Cláudia Bernardo</h2>
+            <div style={{ fontSize: 13, color: '#8B5CF6', fontWeight: 600, marginBottom: 6 }}>Mentora e especialista em BPO Financeiro</div>
+            <div style={{ fontSize: 12, color: '#64748B', marginBottom: 18 }}>Pós-graduada em Finanças (FGV) · Direito e Administração (Comércio Exterior)</div>
+            <p style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.75, margin: '0 0 14px' }}>
+              Há anos estruturo operações financeiras e ajudo empresas a decidir com base em números. Percebi que a maioria dos profissionais dominava a parte técnica, mas não sabia organizar a operação, precificar certo e crescer com previsibilidade — foi por isso que criei esta mentoria.
+            </p>
+            <p style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.75, margin: 0 }}>
+              Meu compromisso é compartilhar exatamente o que uso na prática, sem teoria desnecessária — dentro do Laboratório BPO, com acompanhamento individual do começo ao fim.
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* ── PROBLEMA ────────────────────────────────────────────── */}
       <section style={{ padding: isMobile ? '60px 20px' : '80px 48px', background: 'rgba(255,255,255,.015)' }}>
