@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { usePendencias, useCreatePendencia, useUpdatePendencia, useClients, useTasks } from '../hooks/useData'
+import { usePendencias, useCreatePendencia, useUpdatePendencia, useClients, useTasks, useUpdateTask } from '../hooks/useData'
 import { Card, Btn, Loader, EmptyState, Badge, fmt, isVencida } from '../components/ui'
 
 const fi = { padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'inherit', background:'#fff', width:'100%' }
@@ -11,7 +10,7 @@ export default function PendenciasPage() {
   const { data: tarefas = [] } = useTasks()
   const create = useCreatePendencia()
   const update = useUpdatePendencia()
-  const nav = useNavigate()
+  const updateTask = useUpdateTask()
   const [modal, setModal] = useState(false)
   const [editId, setEditId] = useState(null)
   const [form, setForm] = useState({})
@@ -75,8 +74,7 @@ export default function PendenciasPage() {
           <div style={{ fontSize:12, fontWeight:700, color:'#991B1B', marginBottom:8 }}>🔴 Tarefas atrasadas ({tarefasAtrasadas.length})</div>
           <Card style={{ borderLeft:'3px solid #EF4444' }}>
             {tarefasAtrasadas.map(t => (
-              <div key={t.id} onClick={() => nav('/tasks')}
-                style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 16px', borderBottom:'1px solid #F8FAFC', cursor:'pointer' }}>
+              <div key={t.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 16px', borderBottom:'1px solid #F8FAFC' }}>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:12, fontWeight:600, color:'#991B1B' }}>{t.titulo}</div>
                   <div style={{ fontSize:10, color:'#94A3B8', marginTop:2 }}>
@@ -84,6 +82,7 @@ export default function PendenciasPage() {
                   </div>
                 </div>
                 <Badge label="atrasada" color="red" />
+                <Btn small variant="success" disabled={updateTask.isPending} onClick={() => updateTask.mutate({ id:t.id, status:'concluida' })}>✓ Concluir</Btn>
               </div>
             ))}
           </Card>
