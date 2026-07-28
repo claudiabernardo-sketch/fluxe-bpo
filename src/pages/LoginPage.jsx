@@ -206,15 +206,15 @@ export default function LoginPage() {
               <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '.12em', textTransform: 'uppercase' }}>Mentoria BPO Lucrativo — acompanhamento individual</span>
             </div>
 
-            <h1 style={{ fontSize: isMobile ? 34 : 54, fontWeight: 900, lineHeight: 1.1, margin: '0 0 20px', color: '#F8FAFC', letterSpacing: '-.03em' }}>
-              Estruture seu BPO<br />
-              <span style={{ background: 'linear-gradient(90deg,#818CF8,#A855F7,#22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                com quem já fez isso.
+            <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 34 : 54, fontWeight: 900, lineHeight: 1.1, margin: '0 0 20px', color: '#F8FAFC', letterSpacing: '-.03em' }}>
+              Sua precificação está<br />
+              <span style={{ fontStyle: 'italic', fontWeight: 600, background: 'linear-gradient(90deg,#818CF8,#A855F7,#22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                te dando prejuízo?
               </span>
             </h1>
 
             <p style={{ fontSize: isMobile ? 16 : 18, color: '#94A3B8', lineHeight: 1.75, margin: '0 0 32px', maxWidth: 520 }}>
-              Mentoria individual pra donos de BPO que querem parar de precificar no feeling e começar a gerir com dados reais — com o Fluxe, o sistema que uso pra te dar clareza da sua própria operação, incluso no acompanhamento.
+              Mentoria individual pra donos de BPO que querem parar de precificar no feeling e começar a cobrar (e gerir) com dados reais — com o Fluxe, o sistema que uso pra te dar clareza da sua própria operação, incluso no acompanhamento.
             </p>
 
             <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 40 }}>
@@ -593,7 +593,7 @@ export default function LoginPage() {
         <div style={{ maxWidth: 1060, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 52 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#EF4444', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>O PROBLEMA</div>
-            <h2 style={{ fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 16px', letterSpacing: '-.02em' }}>Reconhece alguma dessas situações?</h2>
+            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 16px', letterSpacing: '-.02em' }}>Reconhece alguma dessas situações?</h2>
             <p style={{ fontSize: isMobile ? 14 : 16, color: '#64748B', maxWidth: 520, margin: '0 auto' }}>A maioria dos BPOs cresce rápido, mas sem uma operação estruturada o crescimento vira caos.</p>
           </div>
 
@@ -635,7 +635,7 @@ export default function LoginPage() {
             <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 1, height: 28, background: 'linear-gradient(to bottom, rgba(239,68,68,.3), rgba(99,102,241,.5))' }} />
               <div style={{ fontSize: 11, fontWeight: 700, color: '#818CF8', letterSpacing: '.1em', textTransform: 'uppercase', padding: '6px 14px', background: 'rgba(99,102,241,.08)', border: '1px solid rgba(99,102,241,.18)', borderRadius: 99 }}>
-                Se você reconheceu mais de uma — o Fluxe foi criado para você
+                Se você reconheceu mais de uma — é disso que a mentoria trata
               </div>
               <div style={{ width: 1, height: 28, background: 'linear-gradient(to bottom, rgba(99,102,241,.5), transparent)' }} />
             </div>
@@ -648,7 +648,7 @@ export default function LoginPage() {
         <div style={{ maxWidth: 1060, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 56 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>COMO FUNCIONA</div>
-            <h2 style={{ fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>Da operação ao lucro, em um lugar só</h2>
+            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>Da operação ao lucro, em um lugar só</h2>
             <p style={{ fontSize: isMobile ? 14 : 16, color: '#64748B' }}>Sem implantação complexa. Sem consultores. Configure em menos de 30 minutos.</p>
           </div>
 
@@ -679,7 +679,7 @@ export default function LoginPage() {
         <div style={{ maxWidth: 1060, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 52 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>QUEM USA O FLUXE</div>
-            <h2 style={{ fontSize: isMobile ? 22 : 32, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>BPOs que pararam de adivinhar</h2>
+            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 22 : 32, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>BPOs que pararam de adivinhar</h2>
             <p style={{ fontSize: isMobile ? 14 : 15, color: '#64748B' }}>e começaram a gerir com dados reais</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: isMobile ? 16 : 24 }}>
@@ -689,8 +689,8 @@ export default function LoginPage() {
               { quote: 'Quando um analista saiu levando todos os acessos de cliente, percebi que precisava de um cofre centralizado. O Fluxe resolveu isso no mesmo dia que fiz o cadastro.', name: 'Camila Souza', role: 'CEO · PrimeirosBPO Financeiro', local: 'Recife – PE', init: 'CS' },
             ].map((t, i) => (
               <div key={i} style={{ padding: '28px 24px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: 20 }}>
-                <div style={{ fontSize: 32, color: '#6366F1', lineHeight: 1, opacity: .5 }}>"</div>
-                <p style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.75, margin: 0 }}>{t.quote}</p>
+                <div style={{ fontFamily: "'Fraunces',serif", fontSize: 40, color: '#8B5CF6', lineHeight: .6, opacity: .6 }}>"</div>
+                <p style={{ fontFamily: "'Fraunces',serif", fontStyle: 'italic', fontWeight: 500, fontSize: 16, color: '#CBD5E1', lineHeight: 1.65, margin: 0 }}>{t.quote}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 'auto' }}>
                   <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg,#6366F1,#A855F7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{t.init}</div>
                   <div>
@@ -710,7 +710,7 @@ export default function LoginPage() {
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 56 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>FUNCIONALIDADES</div>
-            <h2 style={{ fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 16px', letterSpacing: '-.02em' }}>Feito para quem opera BPO no Brasil</h2>
+            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 16px', letterSpacing: '-.02em' }}>Feito para quem opera BPO no Brasil</h2>
             <p style={{ fontSize: isMobile ? 14 : 16, color: '#64748B', maxWidth: 560, margin: '0 auto' }}>Não é um software genérico adaptado. Cada funcionalidade resolve um problema real de quem atende múltiplos clientes ao mesmo tempo.</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: isMobile ? 14 : 20 }}>
@@ -735,7 +735,7 @@ export default function LoginPage() {
         <div style={{ maxWidth: 860, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 32 : 48 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>POR QUE O FLUXE</div>
-            <h2 style={{ fontSize: isMobile ? 22 : 32, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>Antes e depois do Fluxe</h2>
+            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 22 : 32, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>Antes e depois do Fluxe</h2>
             <p style={{ fontSize: isMobile ? 13 : 15, color: '#64748B' }}>O que muda na prática quando você para de improvisar</p>
           </div>
           <div style={{ border: '1px solid rgba(255,255,255,.08)', borderRadius: 16, overflow: 'hidden' }}>
@@ -768,7 +768,7 @@ export default function LoginPage() {
         <div style={{ maxWidth: 700, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 56 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>MENTORIA BPO LUCRATIVO</div>
-            <h2 style={{ fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 16px', letterSpacing: '-.02em' }}>Acompanhamento individual, não um curso gravado.</h2>
+            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 16px', letterSpacing: '-.02em' }}>Acompanhamento individual, não um curso gravado.</h2>
             <p style={{ fontSize: isMobile ? 14 : 16, color: '#64748B', maxWidth: 520, margin: '0 auto' }}>Cada mentoria é única — formato, duração e investimento dependem do que você precisa. Sem tabela de preço fixa: a gente conversa primeiro.</p>
           </div>
 
@@ -816,7 +816,7 @@ export default function LoginPage() {
         <div style={{ maxWidth: 700, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 48 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>FAQ</div>
-            <h2 style={{ fontSize: isMobile ? 26 : 36, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>Perguntas frequentes</h2>
+            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 36, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>Perguntas frequentes</h2>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {FAQS.map((faq, i) => (
@@ -845,7 +845,7 @@ export default function LoginPage() {
             <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,.18) 0%, transparent 70%)', pointerEvents: 'none' }} />
             <div style={{ position: 'relative', zIndex: 1 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 16 }}>COMECE HOJE</div>
-              <h2 style={{ fontSize: isMobile ? 26 : 40, fontWeight: 900, color: '#F8FAFC', margin: '0 0 16px', letterSpacing: '-.03em', lineHeight: 1.12 }}>
+              <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 40, fontWeight: 900, color: '#F8FAFC', margin: '0 0 16px', letterSpacing: '-.03em', lineHeight: 1.12 }}>
                 Pare de crescer sem saber<br />se está lucrando.
               </h2>
               <p style={{ fontSize: isMobile ? 14 : 16, color: '#94A3B8', marginBottom: 12 }}>Diagnóstico individual, sem compromisso.</p>
