@@ -606,6 +606,39 @@ export default function LoginPage() {
         </div>
       </section>
 
+      {/* ── ANTES E DEPOIS DA MENTORIA ──────────────────────────── */}
+      <section style={{ padding: isMobile ? '60px 20px' : '80px 48px', background: 'rgba(255,255,255,.015)' }}>
+        <div style={{ maxWidth: 860, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: isMobile ? 32 : 48 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>POR QUE A MENTORIA</div>
+            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 22 : 32, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>Antes e depois da Mentoria Fluxe</h2>
+            <p style={{ fontSize: isMobile ? 13 : 15, color: '#64748B' }}>O que muda na prática quando você aplica o método</p>
+          </div>
+          <div style={{ border: '1px solid rgba(255,255,255,.08)', borderRadius: 16, overflow: 'hidden' }}>
+            {/* Header */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', background: 'rgba(99,102,241,.08)' }}>
+              <div style={{ padding: '14px 20px', fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '.1em', borderRight: '1px solid rgba(255,255,255,.06)' }}>Situação</div>
+              <div style={{ padding: '14px 20px', fontSize: 11, fontWeight: 700, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '.1em', borderRight: '1px solid rgba(255,255,255,.06)' }}>❌ Antes da mentoria</div>
+              <div style={{ padding: '14px 20px', fontSize: 11, fontWeight: 700, color: '#22C55E', textTransform: 'uppercase', letterSpacing: '.1em' }}>✓ Depois da mentoria</div>
+            </div>
+            {[
+              ['Precificar novo cliente',       'Chuta, torce para não dar prejuízo', 'Calcula com base no custo real da equipe'],
+              ['Rentabilidade por cliente',     'Só descobre quando o problema é grande', 'Acompanha em tempo real quem dá lucro'],
+              ['Prazos e obrigações',           'WhatsApp, post-it e memorização', 'Rotina organizada, nada esquecido'],
+              ['Senhas e acessos dos clientes', 'Planilha, e-mail ou dependente de um analista', 'Centralizado, ninguém trava a operação'],
+              ['Capacidade da equipe',          'Aceita cliente sem saber se aguenta',   'Sabe exatamente quantos novos clientes cabem'],
+              ['Decisão sobre o negócio',       'No feeling, sem dados', 'Com plano estratégico e números reais'],
+            ].map(([s, sem, com], i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderTop: '1px solid rgba(255,255,255,.05)', background: i%2===0 ? 'transparent' : 'rgba(255,255,255,.015)' }}>
+                <div style={{ padding: '14px 20px', fontSize: 13, fontWeight: 600, color: '#CBD5E1', borderRight: '1px solid rgba(255,255,255,.05)' }}>{s}</div>
+                <div style={{ padding: '14px 20px', fontSize: 13, color: '#64748B', borderRight: '1px solid rgba(255,255,255,.05)' }}>{sem}</div>
+                <div style={{ padding: '14px 20px', fontSize: 13, color: '#86EFAC' }}>{com}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── RESULTADOS ──────────────────────────────────────────── */}
       <section style={{ padding: isMobile ? '60px 20px' : '80px 48px' }}>
         <div style={{ maxWidth: 1060, margin: '0 auto' }}>
