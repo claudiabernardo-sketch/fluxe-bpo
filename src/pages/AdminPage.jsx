@@ -14,7 +14,12 @@ function diasTrial(trial_expira_em) {
 
 function LinhaEmpresa({ emp, onAcao, pendente }) {
   const [confirmBloquear, setConfirmBloquear] = useState(false)
-  const [planoRestaurar, setPlanoRestaurar] = useState('trial')
+  // Parte do plano atual quando já é um plano válido (evita a armadilha de
+  // resetar pra "Trial" por padrão e alguém clicar "Definir plano" sem notar
+  // e rebaixar sem querer quem já está em Essencial/Pro).
+  const [planoRestaurar, setPlanoRestaurar] = useState(
+    emp.plano && emp.plano !== 'bloqueado' && emp.plano !== 'trial_expirado' ? emp.plano : 'trial'
+  )
   const [editandoValor, setEditandoValor] = useState(false)
   const [novoValor, setNovoValor] = useState('')
   const dias = diasTrial(emp.trial_expira_em)
@@ -99,24 +104,29 @@ function LinhaEmpresa({ emp, onAcao, pendente }) {
       </td>
       <td style={{ padding: '10px 8px' }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-          {emp.plano === 'bloqueado' ? (
-            <>
-              <select value={planoRestaurar} onChange={e => setPlanoRestaurar(e.target.value)}
-                style={{ fontSize: 11, padding: '4px 6px', borderRadius: 6, border: '1px solid var(--bo)' }}>
-                <option value="trial">Trial</option>
-                <option value="essencial">Essencial</option>
-                <option value="pro">Pro</option>
-              </select>
-              <Btn small variant="success" disabled={pendente} onClick={() => onAcao('desbloquear', emp.id, { plano: planoRestaurar })}>Desbloquear</Btn>
-            </>
-          ) : confirmBloquear ? (
-            <>
-              <span style={{ fontSize: 11, color: '#991B1B' }}>Confirma?</span>
-              <Btn small variant="danger" disabled={pendente} onClick={() => { onAcao('bloquear', emp.id); setConfirmBloquear(false) }}>Sim, bloquear</Btn>
-              <Btn small variant="outline" onClick={() => setConfirmBloquear(false)}>Cancelar</Btn>
-            </>
-          ) : (
-            <Btn small variant="danger" onClick={() => setConfirmBloquear(true)}>Bloquear</Btn>
+          {/* Seletor de plano sempre visível — antes só aparecia quando a empresa
+              já estava "Bloqueada", deixando quem pagou mas ficou presa num
+              trial vencido (ex: assinatura ativa na Asaas, plano no Fluxe
+              ainda em "trial") sem nenhum botão pra corrigir. */}
+          <select value={planoRestaurar} onChange={e => setPlanoRestaurar(e.target.value)}
+            style={{ fontSize: 11, padding: '4px 6px', borderRadius: 6, border: '1px solid var(--bo)' }}>
+            <option value="trial">Trial</option>
+            <option value="essencial">Essencial</option>
+            <option value="pro">Pro</option>
+          </select>
+          <Btn small variant="success" disabled={pendente || planoRestaurar === emp.plano} onClick={() => onAcao('desbloquear', emp.id, { plano: planoRestaurar })}>
+            Definir plano
+          </Btn>
+          {emp.plano !== 'bloqueado' && (
+            confirmBloquear ? (
+              <>
+                <span style={{ fontSize: 11, color: '#991B1B' }}>Confirma?</span>
+                <Btn small variant="danger" disabled={pendente} onClick={() => { onAcao('bloquear', emp.id); setConfirmBloquear(false) }}>Sim, bloquear</Btn>
+                <Btn small variant="outline" onClick={() => setConfirmBloquear(false)}>Cancelar</Btn>
+              </>
+            ) : (
+              <Btn small variant="danger" onClick={() => setConfirmBloquear(true)}>Bloquear</Btn>
+            )
           )}
           {emp.plano !== 'bloqueado' && (
             <>
