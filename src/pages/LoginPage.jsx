@@ -252,7 +252,7 @@ export default function LoginPage() {
             <div style={{ textAlign: isMobile ? 'center' : 'left', padding: isMobile ? '0 4px' : 0 }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(99,102,241,.1)', border: '1px solid rgba(99,102,241,.22)', borderRadius: 99, padding: '6px 14px', marginBottom: 26 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', display: 'inline-block', boxShadow: '0 0 8px #22C55E80' }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '.12em', textTransform: 'uppercase' }}>O ecossistema Fluxe</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '.12em', textTransform: 'uppercase' }}>Mentoria Fluxe</span>
               </div>
 
               <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 32 : 'clamp(40px, 4.6vw, 68px)', fontWeight: 900, lineHeight: 1.06, margin: '0 0 22px', color: '#F8FAFC', letterSpacing: '-.03em' }}>
@@ -263,7 +263,7 @@ export default function LoginPage() {
               </h1>
 
               <p style={{ fontSize: isMobile ? 15 : 18, color: '#94A3B8', lineHeight: 1.7, margin: isMobile ? '0 auto 32px' : '0 0 36px', maxWidth: 480 }}>
-                Dentro do Fluxe você estrutura, organiza, precifica, implanta e escala seu BPO Financeiro com o Método Fluxe® — na prática, dentro do Laboratório Fluxe.
+                Na mentoria Fluxe você aprende, na prática, a estruturar, precificar e escalar seu BPO Financeiro com o Método Fluxe® — usando o Fluxe como seu caderno de exercícios, dentro do Laboratório Fluxe.
               </p>
 
               <div style={{ display: 'flex', justifyContent: isMobile ? 'center' : 'flex-start' }}>
