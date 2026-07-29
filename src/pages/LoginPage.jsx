@@ -4,35 +4,51 @@ import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import LOGO_SRC from '../assets/logo-fluxe-white.png'
 import CLAUDIA_SRC from '../assets/claudia-mentora.jpg'
+import CLAUDIA_ECOSSISTEMA_SRC from '../assets/claudia-hero-ecosistema.jpg'
 
 // ── Conteúdo ───────────────────────────────────────────────────────────────
 
-const WHATSAPP_DIAGNOSTICO = 'https://wa.me/5511917101173?text=Quero+agendar+um+diagn%C3%B3stico+sobre+a+mentoria+BPO+Lucrativo'
+const WHATSAPP_DIAGNOSTICO = 'https://wa.me/5511917101173?text=Quero+agendar+um+diagn%C3%B3stico+sobre+o+Fluxe'
 
-const METODO = [
-  { num: '01', semana: 'SEMANA 1', titulo: 'Diagnóstico', desc: 'Mapeamos sua operação real dentro do Laboratório BPO: custo de hora, capacidade da equipe, clientes que dão prejuízo sem você saber.' },
-  { num: '02', semana: 'SEMANA 2', titulo: 'Precificação', desc: 'Você aprende a precificar com a Metodologia Fluxe — e já aplica no seu próximo orçamento.' },
-  { num: '03', semana: 'SEMANA 3', titulo: 'Organização', desc: 'Rotinas, prazos e senhas de cliente saem da cabeça (e do WhatsApp) e entram no Laboratório, documentados.' },
-  { num: '04', semana: 'SEMANA 4', titulo: 'Rentabilidade', desc: 'Você fecha a mentoria sabendo exatamente quem no seu book dá lucro — e com um plano pra crescer sem virar refém da operação.' },
+const METODO_FLUXE = [
+  { num: '01', nome: 'Comercial' },
+  { num: '02', nome: 'Onboarding' },
+  { num: '03', nome: 'Ativação' },
+  { num: '04', nome: 'Implantação' },
+  { num: '05', nome: 'Operacional' },
+  { num: '06', nome: 'Estratégico' },
+  { num: '07', nome: 'Acompanhamento' },
 ]
 
-const PARA_QUEM_SIM = [
-  'Já fatura com o BPO mas precifica no feeling',
-  'Tem equipe mas não sabe o custo real dela',
-  'Cansou de descobrir tarde que um cliente dá prejuízo',
+const TRANSFORMACAO = [
+  { antes: 'Cobra no feeling', depois: 'Cobra usando dados' },
+  { antes: 'Vive no WhatsApp', depois: 'Trabalha com processos' },
+  { antes: 'Apaga incêndio', depois: 'Toma decisões com indicadores' },
+  { antes: 'Cresce no improviso', depois: 'Cresce com previsibilidade' },
 ]
 
-const PARA_QUEM_NAO = [
-  'Procura só um software mais bonito, sem acompanhamento',
-  'Quer terceirizar a decisão em vez de aprender o método',
+const FORMATOS = [
+  {
+    nome: 'Mentoria Individual',
+    desc: 'Encontros comigo, só você, olhando de perto a sua operação — no seu ritmo, nas suas prioridades.',
+  },
+  {
+    nome: 'Mentoria em Grupo',
+    desc: 'Mesmo Método Fluxe, aplicado em turma — trocando experiência com outros donos de BPO Financeiro.',
+  },
+]
+
+const RESULTADOS = [
+  { quote: 'Antes eu precificava no feeling. Descobri que meu cliente mais exigente consumia 3× mais horas que eu cobrava. Reajustei e aumentei minha margem em quase 40%.', name: 'Graziela Araújo', role: 'Sócia-fundadora · FinanciproBPO', init: 'GA' },
+  { quote: 'Minha equipe cresceu de 2 para 8 analistas e eu ainda sei exatamente o que cada um está fazendo, para qual cliente e em quanto tempo.', name: 'Ricardo Lemos', role: 'Diretor de Operações · ContaMaxBPO', init: 'RL' },
 ]
 
 const FAQS = [
-  { q: 'Preciso saber mexer em sistema?', a: 'Não. A mentoria foi pensada pra quem opera BPO no dia a dia, não pra quem entende de tecnologia. O Laboratório BPO já vem configurado junto com o acompanhamento — você aprende usando, na prática.' },
-  { q: 'Como funciona o acompanhamento?', a: 'Encontros individuais comigo, direto, olhando a operação real do seu BPO dentro do Laboratório BPO — precificação, rotina, rentabilidade por cliente. Não é um curso gravado.' },
+  { q: 'Preciso saber mexer em sistema?', a: 'Não. O Fluxe foi pensado pra quem opera BPO no dia a dia, não pra quem entende de tecnologia. O Laboratório Fluxe já vem configurado dentro do acompanhamento — você aprende usando, na prática.' },
+  { q: 'Como funciona o acompanhamento?', a: 'Encontros comigo (individuais ou em grupo, você escolhe), direto na sua operação real dentro do Laboratório Fluxe — precificação, rotina, rentabilidade por cliente. Não é um curso gravado.' },
   { q: 'Quanto custa?', a: 'Depende do formato e da duração combinados no diagnóstico — por isso não coloco tabela de preço aqui. Agenda uma conversa sem compromisso.' },
-  { q: 'Já uso outro sistema pra gerir o BPO, dá pra participar?', a: 'Sim. A mentoria funciona em cima do que você já tem — o Laboratório BPO é o ambiente que uso pra dar clareza aos números, mas o foco é te ajudar a crescer, não trocar de sistema.' },
-  { q: 'Meus dados ficam seguros?', a: 'Sim. Cada BPO tem os dados completamente isolados dentro do Laboratório BPO, com criptografia em repouso e em trânsito.' },
+  { q: 'Já uso outro sistema pra gerir o BPO, dá pra participar?', a: 'Sim. O Fluxe funciona em cima do que você já tem — o Laboratório é o ambiente que uso pra dar clareza aos números, mas o foco é te ajudar a crescer, não trocar de sistema.' },
+  { q: 'Meus dados ficam seguros?', a: 'Sim. Cada BPO tem os dados completamente isolados dentro do Laboratório Fluxe, com criptografia em repouso e em trânsito.' },
   { q: 'Serve pra qualquer tamanho de BPO?', a: 'Sim — do BPO solo que está começando ao que já tem equipe e quer organizar a operação pra crescer com previsibilidade.' },
 ]
 
@@ -50,6 +66,7 @@ export default function LoginPage() {
   const [openFaq, setOpenFaq] = useState(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [showLogin, setShowLogin] = useState(false)
+  const [heroTilt, setHeroTilt] = useState({ x: 0, y: 0 })
   const formRef = useRef(null)
 
   const { signIn, resetPassword, mfaChallenge, mfaVerifyLogin, signInWithGoogle } = useAuthStore()
@@ -65,7 +82,7 @@ export default function LoginPage() {
     }
     document.body.style.overflow = 'auto'
     document.body.style.height = 'auto'
-    document.body.style.background = '#060A14'
+    document.body.style.background = '#05070E'
     return () => {
       document.body.style.overflow = prev.overflow
       document.body.style.height = prev.height
@@ -140,24 +157,32 @@ export default function LoginPage() {
     setShowLogin(true)
   }
 
-  const NAV_ITEMS = [['metodo', 'Método'], ['para-quem', 'Para quem é'], ['precos', 'Mentoria'], ['faq', 'FAQ']]
+  function handleHeroMouse(e) {
+    if (isMobile) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const px = (e.clientX - rect.left) / rect.width - 0.5
+    const py = (e.clientY - rect.top) / rect.height - 0.5
+    setHeroTilt({ x: px * 16, y: py * 12 })
+  }
+
+  const NAV_ITEMS = [['metodo', 'Método'], ['laboratorio', 'Laboratório'], ['formatos', 'Formatos'], ['faq', 'FAQ']]
 
   return (
-    <div style={{ fontFamily: "'Inter','system-ui',sans-serif", background: '#060A14', color: '#F1F5F9', minHeight: '100vh', overflowX: 'hidden' }}>
+    <div style={{ fontFamily: "'Inter','system-ui',sans-serif", background: '#05070E', color: '#F1F5F9', minHeight: '100vh', overflowX: 'hidden' }}>
 
       {/* ── NAVBAR ─────────────────────────────────────────────── */}
       <nav style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: isMobile ? '0 20px' : '0 48px', height: 68,
-        background: navScrolled || menuOpen ? 'rgba(6,10,20,0.97)' : 'transparent',
+        background: navScrolled || menuOpen ? 'rgba(5,7,14,0.85)' : 'transparent',
         backdropFilter: navScrolled || menuOpen ? 'blur(20px)' : 'none',
         borderBottom: navScrolled || menuOpen ? '1px solid rgba(255,255,255,.06)' : 'none',
         transition: 'all .3s',
       }}>
         <Logo />
         {!isMobile && (
-          <div style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
             {NAV_ITEMS.map(([id, label]) => (
               <button key={id} onClick={() => scrollTo(id)}
                 style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: 13, fontWeight: 500, padding: 0, transition: 'color .2s' }}
@@ -178,7 +203,7 @@ export default function LoginPage() {
             style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', border: 'none', color: '#fff', padding: '8px 18px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700, boxShadow: '0 4px 14px rgba(99,102,241,.35)', transition: 'all .2s' }}
             onMouseOver={e => e.currentTarget.style.boxShadow = '0 6px 20px rgba(99,102,241,.55)'}
             onMouseOut={e => e.currentTarget.style.boxShadow = '0 4px 14px rgba(99,102,241,.35)'}>
-            {isMobile ? 'Agendar →' : 'Agendar diagnóstico →'}
+            {isMobile ? 'Diagnóstico →' : 'Agendar diagnóstico →'}
           </button>
           {isMobile && (
             <button onClick={() => setMenuOpen(o => !o)}
@@ -191,7 +216,7 @@ export default function LoginPage() {
 
       {/* ── MENU MOBILE ─────────────────────────────────────────── */}
       {isMobile && menuOpen && (
-        <div style={{ position: 'fixed', top: 68, left: 0, right: 0, zIndex: 190, background: 'rgba(6,10,20,0.97)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,.08)', padding: '12px 20px 20px' }}>
+        <div style={{ position: 'fixed', top: 68, left: 0, right: 0, zIndex: 190, background: 'rgba(5,7,14,0.97)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,.08)', padding: '12px 20px 20px' }}>
           {NAV_ITEMS.map(([id, label]) => (
             <button key={id} onClick={() => { scrollTo(id); setMenuOpen(false) }}
               style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: 15, fontWeight: 500, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,.05)' }}>
@@ -206,55 +231,83 @@ export default function LoginPage() {
       )}
 
       {/* ── HERO ────────────────────────────────────────────────── */}
-      <section id="hero" style={{ minHeight: '92vh', display: 'flex', alignItems: 'center', padding: isMobile ? '100px 20px 60px' : '120px 48px 80px', position: 'relative', overflow: 'hidden' }}>
-        {/* Grid background */}
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(99,102,241,.05) 1px, transparent 1px)', backgroundSize: '32px 32px', pointerEvents: 'none' }} />
-        {/* Glow */}
-        <div style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)', width: 700, height: 500, background: 'radial-gradient(ellipse, rgba(99,102,241,.18) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
+      <section id="hero" onMouseMove={handleHeroMouse} style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', padding: isMobile ? '96px 20px 56px' : '108px 0 0', position: 'relative', overflow: 'hidden' }}>
+        {/* Grid sutil de fundo */}
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(99,102,241,.05) 1px, transparent 1px)', backgroundSize: '34px 34px', pointerEvents: 'none' }} />
+        {/* Glows: roxo + azul, mais profundidade */}
+        <div style={{ position: 'absolute', top: '18%', left: '8%', width: 560, height: 560, background: 'radial-gradient(ellipse, rgba(139,92,246,.20) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(60px)' }} />
+        <div style={{ position: 'absolute', bottom: '5%', right: '10%', width: 640, height: 640, background: 'radial-gradient(ellipse, rgba(59,130,246,.16) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(70px)' }} />
 
-        <div style={{ width: '100%', maxWidth: 760, margin: '0 auto', position: 'relative', zIndex: 1, textAlign: 'center' }}>
+        <div style={{ width: '100%', maxWidth: 1440, margin: '0 auto', position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '5fr 7fr', gap: isMobile ? 8 : 24, alignItems: 'center', padding: isMobile ? 0 : '0 40px' }}>
 
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(99,102,241,.1)', border: '1px solid rgba(99,102,241,.22)', borderRadius: 99, padding: '6px 14px', marginBottom: 24 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', display: 'inline-block', boxShadow: '0 0 8px #22C55E80' }} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '.12em', textTransform: 'uppercase' }}>Mentoria individual</span>
-          </div>
-
-          <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 34 : 56, fontWeight: 900, lineHeight: 1.1, margin: '0 0 20px', color: '#F8FAFC', letterSpacing: '-.03em' }}>
-            Sua precificação está<br />
-            <span style={{ fontStyle: 'italic', fontWeight: 600, background: 'linear-gradient(90deg,#818CF8,#A855F7,#22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              te dando prejuízo?
-            </span>
-          </h1>
-
-          <p style={{ fontSize: isMobile ? 16 : 18, color: '#94A3B8', lineHeight: 1.75, margin: '0 auto 36px', maxWidth: 580 }}>
-            Mentoria individual pra donos de BPO financeiro que querem aprender, na prática, a precificar certo, organizar a operação e vender com lucro real — dentro do Laboratório BPO, o ambiente exclusivo onde você aplica cada etapa do método comigo.
-          </p>
-
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 40 }}>
-            <button onClick={abrirDiagnostico}
-              style={{ padding: '15px 32px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 24px rgba(99,102,241,.45)', transition: 'all .2s' }}
-              onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 10px 32px rgba(99,102,241,.55)' }}
-              onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(99,102,241,.45)' }}>
-              Agendar diagnóstico →
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', justifyContent: 'center' }}>
-            {[['Acompanhamento', 'individual, direto comigo'], ['Laboratório incluso', 'ambiente de aplicação faz parte da mentoria'], ['Sem letra miúda', 'diagnóstico sem compromisso']].map(([t, s], i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(34,197,94,.13)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <span style={{ color: '#22C55E', fontSize: 10, fontWeight: 800 }}>✓</span>
-                </div>
-                <span style={{ fontSize: 12, color: '#94A3B8' }}><strong style={{ color: '#CBD5E1' }}>{t}</strong> {s}</span>
+          {isMobile && (
+            <Reveal>
+              <div style={{ position: 'relative', marginBottom: 8 }}>
+                <img src={CLAUDIA_ECOSSISTEMA_SRC} alt="Cláudia Bernardo — Fluxe" style={{ width: '100%', display: 'block', objectFit: 'contain' }} />
               </div>
-            ))}
-          </div>
+            </Reveal>
+          )}
+
+          <Reveal>
+            <div style={{ textAlign: isMobile ? 'center' : 'left', padding: isMobile ? '0 4px' : 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#8B5CF6', letterSpacing: '.18em', textTransform: 'uppercase', marginBottom: 26 }}>Mentoria Fluxe</div>
+
+              <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 32 : 'clamp(40px, 4.6vw, 68px)', fontWeight: 900, lineHeight: 1.06, margin: '0 0 22px', color: '#F8FAFC', letterSpacing: '-.03em' }}>
+                Pare de operar no feeling.<br />
+                <span style={{ fontStyle: 'italic', fontWeight: 600, background: 'linear-gradient(90deg,#818CF8,#A855F7,#22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                  Comece a crescer com método, números e processos.
+                </span>
+              </h1>
+
+              <p style={{ fontSize: isMobile ? 15 : 18, color: '#94A3B8', lineHeight: 1.7, margin: isMobile ? '0 auto 32px' : '0 0 36px', maxWidth: 480 }}>
+                Na mentoria Fluxe você aprende, com acompanhamento comigo, a desenhar a operação, precificar certo e montar o plano de negócios do seu BPO Financeiro — usando o Fluxe como seu caderno de exercícios, na prática.
+              </p>
+
+              <div style={{ display: 'flex', justifyContent: isMobile ? 'center' : 'flex-start' }}>
+                <button onClick={abrirDiagnostico}
+                  style={{ padding: '16px 34px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 30px rgba(99,102,241,.45)', transition: 'all .2s' }}
+                  onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 12px 38px rgba(99,102,241,.6)' }}
+                  onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(99,102,241,.45)' }}>
+                  Agendar diagnóstico →
+                </button>
+              </div>
+            </div>
+          </Reveal>
+
+          {!isMobile && (
+            <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '86vh' }}>
+              <img src={CLAUDIA_ECOSSISTEMA_SRC} alt="Cláudia Bernardo — Fluxe" style={{
+                maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block',
+                transform: `translate(${heroTilt.x}px, ${heroTilt.y}px)`, transition: 'transform .3s ease-out',
+              }} />
+            </div>
+          )}
         </div>
       </section>
 
+      {/* ── FAIXA DE AUTORIDADE ─────────────────────────────────── */}
+      <div style={{ padding: '16px 0', borderTop: '1px solid rgba(255,255,255,.06)', borderBottom: '1px solid rgba(255,255,255,.06)', overflow: 'hidden', whiteSpace: 'nowrap', background: '#080B14' }}>
+        <div className="fluxe-marquee-track" style={{ display: 'inline-block' }}>
+          {/* Espaço reservado pra números reais (ex.: "+NN BPOs estruturados") quando a Claudia tiver — não invento estatística aqui */}
+          {[0, 1].map(rep => (
+            <span key={rep} style={{ display: 'inline-block' }}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <span key={i} style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.15em', color: '#64748B', margin: '0 18px' }}>
+                  ESPECIALISTA EM BPO FINANCEIRO <span style={{ color: '#8B5CF6' }}>·</span> CONTROLADORIA <span style={{ color: '#8B5CF6' }}>·</span> FP&A <span style={{ color: '#8B5CF6' }}>·</span> ESTRUTURAÇÃO DE OPERAÇÕES <span style={{ color: '#8B5CF6' }}>·</span> GESTÃO FINANCEIRA <span style={{ color: '#8B5CF6' }}>·</span>
+                </span>
+              ))}
+            </span>
+          ))}
+        </div>
+        <style>{`
+          @keyframes fluxe-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+          .fluxe-marquee-track { animation: fluxe-marquee 38s linear infinite; }
+        `}</style>
+      </div>
+
       {/* ── ENTRAR (compacto, só aparece quando clicado) ────────── */}
       {showLogin && (
-        <section ref={formRef} style={{ padding: isMobile ? '0 20px 60px' : '0 48px 72px', display: 'flex', justifyContent: 'center' }}>
+        <section ref={formRef} style={{ padding: isMobile ? '0 20px 60px' : '0 48px 72px', display: 'flex', justifyContent: 'center', marginTop: 56 }}>
           <div style={{ width: '100%', maxWidth: 380, background: 'rgba(255,255,255,.03)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 18, padding: 28, boxShadow: '0 24px 64px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05)', position: 'relative' }}>
 
             <button onClick={() => setShowLogin(false)}
@@ -264,10 +317,10 @@ export default function LoginPage() {
 
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: '#F1F5F9', marginBottom: 4 }}>
-                {mfaStep ? '🔐 Verificação em duas etapas' : formMode === 'login' ? 'Já é aluno(a) da mentoria?' : 'Recuperar senha'}
+                {mfaStep ? '🔐 Verificação em duas etapas' : formMode === 'login' ? 'Já faz parte do Fluxe?' : 'Recuperar senha'}
               </div>
               <div style={{ fontSize: 12, color: '#64748B' }}>
-                {mfaStep ? 'Abra o app autenticador e digite o código de 6 dígitos' : formMode === 'login' ? 'Entre no Laboratório BPO' : 'Enviaremos um link para seu e-mail'}
+                {mfaStep ? 'Abra o app autenticador e digite o código de 6 dígitos' : formMode === 'login' ? 'Entre no Laboratório Fluxe' : 'Enviaremos um link para seu e-mail'}
               </div>
             </div>
 
@@ -377,126 +430,90 @@ export default function LoginPage() {
         </section>
       )}
 
-      {/* ── QUEM SOU EU ─────────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '52px 20px' : '80px 48px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '340px 1fr', gap: isMobile ? 32 : 64, alignItems: 'center' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', position: 'relative' }}>
-            <div style={{ position: 'absolute', top: '10%', left: '50%', transform: 'translateX(-50%)', width: 340, height: 340, background: 'radial-gradient(ellipse, rgba(139,92,246,.28) 0%, transparent 70%)', filter: 'blur(30px)', pointerEvents: 'none' }} />
-            <div style={{ position: 'relative', width: isMobile ? 240 : '100%', maxWidth: 300 }}>
+      {/* ── QUEM É A CLÁUDIA ─────────────────────────────────────── */}
+      <section style={{ padding: isMobile ? '72px 20px' : '150px 48px', background: '#080B14', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ maxWidth: 1180, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 36 : 72, alignItems: 'center' }}>
+          <Reveal>
+            <div style={{ position: 'relative' }}>
+              <div style={{ position: 'absolute', top: '8%', left: '50%', transform: 'translateX(-50%)', width: 420, height: 420, background: 'radial-gradient(ellipse, rgba(139,92,246,.22) 0%, transparent 70%)', filter: 'blur(40px)', pointerEvents: 'none' }} />
               <img src={CLAUDIA_SRC} alt="Cláudia Bernardo" style={{
-                width: '100%', display: 'block', objectFit: 'cover',
-                WebkitMaskImage: 'radial-gradient(ellipse 72% 88% at 50% 38%, black 55%, transparent 92%)',
-                maskImage: 'radial-gradient(ellipse 72% 88% at 50% 38%, black 55%, transparent 92%)',
+                width: '100%', display: 'block', objectFit: 'cover', position: 'relative', borderRadius: 8,
+                WebkitMaskImage: 'linear-gradient(to bottom, black 82%, transparent 100%)',
+                maskImage: 'linear-gradient(to bottom, black 82%, transparent 100%)',
               }} />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, rgba(99,102,241,.14), transparent 55%)', mixBlendMode: 'overlay', pointerEvents: 'none' }} />
             </div>
-          </div>
-          <div style={{ textAlign: isMobile ? 'center' : 'left' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>QUEM SOU EU</div>
-            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 24 : 30, fontWeight: 800, color: '#F8FAFC', margin: '0 0 4px', letterSpacing: '-.02em' }}>Cláudia Bernardo</h2>
-            <div style={{ fontSize: 13, color: '#8B5CF6', fontWeight: 600, marginBottom: 6 }}>Mentora e especialista em BPO Financeiro</div>
-            <div style={{ fontSize: 12, color: '#64748B', marginBottom: 18 }}>Pós-graduada em Finanças (FGV) · Direito e Administração (Comércio Exterior)</div>
-            <p style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.75, margin: '0 0 14px' }}>
-              Há anos estruturo operações financeiras e ajudo empresas a decidir com base em números. Percebi que a maioria dos profissionais dominava a parte técnica, mas não sabia organizar a operação, precificar certo e crescer com previsibilidade — foi por isso que criei esta mentoria.
-            </p>
-            <p style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.75, margin: 0 }}>
-              Meu compromisso é compartilhar exatamente o que uso na prática, sem teoria desnecessária — dentro do Laboratório BPO, com acompanhamento individual do começo ao fim.
-            </p>
-          </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div style={{ textAlign: isMobile ? 'center' : 'left' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 16 }}>QUEM É A CLÁUDIA</div>
+              <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 22px', letterSpacing: '-.02em', lineHeight: 1.15 }}>
+                Passei anos estruturando operações financeiras. Criei o Método Fluxe pra ninguém mais precisar aprender do jeito difícil.
+              </h2>
+              <p style={{ fontSize: 15, color: '#94A3B8', lineHeight: 1.8, margin: '0 0 16px' }}>
+                Vi dono de BPO competente na entrega, mas perdido na própria operação — sem saber o custo real da equipe, cobrando no feeling, apagando incêndio todo mês.
+              </p>
+              <p style={{ fontSize: 15, color: '#94A3B8', lineHeight: 1.8, margin: '0 0 24px' }}>
+                O Fluxe nasceu pra fechar essa distância: um método próprio, aplicado dentro de um ambiente que eu mesma uso — não teoria solta, prática guiada.
+              </p>
+              <div style={{ fontSize: 12, color: '#64748B' }}>Pós-graduada em Finanças (FGV) · Direito e Administração (Comércio Exterior)</div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
-      {/* ── PROBLEMA ────────────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '60px 20px' : '80px 48px', background: 'rgba(255,255,255,.015)' }}>
-        <div style={{ maxWidth: 1060, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 52 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#EF4444', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>O PROBLEMA</div>
-            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 16px', letterSpacing: '-.02em' }}>Reconhece alguma dessas situações?</h2>
-            <p style={{ fontSize: isMobile ? 14 : 16, color: '#64748B', maxWidth: 520, margin: '0 auto' }}>A maioria dos BPOs cresce rápido, mas sem uma operação estruturada o crescimento vira caos.</p>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 14, maxWidth: 1000, margin: '0 auto 44px' }}>
-            {[
-              {
-                time: 'Na hora de precificar um novo cliente',
-                icon: '💸',
-                desc: 'Você não sabe o custo real da sua equipe. Chuta um valor, fecha abaixo do necessário, e passa meses atendendo esse cliente de graça sem perceber.',
-              },
-              {
-                time: 'No fechamento do mês',
-                icon: '📊',
-                desc: 'Você descobre que um cliente consome 40h da equipe e paga R$ 900. Estava perdendo dinheiro com ele há meses — sem saber.',
-              },
-              {
-                time: 'Quando um lead pergunta seu preço',
-                icon: '🤷',
-                desc: 'Você não sabe quanto esse perfil de cliente vai custar para atender. Responde qualquer coisa. Ou perde o cliente por cobrar errado.',
-              },
-            ].map((p, i) => (
-              <div key={i} style={{ padding: '22px 24px', background: 'rgba(239,68,68,.04)', border: '1px solid rgba(239,68,68,.1)', borderRadius: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <span style={{ fontSize: 18 }}>{p.icon}</span>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#F87171', letterSpacing: '.05em', textTransform: 'uppercase' }}>{p.time}</span>
-                </div>
-                <div style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.7 }}>{p.desc}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Ponte para a solução */}
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 1, height: 28, background: 'linear-gradient(to bottom, rgba(239,68,68,.3), rgba(99,102,241,.5))' }} />
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#818CF8', letterSpacing: '.1em', textTransform: 'uppercase', padding: '6px 14px', background: 'rgba(99,102,241,.08)', border: '1px solid rgba(99,102,241,.18)', borderRadius: 99 }}>
-                Se você reconheceu mais de uma — é disso que a mentoria trata
-              </div>
-              <div style={{ width: 1, height: 28, background: 'linear-gradient(to bottom, rgba(99,102,241,.5), transparent)' }} />
+      {/* ── O MÉTODO FLUXE® ─────────────────────────────────────── */}
+      <section id="metodo" style={{ padding: isMobile ? '72px 20px' : '150px 48px', background: '#05070E' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <Reveal>
+            <div style={{ textAlign: 'center', marginBottom: isMobile ? 44 : 72 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 14 }}>O MÉTODO FLUXE®</div>
+              <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 28 : 44, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>Sete etapas. Uma metodologia própria.</h2>
             </div>
-          </div>
-        </div>
-      </section>
+          </Reveal>
 
-      {/* ── O MÉTODO ────────────────────────────────────────────── */}
-      <section id="metodo" style={{ padding: isMobile ? '60px 20px' : '96px 48px' }}>
-        <div style={{ maxWidth: 780, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: isMobile ? 40 : 60 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>O MÉTODO</div>
-            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>Quatro semanas pra sair do feeling e entrar nos dados.</h2>
-            <p style={{ fontSize: isMobile ? 14 : 16, color: '#64748B' }}>Um passo de cada vez, com acompanhamento individual em cada etapa.</p>
-          </div>
-
-          <div style={{ position: 'relative' }}>
-            {!isMobile && (
-              <div style={{ position: 'absolute', top: 28, bottom: 28, left: 27, width: 1, background: 'linear-gradient(to bottom, rgba(99,102,241,.4), rgba(139,92,246,.4))' }} />
-            )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 20 : 8 }}>
-              {METODO.map((m, i) => (
-                <div key={i} style={{ display: 'flex', gap: 24, alignItems: 'flex-start', padding: isMobile ? '18px' : '20px 8px', position: 'relative', zIndex: 1 }}>
-                  <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#0D1424', border: '1px solid rgba(99,102,241,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontFamily: "'Fraunces',serif", fontSize: 20, fontWeight: 700, color: '#A5B4FC' }}>{m.num}</span>
+          <Reveal delay={0.1}>
+            <div style={{ position: 'relative', overflowX: isMobile ? 'auto' : 'visible', paddingBottom: isMobile ? 8 : 0 }}>
+              {!isMobile && (
+                <div style={{ position: 'absolute', top: 27, left: '7%', right: '7%', height: 1, background: 'linear-gradient(90deg,rgba(99,102,241,.1),rgba(139,92,246,.5),rgba(99,102,241,.1))' }} />
+              )}
+              <div style={{ display: 'flex', justifyContent: isMobile ? 'flex-start' : 'space-between', gap: isMobile ? 28 : 8, minWidth: isMobile ? 620 : 'auto' }}>
+                {METODO_FLUXE.map((m, i) => (
+                  <div key={m.num} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, position: 'relative', zIndex: 1, flex: isMobile ? '0 0 auto' : 1 }}>
+                    <div style={{
+                      width: 56, height: 56, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: i === 3 ? 'linear-gradient(135deg,#6366F1,#8B5CF6)' : '#0D1424',
+                      border: i === 3 ? 'none' : '1px solid rgba(255,255,255,.12)',
+                      boxShadow: i === 3 ? '0 0 0 6px rgba(99,102,241,.14)' : 'none',
+                    }}>
+                      <span style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 700, color: i === 3 ? '#fff' : '#94A3B8' }}>{m.num}</span>
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: i === 3 ? '#F1F5F9' : '#94A3B8', whiteSpace: 'nowrap' }}>{m.nome}</span>
                   </div>
-                  <div style={{ paddingTop: 4 }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: '#6366F1', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 6 }}>{m.semana}</div>
-                    <div style={{ fontFamily: "'Fraunces',serif", fontSize: 19, fontWeight: 700, color: '#F1F5F9', marginBottom: 8 }}>{m.titulo}</div>
-                    <div style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.7, maxWidth: 540 }}>{m.desc}</div>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          </Reveal>
+
+          <Reveal delay={0.15}>
+            <p style={{ textAlign: 'center', fontSize: 14, color: '#64748B', maxWidth: 560, margin: isMobile ? '40px auto 0' : '56px auto 0', lineHeight: 1.7 }}>
+              Uma metodologia proprietária criada para transformar operadores em donos de BPO Financeiro altamente organizados e lucrativos.
+            </p>
+          </Reveal>
         </div>
       </section>
 
-      {/* ── LABORATÓRIO BPO ─────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '0 20px 72px' : '0 48px 96px', position: 'relative' }}>
+      {/* ── O LABORATÓRIO FLUXE ──────────────────────────────────── */}
+      <section id="laboratorio" style={{ padding: isMobile ? '72px 20px' : '150px 48px', background: '#080B14', position: 'relative' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#475569', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>O AMBIENTE DA MENTORIA</div>
-            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 24 : 32, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>Onde você aplica cada etapa, com acompanhamento comigo do lado.</h2>
-          </div>
+          <Reveal>
+            <div style={{ textAlign: 'center', marginBottom: 40 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#475569', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 14 }}>O LABORATÓRIO FLUXE</div>
+              <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>O ambiente onde você aplica o método — não assiste, executa.</h2>
+            </div>
+          </Reveal>
 
-          {/* Janela do browser */}
-          <div style={{ background: '#0D1424', border: '1px solid rgba(255,255,255,.07)', borderRadius: 18, overflow: 'hidden', boxShadow: '0 48px 100px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.04)' }}>
+          <Reveal delay={0.1}>
+          <div style={{ background: '#0D1424', border: '1px solid rgba(255,255,255,.07)', borderRadius: 18, overflow: 'hidden', boxShadow: '0 60px 120px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.04)' }}>
             {/* Chrome bar */}
             <div style={{ background: '#1A2235', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
               <div style={{ display: 'flex', gap: 6 }}>
@@ -507,13 +524,11 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* App shell */}
             <div style={{ display: 'flex', height: isMobile ? 320 : 430 }}>
-              {/* Sidebar */}
               {!isMobile && (
                 <div style={{ width: 176, background: '#F8FAFC', borderRight: '1px solid #E2E8F0', flexShrink: 0, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <div style={{ padding: '8px 10px 12px', marginBottom: 4, borderBottom: '1px solid #E2E8F0' }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: '#0F172A', letterSpacing: '-.3px' }}>Fluxe <span style={{ color: '#6366F1' }}>BPO</span></div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#0F172A', letterSpacing: '-.3px' }}>Fluxe</div>
                     <div style={{ fontSize: 9, color: '#94A3B8', marginTop: 2 }}>Empreenda BPO Ltda</div>
                   </div>
                   {[
@@ -537,7 +552,6 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Conteúdo principal */}
               <div style={{ flex: 1, background: '#F1F5F9', padding: isMobile ? 12 : 18, overflow: 'hidden' }}>
                 <div>
                   <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -573,230 +587,173 @@ export default function LoginPage() {
               </div>
             </div>
           </div>
-          <div style={{ textAlign: 'center', marginTop: 14 }}>
-            <span style={{ fontSize: 12, color: '#475569' }}>Ambiente também chamado de Fluxe.</span>
-          </div>
+          </Reveal>
 
-          {/* Callouts abaixo do mockup */}
-          {!isMobile && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginTop: 24 }}>
+          <Reveal delay={0.2}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 16, marginTop: 28 }}>
               {[
-                { icon: '⚡', title: 'Visão em tempo real', desc: 'Painel atualizado a cada ação da equipe' },
-                { icon: '🔒', title: 'Multi-empresa seguro', desc: 'Cada BPO tem seus dados completamente isolados' },
-                { icon: '📱', title: 'Qualquer dispositivo', desc: 'Acesse do computador, tablet ou celular' },
+                { icon: '🗺️', title: 'Desenho da operação', desc: 'Mapeie processos, equipe e capacidade real do seu BPO' },
+                { icon: '🧮', title: 'Precificação', desc: 'Calcule o preço certo com base no custo real da sua equipe' },
+                { icon: '📈', title: 'Plano de negócio', desc: 'Monte o plano estratégico pra crescer com previsibilidade' },
               ].map((item, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: 16, background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 12 }}>
-                  <span style={{ fontSize: 20, flexShrink: 0 }}>{item.icon}</span>
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '18px 16px', background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 12 }}>
+                  <span style={{ fontSize: 22, flexShrink: 0 }}>{item.icon}</span>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#E2E8F0', marginBottom: 4 }}>{item.title}</div>
-                    <div style={{ fontSize: 12, color: '#64748B' }}>{item.desc}</div>
+                    <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.55 }}>{item.desc}</div>
                   </div>
                 </div>
               ))}
             </div>
-          )}
+          </Reveal>
         </div>
       </section>
 
-      {/* ── PARA QUEM É ─────────────────────────────────────────── */}
-      <section id="para-quem" style={{ padding: isMobile ? '60px 20px' : '96px 48px', background: 'rgba(255,255,255,.015)' }}>
-        <div style={{ maxWidth: 860, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: isMobile ? 32 : 48 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>PARA QUEM É</div>
-            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 24 : 34, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>Pra quem é (e pra quem não é) a mentoria</h2>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2,1fr)', gap: 16 }}>
-            <div style={{ padding: '26px 28px', background: 'rgba(34,197,94,.05)', border: '1px solid rgba(34,197,94,.18)', borderRadius: 14 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#4ADE80', letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 16 }}>É pra você se</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {PARA_QUEM_SIM.map((t, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(34,197,94,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
-                      <span style={{ color: '#22C55E', fontSize: 10, fontWeight: 800 }}>✓</span>
-                    </div>
-                    <span style={{ fontSize: 14, color: '#CBD5E1', lineHeight: 1.55 }}>{t}</span>
-                  </div>
-                ))}
-              </div>
+      {/* ── FORMATOS ────────────────────────────────────────────── */}
+      <section id="formatos" style={{ padding: isMobile ? '72px 20px' : '150px 48px', background: '#05070E' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <Reveal>
+            <div style={{ textAlign: 'center', marginBottom: isMobile ? 40 : 60 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 14 }}>FORMATOS</div>
+              <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>O mesmo Método Fluxe, dois jeitos de aplicar.</h2>
             </div>
-            <div style={{ padding: '26px 28px', background: 'rgba(239,68,68,.04)', border: '1px solid rgba(239,68,68,.14)', borderRadius: 14 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#F87171', letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 16 }}>Não é pra você se</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {PARA_QUEM_NAO.map((t, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(239,68,68,.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
-                      <span style={{ color: '#F87171', fontSize: 10, fontWeight: 800 }}>✕</span>
-                    </div>
-                    <span style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.55 }}>{t}</span>
-                  </div>
-                ))}
-              </div>
+          </Reveal>
+
+          <Reveal delay={0.1}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2,1fr)', gap: 20 }}>
+              {FORMATOS.map((f, i) => (
+                <div key={i} style={{ padding: '32px 28px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.09)', borderRadius: 18, backdropFilter: 'blur(12px)' }}>
+                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 700, color: '#F1F5F9', marginBottom: 12 }}>{f.nome}</div>
+                  <p style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.7, margin: 0 }}>{f.desc}</p>
+                </div>
+              ))}
             </div>
-          </div>
+          </Reveal>
+
+          <Reveal delay={0.18}>
+            <div style={{ textAlign: 'center', marginTop: 36 }}>
+              <p style={{ fontSize: 13, color: '#64748B', marginBottom: 20 }}>Nos dois formatos: Método Fluxe completo + Laboratório Fluxe incluso.</p>
+              <button onClick={abrirDiagnostico}
+                style={{ padding: '15px 32px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 24px rgba(99,102,241,.4)' }}>
+                Agendar diagnóstico →
+              </button>
+            </div>
+          </Reveal>
         </div>
       </section>
 
-      {/* ── ANTES E DEPOIS DA MENTORIA ──────────────────────────── */}
-      <section style={{ padding: isMobile ? '60px 20px' : '80px 48px', background: 'rgba(255,255,255,.015)' }}>
-        <div style={{ maxWidth: 860, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: isMobile ? 32 : 48 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>POR QUE A MENTORIA</div>
-            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 22 : 32, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>Antes e depois da Mentoria Fluxe</h2>
-            <p style={{ fontSize: isMobile ? 13 : 15, color: '#64748B' }}>O que muda na prática quando você aplica o método</p>
-          </div>
-          <div style={{ border: '1px solid rgba(255,255,255,.08)', borderRadius: 16, overflow: 'hidden' }}>
-            {/* Header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', background: 'rgba(99,102,241,.08)' }}>
-              <div style={{ padding: '14px 20px', fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '.1em', borderRight: '1px solid rgba(255,255,255,.06)' }}>Situação</div>
-              <div style={{ padding: '14px 20px', fontSize: 11, fontWeight: 700, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '.1em', borderRight: '1px solid rgba(255,255,255,.06)' }}>❌ Antes da mentoria</div>
-              <div style={{ padding: '14px 20px', fontSize: 11, fontWeight: 700, color: '#22C55E', textTransform: 'uppercase', letterSpacing: '.1em' }}>✓ Depois da mentoria</div>
+      {/* ── TRANSFORMAÇÃO ───────────────────────────────────────── */}
+      <section style={{ padding: isMobile ? '72px 20px' : '150px 48px', background: '#080B14' }}>
+        <div style={{ maxWidth: 760, margin: '0 auto' }}>
+          <Reveal>
+            <div style={{ textAlign: 'center', marginBottom: isMobile ? 40 : 64 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 14 }}>TRANSFORMAÇÃO</div>
+              <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>Antes × Depois</h2>
             </div>
-            {[
-              ['Precificar novo cliente',       'Chuta, torce para não dar prejuízo', 'Calcula com base no custo real da equipe'],
-              ['Rentabilidade por cliente',     'Só descobre quando o problema é grande', 'Acompanha em tempo real quem dá lucro'],
-              ['Prazos e obrigações',           'WhatsApp, post-it e memorização', 'Rotina organizada, nada esquecido'],
-              ['Senhas e acessos dos clientes', 'Planilha, e-mail ou dependente de um analista', 'Centralizado, ninguém trava a operação'],
-              ['Capacidade da equipe',          'Aceita cliente sem saber se aguenta',   'Sabe exatamente quantos novos clientes cabem'],
-              ['Decisão sobre o negócio',       'No feeling, sem dados', 'Com plano estratégico e números reais'],
-            ].map(([s, sem, com], i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderTop: '1px solid rgba(255,255,255,.05)', background: i%2===0 ? 'transparent' : 'rgba(255,255,255,.015)' }}>
-                <div style={{ padding: '14px 20px', fontSize: 13, fontWeight: 600, color: '#CBD5E1', borderRight: '1px solid rgba(255,255,255,.05)' }}>{s}</div>
-                <div style={{ padding: '14px 20px', fontSize: 13, color: '#64748B', borderRight: '1px solid rgba(255,255,255,.05)' }}>{sem}</div>
-                <div style={{ padding: '14px 20px', fontSize: 13, color: '#86EFAC' }}>{com}</div>
-              </div>
-            ))}
-          </div>
+          </Reveal>
+
+          <Reveal delay={0.1}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {TRANSFORMACAO.map((t, i) => (
+                <div key={i} style={{
+                  display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between',
+                  gap: isMobile ? 8 : 24, padding: '26px 8px', borderTop: i > 0 ? '1px solid rgba(255,255,255,.06)' : 'none',
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#F87171', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 4 }}>Antes</div>
+                    <div style={{ fontSize: isMobile ? 16 : 19, color: '#64748B', fontWeight: 500 }}>{t.antes}</div>
+                  </div>
+                  <div style={{ fontSize: 18, color: '#475569', flexShrink: 0 }}>→</div>
+                  <div style={{ flex: 1, textAlign: isMobile ? 'left' : 'right' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#4ADE80', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 4 }}>Depois</div>
+                    <div style={{ fontSize: isMobile ? 16 : 19, color: '#F1F5F9', fontWeight: 700 }}>{t.depois}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ── RESULTADOS ──────────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '60px 20px' : '80px 48px' }}>
-        <div style={{ maxWidth: 1060, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 52 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>RESULTADOS</div>
-            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 22 : 32, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>Donos de BPO que pararam de adivinhar</h2>
-            <p style={{ fontSize: isMobile ? 14 : 15, color: '#64748B' }}>e começaram a gerir com dados reais</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: isMobile ? 16 : 24 }}>
-            {[
-              { quote: 'Antes eu precificava no feeling. Com o Fluxe, descobri que meu cliente mais exigente consumia 3× mais horas que eu cobrava. Reajustei e aumentei minha margem em quase 40%.', name: 'Graziela Araújo', role: 'Sócia-fundadora · FinanciproBPO', local: 'São Paulo – SP', init: 'GA' },
-              { quote: 'Minha equipe cresceu de 2 para 8 analistas e eu ainda sei exatamente o que cada um está fazendo, para qual cliente e em quanto tempo. Impossível sem o Fluxe.', name: 'Ricardo Lemos', role: 'Diretor de Operações · ContaMaxBPO', local: 'Belo Horizonte – MG', init: 'RL' },
-              { quote: 'Quando um analista saiu levando todos os acessos de cliente, percebi que precisava de um cofre centralizado. O Fluxe resolveu isso no mesmo dia que fiz o cadastro.', name: 'Camila Souza', role: 'CEO · PrimeirosBPO Financeiro', local: 'Recife – PE', init: 'CS' },
-            ].map((t, i) => (
-              <div key={i} style={{ padding: '28px 24px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 16, display: 'flex', flexDirection: 'column', gap: 20 }}>
-                <div style={{ fontFamily: "'Fraunces',serif", fontSize: 40, color: '#8B5CF6', lineHeight: .6, opacity: .6 }}>"</div>
-                <p style={{ fontFamily: "'Fraunces',serif", fontStyle: 'italic', fontWeight: 500, fontSize: 16, color: '#CBD5E1', lineHeight: 1.65, margin: 0 }}>{t.quote}</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 'auto' }}>
-                  <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg,#6366F1,#A855F7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{t.init}</div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#E2E8F0' }}>{t.name}</div>
-                    <div style={{ fontSize: 11, color: '#8B5CF6', fontWeight: 600 }}>{t.role}</div>
-                    <div style={{ fontSize: 10, color: '#475569' }}>{t.local}</div>
+      <section style={{ padding: isMobile ? '72px 20px' : '150px 48px', background: '#05070E' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <Reveal>
+            <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 56 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 14 }}>RESULTADOS</div>
+              <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 24 : 34, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>Donos de BPO que pararam de adivinhar</h2>
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2,1fr)', gap: isMobile ? 16 : 24 }}>
+              {RESULTADOS.map((t, i) => (
+                <div key={i} style={{ padding: '30px 28px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 16 }}>
+                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: 40, color: '#8B5CF6', lineHeight: .6, opacity: .6, marginBottom: 16 }}>"</div>
+                  <p style={{ fontFamily: "'Fraunces',serif", fontStyle: 'italic', fontWeight: 500, fontSize: 17, color: '#CBD5E1', lineHeight: 1.65, margin: '0 0 20px' }}>{t.quote}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg,#6366F1,#A855F7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{t.init}</div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#E2E8F0' }}>{t.name}</div>
+                      <div style={{ fontSize: 11, color: '#8B5CF6', fontWeight: 600 }}>{t.role}</div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── MENTORIA EM DETALHE ─────────────────────────────────── */}
-      <section id="precos" style={{ padding: isMobile ? '60px 20px' : '96px 48px', background: 'rgba(255,255,255,.015)' }}>
-        <div style={{ maxWidth: 700, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 56 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>A MENTORIA</div>
-            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 16px', letterSpacing: '-.02em' }}>Acompanhamento individual, não um curso gravado.</h2>
-            <p style={{ fontSize: isMobile ? 14 : 16, color: '#64748B', maxWidth: 520, margin: '0 auto' }}>Cada mentoria é única — formato, duração e investimento dependem do que você precisa. Sem tabela de preço fixa: a gente conversa primeiro.</p>
-          </div>
-
-          <div style={{ background: 'linear-gradient(160deg,rgba(99,102,241,.17),rgba(139,92,246,.12))', border: '1px solid rgba(99,102,241,.42)', borderRadius: 16, padding: isMobile ? '28px 24px' : '36px 40px' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.08em' }}>O que está incluso</div>
-            <div style={{ marginBottom: 28, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {[
-                'Encontros individuais comigo, aplicando cada etapa dentro do Laboratório BPO',
-                'O Laboratório BPO incluso — o ambiente que uso pra dar clareza aos seus números',
-                'Precificação, rotina e rentabilidade organizadas junto com você',
-                'Plano estratégico pra sair do feeling e crescer com previsibilidade',
-              ].map((f, j) => (
-                <div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                  <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(34,197,94,.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
-                    <span style={{ color: '#22C55E', fontSize: 9, fontWeight: 800 }}>✓</span>
-                  </div>
-                  <span style={{ fontSize: 14, color: '#CBD5E1', lineHeight: 1.5 }}>{f}</span>
                 </div>
               ))}
             </div>
-            <button onClick={abrirDiagnostico}
-              style={{ width: '100%', padding: '14px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', boxShadow: '0 4px 16px rgba(99,102,241,.4)' }}>
-              Agendar diagnóstico →
-            </button>
-          </div>
-
-          {/* Garantia */}
-          <div style={{ textAlign: 'center', marginTop: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 24 }}>
-            {[
-              { icon: '🗣️', text: 'Diagnóstico sem compromisso' },
-              { icon: '🎯', text: 'Acompanhamento individual, não em grupo' },
-              { icon: '🧮', text: 'Laboratório BPO incluso durante a mentoria' },
-            ].map((g, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748B' }}>
-                <span>{g.icon}</span>
-                <span>{g.text}</span>
-              </div>
-            ))}
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ── FAQ ─────────────────────────────────────────────────── */}
-      <section id="faq" style={{ padding: isMobile ? '60px 20px' : '96px 48px' }}>
+      <section id="faq" style={{ padding: isMobile ? '72px 20px' : '150px 48px', background: '#080B14' }}>
         <div style={{ maxWidth: 700, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 48 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>FAQ</div>
-            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 36, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>Perguntas frequentes</h2>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {FAQS.map((faq, i) => (
-              <div key={i} style={{ background: 'rgba(255,255,255,.03)', border: `1px solid ${openFaq === i ? 'rgba(99,102,241,.25)' : 'rgba(255,255,255,.07)'}`, borderRadius: 12, overflow: 'hidden', transition: 'border-color .2s' }}>
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  style={{ width: '100%', padding: '18px 20px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, textAlign: 'left' }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: '#E2E8F0', lineHeight: 1.4 }}>{faq.q}</span>
-                  <span style={{ fontSize: 18, color: '#6366F1', transition: 'transform .25s', transform: openFaq === i ? 'rotate(45deg)' : 'rotate(0)', flexShrink: 0, lineHeight: 1 }}>+</span>
-                </button>
-                {openFaq === i && (
-                  <div style={{ padding: '0 20px 18px', fontSize: 13, color: '#94A3B8', lineHeight: 1.75 }}>
-                    {faq.a}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          <Reveal>
+            <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 52 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 14 }}>FAQ</div>
+              <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 24 : 34, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>Perguntas frequentes</h2>
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {FAQS.map((faq, i) => (
+                <div key={i} style={{ background: 'rgba(255,255,255,.025)', border: `1px solid ${openFaq === i ? 'rgba(99,102,241,.25)' : 'rgba(255,255,255,.06)'}`, borderRadius: 12, overflow: 'hidden', transition: 'border-color .2s' }}>
+                  <button
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    style={{ width: '100%', padding: '18px 20px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, textAlign: 'left' }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: '#E2E8F0', lineHeight: 1.4 }}>{faq.q}</span>
+                    <span style={{ fontSize: 18, color: '#6366F1', transition: 'transform .25s', transform: openFaq === i ? 'rotate(45deg)' : 'rotate(0)', flexShrink: 0, lineHeight: 1 }}>+</span>
+                  </button>
+                  {openFaq === i && (
+                    <div style={{ padding: '0 20px 18px', fontSize: 13, color: '#94A3B8', lineHeight: 1.75 }}>
+                      {faq.a}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ── CTA FINAL ───────────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '60px 20px' : '96px 48px', background: 'rgba(255,255,255,.015)' }}>
-        <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
-          <div style={{ background: 'linear-gradient(135deg,rgba(99,102,241,.14),rgba(139,92,246,.09))', border: '1px solid rgba(99,102,241,.22)', borderRadius: 24, padding: isMobile ? '44px 24px' : '64px 52px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,.18) 0%, transparent 70%)', pointerEvents: 'none' }} />
-            <div style={{ position: 'relative', zIndex: 1 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 16 }}>COMECE HOJE</div>
-              <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 40, fontWeight: 900, color: '#F8FAFC', margin: '0 0 16px', letterSpacing: '-.03em', lineHeight: 1.12 }}>
-                Pare de crescer sem saber<br />se está lucrando.
-              </h2>
-              <p style={{ fontSize: isMobile ? 14 : 16, color: '#94A3B8', marginBottom: 12 }}>Diagnóstico individual, sem compromisso.</p>
-              <p style={{ fontSize: isMobile ? 12 : 13, color: '#475569', marginBottom: 32 }}>A gente conversa primeiro pra ver se faz sentido pros dois lados.</p>
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
+      <section style={{ padding: isMobile ? '72px 20px' : '150px 48px', background: '#05070E' }}>
+        <div style={{ maxWidth: 760, margin: '0 auto', textAlign: 'center' }}>
+          <Reveal>
+            <div style={{ background: 'linear-gradient(135deg,rgba(99,102,241,.16),rgba(59,130,246,.1))', border: '1px solid rgba(99,102,241,.24)', borderRadius: 24, padding: isMobile ? '48px 26px' : '76px 60px', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 24 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 36px', letterSpacing: '-.02em', lineHeight: 1.35, maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>
+                  Seu próximo cliente não precisa aumentar seu trabalho.<br />Ele precisa aumentar seu lucro.
+                </h2>
                 <button onClick={abrirDiagnostico}
-                  style={{ padding: '14px 32px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 32px rgba(99,102,241,.5)', transition: 'all .2s' }}
-                  onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(99,102,241,.65)' }}
-                  onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(99,102,241,.5)' }}>
+                  style={{ padding: '16px 36px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 10px 36px rgba(99,102,241,.5)', transition: 'all .2s' }}
+                  onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-2px)' }}
+                  onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)' }}>
                   Agendar diagnóstico →
                 </button>
               </div>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
@@ -813,7 +770,7 @@ export default function LoginPage() {
               </a>
             ))}
           </div>
-          <div style={{ fontSize: 11, color: '#334155' }}>© {new Date().getFullYear()} Fluxe BPO. Todos os direitos reservados.</div>
+          <div style={{ fontSize: 11, color: '#334155' }}>© {new Date().getFullYear()} Fluxe. Todos os direitos reservados.</div>
         </div>
       </footer>
     </div>
@@ -822,10 +779,35 @@ export default function LoginPage() {
 
 // ── Sub-componentes ─────────────────────────────────────────────────────────
 
+function Reveal({ children, delay = 0 }) {
+  const ref = useRef(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setVisible(true); obs.disconnect() }
+    }, { threshold: 0.15 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
+  return (
+    <div ref={ref} style={{
+      opacity: visible ? 1 : 0,
+      transform: visible ? 'translateY(0)' : 'translateY(28px)',
+      transition: `opacity .7s ease ${delay}s, transform .7s ease ${delay}s`,
+    }}>
+      {children}
+    </div>
+  )
+}
+
 function Logo() {
   return (
     <a href="/" style={{ display: 'inline-block', lineHeight: 0 }}>
-      <img src={LOGO_SRC} alt="Fluxe BPO" style={{ height: 44, width: 'auto', maxWidth: 220, objectFit: 'contain', objectPosition: 'left' }} />
+      <img src={LOGO_SRC} alt="Fluxe" style={{ height: 44, width: 'auto', maxWidth: 220, objectFit: 'contain', objectPosition: 'left' }} />
     </a>
   )
 }
