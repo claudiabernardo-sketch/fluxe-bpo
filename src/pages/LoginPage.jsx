@@ -225,6 +225,35 @@ export default function LoginPage() {
           <div style={{ position: 'absolute', top: 0, right: 0, height: '100%', width: '46%', background: 'linear-gradient(0deg, #060A14 0%, transparent 22%)', pointerEvents: 'none' }} />
         )}
 
+        {/* Cartões flutuantes de métricas (desktop) */}
+        {!isMobile && (
+          <>
+            <div style={{ position: 'absolute', top: '20%', right: '30%', width: 190, background: 'rgba(13,20,36,.75)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 14, padding: '14px 16px', boxShadow: '0 20px 50px rgba(0,0,0,.5)', zIndex: 2 }}>
+              <div style={{ fontSize: 10, color: '#94A3B8', marginBottom: 4 }}>Lucro real</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#F1F5F9' }}>R$ 18.400,00</div>
+              <div style={{ fontSize: 10, color: '#4ADE80', fontWeight: 600, marginTop: 2 }}>+35% vs mês anterior</div>
+            </div>
+            <div style={{ position: 'absolute', top: '46%', right: '32%', width: 190, background: 'rgba(13,20,36,.75)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 14, padding: '14px 16px', boxShadow: '0 20px 50px rgba(0,0,0,.5)', zIndex: 2 }}>
+              <div style={{ fontSize: 10, color: '#94A3B8', marginBottom: 4 }}>Clientes ativos</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#F1F5F9' }}>23</div>
+              <div style={{ fontSize: 10, color: '#4ADE80', fontWeight: 600, marginTop: 2 }}>+20% vs mês anterior</div>
+            </div>
+            <div style={{ position: 'absolute', top: '18%', right: '3%', width: 128, height: 128, borderRadius: '50%', background: 'rgba(13,20,36,.75)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,.1)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 20px 50px rgba(0,0,0,.5)', zIndex: 2 }}>
+              <div style={{ fontSize: 9, color: '#94A3B8', marginBottom: 2 }}>Margem média</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#A78BFA' }}>38%</div>
+            </div>
+            <div style={{ position: 'absolute', bottom: '10%', right: '2%', width: 176, background: 'rgba(13,20,36,.75)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 14, padding: '12px 14px', boxShadow: '0 20px 50px rgba(0,0,0,.5)', zIndex: 2 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#F1F5F9', marginBottom: 8 }}>Precificação saudável</div>
+              {['Custos cobertos', 'Margem positiva', 'Operação escalável'].map((t, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: i < 2 ? 5 : 0 }}>
+                  <span style={{ color: '#22C55E', fontSize: 11 }}>✓</span>
+                  <span style={{ fontSize: 11, color: '#94A3B8' }}>{t}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
         <div style={{ width: '100%', maxWidth: 1280, margin: '0 auto', position: 'relative', zIndex: 1, padding: isMobile ? '0 20px 48px' : '0 48px 72px' }}>
 
           {isMobile && (
