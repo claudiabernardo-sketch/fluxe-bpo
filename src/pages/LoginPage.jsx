@@ -250,15 +250,12 @@ export default function LoginPage() {
 
           <Reveal>
             <div style={{ textAlign: isMobile ? 'center' : 'left', padding: isMobile ? '0 4px' : 0 }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(99,102,241,.1)', border: '1px solid rgba(99,102,241,.22)', borderRadius: 99, padding: '6px 14px', marginBottom: 26 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', display: 'inline-block', boxShadow: '0 0 8px #22C55E80' }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '.12em', textTransform: 'uppercase' }}>Mentoria Fluxe</span>
-              </div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#8B5CF6', letterSpacing: '.18em', textTransform: 'uppercase', marginBottom: 26 }}>Mentoria Fluxe</div>
 
               <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 32 : 'clamp(40px, 4.6vw, 68px)', fontWeight: 900, lineHeight: 1.06, margin: '0 0 22px', color: '#F8FAFC', letterSpacing: '-.03em' }}>
                 Pare de operar no feeling.<br />
                 <span style={{ fontStyle: 'italic', fontWeight: 600, background: 'linear-gradient(90deg,#818CF8,#A855F7,#22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                  Administre seu BPO como uma empresa.
+                  Comece a crescer com método, números e processos.
                 </span>
               </h1>
 
