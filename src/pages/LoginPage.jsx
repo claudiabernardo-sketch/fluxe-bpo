@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import LOGO_SRC from '../assets/logo-fluxe-white.png'
+import CLAUDIA_SRC from '../assets/claudia-mentora.jpg'
 
 // ── Conteúdo ───────────────────────────────────────────────────────────────
 
@@ -375,6 +376,35 @@ export default function LoginPage() {
           </div>
         </section>
       )}
+
+      {/* ── QUEM SOU EU ─────────────────────────────────────────── */}
+      <section style={{ padding: isMobile ? '52px 20px' : '80px 48px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '340px 1fr', gap: isMobile ? 32 : 64, alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: '10%', left: '50%', transform: 'translateX(-50%)', width: 340, height: 340, background: 'radial-gradient(ellipse, rgba(139,92,246,.28) 0%, transparent 70%)', filter: 'blur(30px)', pointerEvents: 'none' }} />
+            <div style={{ position: 'relative', width: isMobile ? 240 : '100%', maxWidth: 300 }}>
+              <img src={CLAUDIA_SRC} alt="Cláudia Bernardo" style={{
+                width: '100%', display: 'block', objectFit: 'cover',
+                WebkitMaskImage: 'radial-gradient(ellipse 72% 88% at 50% 38%, black 55%, transparent 92%)',
+                maskImage: 'radial-gradient(ellipse 72% 88% at 50% 38%, black 55%, transparent 92%)',
+              }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, rgba(99,102,241,.14), transparent 55%)', mixBlendMode: 'overlay', pointerEvents: 'none' }} />
+            </div>
+          </div>
+          <div style={{ textAlign: isMobile ? 'center' : 'left' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>QUEM SOU EU</div>
+            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 24 : 30, fontWeight: 800, color: '#F8FAFC', margin: '0 0 4px', letterSpacing: '-.02em' }}>Cláudia Bernardo</h2>
+            <div style={{ fontSize: 13, color: '#8B5CF6', fontWeight: 600, marginBottom: 6 }}>Mentora e especialista em BPO Financeiro</div>
+            <div style={{ fontSize: 12, color: '#64748B', marginBottom: 18 }}>Pós-graduada em Finanças (FGV) · Direito e Administração (Comércio Exterior)</div>
+            <p style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.75, margin: '0 0 14px' }}>
+              Há anos estruturo operações financeiras e ajudo empresas a decidir com base em números. Percebi que a maioria dos profissionais dominava a parte técnica, mas não sabia organizar a operação, precificar certo e crescer com previsibilidade — foi por isso que criei esta mentoria.
+            </p>
+            <p style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.75, margin: 0 }}>
+              Meu compromisso é compartilhar exatamente o que uso na prática, sem teoria desnecessária — dentro do Laboratório BPO, com acompanhamento individual do começo ao fim.
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* ── PROBLEMA ────────────────────────────────────────────── */}
       <section style={{ padding: isMobile ? '60px 20px' : '80px 48px', background: 'rgba(255,255,255,.015)' }}>
