@@ -263,7 +263,7 @@ export default function LoginPage() {
               </h1>
 
               <p style={{ fontSize: isMobile ? 15 : 18, color: '#94A3B8', lineHeight: 1.7, margin: isMobile ? '0 auto 32px' : '0 0 36px', maxWidth: 480 }}>
-                Na mentoria Fluxe você aprende, na prática, a estruturar, precificar e escalar seu BPO Financeiro com o Método Fluxe® — usando o Fluxe como seu caderno de exercícios, dentro do Laboratório Fluxe.
+                Na mentoria Fluxe você aprende, com acompanhamento comigo, a desenhar a operação, precificar certo e montar o plano de negócios do seu BPO Financeiro — usando o Fluxe como seu caderno de exercícios, na prática.
               </p>
 
               <div style={{ display: 'flex', justifyContent: isMobile ? 'center' : 'flex-start' }}>
@@ -595,9 +595,9 @@ export default function LoginPage() {
           <Reveal delay={0.2}>
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 16, marginTop: 28 }}>
               {[
-                { icon: '🧩', title: 'Templates prontos', desc: 'Proposta, contrato, checklist de onboarding, planilha de precificação' },
-                { icon: '✅', title: 'Checklists guiados', desc: 'Cada etapa do Método Fluxe com seu próprio checklist de execução' },
-                { icon: '🤖', title: 'IA aplicada', desc: 'Lê boletos e notas fiscais recebidas e resume pra você, automaticamente' },
+                { icon: '🗺️', title: 'Desenho da operação', desc: 'Mapeie processos, equipe e capacidade real do seu BPO' },
+                { icon: '🧮', title: 'Precificação', desc: 'Calcule o preço certo com base no custo real da sua equipe' },
+                { icon: '📈', title: 'Plano de negócio', desc: 'Monte o plano estratégico pra crescer com previsibilidade' },
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '18px 16px', background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 12 }}>
                   <span style={{ fontSize: 22, flexShrink: 0 }}>{item.icon}</span>
