@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import LOGO_SRC from '../assets/logo-fluxe-white.png'
 import CLAUDIA_SRC from '../assets/claudia-mentora.jpg'
+import CLAUDIA_HERO_SRC from '../assets/claudia-hero.jpg'
 
 // ── Conteúdo ───────────────────────────────────────────────────────────────
 
@@ -206,15 +207,38 @@ export default function LoginPage() {
       )}
 
       {/* ── HERO ────────────────────────────────────────────────── */}
-      <section id="hero" style={{ minHeight: '92vh', display: 'flex', alignItems: 'center', padding: isMobile ? '100px 20px 60px' : '120px 48px 80px', position: 'relative', overflow: 'hidden' }}>
+      <section id="hero" style={{ minHeight: '92vh', display: 'flex', alignItems: 'center', padding: isMobile ? '100px 0 0' : '120px 0 0', position: 'relative', overflow: 'hidden' }}>
         {/* Grid background */}
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(99,102,241,.05) 1px, transparent 1px)', backgroundSize: '32px 32px', pointerEvents: 'none' }} />
         {/* Glow */}
-        <div style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)', width: 700, height: 500, background: 'radial-gradient(ellipse, rgba(99,102,241,.18) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
+        <div style={{ position: 'absolute', top: '30%', left: '20%', width: 700, height: 500, background: 'radial-gradient(ellipse, rgba(99,102,241,.16) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
 
-        <div style={{ width: '100%', maxWidth: 1160, margin: '0 auto', position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 380px', gap: isMobile ? 32 : 56, alignItems: 'center' }}>
+        {/* Foto full-bleed à direita (desktop) */}
+        {!isMobile && (
+          <img src={CLAUDIA_HERO_SRC} alt="Cláudia Bernardo" style={{
+            position: 'absolute', top: 0, right: 0, height: '100%', width: '46%', objectFit: 'cover', objectPosition: 'top center',
+            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 20%)',
+            maskImage: 'linear-gradient(to right, transparent 0%, black 20%)',
+          }} />
+        )}
+        {!isMobile && (
+          <div style={{ position: 'absolute', top: 0, right: 0, height: '100%', width: '46%', background: 'linear-gradient(0deg, #060A14 0%, transparent 22%)', pointerEvents: 'none' }} />
+        )}
 
-          <div style={{ order: isMobile ? 2 : 1, textAlign: isMobile ? 'center' : 'left' }}>
+        <div style={{ width: '100%', maxWidth: 1280, margin: '0 auto', position: 'relative', zIndex: 1, padding: isMobile ? '0 20px 48px' : '0 48px 72px' }}>
+
+          {isMobile && (
+            <div style={{ marginBottom: 28, position: 'relative' }}>
+              <div style={{ position: 'absolute', top: '6%', left: '50%', transform: 'translateX(-50%)', width: 280, height: 280, background: 'radial-gradient(ellipse, rgba(139,92,246,.28) 0%, transparent 70%)', filter: 'blur(30px)', pointerEvents: 'none' }} />
+              <img src={CLAUDIA_HERO_SRC} alt="Cláudia Bernardo" style={{
+                width: '100%', maxHeight: 340, display: 'block', objectFit: 'cover', objectPosition: 'top center', borderRadius: 20, position: 'relative',
+                WebkitMaskImage: 'linear-gradient(to bottom, black 78%, transparent 100%)',
+                maskImage: 'linear-gradient(to bottom, black 78%, transparent 100%)',
+              }} />
+            </div>
+          )}
+
+          <div style={{ maxWidth: isMobile ? '100%' : 620, textAlign: isMobile ? 'center' : 'left' }}>
 
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(99,102,241,.1)', border: '1px solid rgba(99,102,241,.22)', borderRadius: 99, padding: '6px 14px', marginBottom: 24 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', display: 'inline-block', boxShadow: '0 0 8px #22C55E80' }} />
@@ -250,18 +274,6 @@ export default function LoginPage() {
                   <span style={{ fontSize: 12, color: '#94A3B8' }}><strong style={{ color: '#CBD5E1' }}>{t}</strong> {s}</span>
                 </div>
               ))}
-            </div>
-          </div>
-
-          <div style={{ order: isMobile ? 1 : 2, display: 'flex', justifyContent: 'center', position: 'relative' }}>
-            <div style={{ position: 'absolute', top: '8%', left: '50%', transform: 'translateX(-50%)', width: 360, height: 360, background: 'radial-gradient(ellipse, rgba(139,92,246,.32) 0%, transparent 70%)', filter: 'blur(34px)', pointerEvents: 'none' }} />
-            <div style={{ position: 'relative', width: isMobile ? 220 : '100%', maxWidth: 320 }}>
-              <img src={CLAUDIA_SRC} alt="Cláudia Bernardo" style={{
-                width: '100%', display: 'block', objectFit: 'cover',
-                WebkitMaskImage: 'radial-gradient(ellipse 74% 90% at 50% 36%, black 58%, transparent 94%)',
-                maskImage: 'radial-gradient(ellipse 74% 90% at 50% 36%, black 58%, transparent 94%)',
-              }} />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, rgba(99,102,241,.14), transparent 55%)', mixBlendMode: 'overlay', pointerEvents: 'none' }} />
             </div>
           </div>
         </div>
