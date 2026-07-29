@@ -212,45 +212,79 @@ export default function LoginPage() {
         {/* Glow */}
         <div style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)', width: 700, height: 500, background: 'radial-gradient(ellipse, rgba(99,102,241,.18) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
 
-        <div style={{ width: '100%', maxWidth: 760, margin: '0 auto', position: 'relative', zIndex: 1, textAlign: 'center' }}>
+        <div style={{ width: '100%', maxWidth: 1160, margin: '0 auto', position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 380px', gap: isMobile ? 32 : 56, alignItems: 'center' }}>
 
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(99,102,241,.1)', border: '1px solid rgba(99,102,241,.22)', borderRadius: 99, padding: '6px 14px', marginBottom: 24 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', display: 'inline-block', boxShadow: '0 0 8px #22C55E80' }} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '.12em', textTransform: 'uppercase' }}>Mentoria individual</span>
-          </div>
+          <div style={{ order: isMobile ? 2 : 1, textAlign: isMobile ? 'center' : 'left' }}>
 
-          <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 34 : 56, fontWeight: 900, lineHeight: 1.1, margin: '0 0 20px', color: '#F8FAFC', letterSpacing: '-.03em' }}>
-            Sua precificação está<br />
-            <span style={{ fontStyle: 'italic', fontWeight: 600, background: 'linear-gradient(90deg,#818CF8,#A855F7,#22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              te dando prejuízo?
-            </span>
-          </h1>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(99,102,241,.1)', border: '1px solid rgba(99,102,241,.22)', borderRadius: 99, padding: '6px 14px', marginBottom: 24 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', display: 'inline-block', boxShadow: '0 0 8px #22C55E80' }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '.12em', textTransform: 'uppercase' }}>Mentoria individual</span>
+            </div>
 
-          <p style={{ fontSize: isMobile ? 16 : 18, color: '#94A3B8', lineHeight: 1.75, margin: '0 auto 36px', maxWidth: 580 }}>
-            Mentoria individual pra donos de BPO financeiro que querem aprender, na prática, a precificar certo, organizar a operação e vender com lucro real — dentro do Laboratório BPO, o ambiente exclusivo onde você aplica cada etapa do método comigo.
-          </p>
+            <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 34 : 52, fontWeight: 900, lineHeight: 1.1, margin: '0 0 20px', color: '#F8FAFC', letterSpacing: '-.03em' }}>
+              Sua precificação está<br />
+              <span style={{ fontStyle: 'italic', fontWeight: 600, background: 'linear-gradient(90deg,#818CF8,#A855F7,#22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                te dando prejuízo?
+              </span>
+            </h1>
 
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 40 }}>
-            <button onClick={abrirDiagnostico}
-              style={{ padding: '15px 32px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 24px rgba(99,102,241,.45)', transition: 'all .2s' }}
-              onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 10px 32px rgba(99,102,241,.55)' }}
-              onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(99,102,241,.45)' }}>
-              Agendar diagnóstico →
-            </button>
-          </div>
+            <p style={{ fontSize: isMobile ? 16 : 18, color: '#94A3B8', lineHeight: 1.75, margin: isMobile ? '0 auto 36px' : '0 0 36px', maxWidth: 540 }}>
+              Mentoria individual pra donos de BPO financeiro que querem aprender, na prática, a precificar certo, organizar a operação e vender com lucro real — dentro do Laboratório BPO, o ambiente exclusivo onde você aplica cada etapa do método comigo.
+            </p>
 
-          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', justifyContent: 'center' }}>
-            {[['Acompanhamento', 'individual, direto comigo'], ['Laboratório incluso', 'ambiente de aplicação faz parte da mentoria'], ['Sem letra miúda', 'diagnóstico sem compromisso']].map(([t, s], i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(34,197,94,.13)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <span style={{ color: '#22C55E', fontSize: 10, fontWeight: 800 }}>✓</span>
+            <div style={{ display: 'flex', justifyContent: isMobile ? 'center' : 'flex-start', marginBottom: 40 }}>
+              <button onClick={abrirDiagnostico}
+                style={{ padding: '15px 32px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 24px rgba(99,102,241,.45)', transition: 'all .2s' }}
+                onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 10px 32px rgba(99,102,241,.55)' }}
+                onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(99,102,241,.45)' }}>
+                Agendar diagnóstico →
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', justifyContent: isMobile ? 'center' : 'flex-start' }}>
+              {[['Acompanhamento', 'individual, direto comigo'], ['Laboratório incluso', 'ambiente de aplicação faz parte da mentoria'], ['Sem letra miúda', 'diagnóstico sem compromisso']].map(([t, s], i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(34,197,94,.13)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ color: '#22C55E', fontSize: 10, fontWeight: 800 }}>✓</span>
+                  </div>
+                  <span style={{ fontSize: 12, color: '#94A3B8' }}><strong style={{ color: '#CBD5E1' }}>{t}</strong> {s}</span>
                 </div>
-                <span style={{ fontSize: 12, color: '#94A3B8' }}><strong style={{ color: '#CBD5E1' }}>{t}</strong> {s}</span>
-              </div>
-            ))}
+              ))}
+            </div>
+          </div>
+
+          <div style={{ order: isMobile ? 1 : 2, display: 'flex', justifyContent: 'center', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: '8%', left: '50%', transform: 'translateX(-50%)', width: 360, height: 360, background: 'radial-gradient(ellipse, rgba(139,92,246,.32) 0%, transparent 70%)', filter: 'blur(34px)', pointerEvents: 'none' }} />
+            <div style={{ position: 'relative', width: isMobile ? 220 : '100%', maxWidth: 320 }}>
+              <img src={CLAUDIA_SRC} alt="Cláudia Bernardo" style={{
+                width: '100%', display: 'block', objectFit: 'cover',
+                WebkitMaskImage: 'radial-gradient(ellipse 74% 90% at 50% 36%, black 58%, transparent 94%)',
+                maskImage: 'radial-gradient(ellipse 74% 90% at 50% 36%, black 58%, transparent 94%)',
+              }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, rgba(99,102,241,.14), transparent 55%)', mixBlendMode: 'overlay', pointerEvents: 'none' }} />
+            </div>
           </div>
         </div>
       </section>
+
+      {/* ── MARQUEE ─────────────────────────────────────────────── */}
+      <div style={{ padding: '14px 0', borderTop: '1px solid rgba(255,255,255,.06)', borderBottom: '1px solid rgba(255,255,255,.06)', overflow: 'hidden', whiteSpace: 'nowrap', background: '#0B1220' }}>
+        <div className="fluxe-marquee-track" style={{ display: 'inline-block' }}>
+          {[0, 1].map(rep => (
+            <span key={rep} style={{ display: 'inline-block' }}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <span key={i} style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.15em', color: '#475569', margin: '0 18px' }}>
+                  MENTORIA BPO LUCRATIVO <span style={{ color: '#6366F1' }}>·</span> LABORATÓRIO BPO <span style={{ color: '#6366F1' }}>·</span> DIAGNÓSTICO INDIVIDUAL <span style={{ color: '#6366F1' }}>·</span>
+                </span>
+              ))}
+            </span>
+          ))}
+        </div>
+        <style>{`
+          @keyframes fluxe-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+          .fluxe-marquee-track { animation: fluxe-marquee 32s linear infinite; }
+        `}</style>
+      </div>
 
       {/* ── ENTRAR (compacto, só aparece quando clicado) ────────── */}
       {showLogin && (
@@ -378,11 +412,11 @@ export default function LoginPage() {
       )}
 
       {/* ── QUEM SOU EU ─────────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '52px 20px' : '80px 48px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '340px 1fr', gap: isMobile ? 32 : 64, alignItems: 'center' }}>
+      <section style={{ padding: isMobile ? '52px 20px' : '80px 48px', background: '#0B1220', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '300px 1fr', gap: isMobile ? 28 : 56, alignItems: 'center' }}>
           <div style={{ display: 'flex', justifyContent: 'center', position: 'relative' }}>
-            <div style={{ position: 'absolute', top: '10%', left: '50%', transform: 'translateX(-50%)', width: 340, height: 340, background: 'radial-gradient(ellipse, rgba(139,92,246,.28) 0%, transparent 70%)', filter: 'blur(30px)', pointerEvents: 'none' }} />
-            <div style={{ position: 'relative', width: isMobile ? 240 : '100%', maxWidth: 300 }}>
+            <div style={{ position: 'absolute', top: '10%', left: '50%', transform: 'translateX(-50%)', width: 300, height: 300, background: 'radial-gradient(ellipse, rgba(139,92,246,.24) 0%, transparent 70%)', filter: 'blur(28px)', pointerEvents: 'none' }} />
+            <div style={{ position: 'relative', width: isMobile ? 220 : '100%', maxWidth: 260 }}>
               <img src={CLAUDIA_SRC} alt="Cláudia Bernardo" style={{
                 width: '100%', display: 'block', objectFit: 'cover',
                 WebkitMaskImage: 'radial-gradient(ellipse 72% 88% at 50% 38%, black 55%, transparent 92%)',
@@ -407,7 +441,7 @@ export default function LoginPage() {
       </section>
 
       {/* ── PROBLEMA ────────────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '60px 20px' : '80px 48px', background: 'rgba(255,255,255,.015)' }}>
+      <section style={{ padding: isMobile ? '60px 20px' : '80px 48px', background: '#060A14' }}>
         <div style={{ maxWidth: 1060, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 52 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#EF4444', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>O PROBLEMA</div>
@@ -457,8 +491,8 @@ export default function LoginPage() {
       </section>
 
       {/* ── O MÉTODO ────────────────────────────────────────────── */}
-      <section id="metodo" style={{ padding: isMobile ? '60px 20px' : '96px 48px' }}>
-        <div style={{ maxWidth: 780, margin: '0 auto' }}>
+      <section id="metodo" style={{ padding: isMobile ? '60px 20px' : '96px 48px', background: '#0B1220' }}>
+        <div style={{ maxWidth: 920, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 40 : 60 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>O MÉTODO</div>
             <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>Quatro semanas pra sair do feeling e entrar nos dados.</h2>
@@ -488,7 +522,7 @@ export default function LoginPage() {
       </section>
 
       {/* ── LABORATÓRIO BPO ─────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '0 20px 72px' : '0 48px 96px', position: 'relative' }}>
+      <section style={{ padding: isMobile ? '0 20px 72px' : '0 48px 96px', position: 'relative', background: '#060A14' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#475569', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>O AMBIENTE DA MENTORIA</div>
@@ -599,8 +633,8 @@ export default function LoginPage() {
       </section>
 
       {/* ── PARA QUEM É ─────────────────────────────────────────── */}
-      <section id="para-quem" style={{ padding: isMobile ? '60px 20px' : '96px 48px', background: 'rgba(255,255,255,.015)' }}>
-        <div style={{ maxWidth: 860, margin: '0 auto' }}>
+      <section id="para-quem" style={{ padding: isMobile ? '60px 20px' : '96px 48px', background: '#0B1220' }}>
+        <div style={{ maxWidth: 960, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 32 : 48 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>PARA QUEM É</div>
             <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 24 : 34, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>Pra quem é (e pra quem não é) a mentoria</h2>
@@ -637,7 +671,7 @@ export default function LoginPage() {
       </section>
 
       {/* ── ANTES E DEPOIS DA MENTORIA ──────────────────────────── */}
-      <section style={{ padding: isMobile ? '60px 20px' : '80px 48px', background: 'rgba(255,255,255,.015)' }}>
+      <section style={{ padding: isMobile ? '60px 20px' : '80px 48px', background: '#060A14' }}>
         <div style={{ maxWidth: 860, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 32 : 48 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>POR QUE A MENTORIA</div>
@@ -670,7 +704,7 @@ export default function LoginPage() {
       </section>
 
       {/* ── RESULTADOS ──────────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '60px 20px' : '80px 48px' }}>
+      <section style={{ padding: isMobile ? '60px 20px' : '80px 48px', background: '#0B1220' }}>
         <div style={{ maxWidth: 1060, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 52 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>RESULTADOS</div>
@@ -701,7 +735,7 @@ export default function LoginPage() {
       </section>
 
       {/* ── MENTORIA EM DETALHE ─────────────────────────────────── */}
-      <section id="precos" style={{ padding: isMobile ? '60px 20px' : '96px 48px', background: 'rgba(255,255,255,.015)' }}>
+      <section id="precos" style={{ padding: isMobile ? '60px 20px' : '96px 48px', background: '#060A14' }}>
         <div style={{ maxWidth: 700, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 56 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>A MENTORIA</div>
@@ -749,7 +783,7 @@ export default function LoginPage() {
       </section>
 
       {/* ── FAQ ─────────────────────────────────────────────────── */}
-      <section id="faq" style={{ padding: isMobile ? '60px 20px' : '96px 48px' }}>
+      <section id="faq" style={{ padding: isMobile ? '60px 20px' : '96px 48px', background: '#0B1220' }}>
         <div style={{ maxWidth: 700, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 48 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>FAQ</div>
@@ -776,7 +810,7 @@ export default function LoginPage() {
       </section>
 
       {/* ── CTA FINAL ───────────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '60px 20px' : '96px 48px', background: 'rgba(255,255,255,.015)' }}>
+      <section style={{ padding: isMobile ? '60px 20px' : '96px 48px', background: '#060A14' }}>
         <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
           <div style={{ background: 'linear-gradient(135deg,rgba(99,102,241,.14),rgba(139,92,246,.09))', border: '1px solid rgba(99,102,241,.22)', borderRadius: 24, padding: isMobile ? '44px 24px' : '64px 52px', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,.18) 0%, transparent 70%)', pointerEvents: 'none' }} />
