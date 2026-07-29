@@ -30,11 +30,11 @@ const TRANSFORMACAO = [
 const FORMATOS = [
   {
     nome: 'Mentoria Individual',
-    desc: 'Encontros comigo, só você, olhando de perto a sua operação — no seu ritmo, nas suas prioridades.',
+    desc: 'Encontros comigo, só você, olhando de perto a sua operação, no seu ritmo, nas suas prioridades.',
   },
   {
     nome: 'Mentoria em Grupo',
-    desc: 'Mesmo Método Fluxe, aplicado em turma — trocando experiência com outros donos de BPO Financeiro.',
+    desc: 'Mesmo Método Fluxe, aplicado em turma, trocando experiência com outros donos de BPO Financeiro.',
   },
 ]
 
@@ -44,12 +44,12 @@ const RESULTADOS = [
 ]
 
 const FAQS = [
-  { q: 'Preciso saber mexer em sistema?', a: 'Não. O Fluxe foi pensado pra quem opera BPO no dia a dia, não pra quem entende de tecnologia. O Laboratório Fluxe já vem configurado dentro do acompanhamento — você aprende usando, na prática.' },
-  { q: 'Como funciona o acompanhamento?', a: 'Encontros comigo (individuais ou em grupo, você escolhe), direto na sua operação real dentro do Laboratório Fluxe — precificação, rotina, rentabilidade por cliente. Não é um curso gravado.' },
-  { q: 'Quanto custa?', a: 'Depende do formato e da duração combinados no diagnóstico — por isso não coloco tabela de preço aqui. Agenda uma conversa sem compromisso.' },
-  { q: 'Já uso outro sistema pra gerir o BPO, dá pra participar?', a: 'Sim. O Fluxe funciona em cima do que você já tem — o Laboratório é o ambiente que uso pra dar clareza aos números, mas o foco é te ajudar a crescer, não trocar de sistema.' },
+  { q: 'Preciso saber mexer em sistema?', a: 'Não. O Fluxe foi pensado pra quem opera BPO no dia a dia, não pra quem entende de tecnologia. O Laboratório Fluxe já vem configurado dentro do acompanhamento. Você aprende usando, na prática.' },
+  { q: 'Como funciona o acompanhamento?', a: 'Encontros comigo (individuais ou em grupo, você escolhe), direto na sua operação real dentro do Laboratório Fluxe: precificação, rotina, rentabilidade por cliente. Não é um curso gravado.' },
+  { q: 'Quanto custa?', a: 'Depende do formato e da duração combinados no diagnóstico, por isso não coloco tabela de preço aqui. Agenda uma conversa sem compromisso.' },
+  { q: 'Já uso outro sistema pra gerir o BPO, dá pra participar?', a: 'Sim. O Fluxe funciona em cima do que você já tem. O Laboratório é o ambiente que uso pra dar clareza aos números, mas o foco é te ajudar a crescer, não trocar de sistema.' },
   { q: 'Meus dados ficam seguros?', a: 'Sim. Cada BPO tem os dados completamente isolados dentro do Laboratório Fluxe, com criptografia em repouso e em trânsito.' },
-  { q: 'Serve pra qualquer tamanho de BPO?', a: 'Sim — do BPO solo que está começando ao que já tem equipe e quer organizar a operação pra crescer com previsibilidade.' },
+  { q: 'Serve pra qualquer tamanho de BPO?', a: 'Sim, do BPO solo que está começando ao que já tem equipe e quer organizar a operação pra crescer com previsibilidade.' },
 ]
 
 // ── Componente principal ───────────────────────────────────────────────────
@@ -243,7 +243,7 @@ export default function LoginPage() {
           {isMobile && (
             <Reveal>
               <div style={{ position: 'relative', marginBottom: 8 }}>
-                <img src={CLAUDIA_ECOSSISTEMA_SRC} alt="Cláudia Bernardo — Fluxe" style={{ width: '100%', display: 'block', objectFit: 'contain' }} />
+                <img src={CLAUDIA_ECOSSISTEMA_SRC} alt="Cláudia Bernardo, Fluxe" style={{ width: '100%', display: 'block', objectFit: 'contain' }} />
               </div>
             </Reveal>
           )}
@@ -260,7 +260,7 @@ export default function LoginPage() {
               </h1>
 
               <p style={{ fontSize: isMobile ? 15 : 18, color: '#94A3B8', lineHeight: 1.7, margin: isMobile ? '0 auto 32px' : '0 0 36px', maxWidth: 480 }}>
-                Na mentoria Fluxe você aprende, com acompanhamento comigo, a desenhar a operação, precificar certo e montar o plano de negócios do seu BPO Financeiro — usando o Fluxe como seu caderno de exercícios, na prática.
+                Na mentoria Fluxe você aprende, com acompanhamento comigo, a desenhar a operação, precificar certo e montar o plano de negócios do seu BPO Financeiro, usando o Fluxe como seu caderno de exercícios, na prática.
               </p>
 
               <div style={{ display: 'flex', justifyContent: isMobile ? 'center' : 'flex-start' }}>
@@ -276,7 +276,7 @@ export default function LoginPage() {
 
           {!isMobile && (
             <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '86vh' }}>
-              <img src={CLAUDIA_ECOSSISTEMA_SRC} alt="Cláudia Bernardo — Fluxe" style={{
+              <img src={CLAUDIA_ECOSSISTEMA_SRC} alt="Cláudia Bernardo, Fluxe" style={{
                 maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block',
                 transform: `translate(${heroTilt.x}px, ${heroTilt.y}px)`, transition: 'transform .3s ease-out',
               }} />
@@ -450,10 +450,10 @@ export default function LoginPage() {
                 Passei anos estruturando operações financeiras. Criei o Método Fluxe pra ninguém mais precisar aprender do jeito difícil.
               </h2>
               <p style={{ fontSize: 15, color: '#94A3B8', lineHeight: 1.8, margin: '0 0 16px' }}>
-                Vi dono de BPO competente na entrega, mas perdido na própria operação — sem saber o custo real da equipe, cobrando no feeling, apagando incêndio todo mês.
+                Vi dono de BPO competente na entrega, mas perdido na própria operação: sem saber o custo real da equipe, cobrando no feeling, apagando incêndio todo mês.
               </p>
               <p style={{ fontSize: 15, color: '#94A3B8', lineHeight: 1.8, margin: '0 0 24px' }}>
-                O Fluxe nasceu pra fechar essa distância: um método próprio, aplicado dentro de um ambiente que eu mesma uso — não teoria solta, prática guiada.
+                O Fluxe nasceu pra fechar essa distância: um método próprio, aplicado dentro de um ambiente que eu mesma uso. Não teoria solta, prática guiada.
               </p>
               <div style={{ fontSize: 12, color: '#64748B' }}>Pós-graduada em Finanças (FGV) · Direito e Administração (Comércio Exterior)</div>
             </div>
@@ -508,7 +508,7 @@ export default function LoginPage() {
           <Reveal>
             <div style={{ textAlign: 'center', marginBottom: 40 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#475569', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 14 }}>O LABORATÓRIO FLUXE</div>
-              <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>O ambiente onde você aplica o método — não assiste, executa.</h2>
+              <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>O ambiente onde você aplica o método. Não assiste, executa.</h2>
             </div>
           </Reveal>
 
