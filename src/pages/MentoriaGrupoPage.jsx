@@ -251,7 +251,7 @@ export default function MentoriaGrupoPage() {
             </div>
           </Reveal>
           <Reveal delay={0.15}>
-            <p style={{ textAlign: 'center', fontSize: 14, color: '#64748B', marginTop: 28 }}>O Fluxe será o seu caderno de construção — tudo organizado em um único lugar.</p>
+            <p style={{ textAlign: 'center', fontSize: 14, color: '#64748B', marginTop: 28 }}>O Fluxe será o seu caderno de construção, tudo organizado em um único lugar.</p>
           </Reveal>
         </div>
       </section>
