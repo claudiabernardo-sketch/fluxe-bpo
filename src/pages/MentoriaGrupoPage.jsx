@@ -104,6 +104,7 @@ export default function MentoriaGrupoPage() {
   }
 
   function abrirCheckout() {
+    window.fbq && window.fbq('track', 'InitiateCheckout')
     window.open(checkoutUrl, '_blank', 'noopener')
   }
 
