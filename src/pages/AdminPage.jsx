@@ -140,6 +140,57 @@ function LinhaEmpresa({ emp, onAcao, pendente }) {
   )
 }
 
+function NovoMentoradoForm({ acao }) {
+  const [aberto, setAberto] = useState(false)
+  const [form, setForm] = useState({ nome_empresa: '', nome_usuario: '', email: '' })
+  const [resultado, setResultado] = useState(null)
+
+  const pronto = form.nome_empresa.trim() && form.nome_usuario.trim() && form.email.trim()
+
+  function salvar() {
+    if (!pronto) return
+    setResultado(null)
+    acao.mutate({ action: 'criar_mentorado', ...form }, {
+      onSuccess: (data) => {
+        setResultado(data)
+        setForm({ nome_empresa: '', nome_usuario: '', email: '' })
+      },
+    })
+  }
+
+  const fi = { padding: '7px 10px', border: '1px solid var(--bo)', borderRadius: 8, fontSize: 12, fontFamily: 'inherit', flex: '1 1 160px' }
+
+  if (!aberto) {
+    return (
+      <div style={{ marginBottom: 12 }}>
+        <Btn variant="primary" onClick={() => setAberto(true)}>+ Adicionar mentorado</Btn>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ background: 'var(--bg2)', padding: 12, borderRadius: 10, marginBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <input style={fi} placeholder="Nome da empresa" value={form.nome_empresa} onChange={e => setForm(f => ({ ...f, nome_empresa: e.target.value }))} />
+        <input style={fi} placeholder="Nome do mentorado" value={form.nome_usuario} onChange={e => setForm(f => ({ ...f, nome_usuario: e.target.value }))} />
+        <input style={fi} type="email" placeholder="E-mail" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+      </div>
+      {acao.isError && <div style={{ color: '#991B1B', fontSize: 12, marginBottom: 8 }}>Erro: {acao.error?.message}</div>}
+      {resultado?.success && (
+        <div style={{ color: '#166534', fontSize: 12, marginBottom: 8 }}>
+          Mentorado criado{resultado.emailSent ? ' e email de boas-vindas enviado.' : ', mas o email não foi enviado — verifique o Resend.'}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <Btn variant="primary" disabled={acao.isPending || !pronto} onClick={salvar}>
+          {acao.isPending ? 'Criando...' : 'Criar e enviar boas-vindas'}
+        </Btn>
+        <Btn variant="ghost" onClick={() => setAberto(false)}>Cancelar</Btn>
+      </div>
+    </div>
+  )
+}
+
 function SecaoEmpresas() {
   const { data: empresas = [], isLoading } = useAdminEmpresas()
   const acao = useAdminAcaoEmpresa()
@@ -154,7 +205,7 @@ function SecaoEmpresas() {
     <Card style={{ marginBottom: 16 }}>
       <CardHeader title={`Empresas usando o Fluxe (${empresas.length})`} icon="fa-solid fa-building" />
       <div style={{ padding: '4px 16px 16px', overflowX: 'auto' }}>
-        {acao.isError && <div style={{ color: '#991B1B', fontSize: 12, marginBottom: 8 }}>Erro: {acao.error?.message}</div>}
+        <NovoMentoradoForm acao={acao} />
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
           <thead>
             <tr style={{ textAlign: 'left', fontSize: 10, color: 'var(--tx3)', textTransform: 'uppercase' }}>
