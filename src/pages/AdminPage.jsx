@@ -177,8 +177,15 @@ function NovoMentoradoForm({ acao }) {
       </div>
       {acao.isError && <div style={{ color: '#991B1B', fontSize: 12, marginBottom: 8 }}>Erro: {acao.error?.message}</div>}
       {resultado?.success && (
-        <div style={{ color: '#166534', fontSize: 12, marginBottom: 8 }}>
-          Mentorado criado{resultado.emailSent ? ' e email de boas-vindas enviado.' : ', mas o email não foi enviado — verifique o Resend.'}
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 8, padding: '10px 12px', marginBottom: 8 }}>
+          <div style={{ color: '#166534', fontSize: 12, marginBottom: 6 }}>
+            Mentorado criado{resultado.emailSent ? ' e email de boas-vindas enviado.' : ', mas o email não foi enviado — verifique o Resend.'} Manda esses dados por WhatsApp também, pra garantir:
+          </div>
+          <div style={{ fontSize: 12, color: '#0F172A', fontFamily: 'monospace' }}>
+            Site: fluxebpo.com.br → Entrar<br />
+            E-mail: {resultado.email}<br />
+            Senha: {resultado.senha}
+          </div>
         </div>
       )}
       <div style={{ display: 'flex', gap: 8 }}>

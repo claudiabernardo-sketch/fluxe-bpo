@@ -367,7 +367,7 @@ export default function ConfigPage() {
     }
   }
   const [deleteUser, setDeleteUser] = useState(null)
-  const [inviteLink, setInviteLink] = useState('')
+  const [inviteCreds, setInviteCreds] = useState(null) // { email, senha }
 
   const addUser = useMutation({
     mutationFn: async (u) => {
@@ -408,9 +408,9 @@ export default function ConfigPage() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['usuarios'] })
       setNovoUser({ nome:'', email:'', perfil:'operador', custo_hora:35, mensagem:'' })
-      // Se email não foi enviado, mostra o link para compartilhamento manual
-      if (!data?.emailSent && data?.magicLink) {
-        setInviteLink(data.magicLink)
+      // Sempre mostra email+senha como backup — não depende só do email chegar
+      if (data?.email && data?.senha) {
+        setInviteCreds({ email: data.email, senha: data.senha, emailSent: !!data?.emailSent })
       } else {
         setShowNovoUser(false)
       }
@@ -458,9 +458,9 @@ export default function ConfigPage() {
       )
       const data = await res.json()
       if (data?.error) throw new Error(data.error)
-      if (data?.magicLink && !data?.emailSent) {
-        // Email não enviado — mostra link para compartilhar manualmente
-        setLinkConvite({ nome: u.nome, link: data.magicLink })
+      if (data?.email && data?.senha) {
+        // Sempre mostra email+senha como backup — não depende só do email chegar
+        setLinkConvite({ nome: u.nome, email: data.email, senha: data.senha, emailSent: !!data?.emailSent })
       }
       setReenvioStatus(s => ({ ...s, [u.id]: data?.emailSent ? 'ok' : 'link' }))
       setTimeout(() => setReenvioStatus(s => { const n={...s}; delete n[u.id]; return n }), data?.emailSent ? 3000 : 60000)
@@ -828,22 +828,21 @@ export default function ConfigPage() {
                     </div>
                   </div>
                   <div style={{ display:'flex', justifyContent:'flex-end', marginTop:10 }}>
-                    <Btn variant="primary" onClick={()=>{ setInviteLink(''); addUser.mutate(novoUser) }} disabled={addUser.isPending||!novoUser.nome||!novoUser.email}>
+                    <Btn variant="primary" onClick={()=>{ setInviteCreds(null); addUser.mutate(novoUser) }} disabled={addUser.isPending||!novoUser.nome||!novoUser.email}>
                       {addUser.isPending ? 'Criando acesso...' : '📧 Enviar convite'}
                     </Btn>
                   </div>
                   {addUser.isError && <div style={{ color:'#991B1B', fontSize:11, marginTop:8 }}>✗ {addUser.error?.message}</div>}
-                  {addUser.isSuccess && !inviteLink && <div style={{ color:'#15803D', fontSize:11, marginTop:8 }}>✓ Convite enviado por email!</div>}
-                  {inviteLink && (
-                    <div style={{ marginTop:12, padding:'12px 14px', background:'#FFF7ED', border:'1px solid #FED7AA', borderRadius:8 }}>
-                      <div style={{ fontSize:11, fontWeight:700, color:'#92400E', marginBottom:6 }}>
-                        ⚠️ Email não enviado — compartilhe este link com a funcionária:
+                  {inviteCreds && (
+                    <div style={{ marginTop:12, padding:'12px 14px', background: inviteCreds.emailSent ? '#F0FDF4' : '#FFF7ED', border: `1px solid ${inviteCreds.emailSent ? '#BBF7D0' : '#FED7AA'}`, borderRadius:8 }}>
+                      <div style={{ fontSize:11, fontWeight:700, color: inviteCreds.emailSent ? '#15803D' : '#92400E', marginBottom:6 }}>
+                        {inviteCreds.emailSent ? '✓ Convite enviado por email! Se quiser, mande também por WhatsApp:' : '⚠️ Email não enviado — mande esses dados por WhatsApp:'}
                       </div>
                       <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                        <input readOnly value={inviteLink} style={{ flex:1, fontSize:10, padding:'5px 8px', border:'1px solid #FED7AA', borderRadius:6, background:'#fff', color:'#334155', fontFamily:'monospace' }} onClick={e=>e.target.select()} />
-                        <Btn onClick={()=>{ navigator.clipboard.writeText(inviteLink) }} style={{ fontSize:10, padding:'5px 10px', whiteSpace:'nowrap' }}>Copiar</Btn>
+                        <input readOnly value={`E-mail: ${inviteCreds.email} · Senha: ${inviteCreds.senha}`} style={{ flex:1, fontSize:10, padding:'5px 8px', border:'1px solid #FED7AA', borderRadius:6, background:'#fff', color:'#334155', fontFamily:'monospace' }} onClick={e=>e.target.select()} />
+                        <Btn onClick={()=>{ navigator.clipboard.writeText(`Site: fluxebpo.com.br → Entrar\nE-mail: ${inviteCreds.email}\nSenha: ${inviteCreds.senha}`) }} style={{ fontSize:10, padding:'5px 10px', whiteSpace:'nowrap' }}>Copiar</Btn>
                       </div>
-                      <div style={{ fontSize:10, color:'#92400E', marginTop:6 }}>O acesso já foi criado. Este link expira em 24 horas.</div>
+                      <div style={{ fontSize:10, color:'#92400E', marginTop:6 }}>O acesso já foi criado com essa senha — não é um link, então não expira nem "queima" sozinho.</div>
                     </div>
                   )}
                 </div>
@@ -851,16 +850,16 @@ export default function ConfigPage() {
             )}
 
             {linkConvite && (
-              <div style={{ margin:'0 16px 12px', padding:'12px 14px', background:'#FFF7ED', border:'1px solid #FED7AA', borderRadius:8 }}>
-                <div style={{ fontSize:11, fontWeight:700, color:'#92400E', marginBottom:6 }}>
-                  ⚠️ Email não chegou para {linkConvite.nome} — copie e envie por WhatsApp:
+              <div style={{ margin:'0 16px 12px', padding:'12px 14px', background: linkConvite.emailSent ? '#F0FDF4' : '#FFF7ED', border: `1px solid ${linkConvite.emailSent ? '#BBF7D0' : '#FED7AA'}`, borderRadius:8 }}>
+                <div style={{ fontSize:11, fontWeight:700, color: linkConvite.emailSent ? '#15803D' : '#92400E', marginBottom:6 }}>
+                  {linkConvite.emailSent ? `✓ Email reenviado para ${linkConvite.nome}. Se quiser, mande também por WhatsApp:` : `⚠️ Email não chegou para ${linkConvite.nome} — mande esses dados por WhatsApp:`}
                 </div>
                 <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <input readOnly value={linkConvite.link} style={{ flex:1, fontSize:10, padding:'5px 8px', border:'1px solid #FED7AA', borderRadius:6, background:'#fff', color:'#334155', fontFamily:'monospace' }} onClick={e=>e.target.select()} />
-                  <Btn onClick={()=>{ navigator.clipboard.writeText(linkConvite.link); }} style={{ fontSize:10, padding:'5px 10px', whiteSpace:'nowrap' }}>Copiar</Btn>
+                  <input readOnly value={`E-mail: ${linkConvite.email} · Senha: ${linkConvite.senha}`} style={{ flex:1, fontSize:10, padding:'5px 8px', border:'1px solid #FED7AA', borderRadius:6, background:'#fff', color:'#334155', fontFamily:'monospace' }} onClick={e=>e.target.select()} />
+                  <Btn onClick={()=>{ navigator.clipboard.writeText(`Site: fluxebpo.com.br → Entrar\nE-mail: ${linkConvite.email}\nSenha: ${linkConvite.senha}`) }} style={{ fontSize:10, padding:'5px 10px', whiteSpace:'nowrap' }}>Copiar</Btn>
                 </div>
                 <div style={{ fontSize:10, color:'#92400E', marginTop:6 }}>
-                  Este link expira em 24h. Após usar, ela poderá criar sua senha normalmente.
+                  A senha já foi redefinida — não é um link, então não expira nem "queima" sozinha.
                   <span style={{ marginLeft:8, cursor:'pointer', textDecoration:'underline' }} onClick={()=>setLinkConvite(null)}>Fechar</span>
                 </div>
               </div>
