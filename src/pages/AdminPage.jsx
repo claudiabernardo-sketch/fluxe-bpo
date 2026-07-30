@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados, useSessoesMentoria, useCriarSessaoMentoria, useExcluirSessaoMentoria, useSessoesAvulsas, useCombinadosAbertos, useConcluirCombinado, useExcluirDadosMentoria } from '../hooks/useData'
 import { Card, CardHeader, Btn, Badge, Loader } from '../components/ui'
 
@@ -146,15 +146,22 @@ function NovoMentoradoForm({ acao }) {
   const [resultado, setResultado] = useState(null)
 
   const pronto = form.nome_empresa.trim() && form.nome_usuario.trim() && form.email.trim()
+  const enviandoRef = useRef(false)
 
   function salvar() {
-    if (!pronto) return
+    // Guarda síncrona: isPending do React Query só reflete no próximo
+    // render, então um duplo clique bem rápido conseguia disparar duas
+    // requisições antes do botão desabilitar. Isso já criou uma empresa
+    // duplicada numa vez.
+    if (!pronto || enviandoRef.current) return
+    enviandoRef.current = true
     setResultado(null)
     acao.mutate({ action: 'criar_mentorado', ...form }, {
       onSuccess: (data) => {
         setResultado(data)
         setForm({ nome_empresa: '', nome_usuario: '', email: '' })
       },
+      onSettled: () => { enviandoRef.current = false },
     })
   }
 

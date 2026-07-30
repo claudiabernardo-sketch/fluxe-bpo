@@ -233,13 +233,26 @@ serve(async (req) => {
         return ok({ error: 'nome_empresa, nome_usuario e email são obrigatórios' })
       }
 
-      const { data: empresaRow, error: empresaErr } = await supabase
-        .from('empresas')
-        .insert({ nome: nome_empresa, email, plano: 'pro', mentorado_bpo_lucrativo: true })
-        .select('id')
-        .single()
-      if (empresaErr) return ok({ error: empresaErr.message })
-      const empresaId = empresaRow.id
+      // Proteção contra clique duplo / reenvio: se já existe um usuário com
+      // esse e-mail, reaproveita a empresa dele em vez de criar outra do zero.
+      const { data: usuarioExistente } = await supabase
+        .from('usuarios')
+        .select('id, empresa_id')
+        .eq('email', email)
+        .maybeSingle()
+
+      let empresaId: string
+      if (usuarioExistente?.empresa_id) {
+        empresaId = usuarioExistente.empresa_id
+      } else {
+        const { data: empresaRow, error: empresaErr } = await supabase
+          .from('empresas')
+          .insert({ nome: nome_empresa, email, plano: 'pro', mentorado_bpo_lucrativo: true })
+          .select('id')
+          .single()
+        if (empresaErr) return ok({ error: empresaErr.message })
+        empresaId = empresaRow.id
+      }
 
       const senhaTemporaria = gerarSenhaTemporaria()
 
