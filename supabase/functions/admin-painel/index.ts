@@ -162,6 +162,33 @@ serve(async (req) => {
       return ok({ success: true })
     }
 
+    // ── Ação: excluir empresa e todos os dados dela pra sempre ─────────────
+    // Irreversível. O front exige digitar o nome exato da empresa antes de
+    // chamar isso. A tabela "propostas" tem FK NO ACTION (não cascateia
+    // sozinha), então precisa apagar na mão antes de apagar a empresa —
+    // todo o resto (usuarios, clientes, tarefas etc.) cascateia.
+    if (action === 'excluir_empresa') {
+      const { empresa_id } = payload
+      if (!empresa_id) return ok({ error: 'empresa_id é obrigatório' })
+
+      const { data: usuariosDaEmpresa } = await supabase
+        .from('usuarios')
+        .select('id')
+        .eq('empresa_id', empresa_id)
+
+      const { error: propostasErr } = await supabase.from('propostas').delete().eq('empresa_id', empresa_id)
+      if (propostasErr) return ok({ error: propostasErr.message })
+
+      for (const u of usuariosDaEmpresa ?? []) {
+        await supabase.auth.admin.deleteUser(u.id) // best-effort — não bloqueia se falhar
+      }
+
+      const { error: empresaErr } = await supabase.from('empresas').delete().eq('id', empresa_id)
+      if (empresaErr) return ok({ error: empresaErr.message })
+
+      return ok({ success: true, usuarios_removidos: usuariosDaEmpresa?.length ?? 0 })
+    }
+
     // ── Ação: estender trial em N dias ─────────────────────────────────────
     if (action === 'estender_trial') {
       const { empresa_id, dias } = payload
@@ -512,7 +539,7 @@ serve(async (req) => {
       return ok({ success: true })
     }
 
-    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | estender_trial | atualizar_valor_assinatura | toggle_mentorado | criar_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria | listar_sessoes_avulsas | listar_combinados_abertos | concluir_combinado | excluir_dados_mentoria' })
+    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | excluir_empresa | estender_trial | atualizar_valor_assinatura | toggle_mentorado | criar_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria | listar_sessoes_avulsas | listar_combinados_abertos | concluir_combinado | excluir_dados_mentoria' })
 
   } catch (e) {
     return ok({ error: e.message || 'Erro interno' })
