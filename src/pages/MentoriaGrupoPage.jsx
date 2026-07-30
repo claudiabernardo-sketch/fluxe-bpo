@@ -1,46 +1,65 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTurmaAtualPublica } from '../hooks/useData'
 import LOGO_SRC from '../assets/logo-fluxe-white.png'
-import CLAUDIA_ECOSSISTEMA_SRC from '../assets/claudia-hero-ecosistema.jpg'
+import CLAUDIA_ECOSSISTEMA_SRC from '../assets/claudia-mentoria-grupo.jpg'
 
-const WHATSAPP_MENTORIA_GRUPO = 'https://wa.me/5511917101173?text=Quero+saber+mais+sobre+a+Mentoria+em+Grupo+do+Fluxe'
+const WHATSAPP_MENTORIA_GRUPO = 'https://wa.me/5511917101173?text=Quero+construir+meu+BPO+com+o+Programa+BPO+Lucrativo'
 
-const METODO_FLUXE = [
-  { num: '01', nome: 'Comercial' },
-  { num: '02', nome: 'Onboarding' },
-  { num: '03', nome: 'Ativação' },
-  { num: '04', nome: 'Implantação' },
-  { num: '05', nome: 'Operacional' },
-  { num: '06', nome: 'Estratégico' },
-  { num: '07', nome: 'Acompanhamento' },
+const HERO_CHECKLIST = [
+  'Início: 12 de agosto',
+  '15 encontros ao vivo',
+  'Exercícios práticos dentro do Fluxe',
+  'Correções e acompanhamento',
 ]
 
-const COMO_FUNCIONA = [
-  { icon: '🎥', title: 'Aula ao vivo em turma', desc: 'Encontros comigo, aplicando o Método Fluxe direto na sua operação, trocando experiência com outros donos de BPO.' },
-  { icon: '🧮', title: 'Exercício no Fluxe', desc: 'Depois de cada aula, você aplica o que aprendeu no seu próprio Laboratório Fluxe — não é teoria solta.' },
-  { icon: '📼', title: 'Fica tudo gravado', desc: 'Não pôde assistir ao vivo? A aula e o material ficam disponíveis dentro do Fluxe pra você rever quando quiser.' },
+const VIRADA_ITEMS = [
+  'Posicionamento claro.',
+  'Serviços bem definidos.',
+  'Preços estratégicos.',
+  'Processos documentados.',
+  'Onboarding profissional.',
+  'Entregas organizadas.',
+  'Indicadores.',
+  'Rotina.',
+  'Planejamento.',
+  'Crescimento.',
 ]
 
-const RESULTADOS = [
-  { quote: 'Antes eu precificava no feeling. Descobri que meu cliente mais exigente consumia 3× mais horas que eu cobrava. Reajustei e aumentei minha margem em quase 40%.', name: 'Graziela Araújo', role: 'Sócia-fundadora · FinanciproBPO', init: 'GA' },
-  { quote: 'Minha equipe cresceu de 2 para 8 analistas e eu ainda sei exatamente o que cada um está fazendo, para qual cliente e em quanto tempo.', name: 'Ricardo Lemos', role: 'Diretor de Operações · ContaMaxBPO', init: 'RL' },
+const NAO_E = ['Não é um curso gravado.', 'Não é uma sequência de aulas.', 'Não é um monte de PDFs.']
+
+const LABORATORIO_ITEMS = [
+  'seu posicionamento', 'sua oferta', 'sua precificação', 'seus processos',
+  'seus clientes', 'seus indicadores', 'suas rotinas', 'seu plano de crescimento',
 ]
 
-const FAQS = [
-  { q: 'Como funcionam as aulas?', a: 'Encontros ao vivo comigo, em turma, aplicando o Método Fluxe direto na sua operação. Cada encontro vem com um exercício prático pra você aplicar no Fluxe antes do próximo. Tudo fica gravado.' },
-  { q: 'E se eu não conseguir assistir ao vivo?', a: 'Sem problema. Toda aula fica gravada e disponível dentro do Fluxe, junto com o exercício da semana.' },
-  { q: 'Preciso já ser cliente do Fluxe?', a: 'Não. Ao confirmar sua inscrição na Mentoria em Grupo, seu acesso ao Fluxe é liberado automaticamente — o Fluxe é o seu caderno de exercícios durante a turma.' },
-  { q: 'Serve pra qualquer tamanho de BPO?', a: 'Sim, do BPO solo que está começando ao que já tem equipe e quer organizar a operação pra crescer com previsibilidade.' },
+const CICLO = ['Aprendemos', 'Você recebe um exercício', 'Constrói dentro do Fluxe', 'Recebe feedback', 'Próximo encontro']
+
+const MODULOS = [
+  { titulo: 'Módulo 1', nome: 'Estrutura', itens: ['Diagnóstico do seu negócio', 'Posicionamento', 'Cliente ideal', 'Diferencial competitivo'] },
+  { titulo: 'Módulo 2', nome: 'Comercial', itens: ['Oferta', 'Precificação', 'Proposta Comercial', 'Fechamento'] },
+  { titulo: 'Módulo 3', nome: 'Operação', itens: ['Onboarding', 'Fluxo operacional', 'Processos', 'Padronização'] },
+  { titulo: 'Módulo 4', nome: 'Gestão', itens: ['Indicadores', 'Planejamento', 'Organização', 'Crescimento'] },
+  { titulo: 'Módulo 5', nome: 'Escala', itens: ['Estratégia', 'Próximos passos', 'Plano de expansão'] },
 ]
+
+const PARA_QUEM = [
+  'quer viver de BPO Financeiro', 'quer cobrar mais', 'quer organizar a operação',
+  'quer conquistar clientes melhores', 'quer parar de improvisar', 'quer construir uma empresa de verdade',
+]
+const PARA_QUEM_NAO = ['Fórmulas mágicas.', 'Resultado sem executar.', 'Apenas assistir aulas.', 'Atalhos.']
+
+const INCLUSO = ['15 encontros ao vivo', 'Acesso ao Fluxe', 'Exercícios semanais', 'Materiais exclusivos', 'Templates', 'Ferramentas', 'Comunidade', 'Certificado']
 
 export default function MentoriaGrupoPage() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
-  const [openFaq, setOpenFaq] = useState(null)
   const [heroTilt, setHeroTilt] = useState({ x: 0, y: 0 })
   const { data, isLoading } = useTurmaAtualPublica()
   const turma = data?.turma
   const aulas = data?.aulas ?? []
   const checkoutUrl = turma?.checkout_url || WHATSAPP_MENTORIA_GRUPO
+  const dataInicioLabel = turma?.data_inicio
+    ? new Date(turma.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })
+    : '12 de agosto'
 
   useEffect(() => {
     const prev = {
@@ -80,6 +99,9 @@ export default function MentoriaGrupoPage() {
     setHeroTilt({ x: px * 16, y: py * 12 })
   }
 
+  const eyebrow = { fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 14 }
+  const h2 = { fontFamily: "'Fraunces',serif", fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }
+
   return (
     <div style={{ fontFamily: "'Inter','system-ui',sans-serif", background: '#05070E', color: '#F1F5F9', minHeight: '100vh', overflowX: 'hidden' }}>
 
@@ -94,7 +116,7 @@ export default function MentoriaGrupoPage() {
         <Logo />
         <button onClick={abrirCheckout}
           style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', border: 'none', color: '#fff', padding: '8px 18px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700, boxShadow: '0 4px 14px rgba(99,102,241,.35)' }}>
-          {isMobile ? 'Garantir vaga →' : 'Garantir minha vaga →'}
+          {isMobile ? 'Quero construir →' : 'Quero construir meu BPO →'}
         </button>
       </nav>
 
@@ -109,36 +131,37 @@ export default function MentoriaGrupoPage() {
           {isMobile && (
             <Reveal>
               <div style={{ position: 'relative', marginBottom: 8 }}>
-                <img src={CLAUDIA_ECOSSISTEMA_SRC} alt="Cláudia Bernardo, Fluxe" style={{ width: '100%', display: 'block', objectFit: 'contain' }} />
+                <img src={CLAUDIA_ECOSSISTEMA_SRC} alt="Cláudia Bernardo" style={{ width: '100%', display: 'block', objectFit: 'contain', borderRadius: 12 }} />
               </div>
             </Reveal>
           )}
 
           <Reveal>
             <div style={{ textAlign: isMobile ? 'center' : 'left', padding: isMobile ? '0 4px' : 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#8B5CF6', letterSpacing: '.18em', textTransform: 'uppercase', marginBottom: 26 }}>Mentoria em Grupo · Fluxe</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#8B5CF6', letterSpacing: '.18em', textTransform: 'uppercase', marginBottom: 26 }}>Programa BPO Lucrativo™</div>
 
-              <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 32 : 'clamp(38px, 4.4vw, 62px)', fontWeight: 900, lineHeight: 1.08, margin: '0 0 22px', color: '#F8FAFC', letterSpacing: '-.03em' }}>
-                Pare de operar no feeling.<br />
-                <span style={{ fontStyle: 'italic', fontWeight: 600, background: 'linear-gradient(90deg,#818CF8,#A855F7,#22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                  Aprenda em turma, com acompanhamento comigo.
-                </span>
+              <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 30 : 'clamp(34px, 4vw, 54px)', fontWeight: 900, lineHeight: 1.12, margin: '0 0 20px', color: '#F8FAFC', letterSpacing: '-.03em' }}>
+                Construa um BPO Financeiro que <span style={{ fontStyle: 'italic', fontWeight: 600, background: 'linear-gradient(90deg,#818CF8,#A855F7,#22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>vende, entrega e dá lucro.</span>
               </h1>
 
-              <p style={{ fontSize: isMobile ? 15 : 18, color: '#94A3B8', lineHeight: 1.7, margin: isMobile ? '0 auto 32px' : '0 0 36px', maxWidth: 480 }}>
-                15 aulas ao vivo aplicando o Método Fluxe na prática: desenho da operação, precificação e plano de negócio do seu BPO Financeiro, usando o Fluxe como seu caderno de exercícios.
+              <p style={{ fontSize: isMobile ? 15 : 17, color: '#94A3B8', lineHeight: 1.7, margin: isMobile ? '0 auto 24px' : '0 0 28px', maxWidth: 480 }}>
+                Chega de consumir cursos sem conseguir transformar conhecimento em clientes, processos e faturamento. Durante 15 encontros ao vivo, você vai construir seu BPO dentro do Fluxe, aplicando cada etapa comigo e saindo com uma empresa muito mais estruturada.
               </p>
 
-              <div style={{ display: 'flex', justifyContent: isMobile ? 'center' : 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 32, alignItems: isMobile ? 'center' : 'flex-start' }}>
+                {HERO_CHECKLIST.map(item => (
+                  <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#CBD5E1', fontWeight: 500 }}>
+                    <span style={{ color: '#4ADE80' }}>✅</span> {item}
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: isMobile ? 'center' : 'flex-start' }}>
                 <button onClick={abrirCheckout}
                   style={{ padding: '16px 34px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 30px rgba(99,102,241,.45)', transition: 'all .2s' }}
                   onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 12px 38px rgba(99,102,241,.6)' }}
                   onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(99,102,241,.45)' }}>
-                  Garantir minha vaga →
-                </button>
-                <button onClick={() => scrollTo('cronograma')}
-                  style={{ padding: '16px 28px', borderRadius: 10, border: '1px solid rgba(255,255,255,.14)', background: 'none', color: '#F1F5F9', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
-                  Ver cronograma
+                  Quero construir meu BPO →
                 </button>
               </div>
             </div>
@@ -146,8 +169,9 @@ export default function MentoriaGrupoPage() {
 
           {!isMobile && (
             <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '86vh' }}>
-              <img src={CLAUDIA_ECOSSISTEMA_SRC} alt="Cláudia Bernardo, Fluxe" style={{
-                maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block',
+              <img src={CLAUDIA_ECOSSISTEMA_SRC} alt="Cláudia Bernardo" style={{
+                maxWidth: '92%', maxHeight: '92%', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block', borderRadius: 16,
+                boxShadow: '0 40px 100px rgba(0,0,0,.5)',
                 transform: `translate(${heroTilt.x}px, ${heroTilt.y}px)`, transition: 'transform .3s ease-out',
               }} />
             </div>
@@ -155,79 +179,143 @@ export default function MentoriaGrupoPage() {
         </div>
       </section>
 
-      {/* ── FAIXA DE AUTORIDADE ─────────────────────────────────── */}
-      <div style={{ padding: '16px 0', borderTop: '1px solid rgba(255,255,255,.06)', borderBottom: '1px solid rgba(255,255,255,.06)', overflow: 'hidden', whiteSpace: 'nowrap', background: '#080B14' }}>
-        <div className="fluxe-marquee-track" style={{ display: 'inline-block' }}>
-          {[0, 1].map(rep => (
-            <span key={rep} style={{ display: 'inline-block' }}>
-              {Array.from({ length: 6 }).map((_, i) => (
-                <span key={i} style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.15em', color: '#64748B', margin: '0 18px' }}>
-                  ESPECIALISTA EM BPO FINANCEIRO <span style={{ color: '#8B5CF6' }}>·</span> CONTROLADORIA <span style={{ color: '#8B5CF6' }}>·</span> FP&A <span style={{ color: '#8B5CF6' }}>·</span> ESTRUTURAÇÃO DE OPERAÇÕES <span style={{ color: '#8B5CF6' }}>·</span> GESTÃO FINANCEIRA <span style={{ color: '#8B5CF6' }}>·</span>
-                </span>
-              ))}
-            </span>
-          ))}
-        </div>
-        <style>{`
-          @keyframes fluxe-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-          .fluxe-marquee-track { animation: fluxe-marquee 38s linear infinite; }
-        `}</style>
-      </div>
-
-      {/* ── COMO FUNCIONA ───────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '72px 20px' : '130px 48px', background: '#05070E' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+      {/* ── DEPOIS DO HERO: DOR ─────────────────────────────────── */}
+      <section style={{ padding: isMobile ? '64px 20px' : '120px 48px', background: '#080B14' }}>
+        <div style={{ maxWidth: 680, margin: '0 auto', textAlign: 'center' }}>
           <Reveal>
-            <div style={{ textAlign: 'center', marginBottom: isMobile ? 40 : 64 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 14 }}>COMO FUNCIONA</div>
-              <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>Não é curso gravado. É prática guiada.</h2>
-            </div>
+            <h2 style={{ ...h2, fontSize: isMobile ? 24 : 32, lineHeight: 1.35, marginBottom: 8 }}>Você não precisa de mais informação.</h2>
+            <h2 style={{ ...h2, fontSize: isMobile ? 24 : 32, lineHeight: 1.35, color: '#A855F7', fontStyle: 'italic', marginBottom: 40 }}>Você precisa de execução.</h2>
           </Reveal>
           <Reveal delay={0.1}>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 20 }}>
-              {COMO_FUNCIONA.map((item, i) => (
-                <div key={i} style={{ padding: '28px 24px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 16, backdropFilter: 'blur(12px)' }}>
-                  <div style={{ fontSize: 30, marginBottom: 14 }}>{item.icon}</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: '#F1F5F9', marginBottom: 8 }}>{item.title}</div>
-                  <div style={{ fontSize: 13, color: '#94A3B8', lineHeight: 1.65 }}>{item.desc}</div>
-                </div>
-              ))}
+            <div style={{ fontSize: 16, color: '#94A3B8', lineHeight: 2.1 }}>
+              <p style={{ margin: '0 0 4px' }}>Talvez você já tenha feito cursos. Assistiu aulas. Baixou planilhas. Comprou templates. Salvou dezenas de vídeos.</p>
+              <p style={{ margin: '28px 0 4px' }}>Mas quando chega a hora de vender... <strong style={{ color: '#F1F5F9' }}>Você trava.</strong></p>
+              <p style={{ margin: '4px 0' }}>Quando fecha um cliente... <strong style={{ color: '#F1F5F9' }}>Improvisa.</strong></p>
+              <p style={{ margin: '4px 0' }}>Quando precisa cobrar... <strong style={{ color: '#F1F5F9' }}>Fica inseguro.</strong></p>
+              <p style={{ margin: '4px 0 28px' }}>Quando cresce... <strong style={{ color: '#F1F5F9' }}>Tudo vira bagunça.</strong></p>
+              <p style={{ margin: '0 0 8px' }}>O problema nunca foi falta de conteúdo.</p>
+              <p style={{ margin: 0, color: '#E2E8F0', fontWeight: 600 }}>O problema é que ninguém mostrou como transformar conhecimento em um negócio. É exatamente isso que faremos juntos.</p>
             </div>
           </Reveal>
         </div>
       </section>
 
-      {/* ── CRONOGRAMA ──────────────────────────────────────────── */}
-      <section id="cronograma" style={{ padding: isMobile ? '56px 20px 72px' : '48px 48px 130px', background: '#080B14' }}>
-        <div style={{ maxWidth: 760, margin: '0 auto' }}>
+      {/* ── A VIRADA ────────────────────────────────────────────── */}
+      <section style={{ padding: isMobile ? '64px 20px' : '120px 48px', background: '#05070E' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <Reveal>
+            <div style={{ textAlign: 'center', marginBottom: 36 }}>
+              <div style={eyebrow}>A VIRADA</div>
+              <h2 style={{ ...h2, fontSize: isMobile ? 24 : 34, maxWidth: 640, margin: '0 auto' }}>Imagine olhar para o seu BPO daqui a alguns meses e perceber que ele deixou de ser uma prestação de serviço improvisada.</h2>
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(1,1fr)' : 'repeat(2,1fr)', gap: '10px 24px', marginBottom: 32 }}>
+              {VIRADA_ITEMS.map(item => (
+                <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 10, fontSize: 14, color: '#E2E8F0', fontWeight: 600 }}>
+                  <span style={{ color: '#4ADE80' }}>✔</span> {item}
+                </div>
+              ))}
+            </div>
+          </Reveal>
+          <Reveal delay={0.15}>
+            <p style={{ textAlign: 'center', fontSize: 17, color: '#F1F5F9', fontWeight: 600, maxWidth: 560, margin: '0 auto' }}>
+              Você deixa de ser apenas um operador financeiro. Passa a ser <span style={{ color: '#A855F7' }}>dono de um negócio.</span>
+            </p>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── O QUE É ─────────────────────────────────────────────── */}
+      <section style={{ padding: isMobile ? '64px 20px' : '120px 48px', background: '#080B14' }}>
+        <div style={{ maxWidth: 680, margin: '0 auto', textAlign: 'center' }}>
+          <Reveal>
+            <div style={eyebrow}>O QUE É O PROGRAMA BPO LUCRATIVO™</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
+              {NAO_E.map(t => <span key={t} style={{ fontSize: 15, color: '#64748B' }}>{t}</span>)}
+            </div>
+            <h2 style={{ ...h2, fontSize: isMobile ? 26 : 36, marginBottom: 24 }}>É uma construção guiada.</h2>
+            <p style={{ fontSize: 16, color: '#94A3B8', lineHeight: 1.8, margin: 0 }}>
+              Durante 15 semanas vamos montar, juntos, o seu BPO. Cada encontro gera uma entrega. Cada entrega gera um exercício. Cada exercício aproxima você de uma empresa mais organizada, lucrativa e preparada para crescer. Ao final do programa, você terá construído algo que continuará usando todos os dias.
+            </p>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── O FLUXE SERÁ SEU LABORATÓRIO ────────────────────────── */}
+      <section style={{ padding: isMobile ? '64px 20px' : '120px 48px', background: '#05070E' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <Reveal>
             <div style={{ textAlign: 'center', marginBottom: 40 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 14 }}>CRONOGRAMA</div>
-              <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 36, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>
-                {turma?.nome || 'Próxima turma'}
-              </h2>
-              {turma?.data_inicio && (
-                <p style={{ fontSize: 14, color: '#94A3B8', marginTop: 12 }}>
-                  Início em {new Date(turma.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })} · vagas limitadas por turma
-                </p>
-              )}
+              <div style={eyebrow}>O FLUXE SERÁ SEU LABORATÓRIO</div>
+              <h2 style={{ ...h2, fontSize: isMobile ? 24 : 34, maxWidth: 620, margin: '0 auto' }}>Enquanto outras mentorias entregam vídeos, você terá um ambiente onde cada decisão é registrada.</h2>
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4,1fr)', gap: 10 }}>
+              {LABORATORIO_ITEMS.map(item => (
+                <div key={item} style={{ padding: '14px 16px', background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 10, fontSize: 13, color: '#CBD5E1', fontWeight: 600, textAlign: 'center' }}>
+                  {item}
+                </div>
+              ))}
+            </div>
+          </Reveal>
+          <Reveal delay={0.15}>
+            <p style={{ textAlign: 'center', fontSize: 14, color: '#64748B', marginTop: 28 }}>O Fluxe será o seu caderno de construção — tudo organizado em um único lugar.</p>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── COMO FUNCIONA ───────────────────────────────────────── */}
+      <section style={{ padding: isMobile ? '64px 20px' : '120px 48px', background: '#080B14' }}>
+        <div style={{ maxWidth: 760, margin: '0 auto' }}>
+          <Reveal>
+            <div style={{ textAlign: 'center', marginBottom: 44 }}>
+              <div style={eyebrow}>COMO FUNCIONA</div>
+              <h2 style={{ ...h2, fontSize: isMobile ? 24 : 34 }}>Encontro 1</h2>
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'center', justifyContent: 'center', gap: isMobile ? 10 : 6, flexWrap: 'wrap' }}>
+              {CICLO.map((step, i) => (
+                <div key={step} style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 6 }}>
+                  <div style={{ padding: '12px 18px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 99, fontSize: 13, fontWeight: 600, color: '#E2E8F0', whiteSpace: 'nowrap' }}>{step}</div>
+                  {i < CICLO.length - 1 && <span style={{ color: '#6366F1', fontSize: 16, transform: isMobile ? 'rotate(90deg)' : 'none' }}>→</span>}
+                </div>
+              ))}
+            </div>
+          </Reveal>
+          <Reveal delay={0.15}>
+            <p style={{ textAlign: 'center', fontSize: 15, color: '#94A3B8', marginTop: 32, lineHeight: 1.7 }}>
+              Durante 15 semanas esse ciclo se repete. É impossível terminar o programa sem ter colocado a mão na massa.
+            </p>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── CRONOGRAMA ──────────────────────────────────────────── */}
+      <section id="cronograma" style={{ padding: isMobile ? '56px 20px 72px' : '48px 48px 120px', background: '#05070E' }}>
+        <div style={{ maxWidth: 760, margin: '0 auto' }}>
+          <Reveal>
+            <div style={{ textAlign: 'center', marginBottom: 36 }}>
+              <div style={eyebrow}>CRONOGRAMA</div>
+              <h2 style={{ ...h2, fontSize: isMobile ? 24 : 32 }}>{turma?.nome || 'Próxima turma'}</h2>
+              <p style={{ fontSize: 14, color: '#94A3B8', marginTop: 12 }}>Início em {dataInicioLabel} · vagas limitadas por turma</p>
             </div>
           </Reveal>
 
           {isLoading ? (
             <div style={{ textAlign: 'center', color: '#64748B', fontSize: 13, padding: 40 }}>Carregando...</div>
-          ) : !turma ? (
+          ) : !turma || aulas.length === 0 ? (
             <Reveal delay={0.1}>
               <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: 14, padding: '40px 20px', background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 16 }}>
-                Novas turmas em breve. Fale comigo no WhatsApp pra saber a próxima data.
+                Cronograma detalhado em breve. Garanta sua vaga e receba tudo em primeira mão.
               </div>
             </Reveal>
           ) : (
             <Reveal delay={0.1}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {aulas.length === 0 ? (
-                  <div style={{ textAlign: 'center', color: '#64748B', fontSize: 13, padding: 20 }}>Cronograma detalhado em breve.</div>
-                ) : aulas.map(a => (
+                {aulas.map(a => (
                   <div key={a.id} style={{ display: 'flex', gap: 16, alignItems: 'flex-start', padding: '16px 18px', background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 12 }}>
                     <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#0D1424', border: '1px solid rgba(255,255,255,.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <span style={{ fontFamily: "'Fraunces',serif", fontSize: 13, fontWeight: 700, color: '#94A3B8' }}>{a.numero}</span>
@@ -244,121 +332,170 @@ export default function MentoriaGrupoPage() {
               </div>
             </Reveal>
           )}
+        </div>
+      </section>
 
-          <Reveal delay={0.18}>
-            <div style={{ textAlign: 'center', marginTop: 36 }}>
+      {/* ── O QUE VOCÊ VAI CONSTRUIR ─────────────────────────────── */}
+      <section style={{ padding: isMobile ? '64px 20px' : '120px 48px', background: '#080B14' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <Reveal>
+            <div style={{ textAlign: 'center', marginBottom: 44 }}>
+              <div style={eyebrow}>O QUE VOCÊ VAI CONSTRUIR</div>
+              <h2 style={{ ...h2, fontSize: isMobile ? 24 : 34 }}>Cinco módulos, um BPO estruturado</h2>
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+              {MODULOS.map(m => (
+                <div key={m.titulo} style={{ padding: '24px 20px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#8B5CF6', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 4 }}>{m.titulo}</div>
+                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: 19, fontWeight: 700, color: '#F1F5F9', marginBottom: 14 }}>{m.nome}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {m.itens.map(item => (
+                      <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, color: '#94A3B8' }}>
+                        <span style={{ color: '#4ADE80', flexShrink: 0 }}>✔</span> {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── PARA QUEM É / NÃO É ─────────────────────────────────── */}
+      <section style={{ padding: isMobile ? '64px 20px' : '120px 48px', background: '#05070E' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2,1fr)', gap: 24 }}>
+          <Reveal>
+            <div style={{ padding: '28px 26px', background: 'rgba(74,222,128,.05)', border: '1px solid rgba(74,222,128,.2)', borderRadius: 16, height: '100%', boxSizing: 'border-box' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#4ADE80', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 16 }}>Para quem é</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {PARA_QUEM.map(item => (
+                  <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 14, color: '#E2E8F0' }}>
+                    <span style={{ color: '#4ADE80', flexShrink: 0 }}>✔</span> {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div style={{ padding: '28px 26px', background: 'rgba(248,113,113,.05)', border: '1px solid rgba(248,113,113,.2)', borderRadius: 16, height: '100%', boxSizing: 'border-box' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#F87171', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 16 }}>Para quem NÃO é</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                {PARA_QUEM_NAO.map(item => (
+                  <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 14, color: '#E2E8F0' }}>
+                    <span style={{ color: '#F87171', flexShrink: 0 }}>❌</span> {item}
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: 13, color: '#94A3B8', fontStyle: 'italic' }}>Aqui você vai trabalhar.</div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── O QUE ESTÁ INCLUSO ──────────────────────────────────── */}
+      <section style={{ padding: isMobile ? '64px 20px' : '120px 48px', background: '#080B14' }}>
+        <div style={{ maxWidth: 800, margin: '0 auto' }}>
+          <Reveal>
+            <div style={{ textAlign: 'center', marginBottom: 36 }}>
+              <div style={eyebrow}>O QUE ESTÁ INCLUSO</div>
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: 10 }}>
+              {INCLUSO.map(item => (
+                <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px', background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 10, fontSize: 13, color: '#E2E8F0', fontWeight: 600 }}>
+                  <span style={{ color: '#4ADE80', flexShrink: 0 }}>✅</span> {item}
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── SOBRE MIM ────────────────────────────────────────────── */}
+      <section style={{ padding: isMobile ? '64px 20px' : '130px 48px', background: '#05070E', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1.3fr', gap: isMobile ? 32 : 64, alignItems: 'center' }}>
+          <Reveal>
+            <div style={{ position: 'relative' }}>
+              <div style={{ position: 'absolute', top: '8%', left: '50%', transform: 'translateX(-50%)', width: 340, height: 340, background: 'radial-gradient(ellipse, rgba(139,92,246,.2) 0%, transparent 70%)', filter: 'blur(40px)', pointerEvents: 'none' }} />
+              <img src={CLAUDIA_ECOSSISTEMA_SRC} alt="Cláudia Bernardo" style={{ width: '100%', display: 'block', objectFit: 'cover', position: 'relative', borderRadius: 12 }} />
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div style={{ textAlign: isMobile ? 'center' : 'left' }}>
+              <div style={eyebrow}>SOBRE MIM</div>
+              <h2 style={{ ...h2, fontSize: isMobile ? 24 : 32, marginBottom: 20 }}>Prazer, eu sou Cláudia Bernardo.</h2>
+              <p style={{ fontSize: 15, color: '#94A3B8', lineHeight: 1.8, margin: '0 0 16px' }}>
+                Sou especialista em BPO Financeiro e há anos ajudo profissionais a transformarem conhecimento técnico em empresas organizadas, lucrativas e sustentáveis.
+              </p>
+              <p style={{ fontSize: 15, color: '#94A3B8', lineHeight: 1.8, margin: '0 0 20px' }}>
+                Ao longo da minha trajetória acompanhei centenas de operações de BPO, identifiquei os erros que impedem o crescimento e desenvolvi um método baseado em execução prática.
+              </p>
+              <p style={{ fontSize: 15, color: '#F1F5F9', fontWeight: 600, lineHeight: 1.7, margin: 0 }}>
+                Minha missão não é ensinar teoria. É fazer você construir um negócio que funcione.
+              </p>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── PREÇO ───────────────────────────────────────────────── */}
+      <section style={{ padding: isMobile ? '64px 20px' : '130px 48px', background: '#080B14' }}>
+        <div style={{ maxWidth: 620, margin: '0 auto', textAlign: 'center' }}>
+          <Reveal>
+            <div style={{ fontSize: 15, color: '#94A3B8', lineHeight: 2, marginBottom: 32 }}>
+              <p style={{ margin: '0 0 4px' }}>Quanto vale construir seu negócio?</p>
+              <p style={{ margin: '0 0 4px' }}>Quanto vale parar de cobrar barato?</p>
+              <p style={{ margin: '0 0 4px' }}>Quanto vale conseguir fechar clientes com segurança?</p>
+              <p style={{ margin: '0 0 4px' }}>Quanto vale organizar uma operação que funciona mesmo quando você cresce?</p>
+              <p style={{ margin: 0 }}>Quanto vale finalmente enxergar lucro no seu BPO?</p>
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div style={{ background: 'linear-gradient(135deg,rgba(99,102,241,.16),rgba(59,130,246,.1))', border: '1px solid rgba(99,102,241,.3)', borderRadius: 24, padding: isMobile ? '36px 24px' : '48px 44px' }}>
+              <p style={{ fontSize: 13, color: '#94A3B8', margin: '0 0 4px' }}>Essa transformação poderia custar milhares de reais.</p>
+              <p style={{ fontSize: 14, color: '#CBD5E1', margin: '0 0 24px' }}>Mas a primeira turma do Programa BPO Lucrativo™ terá um investimento especial de lançamento.</p>
+              <div style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 44 : 56, fontWeight: 900, color: '#F8FAFC', letterSpacing: '-.02em', marginBottom: 4 }}>R$ 797</div>
+              <div style={{ fontSize: 14, color: '#94A3B8', marginBottom: 28 }}>ou em até 12x no cartão</div>
               <button onClick={abrirCheckout}
-                style={{ padding: '15px 32px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 24px rgba(99,102,241,.4)' }}>
-                Garantir minha vaga →
+                style={{ padding: '16px 40px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 10px 36px rgba(99,102,241,.5)' }}>
+                Quero construir meu BPO →
               </button>
             </div>
           </Reveal>
         </div>
       </section>
 
-      {/* ── O MÉTODO FLUXE® ─────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '72px 20px' : '130px 48px', background: '#05070E' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <Reveal>
-            <div style={{ textAlign: 'center', marginBottom: isMobile ? 40 : 64 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 14 }}>O MÉTODO FLUXE®</div>
-              <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 26 : 38, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>Sete etapas. Uma metodologia própria.</h2>
-            </div>
-          </Reveal>
-
-          <Reveal delay={0.1}>
-            <div style={{ position: 'relative', overflowX: isMobile ? 'auto' : 'visible', paddingBottom: isMobile ? 8 : 0 }}>
-              {!isMobile && (
-                <div style={{ position: 'absolute', top: 27, left: '7%', right: '7%', height: 1, background: 'linear-gradient(90deg,rgba(99,102,241,.1),rgba(139,92,246,.5),rgba(99,102,241,.1))' }} />
-              )}
-              <div style={{ display: 'flex', justifyContent: isMobile ? 'flex-start' : 'space-between', gap: isMobile ? 28 : 8, minWidth: isMobile ? 620 : 'auto' }}>
-                {METODO_FLUXE.map((m, i) => (
-                  <div key={m.num} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, position: 'relative', zIndex: 1, flex: isMobile ? '0 0 auto' : 1 }}>
-                    <div style={{ width: 56, height: 56, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0D1424', border: '1px solid rgba(255,255,255,.12)' }}>
-                      <span style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 700, color: '#94A3B8' }}>{m.num}</span>
-                    </div>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#94A3B8', whiteSpace: 'nowrap' }}>{m.nome}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Reveal>
-        </div>
+      {/* ── GARANTIA ────────────────────────────────────────────── */}
+      <section style={{ padding: isMobile ? '48px 20px' : '80px 48px', background: '#05070E' }}>
+        <Reveal>
+          <div style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center', padding: '28px 24px', background: 'rgba(74,222,128,.05)', border: '1px solid rgba(74,222,128,.2)', borderRadius: 16 }}>
+            <div style={{ fontSize: 24, marginBottom: 10 }}>🛡️</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#4ADE80', marginBottom: 8 }}>Garantia de 7 dias</div>
+            <p style={{ fontSize: 13, color: '#94A3B8', lineHeight: 1.7, margin: 0 }}>
+              Entre, participe, conheça a metodologia e, se perceber que não faz sentido para você, basta solicitar o reembolso dentro do prazo. Sem burocracia.
+            </p>
+          </div>
+        </Reveal>
       </section>
 
-      {/* ── RESULTADOS ──────────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '72px 20px' : '130px 48px', background: '#080B14' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <Reveal>
-            <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 56 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 14 }}>RESULTADOS</div>
-              <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 24 : 34, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>Donos de BPO que pararam de adivinhar</h2>
-            </div>
-          </Reveal>
-          <Reveal delay={0.1}>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2,1fr)', gap: isMobile ? 16 : 24 }}>
-              {RESULTADOS.map((t, i) => (
-                <div key={i} style={{ padding: '30px 28px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 16 }}>
-                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: 40, color: '#8B5CF6', lineHeight: .6, opacity: .6, marginBottom: 16 }}>"</div>
-                  <p style={{ fontFamily: "'Fraunces',serif", fontStyle: 'italic', fontWeight: 500, fontSize: 17, color: '#CBD5E1', lineHeight: 1.65, margin: '0 0 20px' }}>{t.quote}</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg,#6366F1,#A855F7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{t.init}</div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#E2E8F0' }}>{t.name}</div>
-                      <div style={{ fontSize: 11, color: '#8B5CF6', fontWeight: 600 }}>{t.role}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ── FAQ ─────────────────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '72px 20px' : '130px 48px', background: '#05070E' }}>
-        <div style={{ maxWidth: 700, margin: '0 auto' }}>
-          <Reveal>
-            <div style={{ textAlign: 'center', marginBottom: isMobile ? 36 : 52 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 14 }}>FAQ</div>
-              <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 24 : 34, fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }}>Perguntas frequentes</h2>
-            </div>
-          </Reveal>
-          <Reveal delay={0.1}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {FAQS.map((faq, i) => (
-                <div key={i} style={{ background: 'rgba(255,255,255,.025)', border: `1px solid ${openFaq === i ? 'rgba(99,102,241,.25)' : 'rgba(255,255,255,.06)'}`, borderRadius: 12, overflow: 'hidden', transition: 'border-color .2s' }}>
-                  <button
-                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                    style={{ width: '100%', padding: '18px 20px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, textAlign: 'left' }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: '#E2E8F0', lineHeight: 1.4 }}>{faq.q}</span>
-                    <span style={{ fontSize: 18, color: '#6366F1', transition: 'transform .25s', transform: openFaq === i ? 'rotate(45deg)' : 'rotate(0)', flexShrink: 0, lineHeight: 1 }}>+</span>
-                  </button>
-                  {openFaq === i && (
-                    <div style={{ padding: '0 20px 18px', fontSize: 13, color: '#94A3B8', lineHeight: 1.75 }}>
-                      {faq.a}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ── CTA FINAL ───────────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '72px 20px' : '130px 48px', background: '#080B14' }}>
+      {/* ── CHAMADA FINAL ───────────────────────────────────────── */}
+      <section style={{ padding: isMobile ? '64px 20px' : '130px 48px', background: '#080B14' }}>
         <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
           <Reveal>
             <div style={{ background: 'linear-gradient(135deg,rgba(99,102,241,.16),rgba(59,130,246,.1))', border: '1px solid rgba(99,102,241,.24)', borderRadius: 24, padding: isMobile ? '44px 24px' : '64px 56px', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
               <div style={{ position: 'relative', zIndex: 1 }}>
-                <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 22 : 32, fontWeight: 800, color: '#F8FAFC', margin: '0 0 32px', letterSpacing: '-.02em', lineHeight: 1.3 }}>
-                  Vagas limitadas por turma.
-                </h2>
+                <p style={{ fontSize: 14, color: '#94A3B8', margin: '0 0 8px' }}>Daqui a alguns meses você continuará exatamente onde está...</p>
+                <p style={{ fontSize: 14, color: '#94A3B8', margin: '0 0 28px' }}>...ou poderá olhar para trás e perceber que foi nesta turma que seu BPO deixou de ser um trabalho e começou a se tornar uma empresa.</p>
+                <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 22 : 30, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>A decisão é sua.</h2>
+                <p style={{ fontSize: 13, color: '#CBD5E1', margin: '0 0 32px' }}>As vagas são limitadas para garantir acompanhamento durante os encontros.<br />Início: {dataInicioLabel}.</p>
                 <button onClick={abrirCheckout}
                   style={{ padding: '16px 36px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 10px 36px rgba(99,102,241,.5)' }}>
-                  Garantir minha vaga →
+                  Quero construir meu BPO →
                 </button>
               </div>
             </div>
