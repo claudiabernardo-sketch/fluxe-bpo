@@ -6,6 +6,13 @@ const PLANO_COLOR = { trial:'yellow', trial_expirado:'orange', bloqueado:'red', 
 const PLANO_LABEL = { trial:'Trial', trial_expirado:'Trial expirado', bloqueado:'Bloqueada', essencial:'Essencial', pro:'Pro' }
 const VALOR_ESPERADO = { essencial: 97, pro: 197 }
 
+// Compara o texto digitado com o nome da empresa de forma tolerante —
+// ignora maiúsculas/minúsculas e espaços extras (nomes no banco às vezes
+// têm espaço duplo, o que tornava a confirmação exata impossível de digitar).
+function normalizar(s) {
+  return (s || '').trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
 function diasTrial(trial_expira_em) {
   if (!trial_expira_em) return null
   const dias = Math.ceil((new Date(trial_expira_em) - new Date()) / (1000 * 60 * 60 * 24))
@@ -141,7 +148,7 @@ function LinhaEmpresa({ emp, onAcao, pendente }) {
               <span style={{ fontSize: 10, color: '#991B1B' }}>Digite "{emp.nome}" pra confirmar:</span>
               <input value={textoConfirmacao} onChange={e => setTextoConfirmacao(e.target.value)} autoFocus
                 style={{ fontSize: 11, padding: '3px 5px', borderRadius: 5, border: '1px solid #FCA5A5', width: 110 }} />
-              <Btn small variant="danger" disabled={pendente || textoConfirmacao !== emp.nome}
+              <Btn small variant="danger" disabled={pendente || normalizar(textoConfirmacao) !== normalizar(emp.nome)}
                 onClick={() => { onAcao('excluir_empresa', emp.id); setConfirmExcluir(false); setTextoConfirmacao('') }}>
                 Excluir de vez
               </Btn>
