@@ -49,6 +49,7 @@ function LinhaEmpresa({ emp, onAcao, pendente }) {
   }
 
   return (
+    <>
     <tr style={{ borderBottom: '1px solid var(--bo)' }}>
       <td style={{ padding: '10px 8px' }}>
         <div style={{ fontWeight: 600, fontSize: 13 }}>{emp.nome || '—'}</div>
@@ -143,25 +144,45 @@ function LinhaEmpresa({ emp, onAcao, pendente }) {
               <Btn small variant="outline" disabled={pendente} onClick={() => onAcao('estender_trial', emp.id, { dias: 30 })}>+30d</Btn>
             </>
           )}
-          {confirmExcluir ? (
-            <div style={{ display: 'flex', gap: 4, alignItems: 'center', background: '#FEF2F2', padding: '4px 6px', borderRadius: 6 }}>
-              <span style={{ fontSize: 10, color: '#991B1B' }}>Digite "{emp.nome}" pra confirmar:</span>
-              <input value={textoConfirmacao} onChange={e => setTextoConfirmacao(e.target.value)} autoFocus
-                style={{ fontSize: 11, padding: '3px 5px', borderRadius: 5, border: '1px solid #FCA5A5', width: 110 }} />
-              <Btn small variant="danger" disabled={pendente || normalizar(textoConfirmacao) !== normalizar(emp.nome)}
-                onClick={() => { onAcao('excluir_empresa', emp.id); setConfirmExcluir(false); setTextoConfirmacao('') }}>
-                Excluir de vez
-              </Btn>
-              <Btn small variant="outline" onClick={() => { setConfirmExcluir(false); setTextoConfirmacao('') }}>Cancelar</Btn>
-            </div>
-          ) : (
-            <Btn small variant="danger" onClick={() => setConfirmExcluir(true)} title="Exclui a empresa e todos os dados dela pra sempre">
-              🗑️ Excluir
-            </Btn>
-          )}
+          <Btn small variant="danger" onClick={() => setConfirmExcluir(true)} title="Exclui a empresa e todos os dados dela pra sempre">
+            🗑️ Excluir
+          </Btn>
         </div>
       </td>
     </tr>
+    {confirmExcluir && (
+      <ModalExcluirEmpresa
+        emp={emp}
+        pendente={pendente}
+        onConfirmar={() => { onAcao('excluir_empresa', emp.id); setConfirmExcluir(false) }}
+        onCancelar={() => setConfirmExcluir(false)}
+      />
+    )}
+    </>
+  )
+}
+
+function ModalExcluirEmpresa({ emp, pendente, onConfirmar, onCancelar }) {
+  const [texto, setTexto] = useState('')
+  const confere = normalizar(texto) === normalizar(emp.nome)
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      onClick={onCancelar}>
+      <div style={{ background: '#fff', borderRadius: 12, padding: 24, maxWidth: 380, width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,.3)' }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: '#991B1B', marginBottom: 8 }}>Excluir "{emp.nome}"?</div>
+        <div style={{ fontSize: 12, color: 'var(--tx3)', marginBottom: 14, lineHeight: 1.5 }}>
+          Isso apaga a empresa, os usuários, clientes e todos os dados dela pra sempre. Não tem como desfazer.
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--tx2)', marginBottom: 6 }}>Digite <strong>{emp.nome}</strong> pra confirmar:</div>
+        <input value={texto} onChange={e => setTexto(e.target.value)} autoFocus
+          style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--bo)', fontSize: 13, boxSizing: 'border-box', marginBottom: 14 }} />
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <Btn variant="outline" onClick={onCancelar}>Cancelar</Btn>
+          <Btn variant="danger" disabled={pendente || !confere} onClick={onConfirmar}>Excluir de vez</Btn>
+        </div>
+      </div>
+    </div>
   )
 }
 
