@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTurmaAtualPublica } from '../hooks/useData'
 import LOGO_SRC from '../assets/logo-fluxe-white.png'
 import CLAUDIA_ECOSSISTEMA_SRC from '../assets/claudia-mentoria-grupo.jpg'
+import CLAUDIA_SOBRE_MIM_SRC from '../assets/claudia-sobre-mim.jpg'
 
 const WHATSAPP_MENTORIA_GRUPO = 'https://wa.me/5511917101173?text=Quero+construir+meu+BPO+com+o+Programa+BPO+Lucrativo'
 
@@ -52,7 +53,6 @@ const INCLUSO = ['15 encontros ao vivo', 'Acesso ao Fluxe', 'Exercícios semanai
 
 export default function MentoriaGrupoPage() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
-  const [heroTilt, setHeroTilt] = useState({ x: 0, y: 0 })
   const { data, isLoading } = useTurmaAtualPublica()
   const turma = data?.turma
   const aulas = data?.aulas ?? []
@@ -91,14 +91,6 @@ export default function MentoriaGrupoPage() {
     window.open(checkoutUrl, '_blank', 'noopener')
   }
 
-  function handleHeroMouse(e) {
-    if (isMobile) return
-    const rect = e.currentTarget.getBoundingClientRect()
-    const px = (e.clientX - rect.left) / rect.width - 0.5
-    const py = (e.clientY - rect.top) / rect.height - 0.5
-    setHeroTilt({ x: px * 16, y: py * 12 })
-  }
-
   const eyebrow = { fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 14 }
   const h2 = { fontFamily: "'Fraunces',serif", fontWeight: 800, color: '#F8FAFC', margin: 0, letterSpacing: '-.02em' }
 
@@ -121,7 +113,7 @@ export default function MentoriaGrupoPage() {
       </nav>
 
       {/* ── HERO ────────────────────────────────────────────────── */}
-      <section onMouseMove={handleHeroMouse} style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', padding: isMobile ? '96px 20px 48px' : '108px 0 0', position: 'relative', overflow: 'hidden' }}>
+      <section style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', padding: isMobile ? '96px 20px 48px' : '108px 0 0', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(99,102,241,.05) 1px, transparent 1px)', backgroundSize: '34px 34px', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: '14%', left: '6%', width: 560, height: 560, background: 'radial-gradient(ellipse, rgba(139,92,246,.22) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(60px)' }} />
         <div style={{ position: 'absolute', bottom: '4%', right: '8%', width: 640, height: 640, background: 'radial-gradient(ellipse, rgba(59,130,246,.18) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(70px)' }} />
@@ -168,11 +160,9 @@ export default function MentoriaGrupoPage() {
           </Reveal>
 
           {!isMobile && (
-            <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', height: '86vh' }}>
+            <div style={{ position: 'relative', height: '90vh', borderRadius: 20, overflow: 'hidden', boxShadow: '0 40px 100px rgba(0,0,0,.5)' }}>
               <img src={CLAUDIA_ECOSSISTEMA_SRC} alt="Cláudia Bernardo" style={{
-                maxWidth: '92%', maxHeight: '92%', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block', borderRadius: 16,
-                boxShadow: '0 40px 100px rgba(0,0,0,.5)',
-                transform: `translate(${heroTilt.x}px, ${heroTilt.y}px)`, transition: 'transform .3s ease-out',
+                width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'right center', display: 'block',
               }} />
             </div>
           )}
@@ -421,7 +411,7 @@ export default function MentoriaGrupoPage() {
           <Reveal>
             <div style={{ position: 'relative' }}>
               <div style={{ position: 'absolute', top: '8%', left: '50%', transform: 'translateX(-50%)', width: 340, height: 340, background: 'radial-gradient(ellipse, rgba(139,92,246,.2) 0%, transparent 70%)', filter: 'blur(40px)', pointerEvents: 'none' }} />
-              <img src={CLAUDIA_ECOSSISTEMA_SRC} alt="Cláudia Bernardo" style={{ width: '100%', display: 'block', objectFit: 'cover', position: 'relative', borderRadius: 12 }} />
+              <img src={CLAUDIA_SOBRE_MIM_SRC} alt="Cláudia Bernardo" style={{ width: '100%', display: 'block', objectFit: 'cover', position: 'relative', borderRadius: 12 }} />
             </div>
           </Reveal>
           <Reveal delay={0.1}>
