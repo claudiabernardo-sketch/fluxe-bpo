@@ -189,6 +189,50 @@ serve(async (req) => {
       return ok({ success: true, usuarios_removidos: usuariosDaEmpresa?.length ?? 0 })
     }
 
+    // ── Ação: busca a turma ativa da Mentoria em Grupo + aulas ──────────────
+    // Usada pelo Admin pra popular o formulário de edição (a leitura pública
+    // usada na landing e na aba Mentoria do aluno não passa por aqui — lê
+    // direto via RLS de leitura pública em turma_grupo/turma_aulas).
+    if (action === 'get_turma_atual') {
+      const { data: turma } = await supabase.from('turma_grupo').select('*').eq('ativo', true).order('criado_em', { ascending: false }).limit(1).maybeSingle()
+      if (!turma) return ok({ success: true, turma: null, aulas: [] })
+      const { data: aulas } = await supabase.from('turma_aulas').select('*').eq('turma_id', turma.id).order('numero')
+      return ok({ success: true, turma, aulas: aulas ?? [] })
+    }
+
+    // ── Ação: cria/atualiza a turma da Mentoria em Grupo ────────────────────
+    if (action === 'salvar_turma') {
+      const { id, nome, data_inicio, ativo, checkout_url } = payload
+      if (!nome) return ok({ error: 'nome é obrigatório' })
+      const linha = { nome, data_inicio: data_inicio || null, ativo: ativo !== false, checkout_url: checkout_url || null }
+      const { data, error } = id
+        ? await supabase.from('turma_grupo').update(linha).eq('id', id).select().single()
+        : await supabase.from('turma_grupo').insert(linha).select().single()
+      if (error) return ok({ error: error.message })
+      return ok({ success: true, turma: data })
+    }
+
+    // ── Ação: cria/atualiza uma aula da turma ───────────────────────────────
+    if (action === 'salvar_aula') {
+      const { id, turma_id, numero, titulo, data, exercicio, video_url } = payload
+      if (!turma_id || !numero || !titulo) return ok({ error: 'turma_id, numero e titulo são obrigatórios' })
+      const linha = { turma_id, numero, titulo, data: data || null, exercicio: exercicio || null, video_url: video_url || null }
+      const { data: row, error } = id
+        ? await supabase.from('turma_aulas').update(linha).eq('id', id).select().single()
+        : await supabase.from('turma_aulas').insert(linha).select().single()
+      if (error) return ok({ error: error.message })
+      return ok({ success: true, aula: row })
+    }
+
+    // ── Ação: exclui uma aula da turma ──────────────────────────────────────
+    if (action === 'excluir_aula') {
+      const { id } = payload
+      if (!id) return ok({ error: 'id é obrigatório' })
+      const { error } = await supabase.from('turma_aulas').delete().eq('id', id)
+      if (error) return ok({ error: error.message })
+      return ok({ success: true })
+    }
+
     // ── Ação: estender trial em N dias ─────────────────────────────────────
     if (action === 'estender_trial') {
       const { empresa_id, dias } = payload
@@ -539,7 +583,7 @@ serve(async (req) => {
       return ok({ success: true })
     }
 
-    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | excluir_empresa | estender_trial | atualizar_valor_assinatura | toggle_mentorado | criar_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria | listar_sessoes_avulsas | listar_combinados_abertos | concluir_combinado | excluir_dados_mentoria' })
+    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | excluir_empresa | get_turma_atual | salvar_turma | salvar_aula | excluir_aula | estender_trial | atualizar_valor_assinatura | toggle_mentorado | criar_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria | listar_sessoes_avulsas | listar_combinados_abertos | concluir_combinado | excluir_dados_mentoria' })
 
   } catch (e) {
     return ok({ error: e.message || 'Erro interno' })

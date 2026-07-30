@@ -1657,8 +1657,47 @@ export function useAdminAcaoEmpresa() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin_empresas'] })
       qc.invalidateQueries({ queryKey: ['admin_mentorados'] })
+      qc.invalidateQueries({ queryKey: ['admin_turma'] })
+      qc.invalidateQueries({ queryKey: ['turma_atual_publica'] })
     },
     onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+// ── TURMA DA MENTORIA EM GRUPO ────────────────────────
+// Leitura pública (RLS permite anon+authenticated) — usada na landing
+// pública (/mentoriaBPOlucrativo) e na aba Mentoria do aluno. Não passa
+// pelo admin-painel, não precisa de sessão.
+export function useTurmaAtualPublica() {
+  return useQuery({
+    queryKey: ['turma_atual_publica'],
+    queryFn: async () => {
+      const { data: turma } = await supabase.from('turma_grupo').select('*').eq('ativo', true).order('criado_em', { ascending: false }).limit(1).maybeSingle()
+      if (!turma) return { turma: null, aulas: [] }
+      const { data: aulas } = await supabase.from('turma_aulas').select('*').eq('turma_id', turma.id).order('numero')
+      return { turma, aulas: aulas ?? [] }
+    },
+    staleTime: 60_000,
+  })
+}
+
+// Leitura pelo Admin (via admin-painel, mesmo dado, mas passando pela
+// checagem de fluxe_staff — usado só na tela de edição).
+export function useAdminTurma() {
+  return useQuery({
+    queryKey: ['admin_turma'],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-painel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_turma_atual' }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      return { turma: data.turma, aulas: data.aulas ?? [] }
+    },
+    staleTime: 15_000,
   })
 }
 

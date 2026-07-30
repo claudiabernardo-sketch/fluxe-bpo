@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados, useSessoesMentoria, useCriarSessaoMentoria, useExcluirSessaoMentoria, useSessoesAvulsas, useCombinadosAbertos, useConcluirCombinado, useExcluirDadosMentoria } from '../hooks/useData'
+import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados, useSessoesMentoria, useCriarSessaoMentoria, useExcluirSessaoMentoria, useSessoesAvulsas, useCombinadosAbertos, useConcluirCombinado, useExcluirDadosMentoria, useAdminTurma } from '../hooks/useData'
 import { Card, CardHeader, Btn, Badge, Loader } from '../components/ui'
 
 const PLANO_COLOR = { trial:'yellow', trial_expirado:'orange', bloqueado:'red', essencial:'green', pro:'green' }
@@ -745,6 +745,127 @@ function SecaoSessoesAvulsas() {
   )
 }
 
+function FormTurma({ turma, acao }) {
+  const [form, setForm] = useState({
+    nome: turma?.nome || '',
+    data_inicio: turma?.data_inicio || '',
+    ativo: turma?.ativo !== false,
+    checkout_url: turma?.checkout_url || '',
+  })
+
+  function salvar() {
+    if (!form.nome.trim()) return
+    acao.mutate({ action: 'salvar_turma', id: turma?.id, nome: form.nome, data_inicio: form.data_inicio || null, ativo: form.ativo, checkout_url: form.checkout_url || null })
+  }
+
+  const fi = { padding: '7px 10px', border: '1px solid var(--bo)', borderRadius: 8, fontSize: 12, fontFamily: 'inherit' }
+
+  return (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12, background: 'var(--bg2)', padding: 10, borderRadius: 8 }}>
+      <input style={{ ...fi, flex: '1 1 200px' }} placeholder="Nome da turma (ex: Turma Agosto 2026)" value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} />
+      <input style={{ ...fi, flex: '0 0 160px' }} type="date" value={form.data_inicio} onChange={e => setForm(f => ({ ...f, data_inicio: e.target.value }))} />
+      <input style={{ ...fi, flex: '1 1 240px' }} placeholder="Link de checkout (Kiwify)" value={form.checkout_url} onChange={e => setForm(f => ({ ...f, checkout_url: e.target.value }))} />
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+        <input type="checkbox" checked={form.ativo} onChange={e => setForm(f => ({ ...f, ativo: e.target.checked }))} /> Ativa
+      </label>
+      <Btn small variant="primary" disabled={acao.isPending || !form.nome.trim()} onClick={salvar}>
+        {acao.isPending ? 'Salvando...' : turma ? 'Salvar turma' : 'Criar turma'}
+      </Btn>
+    </div>
+  )
+}
+
+function LinhaAula({ aula, turmaId, acao }) {
+  const [form, setForm] = useState({
+    numero: aula.numero,
+    titulo: aula.titulo,
+    data: aula.data || '',
+    exercicio: aula.exercicio || '',
+    video_url: aula.video_url || '',
+  })
+  const [confirmDel, setConfirmDel] = useState(false)
+  const fi = { padding: '6px 8px', border: '1px solid var(--bo)', borderRadius: 6, fontSize: 12, fontFamily: 'inherit' }
+
+  function salvar() {
+    if (!form.titulo.trim() || !form.numero) return
+    acao.mutate({ action: 'salvar_aula', id: aula.id, turma_id: turmaId, numero: Number(form.numero), titulo: form.titulo, data: form.data || null, exercicio: form.exercicio || null, video_url: form.video_url || null })
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', border: '1px solid var(--bo)', borderRadius: 8, padding: 8 }}>
+      <input style={{ ...fi, width: 44 }} type="number" value={form.numero} onChange={e => setForm(f => ({ ...f, numero: e.target.value }))} />
+      <input style={{ ...fi, flex: '1 1 160px' }} placeholder="Título" value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))} />
+      <input style={{ ...fi, flex: '0 0 130px' }} type="date" value={form.data} onChange={e => setForm(f => ({ ...f, data: e.target.value }))} />
+      <input style={{ ...fi, flex: '1 1 160px' }} placeholder="Exercício" value={form.exercicio} onChange={e => setForm(f => ({ ...f, exercicio: e.target.value }))} />
+      <input style={{ ...fi, flex: '1 1 200px' }} placeholder="Link do vídeo (Google Drive)" value={form.video_url} onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))} />
+      <Btn small variant="success" disabled={acao.isPending} onClick={salvar}>Salvar</Btn>
+      {confirmDel ? (
+        <>
+          <Btn small variant="danger" disabled={acao.isPending} onClick={() => { acao.mutate({ action: 'excluir_aula', id: aula.id }); setConfirmDel(false) }}>Confirma?</Btn>
+          <Btn small variant="outline" onClick={() => setConfirmDel(false)}>Cancelar</Btn>
+        </>
+      ) : (
+        <button onClick={() => setConfirmDel(true)} title="Excluir aula" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 13 }}>🗑️</button>
+      )}
+    </div>
+  )
+}
+
+function NovaAulaForm({ turmaId, acao, proximoNumero }) {
+  const [form, setForm] = useState({ numero: proximoNumero, titulo: '', data: '', exercicio: '', video_url: '' })
+  const fi = { padding: '6px 8px', border: '1px solid var(--bo)', borderRadius: 6, fontSize: 12, fontFamily: 'inherit' }
+
+  function salvar() {
+    if (!form.titulo.trim() || !form.numero) return
+    acao.mutate({ action: 'salvar_aula', turma_id: turmaId, numero: Number(form.numero), titulo: form.titulo, data: form.data || null, exercicio: form.exercicio || null, video_url: form.video_url || null }, {
+      onSuccess: () => setForm({ numero: Number(form.numero) + 1, titulo: '', data: '', exercicio: '', video_url: '' }),
+    })
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', border: '1px dashed var(--bo)', borderRadius: 8, padding: 8 }}>
+      <input style={{ ...fi, width: 44 }} type="number" value={form.numero} onChange={e => setForm(f => ({ ...f, numero: e.target.value }))} />
+      <input style={{ ...fi, flex: '1 1 160px' }} placeholder="Título da nova aula" value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))} />
+      <input style={{ ...fi, flex: '0 0 130px' }} type="date" value={form.data} onChange={e => setForm(f => ({ ...f, data: e.target.value }))} />
+      <input style={{ ...fi, flex: '1 1 160px' }} placeholder="Exercício" value={form.exercicio} onChange={e => setForm(f => ({ ...f, exercicio: e.target.value }))} />
+      <input style={{ ...fi, flex: '1 1 200px' }} placeholder="Link do vídeo (Google Drive)" value={form.video_url} onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))} />
+      <Btn small variant="primary" disabled={acao.isPending || !form.titulo.trim()} onClick={salvar}>+ Adicionar aula</Btn>
+    </div>
+  )
+}
+
+function SecaoTurmaGrupo() {
+  const { data, isLoading } = useAdminTurma()
+  const acao = useAdminAcaoEmpresa()
+  const turma = data?.turma
+  const aulas = data?.aulas ?? []
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <CardHeader title="Turma da Mentoria em Grupo" icon="fa-solid fa-chalkboard-user" />
+      <div style={{ padding: 16 }}>
+        <div style={{ fontSize: 12, color: 'var(--tx3)', marginBottom: 12 }}>
+          Só uma turma ativa por vez aparece na página pública (fluxebpo.com.br/mentoriaBPOlucrativo) e dentro do Fluxe pros alunos marcados como 🎓.
+        </div>
+        {isLoading ? <Loader /> : (
+          <>
+            <FormTurma key={turma?.id || 'nova'} turma={turma} acao={acao} />
+            {turma && (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--tx2)', margin: '16px 0 8px' }}>Aulas ({aulas.length})</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                  {aulas.map(a => <LinhaAula key={a.id} aula={a} turmaId={turma.id} acao={acao} />)}
+                </div>
+                <NovaAulaForm turmaId={turma.id} acao={acao} proximoNumero={aulas.length + 1} />
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 export default function AdminPage() {
   return (
     <div>
@@ -754,6 +875,7 @@ export default function AdminPage() {
       <SecaoMentorados />
       <SecaoCombinadosAbertos />
       <SecaoSessoesAvulsas />
+      <SecaoTurmaGrupo />
       <SecaoEmpresas />
       <SecaoBugs />
     </div>

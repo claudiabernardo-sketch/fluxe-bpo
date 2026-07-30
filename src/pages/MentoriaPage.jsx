@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMentoriaLinks, useCreateMentoriaLink, useDeleteMentoriaLink, useMeusCombinados, useAtualizarMeuCombinado } from '../hooks/useData'
+import { useMentoriaLinks, useCreateMentoriaLink, useDeleteMentoriaLink, useMeusCombinados, useAtualizarMeuCombinado, useTurmaAtualPublica } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import { Card, CardHeader, Btn, Loader } from '../components/ui'
@@ -42,6 +42,50 @@ function ItemMeuCombinado({ c }) {
         )}
       </div>
     </div>
+  )
+}
+
+function SecaoAulasDaTurma() {
+  const { empresa } = useAuthStore()
+  const { data, isLoading } = useTurmaAtualPublica()
+  const turma = data?.turma
+  const aulas = data?.aulas ?? []
+
+  if (!empresa?.mentorado_bpo_lucrativo) return null
+  if (isLoading) return null
+  if (!turma) return null
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <CardHeader title={`Aulas da Turma${turma.nome ? ` — ${turma.nome}` : ''}`} icon="fa-solid fa-video" />
+      <div style={{ padding: 16 }}>
+        {aulas.length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>Cronograma da turma em breve.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {aulas.map(a => (
+              <div key={a.id} style={{ border: '1px solid var(--bo)', borderRadius: 10, padding: '12px 14px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(99,102,241,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, fontWeight: 700, color: '#6366F1' }}>{a.numero}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{a.titulo}</div>
+                  {a.exercicio && <div style={{ fontSize: 12, color: 'var(--tx2)', marginTop: 2 }}>Exercício: {a.exercicio}</div>}
+                  <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 4 }}>
+                    {a.data ? new Date(a.data + 'T12:00:00').toLocaleDateString('pt-BR') : 'Data a combinar'}
+                  </div>
+                </div>
+                {a.video_url ? (
+                  <a href={a.video_url} target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, fontSize: 12, fontWeight: 600, color: '#6366F1', textDecoration: 'none', border: '1px solid #6366F1', borderRadius: 8, padding: '6px 12px' }}>
+                    ▶ Assistir
+                  </a>
+                ) : (
+                  <span style={{ flexShrink: 0, fontSize: 11, color: 'var(--tx3)' }}>Em breve</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Card>
   )
 }
 
@@ -95,6 +139,7 @@ export default function MentoriaPage() {
         Vídeos e materiais de mentoria — cole um link (YouTube, Google Drive, Canva, etc.) ou suba um arquivo direto pra sua equipe acessar.
       </div>
 
+      <SecaoAulasDaTurma />
       <SecaoMeusCombinados />
 
       <Card style={{ marginBottom: 16 }}>
