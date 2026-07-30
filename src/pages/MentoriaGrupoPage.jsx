@@ -66,14 +66,30 @@ export default function MentoriaGrupoPage() {
       overflow: document.body.style.overflow,
       height: document.body.style.height,
       bg: document.body.style.background,
+      title: document.title,
     }
     document.body.style.overflow = 'auto'
     document.body.style.height = 'auto'
     document.body.style.background = '#05070E'
+    document.title = 'Programa BPO Lucrativo™ | Mentoria em Grupo Fluxe'
+
+    let meta = document.querySelector('meta[name="description"]')
+    const metaCreated = !meta
+    if (!meta) {
+      meta = document.createElement('meta')
+      meta.setAttribute('name', 'description')
+      document.head.appendChild(meta)
+    }
+    const prevContent = meta.getAttribute('content')
+    meta.setAttribute('content', 'Construa um BPO Financeiro que vende, entrega e dá lucro. 15 encontros ao vivo com Cláudia Bernardo, aplicando o Método Fluxe na prática dentro do Fluxe. Turma com vagas limitadas.')
+
     return () => {
       document.body.style.overflow = prev.overflow
       document.body.style.height = prev.height
       document.body.style.background = prev.bg
+      document.title = prev.title
+      if (metaCreated) meta.remove()
+      else if (prevContent != null) meta.setAttribute('content', prevContent)
     }
   }, [])
 
