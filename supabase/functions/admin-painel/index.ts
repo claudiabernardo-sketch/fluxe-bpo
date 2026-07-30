@@ -206,10 +206,27 @@ serve(async (req) => {
       return ok({ success: true })
     }
 
+    // ── Ação: definir senha temporária pra um usuário (fallback quando o
+    // link de acesso expira/é consumido por pré-visualização do WhatsApp
+    // ou de algum filtro de segurança de e-mail corporativo) ───────────────
+    if (action === 'definir_senha_temporaria') {
+      const { user_id, senha } = payload
+      if (!user_id || !senha) return ok({ error: 'user_id e senha são obrigatórios' })
+      const { error } = await supabase.auth.admin.updateUserById(user_id, { password: senha })
+      if (error) return ok({ error: error.message })
+      return ok({ success: true })
+    }
+
     // ── Ação: criar uma nova empresa mentorada (onboarding manual) ─────────
     // Substitui o cadastro público que existia antes na landing page: cria a
-    // empresa, o usuário no Auth, vincula em usuarios e manda o email de
-    // boas-vindas com o link de primeiro acesso.
+    // empresa, o usuário no Auth já com senha definida, vincula em usuarios
+    // e manda o email de boas-vindas com email+senha em texto.
+    //
+    // Importante: NÃO usa link de acesso de uso único (magic link). Esses
+    // links são consumidos silenciosamente por pré-visualização automática
+    // do WhatsApp e por scanners de segurança de e-mail corporativo, o que
+    // já deixou mentorados sem conseguir entrar. Senha em texto não tem
+    // esse problema.
     if (action === 'criar_mentorado') {
       const { nome_empresa, nome_usuario, email } = payload
       if (!nome_empresa || !nome_usuario || !email) {
@@ -224,31 +241,29 @@ serve(async (req) => {
       if (empresaErr) return ok({ error: empresaErr.message })
       const empresaId = empresaRow.id
 
+      const senhaTemporaria = gerarSenhaTemporaria()
+
       let userId: string
       const { data: created, error: createError } = await supabase.auth.admin.createUser({
         email,
-        email_confirm: false,
+        password: senhaTemporaria,
+        email_confirm: true,
         user_metadata: { nome: nome_usuario, empresa_id: empresaId },
       })
       if (createError) {
         if (createError.message?.includes('already been registered')) {
-          userId = '__lookup_via_generateLink__'
+          // Já existe no Auth — busca o id existente e redefine a senha
+          const { data: existing } = await supabase.from('usuarios').select('id').eq('email', email).maybeSingle()
+          if (!existing?.id) return ok({ error: createError.message })
+          userId = existing.id
+          const { error: pwError } = await supabase.auth.admin.updateUserById(userId, { password: senhaTemporaria })
+          if (pwError) return ok({ error: pwError.message })
         } else {
           return ok({ error: createError.message })
         }
       } else {
         userId = created.user.id
       }
-
-      const siteUrl = Deno.env.get('SITE_URL') || 'https://fluxebpo.com.br'
-      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-        type: 'magiclink',
-        email,
-        options: { redirectTo: `${siteUrl}/reset-password` },
-      })
-      if (linkError) return ok({ error: linkError.message })
-      if (userId === '__lookup_via_generateLink__') userId = linkData.user.id
-      const magicLink: string = linkData.properties.action_link
 
       const { error: profileError } = await supabase
         .from('usuarios')
@@ -259,7 +274,7 @@ serve(async (req) => {
       const resendFrom = Deno.env.get('RESEND_FROM') || 'Fluxe <noreply@fluxebpo.com.br>'
       let emailSent = false
       if (resendKey) {
-        const html = buildWelcomeEmail({ nome: nome_usuario, magicLink })
+        const html = buildWelcomeEmail({ nome: nome_usuario, email, senha: senhaTemporaria })
         try {
           const resendRes = await fetch('https://api.resend.com/emails', {
             method: 'POST',
@@ -273,7 +288,7 @@ serve(async (req) => {
         }
       }
 
-      return ok({ success: true, empresa_id: empresaId, userId, magicLink, emailSent })
+      return ok({ success: true, empresa_id: empresaId, userId, email, senha: senhaTemporaria, emailSent })
     }
 
     // ── Ação: painel do mentor — Radar + Plano de Negócio de cada mentorado ─
@@ -491,10 +506,24 @@ serve(async (req) => {
   }
 })
 
+// Senha temporária legível (evita caracteres ambíguos tipo 0/O, 1/l/I).
+function gerarSenhaTemporaria() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
+  const bytes = new Uint8Array(10)
+  crypto.getRandomValues(bytes)
+  let senha = ''
+  for (const b of bytes) senha += chars[b % chars.length]
+  return `Fluxe${senha}!`
+}
+
 // ── Template do email de boas-vindas ao Fluxe (novo mentorado) ─────────────
 // Table-based, sem gradiente, pra compatibilidade máxima com clientes de email.
-function buildWelcomeEmail({ nome, magicLink }: { nome: string; magicLink: string }) {
+// Manda email + senha em texto (sem link de uso único) — links assim são
+// consumidos por pré-visualização automática de apps de mensagem e por
+// scanners de segurança de e-mail corporativo antes da pessoa clicar.
+function buildWelcomeEmail({ nome, email, senha }: { nome: string; email: string; senha: string }) {
   const year = new Date().getFullYear()
+  const loginUrl = 'https://fluxebpo.com.br/login'
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -526,29 +555,34 @@ function buildWelcomeEmail({ nome, magicLink }: { nome: string; magicLink: strin
           precifica certo e monta o plano de negócio do seu BPO Financeiro, aplicando o Método Fluxe na prática.
         </p>
         <p style="margin:0 0 24px;font-size:14px;color:#94A3B8;line-height:1.65">
-          Clique no botão abaixo pra criar sua senha e entrar no Laboratório Fluxe.
+          Seus dados de acesso já estão prontos:
         </p>
 
-        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px auto">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#0B1220;border-radius:8px;margin-bottom:24px">
+          <tr>
+            <td style="padding:16px 20px;border-left:3px solid #6366F1">
+              <p style="margin:0 0 4px;font-size:11px;color:#64748B;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px">Seus dados de acesso</p>
+              <p style="margin:0 0 4px;font-size:13px;color:#CBD5E1"><strong>E-mail:</strong> ${email}</p>
+              <p style="margin:0;font-size:13px;color:#CBD5E1"><strong>Senha:</strong> ${senha}</p>
+            </td>
+          </tr>
+        </table>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 28px">
           <tr>
             <td style="background-color:#6366F1;border-radius:8px;text-align:center">
-              <a href="${magicLink}"
+              <a href="${loginUrl}"
                  style="display:inline-block;padding:14px 40px;font-size:15px;font-weight:bold;
                         color:#ffffff;text-decoration:none;border-radius:8px;
                         mso-padding-alt:14px 40px;font-family:Arial,Helvetica,sans-serif">
-                &#x2192;&nbsp;Criar minha senha e entrar
+                &#x2192;&nbsp;Entrar no Fluxe
               </a>
             </td>
           </tr>
         </table>
 
-        <p style="margin:0 0 16px;font-size:12px;color:#64748B;line-height:1.6">
-          Se o botão não funcionar, copie e cole este link no navegador:<br>
-          <a href="${magicLink}" style="color:#A5B4FC;word-break:break-all">${magicLink}</a>
-        </p>
-
         <p style="margin:0;font-size:12px;color:#64748B;line-height:1.6">
-          Este link é válido por <strong>24 horas</strong>.
+          Recomendamos trocar sua senha assim que entrar, nas configurações da sua conta.
         </p>
 
       </td>

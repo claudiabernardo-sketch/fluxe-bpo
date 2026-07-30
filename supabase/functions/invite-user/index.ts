@@ -20,6 +20,16 @@ const perfilLabel: Record<string, string> = {
   operador: 'Operador',
 }
 
+// Senha temporária legível (evita caracteres ambíguos tipo 0/O, 1/l/I).
+function gerarSenhaTemporaria() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
+  const bytes = new Uint8Array(10)
+  crypto.getRandomValues(bytes)
+  let senha = ''
+  for (const b of bytes) senha += chars[b % chars.length]
+  return `Fluxe${senha}!`
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -69,6 +79,13 @@ serve(async (req) => {
     const resendFrom = Deno.env.get('RESEND_FROM') || 'Fluxe BPO <noreply@fluxebpo.com.br>'
     const cargoLabel = perfilLabel[perfil] || 'Operador'
 
+    // Senha temporária em vez de link de uso único: links assim são
+    // consumidos silenciosamente por pré-visualização automática do
+    // WhatsApp/apps de mensagem e por scanners de segurança de e-mail
+    // corporativo antes da pessoa clicar — já deixou gente sem conseguir
+    // entrar. Senha em texto não tem esse problema.
+    const senhaTemporaria = gerarSenhaTemporaria()
+
     // ── 1. Busca ou cria o usuário (sem listUsers — é lento) ─────────────
     // Primeiro tenta achar na tabela usuarios (mais rápido)
     let userId: string
@@ -80,17 +97,25 @@ serve(async (req) => {
 
     if (existingProfile?.id) {
       userId = existingProfile.id
+      const { error: pwError } = await supabaseAdmin.auth.admin.updateUserById(userId, { password: senhaTemporaria })
+      if (pwError) return ok({ error: pwError.message })
     } else {
       const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
-        email_confirm: false,
+        password: senhaTemporaria,
+        email_confirm: true,
         user_metadata: { nome, empresa_id, perfil: perfil || 'operador' },
       })
       if (createError) {
         if (createError.message?.includes('already been registered')) {
           // Usuário já existe no Auth (convite anterior falhou antes de salvar em usuarios)
-          // generateLink vai nos dar o ID na resposta — tratamos abaixo
-          userId = '__lookup_via_generateLink__'
+          // — busca pelo e-mail direto no Auth pra pegar o id e redefinir a senha
+          const { data: found } = await supabaseAdmin.auth.admin.listUsers()
+          const match = found?.users?.find(u => u.email === email)
+          if (!match) return ok({ error: createError.message })
+          userId = match.id
+          const { error: pwError } = await supabaseAdmin.auth.admin.updateUserById(userId, { password: senhaTemporaria })
+          if (pwError) return ok({ error: pwError.message })
         } else {
           return ok({ error: createError.message })
         }
@@ -98,26 +123,6 @@ serve(async (req) => {
         userId = created.user.id
       }
     }
-
-    // ── 2. Se userId ainda não temos, generateLink vai resolver ──────────
-    // (caso em que o usuário já existia no Auth mas não em usuarios)
-    // Fazemos isso ANTES do upsert para ter o ID real
-
-    // ── 3. Gera magic link para primeiro acesso ───────────────────────────
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink',
-      email,
-      options: { redirectTo: `${siteUrl}/reset-password` },
-    })
-
-    if (linkError) return ok({ error: linkError.message })
-
-    // generateLink sempre retorna o objeto user com o ID real
-    if (userId === '__lookup_via_generateLink__') {
-      userId = linkData.user.id
-    }
-
-    const magicLink: string = linkData.properties.action_link
 
     // ── Cria/atualiza perfil na tabela usuarios ────────────────────────
     const { error: profileError } = await supabaseAdmin
@@ -134,9 +139,9 @@ serve(async (req) => {
 
     if (profileError) return ok({ error: profileError.message })
 
-    // ── 4. Envia email via Resend ─────────────────────────────────────────
+    // ── Envia email via Resend ─────────────────────────────────────────
     if (resendKey) {
-      const html = buildInviteEmail({ nome, email, cargoLabel, magicLink })
+      const html = buildInviteEmail({ nome, email, cargoLabel, senha: senhaTemporaria, siteUrl })
 
       try {
         const resendRes = await fetch('https://api.resend.com/emails', {
@@ -156,19 +161,19 @@ serve(async (req) => {
         if (!resendRes.ok) {
           const err = await resendRes.text()
           console.error('Resend error:', err)
-          return ok({ success: true, userId, magicLink, emailSent: false, emailError: err })
+          return ok({ success: true, userId, email, senha: senhaTemporaria, emailSent: false, emailError: err })
         }
 
-        return ok({ success: true, userId, emailSent: true })
+        return ok({ success: true, userId, email, senha: senhaTemporaria, emailSent: true })
 
       } catch (e) {
         console.error('Resend exception:', e)
-        return ok({ success: true, userId, magicLink, emailSent: false })
+        return ok({ success: true, userId, email, senha: senhaTemporaria, emailSent: false })
       }
     }
 
-    // Sem Resend configurado — retorna link para compartilhamento manual
-    return ok({ success: true, userId, magicLink, emailSent: false })
+    // Sem Resend configurado — retorna os dados de acesso pra compartilhar manualmente
+    return ok({ success: true, userId, email, senha: senhaTemporaria, emailSent: false })
 
   } catch (e) {
     return ok({ error: (e as Error).message || 'Erro interno' })
@@ -177,10 +182,11 @@ serve(async (req) => {
 
 // ── Template do email de convite ──────────────────────────────────────────
 // Usa table-based button (sem gradiente) para máxima compatibilidade com clientes de email
-function buildInviteEmail({ nome, email, cargoLabel, magicLink }: {
-  nome: string; email: string; cargoLabel: string; magicLink: string
+function buildInviteEmail({ nome, email, cargoLabel, senha, siteUrl }: {
+  nome: string; email: string; cargoLabel: string; senha: string; siteUrl: string
 }) {
   const year = new Date().getFullYear()
+  const loginUrl = `${siteUrl}/login`
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -215,14 +221,26 @@ function buildInviteEmail({ nome, email, cargoLabel, magicLink }: {
         </p>
         <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6">
           Você foi adicionado(a) ao <strong style="color:#0F172A">Fluxe BPO</strong> como <strong style="color:#6366F1">${cargoLabel}</strong>.
-          Clique no botão abaixo para criar sua senha e começar a usar.
+          Seus dados de acesso já estão prontos:
         </p>
 
+        <!-- Dados de acesso -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F8FAFC;border-radius:8px;margin-bottom:24px">
+          <tr>
+            <td style="padding:16px 20px;border-left:3px solid #6366F1">
+              <p style="margin:0 0 4px;font-size:11px;color:#94A3B8;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px">Seus dados de acesso</p>
+              <p style="margin:0 0 4px;font-size:13px;color:#475569"><strong>Email:</strong> ${email}</p>
+              <p style="margin:0 0 4px;font-size:13px;color:#475569"><strong>Senha:</strong> ${senha}</p>
+              <p style="margin:0;font-size:13px;color:#475569"><strong>Perfil:</strong> ${cargoLabel}</p>
+            </td>
+          </tr>
+        </table>
+
         <!-- Botão compatível com todos os clientes de email -->
-        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px auto">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 28px">
           <tr>
             <td style="background-color:#6366F1;border-radius:8px;text-align:center">
-              <a href="${magicLink}"
+              <a href="${loginUrl}"
                  style="display:inline-block;padding:14px 40px;font-size:15px;font-weight:bold;
                         color:#ffffff;text-decoration:none;border-radius:8px;
                         mso-padding-alt:14px 40px;font-family:Arial,Helvetica,sans-serif">
@@ -232,25 +250,8 @@ function buildInviteEmail({ nome, email, cargoLabel, magicLink }: {
           </tr>
         </table>
 
-        <!-- Dados de acesso -->
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F8FAFC;border-radius:8px;margin-bottom:24px">
-          <tr>
-            <td style="padding:16px 20px;border-left:3px solid #6366F1">
-              <p style="margin:0 0 4px;font-size:11px;color:#94A3B8;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px">Seus dados de acesso</p>
-              <p style="margin:0 0 4px;font-size:13px;color:#475569"><strong>Email:</strong> ${email}</p>
-              <p style="margin:0;font-size:13px;color:#475569"><strong>Perfil:</strong> ${cargoLabel}</p>
-            </td>
-          </tr>
-        </table>
-
-        <!-- Link alternativo caso botão não carregue -->
-        <p style="margin:0 0 16px;font-size:12px;color:#94A3B8;line-height:1.6">
-          Se o botão não funcionar, copie e cole este link no navegador:<br>
-          <a href="${magicLink}" style="color:#6366F1;word-break:break-all">${magicLink}</a>
-        </p>
-
         <p style="margin:0;font-size:12px;color:#94A3B8;line-height:1.6">
-          Este link é válido por <strong>24 horas</strong>. Se não solicitou este acesso, ignore este email.
+          Recomendamos trocar sua senha assim que entrar, nas configurações da conta. Se não solicitou este acesso, ignore este email.
         </p>
 
       </td>
