@@ -233,6 +233,7 @@ function NovoMentoradoForm({ acao }) {
 function SecaoEmpresas() {
   const { data: empresas = [], isLoading } = useAdminEmpresas()
   const acao = useAdminAcaoEmpresa()
+  const [filtro, setFiltro] = useState('ativas') // 'ativas' | 'inativas' | 'todas'
 
   function handleAcao(action, empresa_id, extra = {}) {
     acao.mutate({ action, empresa_id, ...extra })
@@ -240,11 +241,30 @@ function SecaoEmpresas() {
 
   if (isLoading) return <Loader />
 
+  const empresasFiltradas = empresas.filter(e => {
+    if (filtro === 'todas') return true
+    const inativa = e.plano === 'bloqueado'
+    return filtro === 'inativas' ? inativa : !inativa
+  })
+
   return (
     <Card style={{ marginBottom: 16 }}>
-      <CardHeader title={`Empresas usando o Fluxe (${empresas.length})`} icon="fa-solid fa-building" />
+      <CardHeader title={`Empresas usando o Fluxe (${empresasFiltradas.length}/${empresas.length})`} icon="fa-solid fa-building" />
       <div style={{ padding: '4px 16px 16px', overflowX: 'auto' }}>
         <NovoMentoradoForm acao={acao} />
+        <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+          {[['ativas', 'Ativas'], ['inativas', 'Inativas (bloqueadas)'], ['todas', 'Todas']].map(([v, label]) => (
+            <button key={v} onClick={() => setFiltro(v)}
+              style={{
+                fontSize: 11, fontWeight: 600, padding: '5px 12px', borderRadius: 99, cursor: 'pointer',
+                border: filtro === v ? '1px solid #6366F1' : '1px solid var(--bo)',
+                background: filtro === v ? '#EEF2FF' : 'transparent',
+                color: filtro === v ? '#6366F1' : 'var(--tx3)',
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
           <thead>
             <tr style={{ textAlign: 'left', fontSize: 10, color: 'var(--tx3)', textTransform: 'uppercase' }}>
@@ -261,7 +281,7 @@ function SecaoEmpresas() {
             </tr>
           </thead>
           <tbody>
-            {empresas.map(emp => (
+            {empresasFiltradas.map(emp => (
               <LinhaEmpresa key={emp.id} emp={emp} onAcao={handleAcao} pendente={acao.isPending} />
             ))}
           </tbody>
