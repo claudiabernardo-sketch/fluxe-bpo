@@ -206,6 +206,76 @@ serve(async (req) => {
       return ok({ success: true })
     }
 
+    // ── Ação: criar uma nova empresa mentorada (onboarding manual) ─────────
+    // Substitui o cadastro público que existia antes na landing page: cria a
+    // empresa, o usuário no Auth, vincula em usuarios e manda o email de
+    // boas-vindas com o link de primeiro acesso.
+    if (action === 'criar_mentorado') {
+      const { nome_empresa, nome_usuario, email } = payload
+      if (!nome_empresa || !nome_usuario || !email) {
+        return ok({ error: 'nome_empresa, nome_usuario e email são obrigatórios' })
+      }
+
+      const { data: empresaRow, error: empresaErr } = await supabase
+        .from('empresas')
+        .insert({ nome: nome_empresa, email, plano: 'pro', mentorado_bpo_lucrativo: true })
+        .select('id')
+        .single()
+      if (empresaErr) return ok({ error: empresaErr.message })
+      const empresaId = empresaRow.id
+
+      let userId: string
+      const { data: created, error: createError } = await supabase.auth.admin.createUser({
+        email,
+        email_confirm: false,
+        user_metadata: { nome: nome_usuario, empresa_id: empresaId },
+      })
+      if (createError) {
+        if (createError.message?.includes('already been registered')) {
+          userId = '__lookup_via_generateLink__'
+        } else {
+          return ok({ error: createError.message })
+        }
+      } else {
+        userId = created.user.id
+      }
+
+      const siteUrl = Deno.env.get('SITE_URL') || 'https://fluxebpo.com.br'
+      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email,
+        options: { redirectTo: `${siteUrl}/reset-password` },
+      })
+      if (linkError) return ok({ error: linkError.message })
+      if (userId === '__lookup_via_generateLink__') userId = linkData.user.id
+      const magicLink: string = linkData.properties.action_link
+
+      const { error: profileError } = await supabase
+        .from('usuarios')
+        .upsert({ id: userId, empresa_id: empresaId, nome: nome_usuario, email, perfil: 'admin', ativo: true })
+      if (profileError) return ok({ error: profileError.message })
+
+      const resendKey = Deno.env.get('RESEND_API_KEY')
+      const resendFrom = Deno.env.get('RESEND_FROM') || 'Fluxe <noreply@fluxebpo.com.br>'
+      let emailSent = false
+      if (resendKey) {
+        const html = buildWelcomeEmail({ nome: nome_usuario, magicLink })
+        try {
+          const resendRes = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from: resendFrom, to: [email], subject: 'Bem-vindo(a) ao Fluxe', html }),
+          })
+          emailSent = resendRes.ok
+          if (!resendRes.ok) console.error('Resend error:', await resendRes.text())
+        } catch (e) {
+          console.error('Resend exception:', e)
+        }
+      }
+
+      return ok({ success: true, empresa_id: empresaId, userId, magicLink, emailSent })
+    }
+
     // ── Ação: painel do mentor — Radar + Plano de Negócio de cada mentorado ─
     if (action === 'list_mentorados') {
       const { data: empresas, error } = await supabase
@@ -414,9 +484,89 @@ serve(async (req) => {
       return ok({ success: true })
     }
 
-    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | estender_trial | atualizar_valor_assinatura | toggle_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria | listar_sessoes_avulsas | listar_combinados_abertos | concluir_combinado | excluir_dados_mentoria' })
+    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | estender_trial | atualizar_valor_assinatura | toggle_mentorado | criar_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria | listar_sessoes_avulsas | listar_combinados_abertos | concluir_combinado | excluir_dados_mentoria' })
 
   } catch (e) {
     return ok({ error: e.message || 'Erro interno' })
   }
 })
+
+// ── Template do email de boas-vindas ao Fluxe (novo mentorado) ─────────────
+// Table-based, sem gradiente, pra compatibilidade máxima com clientes de email.
+function buildWelcomeEmail({ nome, magicLink }: { nome: string; magicLink: string }) {
+  const year = new Date().getFullYear()
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bem-vindo(a) ao Fluxe</title>
+</head>
+<body style="margin:0;padding:0;background-color:#05070E;font-family:Arial,Helvetica,sans-serif">
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#05070E;padding:32px 16px">
+<tr><td align="center">
+
+  <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background-color:#0D1424;border-radius:14px;overflow:hidden;max-width:560px;border:1px solid #1E293B">
+
+    <tr>
+      <td style="background-color:#6366F1;padding:32px 40px;text-align:center">
+        <p style="margin:0;font-size:24px;font-weight:bold;color:#ffffff;letter-spacing:-0.5px">Fluxe</p>
+        <p style="margin:6px 0 0;font-size:11px;color:#E0E7FF;letter-spacing:1px;text-transform:uppercase">Mentoria Fluxe</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:36px 40px 28px">
+
+        <h1 style="margin:0 0 16px;font-size:22px;font-weight:bold;color:#F8FAFC">Bem-vindo(a) ao Fluxe, ${nome}! 🎉</h1>
+
+        <p style="margin:0 0 16px;font-size:14px;color:#94A3B8;line-height:1.65">
+          A partir de agora, o Fluxe é o seu caderno de exercícios dentro da mentoria: é aqui que você desenha a operação,
+          precifica certo e monta o plano de negócio do seu BPO Financeiro, aplicando o Método Fluxe na prática.
+        </p>
+        <p style="margin:0 0 24px;font-size:14px;color:#94A3B8;line-height:1.65">
+          Clique no botão abaixo pra criar sua senha e entrar no Laboratório Fluxe.
+        </p>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px auto">
+          <tr>
+            <td style="background-color:#6366F1;border-radius:8px;text-align:center">
+              <a href="${magicLink}"
+                 style="display:inline-block;padding:14px 40px;font-size:15px;font-weight:bold;
+                        color:#ffffff;text-decoration:none;border-radius:8px;
+                        mso-padding-alt:14px 40px;font-family:Arial,Helvetica,sans-serif">
+                &#x2192;&nbsp;Criar minha senha e entrar
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0 0 16px;font-size:12px;color:#64748B;line-height:1.6">
+          Se o botão não funcionar, copie e cole este link no navegador:<br>
+          <a href="${magicLink}" style="color:#A5B4FC;word-break:break-all">${magicLink}</a>
+        </p>
+
+        <p style="margin:0;font-size:12px;color:#64748B;line-height:1.6">
+          Este link é válido por <strong>24 horas</strong>.
+        </p>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td style="padding:18px 40px;border-top:1px solid #1E293B;text-align:center;background-color:#0B1220">
+        <p style="margin:0;font-size:11px;color:#475569">
+          &copy; ${year} Fluxe &middot; fluxebpo.com.br<br>
+          Enviado automaticamente &mdash; não responda este email.
+        </p>
+      </td>
+    </tr>
+
+  </table>
+</td></tr>
+</table>
+
+</body>
+</html>`
+}
