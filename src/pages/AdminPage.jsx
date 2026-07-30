@@ -14,6 +14,8 @@ function diasTrial(trial_expira_em) {
 
 function LinhaEmpresa({ emp, onAcao, pendente }) {
   const [confirmBloquear, setConfirmBloquear] = useState(false)
+  const [confirmExcluir, setConfirmExcluir] = useState(false)
+  const [textoConfirmacao, setTextoConfirmacao] = useState('')
   // Parte do plano atual quando já é um plano válido (evita a armadilha de
   // resetar pra "Trial" por padrão e alguém clicar "Definir plano" sem notar
   // e rebaixar sem querer quem já está em Essencial/Pro).
@@ -133,6 +135,22 @@ function LinhaEmpresa({ emp, onAcao, pendente }) {
               <Btn small variant="outline" disabled={pendente} onClick={() => onAcao('estender_trial', emp.id, { dias: 7 })}>+7d</Btn>
               <Btn small variant="outline" disabled={pendente} onClick={() => onAcao('estender_trial', emp.id, { dias: 30 })}>+30d</Btn>
             </>
+          )}
+          {confirmExcluir ? (
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center', background: '#FEF2F2', padding: '4px 6px', borderRadius: 6 }}>
+              <span style={{ fontSize: 10, color: '#991B1B' }}>Digite "{emp.nome}" pra confirmar:</span>
+              <input value={textoConfirmacao} onChange={e => setTextoConfirmacao(e.target.value)} autoFocus
+                style={{ fontSize: 11, padding: '3px 5px', borderRadius: 5, border: '1px solid #FCA5A5', width: 110 }} />
+              <Btn small variant="danger" disabled={pendente || textoConfirmacao !== emp.nome}
+                onClick={() => { onAcao('excluir_empresa', emp.id); setConfirmExcluir(false); setTextoConfirmacao('') }}>
+                Excluir de vez
+              </Btn>
+              <Btn small variant="outline" onClick={() => { setConfirmExcluir(false); setTextoConfirmacao('') }}>Cancelar</Btn>
+            </div>
+          ) : (
+            <Btn small variant="danger" onClick={() => setConfirmExcluir(true)} title="Exclui a empresa e todos os dados dela pra sempre">
+              🗑️ Excluir
+            </Btn>
           )}
         </div>
       </td>
