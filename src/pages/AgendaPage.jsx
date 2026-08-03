@@ -121,11 +121,13 @@ export default function AgendaPage() {
     const jsDow = d.getDay() // 0=Dom, 1=Seg... 6=Sab
     const dow   = jsDow === 0 ? 6 : jsDow - 1 // 0=Seg..6=Dom
     const dom   = d.getDate()
+    const mes   = d.getMonth() + 1
     return todasRotinas
       .filter(r => r.ativo && (
         r.tipo === 'diaria' ||
         (r.tipo === 'semanal' && (r.dias_semana?.length ? r.dias_semana.includes(dow) : r.dia_semana === dow)) ||
-        (r.tipo === 'mensal'  && r.dia_mes === dom)
+        (r.tipo === 'mensal'  && r.dia_mes === dom) ||
+        (r.tipo === 'anual'   && r.dia_mes === dom && r.mes === mes)
       ))
       .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''))
   }, [todasRotinas])
@@ -208,11 +210,13 @@ export default function AgendaPage() {
       const jsDow  = d.getDay()
       const dow    = jsDow === 0 ? 6 : jsDow - 1
       const dom    = d.getDate()
+      const mes    = d.getMonth() + 1
       const lista  = todasRotinas.filter(r => r.ativo &&
         (!fCliente || r.cliente_id === fCliente) && (
           r.tipo === 'diaria' ||
           (r.tipo === 'semanal' && (r.dias_semana?.length ? r.dias_semana.includes(dow) : r.dia_semana === dow)) ||
-          (r.tipo === 'mensal'  && r.dia_mes === dom)
+          (r.tipo === 'mensal'  && r.dia_mes === dom) ||
+          (r.tipo === 'anual'   && r.dia_mes === dom && r.mes === mes)
         )
       )
       if (lista.length) map[key] = lista

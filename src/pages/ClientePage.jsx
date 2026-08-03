@@ -27,6 +27,7 @@ const STATUS_OP_COLOR = { em_configuracao:'yw', operacional:'gr', pausado:'or', 
 const STATUS_OP_LABEL = { em_configuracao:'Rotina: Em Configuração', operacional:'Rotina: Ativa', pausado:'Rotina: Pausada', encerrado:'Rotina: Encerrada' }
 
 const DIAS_SEMANA_R = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
+const MESES_R = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 
 
 const CATEGORIAS_COFRE = [
@@ -120,7 +121,7 @@ export default function ClientePage() {
   const [editandoRotina, setEditandoRotina] = useState(null)
   const [rotinaEditForm, setRotinaEditForm] = useState({})
   const [rotinaEditErr, setRotinaEditErr] = useState('')
-  const [rotinaForm, setRotinaForm] = useState({ titulo:'', tipo:'diaria', hora:'', observacao:'', dia_mes:1, dias_semana:[] })
+  const [rotinaForm, setRotinaForm] = useState({ titulo:'', tipo:'diaria', hora:'', observacao:'', dia_mes:1, mes:1, dias_semana:[] })
   const [rotinaErr, setRotinaErr] = useState('')
 
   // Status operacional — "Iniciar Operação" não existe mais como passo manual:
@@ -207,24 +208,49 @@ export default function ClientePage() {
     if (!rotinaForm.titulo.trim()) { setRotinaErr('Informe o título'); return }
     if (rotinaForm.tipo === 'semanal' && rotinaForm.dias_semana.length === 0) { setRotinaErr('Selecione ao menos um dia da semana'); return }
     setRotinaErr('')
-    await createRotina.mutateAsync({ ...rotinaForm, cliente_id: clienteId, empresa_id: empresa?.id })
-    setRotinaForm({ titulo:'', tipo:'diaria', hora:'', observacao:'', dia_mes:1, dias_semana:[] })
+    await createRotina.mutateAsync({
+      titulo: rotinaForm.titulo, tipo: rotinaForm.tipo, hora: rotinaForm.hora || null, observacao: rotinaForm.observacao || null,
+      dias_semana: rotinaForm.tipo === 'semanal' ? rotinaForm.dias_semana : null,
+      dia_mes: (rotinaForm.tipo === 'mensal' || rotinaForm.tipo === 'anual') ? rotinaForm.dia_mes : null,
+      mes: rotinaForm.tipo === 'anual' ? rotinaForm.mes : null,
+      cliente_id: clienteId, empresa_id: empresa?.id,
+    })
+    setRotinaForm({ titulo:'', tipo:'diaria', hora:'', observacao:'', dia_mes:1, mes:1, dias_semana:[] })
   }
 
   function iniciarEdicaoRotina(r) {
     setEditandoRotina(r.id)
-    setRotinaEditForm({ titulo: r.titulo, hora: r.hora || '', observacao: r.observacao || '' })
+    setRotinaEditForm({
+      titulo: r.titulo, hora: r.hora || '', observacao: r.observacao || '',
+      tipo: r.tipo, dia_mes: r.dia_mes || 1, mes: r.mes || 1,
+      dias_semana: r.dias_semana?.length ? r.dias_semana : (r.dia_semana != null ? [r.dia_semana] : []),
+    })
     setRotinaEditErr('')
   }
 
   async function salvarEdicaoRotina() {
     if (!rotinaEditForm.titulo.trim()) { setRotinaEditErr('Informe o título'); return }
-    await updateRotina.mutateAsync({ id: editandoRotina, ...rotinaEditForm })
+    if (rotinaEditForm.tipo === 'semanal' && rotinaEditForm.dias_semana.length === 0) { setRotinaEditErr('Selecione ao menos um dia da semana'); return }
+    setRotinaEditErr('')
+    await updateRotina.mutateAsync({
+      id: editandoRotina,
+      titulo: rotinaEditForm.titulo, tipo: rotinaEditForm.tipo, hora: rotinaEditForm.hora || null, observacao: rotinaEditForm.observacao || null,
+      dias_semana: rotinaEditForm.tipo === 'semanal' ? rotinaEditForm.dias_semana : null,
+      dia_mes: (rotinaEditForm.tipo === 'mensal' || rotinaEditForm.tipo === 'anual') ? rotinaEditForm.dia_mes : null,
+      mes: rotinaEditForm.tipo === 'anual' ? rotinaEditForm.mes : null,
+    })
     setEditandoRotina(null)
   }
 
   function toggleDiaSemana(i) {
     setRotinaForm(f => ({
+      ...f,
+      dias_semana: f.dias_semana.includes(i) ? f.dias_semana.filter(d => d !== i) : [...f.dias_semana, i].sort()
+    }))
+  }
+
+  function toggleDiaSemanaEdit(i) {
+    setRotinaEditForm(f => ({
       ...f,
       dias_semana: f.dias_semana.includes(i) ? f.dias_semana.filter(d => d !== i) : [...f.dias_semana, i].sort()
     }))
@@ -645,6 +671,7 @@ export default function ClientePage() {
                 const byHora = (a, b) => (a.hora||'').localeCompare(b.hora||'')
                 const diarias = [...rotinas].filter(r => r.tipo === 'diaria').sort(byHora)
                 const mensais = [...rotinas].filter(r => r.tipo === 'mensal').sort(byHora)
+                const anuais  = [...rotinas].filter(r => r.tipo === 'anual').sort((a,b) => (a.mes||0) - (b.mes||0) || (a.dia_mes||0) - (b.dia_mes||0))
                 const diasComRotina = DIAS_SEMANA_R.map((label, idx) => ({
                   label,
                   rotinas: [...rotinas].filter(r => r.tipo === 'semanal' && (r.dias_semana?.includes(idx) || r.dia_semana === idx)).sort(byHora),
@@ -656,11 +683,44 @@ export default function ClientePage() {
                       <input value={rotinaEditForm.titulo} onChange={e=>setRotinaEditForm(f=>({...f,titulo:e.target.value}))}
                         className="fi" placeholder="Título" style={{ fontSize:11 }} />
                       <div style={{ display:'flex', gap:6 }}>
+                        <select value={rotinaEditForm.tipo} onChange={e=>setRotinaEditForm(f=>({...f,tipo:e.target.value}))}
+                          className="fi" style={{ fontSize:11, flex:1 }}>
+                          <option value="diaria">Todo dia</option>
+                          <option value="semanal">Semanal</option>
+                          <option value="mensal">Mensal</option>
+                          <option value="anual">Anual</option>
+                        </select>
                         <input type="time" value={rotinaEditForm.hora} onChange={e=>setRotinaEditForm(f=>({...f,hora:e.target.value}))}
                           className="fi" style={{ fontSize:11, flex:'0 0 90px' }} />
-                        <input value={rotinaEditForm.observacao} onChange={e=>setRotinaEditForm(f=>({...f,observacao:e.target.value}))}
-                          className="fi" placeholder="Observação..." style={{ fontSize:11, flex:1 }} />
                       </div>
+                      {rotinaEditForm.tipo === 'semanal' && (
+                        <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
+                          {DIAS_SEMANA_R.map((d,i) => (
+                            <button key={i} type="button" onClick={() => toggleDiaSemanaEdit(i)}
+                              style={{ padding:'3px 7px', borderRadius:99, fontSize:10, fontWeight:600, cursor:'pointer',
+                                border: rotinaEditForm.dias_semana.includes(i) ? '1px solid var(--br)' : '1px solid var(--bo)',
+                                background: rotinaEditForm.dias_semana.includes(i) ? 'var(--brl)' : 'var(--sur)',
+                                color: rotinaEditForm.dias_semana.includes(i) ? 'var(--br)' : 'var(--tx3)' }}>
+                              {d.slice(0,3)}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {(rotinaEditForm.tipo === 'mensal' || rotinaEditForm.tipo === 'anual') && (
+                        <div style={{ display:'flex', gap:6 }}>
+                          {rotinaEditForm.tipo === 'anual' && (
+                            <select value={rotinaEditForm.mes} onChange={e=>setRotinaEditForm(f=>({...f,mes:Number(e.target.value)}))}
+                              className="fi" style={{ fontSize:11, flex:1 }}>
+                              {MESES_R.map((m,i) => <option key={i} value={i+1}>{m}</option>)}
+                            </select>
+                          )}
+                          <input type="number" min={1} max={31} value={rotinaEditForm.dia_mes}
+                            onChange={e=>setRotinaEditForm(f=>({...f,dia_mes:Number(e.target.value)}))}
+                            className="fi" placeholder="Dia" style={{ fontSize:11, flex:'0 0 70px' }} />
+                        </div>
+                      )}
+                      <input value={rotinaEditForm.observacao} onChange={e=>setRotinaEditForm(f=>({...f,observacao:e.target.value}))}
+                        className="fi" placeholder="Observação..." style={{ fontSize:11 }} />
                       {rotinaEditErr && <div style={{ fontSize:10, color:'var(--rdt)' }}>{rotinaEditErr}</div>}
                       <div style={{ display:'flex', gap:6 }}>
                         <button onClick={salvarEdicaoRotina} disabled={updateRotina.isPending}
@@ -681,6 +741,8 @@ export default function ClientePage() {
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:11, fontWeight:600, color:'var(--tx)', lineHeight:1.4 }}>{r.titulo}</div>
+                      {r.tipo === 'mensal' && <div style={{ fontSize:9, color:'#B45309', marginTop:2 }}>Todo dia {r.dia_mes}</div>}
+                      {r.tipo === 'anual' && <div style={{ fontSize:9, color:'#B45309', marginTop:2 }}>{r.dia_mes} de {MESES_R[(r.mes||1)-1]}</div>}
                       {r.observacao && <div style={{ fontSize:9, color:'var(--tx3)', marginTop:2, fontStyle:'italic' }}>{r.observacao}</div>}
                     </div>
                     <div style={{ display:'flex', gap:3, flexShrink:0 }}>
@@ -727,6 +789,14 @@ export default function ClientePage() {
                         </div>
                       </div>
                     )}
+                    {anuais.length > 0 && (
+                      <div>
+                        {diaHeader('🎂 Anual', anuais.length, '#EC4899')}
+                        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px,1fr))', gap:8 }}>
+                          {anuais.map(rotinaCard)}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               })()}
@@ -747,6 +817,7 @@ export default function ClientePage() {
                         <option value="diaria">Todo dia</option>
                         <option value="semanal">Semanal</option>
                         <option value="mensal">Mensal</option>
+                        <option value="anual">Anual</option>
                       </select>
                     </div>
                     <div>
@@ -769,11 +840,19 @@ export default function ClientePage() {
                         </div>
                       </div>
                     )}
-                    {rotinaForm.tipo === 'mensal' && (
+                    {(rotinaForm.tipo === 'mensal' || rotinaForm.tipo === 'anual') && (
                       <div>
                         <label className="lbl">Dia do mês</label>
                         <input type="number" min={1} max={31} value={rotinaForm.dia_mes}
                           onChange={e=>setRotinaForm(f=>({...f,dia_mes:Number(e.target.value)}))} className="fi" />
+                      </div>
+                    )}
+                    {rotinaForm.tipo === 'anual' && (
+                      <div>
+                        <label className="lbl">Mês</label>
+                        <select value={rotinaForm.mes} onChange={e=>setRotinaForm(f=>({...f,mes:Number(e.target.value)}))} className="fi">
+                          {MESES_R.map((m,i) => <option key={i} value={i+1}>{m}</option>)}
+                        </select>
                       </div>
                     )}
                     <div style={{ gridColumn: rotinaForm.tipo === 'diaria' ? '1/-1' : undefined }}>

@@ -74,6 +74,7 @@ function RotinaInfo({ rot }) {
       {rot.hora && `⏰ ${rot.hora}`}
       {rot.tipo === 'semanal' && dias && ` · ${dias}`}
       {rot.tipo === 'mensal'  && rot.dia_mes && ` · dia ${rot.dia_mes}`}
+      {rot.tipo === 'anual'   && rot.dia_mes && ` · ${rot.dia_mes}/${rot.mes || 1}`}
       {rot.tipo === 'diaria'  && ' · Todo dia'}
     </span>
   )
