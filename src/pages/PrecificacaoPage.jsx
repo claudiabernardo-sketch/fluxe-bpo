@@ -937,17 +937,17 @@ export default function PrecificacaoPage() {
                 <Campo label="Pagamentos (contas a pagar) / mês" hint="Quantas contas você vai pagar por ele todo mês — fornecedores, aluguel, luz, internet, etc. Ex: 5 fornecedores + 3 fixas = 8. Raramente passa de 100 num cliente pequeno.">
                   <input className="prec-input" type="number" value={d.capag} onChange={num('capag')} min="0" />
                   {d.capag > 0 && <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>≈ {(0.5 + d.capag * 0.05).toFixed(1)}h/mês de gestão CP</div>}
-                  {d.capag > 200 && <div style={{ fontSize:10, color:'#EF4444', marginTop:2 }}>⚠ Mais de 200 pagamentos/mês é incomum. Confira se preencheu certo.</div>}
+                  {d.capag > 400 && <div style={{ fontSize:10, color:'#F59E0B', marginTop:2 }}>⚠ Número alto — comum em indústria/comércio com muitos fornecedores. Vale confirmar se bate com a realidade do cliente.</div>}
                 </Campo>
                 <Campo label="Clientes que pagam manualmente / mês" hint="Quantos clientes do seu cliente pagam por boleto ou PIX avulso, e você precisa conferir um por um. NÃO inclua vendas por maquininha, Mercado Pago ou outras plataformas — essas vão no campo 'Outras plataformas' abaixo. Preencher aqui também inclui no escopo o follow-up de cobrança desses inadimplentes — não tem como separar os dois.">
                   <input className="prec-input" type="number" value={d.carec} onChange={num('carec')} min="0" />
                   {d.carec > 0 && <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>≈ {(0.5 + d.carec * 0.04).toFixed(1)}h/mês de gestão CR</div>}
-                  {d.carec > 500 && <div style={{ fontSize:10, color:'#EF4444', marginTop:2 }}>⚠ Mais de 500 cobranças individuais é muito alto. Vendas por plataforma (Mercado Pago, cartão) não entram aqui.</div>}
+                  {d.carec > 800 && <div style={{ fontSize:10, color:'#F59E0B', marginTop:2 }}>⚠ Número alto de cobranças individuais. Vendas por plataforma (Mercado Pago, cartão) não entram aqui — confira se não misturou.</div>}
                 </Campo>
                 <Campo label="Movimentações no extrato / mês" hint="Quantidade de linhas no extrato bancário por mês. Se não souber: some pagamentos + recebimentos e multiplique por 1,3. Ex: 50 pagamentos + 30 recebimentos = 80 × 1,3 = ~100 movimentações. Raramente passa de 500 num cliente pequeno.">
                   <input className="prec-input" type="number" value={d.mov} onChange={num('mov')} min="0" />
                   {d.mov > 0 && d.bancos > 0 && <div style={{ fontSize:10, color:'#6366F1', marginTop:4 }}>impacta conciliação: +{(d.mov * 0.003).toFixed(1)}h</div>}
-                  {d.mov > 2000 && <div style={{ fontSize:10, color:'#EF4444', marginTop:2 }}>⚠ Mais de 2.000 movimentações é muito alto para um único CNPJ. Confira se preencheu certo.</div>}
+                  {d.mov > 3000 && <div style={{ fontSize:10, color:'#F59E0B', marginTop:2 }}>⚠ Volume alto para um único CNPJ — comum em indústria/comércio de grande giro. Vale confirmar se bate com a realidade do cliente.</div>}
                 </Campo>
                 <Campo label="Notas fiscais a emitir / mês" hint="NFS-e de serviço ou NF-e de produto. Zero se não for emitir.">
                   <input className="prec-input" type="number" value={d.nfs} onChange={num('nfs')} min="0" />
