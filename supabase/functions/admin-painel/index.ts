@@ -111,7 +111,7 @@ serve(async (req) => {
     if (action === 'list_empresas') {
       const { data: empresas, error } = await supabase
         .from('empresas')
-        .select('id, nome, email, cnpj, plano, trial_expira_em, criado_em, asaas_customer_id, asaas_subscription_id')
+        .select('id, nome, email, cnpj, plano, trial_expira_em, criado_em, asaas_customer_id, asaas_subscription_id, mentorado_bpo_lucrativo')
         .order('criado_em', { ascending: false })
       if (error) return ok({ error: error.message })
 
