@@ -1,9 +1,13 @@
 // ── OnboardingCliente ────────────────────────────────────────────────────
-// Checklist operacional de onboarding por cliente — modelo baseado no que a
-// Claudia usa de verdade com clientes novos (linha do tempo de 5 semanas,
-// responsabilidades, canal de comunicação). Uma linha por cliente (upsert).
+// Pacote de onboarding por cliente — modelo baseado no que a Claudia usa de
+// verdade com clientes novos (objetivos, responsabilidades, canal de
+// comunicação). Uma linha por cliente (upsert). O checklist de etapas vira
+// tarefas reais (categoria "Onboarding" já existente em Tarefas), em vez de
+// duplicar o que a aba Tarefas já faz melhor (responsável, prazo, Central
+// Operacional).
 import { useState } from 'react'
-import { useClienteOnboarding, useSalvarOnboarding } from '../../hooks/useData'
+import { useNavigate } from 'react-router-dom'
+import { useClienteOnboarding, useSalvarOnboarding, useCreateTask } from '../../hooks/useData'
 import { Loader } from './index'
 
 const OBJETIVOS_PADRAO = [
@@ -14,11 +18,11 @@ const OBJETIVOS_PADRAO = [
 ]
 
 const ETAPAS_PADRAO = [
-  { titulo: 'Kick-off & Acessos', descricao: 'Reunião inicial, alinhamento de expectativas e liberação de todos os acessos necessários.', data: '', concluido: false },
-  { titulo: 'Mapeamento & Estruturação Interna', descricao: 'Análise do financeiro atual, organização de pastas e estruturação dos fluxos internos.', data: '', concluido: false },
-  { titulo: 'Testes, Validações & Primeiros Relatórios', descricao: 'Testes de conciliação e envio dos primeiros relatórios experimentais.', data: '', concluido: false },
-  { titulo: 'Go-live Oficial', descricao: 'Início da rotina financeira completa com todos os processos funcionando.', data: '', concluido: false },
-  { titulo: 'Acompanhamento & Feedback', descricao: 'Monitoramento, correções e reunião de feedback para finalizar o onboarding.', data: '', concluido: false },
+  { titulo: 'Kick-off & Acessos', obs: 'Reunião inicial, alinhamento de expectativas e liberação de todos os acessos necessários.' },
+  { titulo: 'Mapeamento & Estruturação Interna', obs: 'Análise do financeiro atual, organização de pastas e estruturação dos fluxos internos.' },
+  { titulo: 'Testes, Validações & Primeiros Relatórios', obs: 'Testes de conciliação e envio dos primeiros relatórios experimentais.' },
+  { titulo: 'Go-live Oficial', obs: 'Início da rotina financeira completa com todos os processos funcionando.' },
+  { titulo: 'Acompanhamento & Feedback', obs: 'Monitoramento, correções e reunião de feedback para finalizar o onboarding.' },
 ]
 
 const RESP_NOSSAS_PADRAO = [
@@ -41,15 +45,18 @@ function linhasParaLista(texto) {
 }
 
 export default function OnboardingCliente({ clienteId }) {
+  const navigate = useNavigate()
   const { data: onboarding, isLoading } = useClienteOnboarding(clienteId)
   const salvar = useSalvarOnboarding()
+  const criarTarefa = useCreateTask()
   const [form, setForm] = useState(null)
   const [saveOk, setSaveOk] = useState(false)
+  const [criandoTarefas, setCriandoTarefas] = useState(false)
+  const [tarefasCriadas, setTarefasCriadas] = useState(false)
 
   if (!isLoading && form === null) {
     setForm({
       objetivosTexto: (onboarding?.objetivos?.length ? onboarding.objetivos : OBJETIVOS_PADRAO).join('\n'),
-      etapas: onboarding?.etapas?.length ? onboarding.etapas : ETAPAS_PADRAO,
       respNossasTexto: (onboarding?.responsabilidades_nossas?.length ? onboarding.responsabilidades_nossas : RESP_NOSSAS_PADRAO).join('\n'),
       respClienteTexto: (onboarding?.responsabilidades_cliente?.length ? onboarding.responsabilidades_cliente : RESP_CLIENTE_PADRAO).join('\n'),
       canal_comunicacao: onboarding?.canal_comunicacao || '',
@@ -60,23 +67,10 @@ export default function OnboardingCliente({ clienteId }) {
 
   if (isLoading || !form) return <Loader />
 
-  const concluidas = form.etapas.filter(e => e.concluido).length
-
-  function atualizarEtapa(i, patch) {
-    setForm(f => ({ ...f, etapas: f.etapas.map((e, idx) => idx === i ? { ...e, ...patch } : e) }))
-  }
-  function adicionarEtapa() {
-    setForm(f => ({ ...f, etapas: [...f.etapas, { titulo: '', descricao: '', data: '', concluido: false }] }))
-  }
-  function removerEtapa(i) {
-    setForm(f => ({ ...f, etapas: f.etapas.filter((_, idx) => idx !== i) }))
-  }
-
   async function salvarTudo() {
     await salvar.mutateAsync({
       clienteId,
       objetivos: linhasParaLista(form.objetivosTexto),
-      etapas: form.etapas.filter(e => e.titulo.trim()),
       responsabilidades_nossas: linhasParaLista(form.respNossasTexto),
       responsabilidades_cliente: linhasParaLista(form.respClienteTexto),
       canal_comunicacao: form.canal_comunicacao,
@@ -85,6 +79,15 @@ export default function OnboardingCliente({ clienteId }) {
     })
     setSaveOk(true)
     setTimeout(() => setSaveOk(false), 2000)
+  }
+
+  async function criarTarefasDeOnboarding() {
+    setCriandoTarefas(true)
+    for (const etapa of ETAPAS_PADRAO) {
+      await criarTarefa.mutateAsync({ titulo: etapa.titulo, obs: etapa.obs, categoria: 'Onboarding', status: 'aberta', cliente_id: clienteId })
+    }
+    setCriandoTarefas(false)
+    setTarefasCriadas(true)
   }
 
   return (
@@ -97,32 +100,22 @@ export default function OnboardingCliente({ clienteId }) {
           value={form.objetivosTexto} onChange={e => setForm(f => ({ ...f, objetivosTexto: e.target.value }))} />
       </div>
 
-      {/* ── Linha do tempo ── */}
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <label className="lbl" style={{ margin: 0 }}>Linha do tempo</label>
-          <span style={{ fontSize: 11, color: 'var(--tx3)', fontWeight: 600 }}>{concluidas} de {form.etapas.length} concluídas</span>
+      {/* ── Checklist de etapas → cria tarefas reais ── */}
+      <div style={{ border: '1px solid var(--bo)', borderRadius: 10, padding: 14, background: 'var(--s2)' }}>
+        <label className="lbl" style={{ margin: 0 }}>Checklist de onboarding (5 etapas)</label>
+        <div style={{ fontSize: 12, color: 'var(--tx2)', margin: '6px 0 10px' }}>
+          Kick-off & Acessos · Mapeamento & Estruturação Interna · Testes, Validações & Primeiros Relatórios · Go-live Oficial · Acompanhamento & Feedback
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {form.etapas.map((e, i) => (
-            <div key={i} style={{ border: '1px solid var(--bo)', borderRadius: 8, padding: '10px 12px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <input type="checkbox" checked={!!e.concluido} onChange={ev => atualizarEtapa(i, { concluido: ev.target.checked })} style={{ marginTop: 6 }} />
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <input className="fi" style={{ flex: 1, fontWeight: 600 }} placeholder={`Etapa ${i + 1}`}
-                    value={e.titulo} onChange={ev => atualizarEtapa(i, { titulo: ev.target.value })} />
-                  <input className="fi" type="date" style={{ width: 150 }}
-                    value={e.data || ''} onChange={ev => atualizarEtapa(i, { data: ev.target.value })} />
-                  <button onClick={() => removerEtapa(i)} title="Remover etapa"
-                    style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 14, color: 'var(--tx3)' }}>×</button>
-                </div>
-                <input className="fi" placeholder="Descrição (opcional)"
-                  value={e.descricao || ''} onChange={ev => atualizarEtapa(i, { descricao: ev.target.value })} />
-              </div>
-            </div>
-          ))}
-        </div>
-        <button className="btn bp bsm" style={{ marginTop: 8 }} onClick={adicionarEtapa}>+ Etapa</button>
+        {tarefasCriadas ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 12, color: 'var(--grt)', fontWeight: 600 }}>✓ 5 tarefas criadas na categoria Onboarding</span>
+            <button className="btn bp bsm" onClick={() => navigate('/tasks')}>Ver em Tarefas</button>
+          </div>
+        ) : (
+          <button className="btn bp bsm" disabled={criandoTarefas} onClick={criarTarefasDeOnboarding}>
+            {criandoTarefas ? 'Criando…' : '+ Criar as 5 tarefas de onboarding'}
+          </button>
+        )}
       </div>
 
       {/* ── Responsabilidades ── */}

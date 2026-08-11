@@ -754,12 +754,12 @@ export function useClienteOnboarding(clienteId) {
 export function useSalvarOnboarding() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ clienteId, objetivos, etapas, responsabilidades_nossas, responsabilidades_cliente, canal_comunicacao, erp_usado, email_padrao }) => {
+    mutationFn: async ({ clienteId, objetivos, responsabilidades_nossas, responsabilidades_cliente, canal_comunicacao, erp_usado, email_padrao }) => {
       const { data, error } = await supabase
         .from('cliente_onboarding')
         .upsert({
           cliente_id: clienteId,
-          objetivos, etapas, responsabilidades_nossas, responsabilidades_cliente,
+          objetivos, responsabilidades_nossas, responsabilidades_cliente,
           canal_comunicacao: canal_comunicacao || null,
           erp_usado: erp_usado || null,
           email_padrao: email_padrao || null,
