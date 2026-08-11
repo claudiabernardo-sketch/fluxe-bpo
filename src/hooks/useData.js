@@ -1741,6 +1741,40 @@ export function useAdminTurma() {
   })
 }
 
+// Progresso do mentorado pelas aulas da turma — check visual de "concluída".
+// Vai direto (RLS por empresa_id), não passa pelo admin-painel.
+export function useMeuProgressoAulas() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['turma_aulas_progresso', empresa?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('turma_aulas_progresso').select('aula_id')
+      if (error) throw error
+      return new Set((data ?? []).map(r => r.aula_id))
+    },
+    staleTime: 15_000,
+    enabled: !!empresa?.id,
+  })
+}
+
+export function useToggleProgressoAula() {
+  const qc = useQueryClient()
+  const { empresa } = useAuthStore()
+  return useMutation({
+    mutationFn: async ({ aula_id, concluido }) => {
+      if (concluido) {
+        const { error } = await supabase.from('turma_aulas_progresso').insert({ aula_id, empresa_id: empresa.id })
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('turma_aulas_progresso').delete().eq('aula_id', aula_id).eq('empresa_id', empresa.id)
+        if (error) throw error
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['turma_aulas_progresso', empresa?.id] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
 // ── MENTORIA (links) ─────────────────────────────────
 export function useMentoriaLinks() {
   const { empresa } = useAuthStore()
