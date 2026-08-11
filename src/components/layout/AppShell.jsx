@@ -123,14 +123,17 @@ const MOB_NAV = [
   { path:'/tasks',    icon:'fa-solid fa-list-check',  label:'Tarefas' },
   { path:'/agenda',   icon:'fa-solid fa-rocket',      label:'Central' },
   { path:'/clientes', icon:'fa-solid fa-building',    label:'Clientes'},
-  { path:'/config',   icon:'fa-solid fa-gear',        label:'Mais'    },
+  { more:true,        icon:'fa-solid fa-ellipsis',    label:'Mais'    },
 ]
+// Itens já fixos na barra mobile — não repetir no menu "Mais"
+const MOB_NAV_PATHS = new Set(MOB_NAV.map(i => i.path).filter(Boolean))
 
 export default function AppShell() {
   const { profile, empresa, signOut } = useAuthStore()
   const nav = useNavigate()
   const loc = useLocation()
   const [showMenu, setShowMenu] = useState(false)
+  const [showMore, setShowMore] = useState(false)
   const menuRef = useRef(null)
   const title = TITLES[loc.pathname] || 'Fluxe BPO'
   const initials = profile?.nome?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?'
@@ -149,7 +152,7 @@ export default function AppShell() {
   }, [showMenu])
 
   // Fecha menu ao navegar
-  useEffect(() => { setShowMenu(false) }, [loc.pathname])
+  useEffect(() => { setShowMenu(false); setShowMore(false) }, [loc.pathname])
 
   const handleSignOut = async () => {
     setShowMenu(false)
@@ -298,11 +301,11 @@ export default function AppShell() {
     {/* Nav mobile */}
     <nav className="mob-nav">
       {MOB_NAV.map(item => {
-        const active = loc.pathname === item.path
+        const active = !item.more && loc.pathname === item.path
         return (
-          <button key={item.path}
-            className={`mob-nav-item${active ? ' on' : ''}`}
-            onClick={() => nav(item.path)}
+          <button key={item.path || 'more'}
+            className={`mob-nav-item${active ? ' on' : ''}${item.more && showMore ? ' on' : ''}`}
+            onClick={() => item.more ? setShowMore(v => !v) : nav(item.path)}
           >
             <i className={item.icon} />
             <span>{item.label}</span>
@@ -310,6 +313,45 @@ export default function AppShell() {
         )
       })}
     </nav>
+
+    {/* Menu "Mais" mobile — todo o resto do menu que não cabe na barra */}
+    {showMore && (
+      <div className="mob-more-ov" onClick={() => setShowMore(false)}>
+        <div className="mob-more-sheet" onClick={e => e.stopPropagation()}>
+          <div className="mob-more-hd">
+            <span>Menu</span>
+            <button className="mob-more-close" onClick={() => setShowMore(false)}>
+              <i className="fa-solid fa-xmark" />
+            </button>
+          </div>
+          <div className="mob-more-list">
+            {navItems.map((item, i) => {
+              if (item.grp) return <div key={i} className="sb-grp-lbl">{item.grp}</div>
+              if (MOB_NAV_PATHS.has(item.path)) return null
+              return (
+                <button key={item.path} className="mob-more-item" onClick={() => nav(item.path)}>
+                  <i className={item.icon} />
+                  <span>{item.label}</span>
+                </button>
+              )
+            })}
+            <div className="sb-grp-lbl">CONTA</div>
+            <button className="mob-more-item" onClick={() => nav('/meu-painel')}>
+              <i className="fa-solid fa-circle-user" /> <span>Meu Painel</span>
+            </button>
+            <button className="mob-more-item" onClick={() => nav('/config')}>
+              <i className="fa-solid fa-gear" /> <span>Configurações</span>
+            </button>
+            <button className="mob-more-item" onClick={() => nav('/ajuda')}>
+              <i className="fa-solid fa-circle-question" /> <span>Central de Ajuda</span>
+            </button>
+            <button className="mob-more-item danger" onClick={handleSignOut}>
+              <i className="fa-solid fa-arrow-right-from-bracket" /> <span>Sair</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
     <RadarPanelOverlay />
     <TrialGuard />
