@@ -751,11 +751,12 @@ function FormTurma({ turma, acao }) {
     data_inicio: turma?.data_inicio || '',
     ativo: turma?.ativo !== false,
     checkout_url: turma?.checkout_url || '',
+    grupo_whatsapp_url: turma?.grupo_whatsapp_url || '',
   })
 
   function salvar() {
     if (!form.nome.trim()) return
-    acao.mutate({ action: 'salvar_turma', id: turma?.id, nome: form.nome, data_inicio: form.data_inicio || null, ativo: form.ativo, checkout_url: form.checkout_url || null })
+    acao.mutate({ action: 'salvar_turma', id: turma?.id, nome: form.nome, data_inicio: form.data_inicio || null, ativo: form.ativo, checkout_url: form.checkout_url || null, grupo_whatsapp_url: form.grupo_whatsapp_url || null })
   }
 
   const fi = { padding: '7px 10px', border: '1px solid var(--bo)', borderRadius: 8, fontSize: 12, fontFamily: 'inherit' }
@@ -765,6 +766,7 @@ function FormTurma({ turma, acao }) {
       <input style={{ ...fi, flex: '1 1 200px' }} placeholder="Nome da turma (ex: Turma Agosto 2026)" value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} />
       <input style={{ ...fi, flex: '0 0 160px' }} type="date" value={form.data_inicio} onChange={e => setForm(f => ({ ...f, data_inicio: e.target.value }))} />
       <input style={{ ...fi, flex: '1 1 240px' }} placeholder="Link de checkout (Kiwify)" value={form.checkout_url} onChange={e => setForm(f => ({ ...f, checkout_url: e.target.value }))} />
+      <input style={{ ...fi, flex: '1 1 240px' }} placeholder="Link do grupo do WhatsApp" value={form.grupo_whatsapp_url} onChange={e => setForm(f => ({ ...f, grupo_whatsapp_url: e.target.value }))} />
       <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
         <input type="checkbox" checked={form.ativo} onChange={e => setForm(f => ({ ...f, ativo: e.target.checked }))} /> Ativa
       </label>
