@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMentoriaLinks, useCreateMentoriaLink, useDeleteMentoriaLink, useMeusCombinados, useAtualizarMeuCombinado, useTurmaAtualPublica } from '../hooks/useData'
+import { useMentoriaLinks, useCreateMentoriaLink, useDeleteMentoriaLink, useMeusCombinados, useAtualizarMeuCombinado, useTurmaAtualPublica, useMeuProgressoAulas, useToggleProgressoAula } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import { Card, CardHeader, Btn, Loader } from '../components/ui'
@@ -45,11 +45,32 @@ function ItemMeuCombinado({ c }) {
   )
 }
 
+function AulaConcluidaCheck({ aula, concluida }) {
+  const toggle = useToggleProgressoAula()
+  return (
+    <button
+      onClick={() => toggle.mutate({ aula_id: aula.id, concluido: !concluida })}
+      disabled={toggle.isPending}
+      title={concluida ? 'Marcar como não concluída' : 'Marcar como concluída'}
+      style={{
+        width: 28, height: 28, borderRadius: '50%', border: 'none', flexShrink: 0, cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700,
+        background: concluida ? '#22C55E' : 'rgba(99,102,241,.1)', color: concluida ? '#fff' : '#6366F1',
+        transition: 'all .15s',
+      }}
+    >
+      {concluida ? <i className="fa-solid fa-check" /> : aula.numero}
+    </button>
+  )
+}
+
 function SecaoAulasDaTurma() {
   const { empresa } = useAuthStore()
   const { data, isLoading } = useTurmaAtualPublica()
+  const { data: concluidas = new Set() } = useMeuProgressoAulas()
   const turma = data?.turma
   const aulas = data?.aulas ?? []
+  const totalConcluidas = aulas.filter(a => concluidas.has(a.id)).length
 
   if (!empresa?.mentorado_bpo_lucrativo) return null
   if (isLoading) return null
@@ -59,30 +80,56 @@ function SecaoAulasDaTurma() {
     <Card style={{ marginBottom: 16 }}>
       <CardHeader title={`Aulas da Turma${turma.nome ? ` — ${turma.nome}` : ''}`} icon="fa-solid fa-video" />
       <div style={{ padding: 16 }}>
+        {turma.grupo_whatsapp_url && (
+          <a href={turma.grupo_whatsapp_url} target="_blank" rel="noopener noreferrer" style={{
+            display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: '#fff',
+            background: '#25D366', borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 700, marginBottom: 14,
+          }}>
+            <i className="fa-brands fa-whatsapp" style={{ fontSize: 16 }} /> Entrar no grupo da turma no WhatsApp
+          </a>
+        )}
         {aulas.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>Cronograma da turma em breve.</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {aulas.map(a => (
-              <div key={a.id} style={{ border: '1px solid var(--bo)', borderRadius: 10, padding: '12px 14px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(99,102,241,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, fontWeight: 700, color: '#6366F1' }}>{a.numero}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{a.titulo}</div>
-                  {a.exercicio && <div style={{ fontSize: 12, color: 'var(--tx2)', marginTop: 2 }}>Exercício: {a.exercicio}</div>}
-                  <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 4 }}>
-                    {a.data ? new Date(a.data + 'T12:00:00').toLocaleDateString('pt-BR') : 'Data a combinar'}
+          <>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--tx2)', marginBottom: 5, fontWeight: 600 }}>
+                <span>Seu progresso</span>
+                <span>{totalConcluidas} de {aulas.length} aulas concluídas</span>
+              </div>
+              <div style={{ height: 6, borderRadius: 99, background: 'var(--s2)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${aulas.length ? (totalConcluidas / aulas.length) * 100 : 0}%`, background: '#22C55E', transition: 'width .2s' }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {aulas.map(a => (
+                <div key={a.id} style={{ border: '1px solid var(--bo)', borderRadius: 10, padding: '12px 14px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <AulaConcluidaCheck aula={a} concluida={concluidas.has(a.id)} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>{a.titulo}</div>
+                    {a.exercicio && <div style={{ fontSize: 12, color: 'var(--tx2)', marginTop: 2 }}>Exercício: {a.exercicio}</div>}
+                    <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 4 }}>
+                      {a.data ? new Date(a.data + 'T12:00:00').toLocaleDateString('pt-BR') : 'Data a combinar'}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap' }}>
+                    {a.material_url && (
+                      <a href={a.material_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: 'var(--tx2)', textDecoration: 'none', border: '1px solid var(--bo)', borderRadius: 8, padding: '6px 12px' }}>
+                        📄 Material
+                      </a>
+                    )}
+                    {a.video_url ? (
+                      <a href={a.video_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: '#6366F1', textDecoration: 'none', border: '1px solid #6366F1', borderRadius: 8, padding: '6px 12px' }}>
+                        ▶ Assistir
+                      </a>
+                    ) : (
+                      !a.material_url && <span style={{ fontSize: 11, color: 'var(--tx3)' }}>Em breve</span>
+                    )}
                   </div>
                 </div>
-                {a.video_url ? (
-                  <a href={a.video_url} target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, fontSize: 12, fontWeight: 600, color: '#6366F1', textDecoration: 'none', border: '1px solid #6366F1', borderRadius: 8, padding: '6px 12px' }}>
-                    ▶ Assistir
-                  </a>
-                ) : (
-                  <span style={{ flexShrink: 0, fontSize: 11, color: 'var(--tx3)' }}>Em breve</span>
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </Card>
