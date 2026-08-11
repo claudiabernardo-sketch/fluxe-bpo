@@ -733,6 +733,46 @@ export function useSalvarMetricaMes() {
   })
 }
 
+// ── ONBOARDING DO CLIENTE ─────────────────────────────
+export function useClienteOnboarding(clienteId) {
+  return useQuery({
+    queryKey: ['cliente_onboarding', clienteId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cliente_onboarding')
+        .select('*')
+        .eq('cliente_id', clienteId)
+        .maybeSingle()
+      if (error) throw error
+      return data
+    },
+    enabled: !!clienteId,
+    staleTime: 15_000,
+  })
+}
+
+export function useSalvarOnboarding() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ clienteId, objetivos, responsabilidades_nossas, responsabilidades_cliente, canal_comunicacao, erp_usado, email_padrao }) => {
+      const { data, error } = await supabase
+        .from('cliente_onboarding')
+        .upsert({
+          cliente_id: clienteId,
+          objetivos, responsabilidades_nossas, responsabilidades_cliente,
+          canal_comunicacao: canal_comunicacao || null,
+          erp_usado: erp_usado || null,
+          email_padrao: email_padrao || null,
+          atualizado_em: new Date().toISOString(),
+        }, { onConflict: 'cliente_id' })
+        .select()
+      if (error) throw error
+      return data?.[0]
+    },
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['cliente_onboarding', vars.clienteId] }),
+  })
+}
+
 export function useSaveApontamento() {
   const qc = useQueryClient()
   const { empresa } = useAuthStore()

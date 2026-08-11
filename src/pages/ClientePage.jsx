@@ -14,6 +14,7 @@ import { Badge, Loader, fmtR } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 import RadarPainel from '../components/ui/RadarPainel'
 import RadarRelatorio360 from '../components/ui/RadarRelatorio360'
+import OnboardingCliente from '../components/ui/OnboardingCliente'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const ETAPA_COLOR = { comercial:'pu', pre_ob:'yw', onboarding:'bl', implantacao:'or', operacional:'gr', estrategico:'cy', acompanhamento:'gy', encerramento:'gy' }
@@ -390,6 +391,7 @@ export default function ClientePage() {
             ['financeiro','💰 Financeiro'],
             ['bancos','🏦 Bancos'],
             ['cofre','🔐 Cofre'],
+            ['onboarding','🚀 Onboarding'],
             ['rotina','🔁 Rotina'],
             ['radar','🩺 Radar'],
             ['relatorio360','📄 Relatório 360'],
@@ -868,6 +870,11 @@ export default function ClientePage() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* ── ABA ONBOARDING ────────────────────────────────────────────────── */}
+          {tab === 'onboarding' && (
+            <OnboardingCliente clienteId={clienteId} />
           )}
 
           {/* ── ABA RADAR ─────────────────────────────────────────────────────── */}
