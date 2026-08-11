@@ -782,13 +782,14 @@ function LinhaAula({ aula, turmaId, acao }) {
     data: aula.data || '',
     exercicio: aula.exercicio || '',
     video_url: aula.video_url || '',
+    material_url: aula.material_url || '',
   })
   const [confirmDel, setConfirmDel] = useState(false)
   const fi = { padding: '6px 8px', border: '1px solid var(--bo)', borderRadius: 6, fontSize: 12, fontFamily: 'inherit' }
 
   function salvar() {
     if (!form.titulo.trim() || !form.numero) return
-    acao.mutate({ action: 'salvar_aula', id: aula.id, turma_id: turmaId, numero: Number(form.numero), titulo: form.titulo, data: form.data || null, exercicio: form.exercicio || null, video_url: form.video_url || null })
+    acao.mutate({ action: 'salvar_aula', id: aula.id, turma_id: turmaId, numero: Number(form.numero), titulo: form.titulo, data: form.data || null, exercicio: form.exercicio || null, video_url: form.video_url || null, material_url: form.material_url || null })
   }
 
   return (
@@ -798,6 +799,7 @@ function LinhaAula({ aula, turmaId, acao }) {
       <input style={{ ...fi, flex: '0 0 130px' }} type="date" value={form.data} onChange={e => setForm(f => ({ ...f, data: e.target.value }))} />
       <input style={{ ...fi, flex: '1 1 160px' }} placeholder="Exercício" value={form.exercicio} onChange={e => setForm(f => ({ ...f, exercicio: e.target.value }))} />
       <input style={{ ...fi, flex: '1 1 200px' }} placeholder="Link do vídeo (Google Drive)" value={form.video_url} onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))} />
+      <input style={{ ...fi, flex: '1 1 200px' }} placeholder="Link do material de apoio (PDF, slide...)" value={form.material_url} onChange={e => setForm(f => ({ ...f, material_url: e.target.value }))} />
       <Btn small variant="success" disabled={acao.isPending} onClick={salvar}>Salvar</Btn>
       {confirmDel ? (
         <>
@@ -812,13 +814,13 @@ function LinhaAula({ aula, turmaId, acao }) {
 }
 
 function NovaAulaForm({ turmaId, acao, proximoNumero }) {
-  const [form, setForm] = useState({ numero: proximoNumero, titulo: '', data: '', exercicio: '', video_url: '' })
+  const [form, setForm] = useState({ numero: proximoNumero, titulo: '', data: '', exercicio: '', video_url: '', material_url: '' })
   const fi = { padding: '6px 8px', border: '1px solid var(--bo)', borderRadius: 6, fontSize: 12, fontFamily: 'inherit' }
 
   function salvar() {
     if (!form.titulo.trim() || !form.numero) return
-    acao.mutate({ action: 'salvar_aula', turma_id: turmaId, numero: Number(form.numero), titulo: form.titulo, data: form.data || null, exercicio: form.exercicio || null, video_url: form.video_url || null }, {
-      onSuccess: () => setForm({ numero: Number(form.numero) + 1, titulo: '', data: '', exercicio: '', video_url: '' }),
+    acao.mutate({ action: 'salvar_aula', turma_id: turmaId, numero: Number(form.numero), titulo: form.titulo, data: form.data || null, exercicio: form.exercicio || null, video_url: form.video_url || null, material_url: form.material_url || null }, {
+      onSuccess: () => setForm({ numero: Number(form.numero) + 1, titulo: '', data: '', exercicio: '', video_url: '', material_url: '' }),
     })
   }
 
@@ -829,6 +831,7 @@ function NovaAulaForm({ turmaId, acao, proximoNumero }) {
       <input style={{ ...fi, flex: '0 0 130px' }} type="date" value={form.data} onChange={e => setForm(f => ({ ...f, data: e.target.value }))} />
       <input style={{ ...fi, flex: '1 1 160px' }} placeholder="Exercício" value={form.exercicio} onChange={e => setForm(f => ({ ...f, exercicio: e.target.value }))} />
       <input style={{ ...fi, flex: '1 1 200px' }} placeholder="Link do vídeo (Google Drive)" value={form.video_url} onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))} />
+      <input style={{ ...fi, flex: '1 1 200px' }} placeholder="Link do material de apoio (PDF, slide...)" value={form.material_url} onChange={e => setForm(f => ({ ...f, material_url: e.target.value }))} />
       <Btn small variant="primary" disabled={acao.isPending || !form.titulo.trim()} onClick={salvar}>+ Adicionar aula</Btn>
     </div>
   )

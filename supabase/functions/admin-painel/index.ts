@@ -214,9 +214,9 @@ serve(async (req) => {
 
     // ── Ação: cria/atualiza uma aula da turma ───────────────────────────────
     if (action === 'salvar_aula') {
-      const { id, turma_id, numero, titulo, data, exercicio, video_url } = payload
+      const { id, turma_id, numero, titulo, data, exercicio, video_url, material_url } = payload
       if (!turma_id || !numero || !titulo) return ok({ error: 'turma_id, numero e titulo são obrigatórios' })
-      const linha = { turma_id, numero, titulo, data: data || null, exercicio: exercicio || null, video_url: video_url || null }
+      const linha = { turma_id, numero, titulo, data: data || null, exercicio: exercicio || null, video_url: video_url || null, material_url: material_url || null }
       const { data: row, error } = id
         ? await supabase.from('turma_aulas').update(linha).eq('id', id).select().single()
         : await supabase.from('turma_aulas').insert(linha).select().single()

@@ -73,13 +73,20 @@ function SecaoAulasDaTurma() {
                     {a.data ? new Date(a.data + 'T12:00:00').toLocaleDateString('pt-BR') : 'Data a combinar'}
                   </div>
                 </div>
-                {a.video_url ? (
-                  <a href={a.video_url} target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, fontSize: 12, fontWeight: 600, color: '#6366F1', textDecoration: 'none', border: '1px solid #6366F1', borderRadius: 8, padding: '6px 12px' }}>
-                    ▶ Assistir
-                  </a>
-                ) : (
-                  <span style={{ flexShrink: 0, fontSize: 11, color: 'var(--tx3)' }}>Em breve</span>
-                )}
+                <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap' }}>
+                  {a.material_url && (
+                    <a href={a.material_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: 'var(--tx2)', textDecoration: 'none', border: '1px solid var(--bo)', borderRadius: 8, padding: '6px 12px' }}>
+                      📄 Material
+                    </a>
+                  )}
+                  {a.video_url ? (
+                    <a href={a.video_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: '#6366F1', textDecoration: 'none', border: '1px solid #6366F1', borderRadius: 8, padding: '6px 12px' }}>
+                      ▶ Assistir
+                    </a>
+                  ) : (
+                    !a.material_url && <span style={{ fontSize: 11, color: 'var(--tx3)' }}>Em breve</span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
