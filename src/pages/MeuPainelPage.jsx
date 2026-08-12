@@ -1,10 +1,82 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../store/authStore'
+import { useUpdateApontamento, useDeleteApontamento } from '../hooks/useData'
 
 const PERFIL_LABEL = { admin:'Administrador', gestor:'Gestor', supervisor:'Supervisor', operador:'Operador' }
 const STATUS_LABEL  = { aberta:'A fazer', andamento:'Em andamento', aguardando:'Aguardando', impedimento:'Impedimento', concluida:'Concluída' }
 const STATUS_COR    = { aberta:'var(--tx3)', andamento:'var(--br)', aguardando:'var(--yw)', impedimento:'var(--rd)', concluida:'var(--gr)' }
+
+function fmtHoras(segundos) {
+  const totalMin = Math.round(segundos / 60)
+  const h = Math.floor(totalMin / 60)
+  const m = totalMin % 60
+  return `${h}h${m ? ` ${String(m).padStart(2, '0')}min` : ''}`
+}
+
+function LinhaApontamento({ ap }) {
+  const [editando, setEditando] = useState(false)
+  const [horasForm, setHorasForm] = useState('')
+  const [confirmDel, setConfirmDel] = useState(false)
+  const atualizar = useUpdateApontamento()
+  const remover = useDeleteApontamento()
+
+  const cliente = ap.clientes?.fantasia || ap.clientes?.razao_social
+  const titulo = ap.tarefas?.titulo || cliente || 'Apontamento avulso'
+  const dataFmt = new Date(ap.inicio).toLocaleDateString('pt-BR')
+  const horasDecimal = ap.segundos / 3600
+  // Timer esquecido ligado costuma passar de 6h numa tarefa só — sinaliza pra facilitar achar o problema.
+  const suspeito = horasDecimal > 6
+
+  function iniciarEdicao() {
+    setHorasForm(horasDecimal.toFixed(2))
+    setEditando(true)
+  }
+  function salvar() {
+    const h = Number(horasForm.replace(',', '.'))
+    if (!h || h <= 0) return
+    const novoFim = new Date(new Date(ap.inicio).getTime() + h * 3600 * 1000).toISOString()
+    atualizar.mutate({ id: ap.id, inicio: ap.inicio, fim: novoFim }, { onSuccess: () => setEditando(false) })
+  }
+
+  return (
+    <div style={{ padding: '9px 14px', borderBottom: '1px solid var(--bo)', display: 'flex', alignItems: 'center', gap: 9 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--tx)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{titulo}</div>
+        <div style={{ fontSize: 10, color: 'var(--tx3)' }}>{cliente ? `${cliente} · ` : ''}{dataFmt}</div>
+      </div>
+      {editando ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <input
+            type="number" step="0.25" min="0" autoFocus value={horasForm}
+            onChange={e => setHorasForm(e.target.value)}
+            style={{ width: 56, padding: '4px 6px', fontSize: 11, border: '1px solid var(--bo)', borderRadius: 6, fontFamily: 'inherit' }}
+          />
+          <span style={{ fontSize: 10, color: 'var(--tx3)' }}>h</span>
+          <button onClick={salvar} disabled={atualizar.isPending} title="Salvar" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--gr)' }}>✓</button>
+          <button onClick={() => setEditando(false)} title="Cancelar" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--tx3)' }}>✕</button>
+        </div>
+      ) : confirmDel ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 10, color: 'var(--rdt)' }}>Apagar?</span>
+          <button onClick={() => remover.mutate(ap.id)} disabled={remover.isPending} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--rdt)', fontWeight: 700 }}>Sim</button>
+          <button onClick={() => setConfirmDel(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--tx3)' }}>Não</button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span
+            className={suspeito ? 'b b-rd' : 'b b-gy'}
+            style={{ fontSize: 9 }}
+            title={suspeito ? 'Mais de 6h numa tarefa só — confere se o timer ficou esquecido ligado' : undefined}
+          >{fmtHoras(ap.segundos)}{suspeito ? ' ⚠️' : ''}</span>
+          <button onClick={iniciarEdicao} title="Corrigir tempo" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--tx3)' }}>✏️</button>
+          <button onClick={() => setConfirmDel(true)} title="Apagar" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--tx3)' }}>🗑️</button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function MeuPainelPage() {
   const { profile, empresa } = useAuthStore()
@@ -31,9 +103,10 @@ export default function MeuPainelPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from('apontamentos')
-        .select('*')
+        .select('*, clientes(razao_social, fantasia), tarefas(titulo)')
         .eq('usuario_id', profile?.id)
         .gte('inicio', mesStart.toISOString())
+        .order('inicio', { ascending: false })
       return data || []
     },
     enabled: !!profile?.id,
@@ -184,6 +257,20 @@ export default function MeuPainelPage() {
               ))
             }
           </div>
+        </div>
+      </div>
+
+      {/* Meus apontamentos — corrigir tempo quando o timer fica esquecido ligado */}
+      <div style={{ background:'var(--sur)', border:'1px solid var(--bo)', borderRadius:'var(--rl)', boxShadow:'var(--sh)', marginTop:12 }}>
+        <div className="ch">
+          <div className="ct"><i className="fa-solid fa-clock" style={{ color:'var(--br)' }}></i> Meus Apontamentos (este mês)</div>
+          <span className="b b-bl">{horas.length}</span>
+        </div>
+        <div style={{ maxHeight:280, overflowY:'auto' }}>
+          {horas.length === 0
+            ? <div style={{ padding:'20px', textAlign:'center', color:'var(--tx3)', fontSize:12 }}>Nenhum apontamento este mês</div>
+            : horas.map(ap => <LinhaApontamento key={ap.id} ap={ap} />)
+          }
         </div>
       </div>
     </div>

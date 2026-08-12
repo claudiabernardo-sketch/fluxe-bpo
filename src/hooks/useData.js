@@ -789,6 +789,46 @@ export function useSaveApontamento() {
   })
 }
 
+// Corrige um apontamento existente — usado quando o usuário esquece o timer
+// ligado e o lançamento fica com horas absurdas. Recalcula 'segundos' a
+// partir de inicio/fim pra não deixar os dois campos fora de sincronia.
+export function useUpdateApontamento() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, inicio, fim }) => {
+      const segundos = Math.max(0, Math.round((new Date(fim) - new Date(inicio)) / 1000))
+      const { data, error } = await supabase
+        .from('apontamentos').update({ inicio, fim, segundos }).eq('id', id).select()
+      if (error) throw error
+      await logAudit('UPDATE', 'apontamentos', id, { segundos })
+      return data?.[0]
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['apontamentos'] })
+      qc.invalidateQueries({ queryKey: ['apontamentos_mes'] })
+      qc.invalidateQueries({ queryKey: ['my-horas'] })
+    },
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+export function useDeleteApontamento() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('apontamentos').delete().eq('id', id)
+      if (error) throw error
+      await logAudit('DELETE', 'apontamentos', id)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['apontamentos'] })
+      qc.invalidateQueries({ queryKey: ['apontamentos_mes'] })
+      qc.invalidateQueries({ queryKey: ['my-horas'] })
+    },
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
 // ── APROVAÇÕES ───────────────────────────────────────
 // ── USUÁRIOS DA EMPRESA ───────────────────────────────
 export function useUsuarios() {
