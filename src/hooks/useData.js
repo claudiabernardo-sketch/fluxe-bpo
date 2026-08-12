@@ -1558,7 +1558,7 @@ export function useMentorados() {
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      return data.mentorados ?? []
+      return { mentorados: data.mentorados ?? [], turma_aulas: data.turma_aulas ?? [] }
     },
     staleTime: 30_000,
   })

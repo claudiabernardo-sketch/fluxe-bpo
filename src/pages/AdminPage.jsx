@@ -111,6 +111,11 @@ function LinhaEmpresa({ emp, onAcao, pendente }) {
         >
           🎓
         </button>
+        {emp.mentorado_bpo_lucrativo && emp.aulas_total > 0 && (
+          <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 2 }} title="Progresso na turma da Mentoria em Grupo">
+            {emp.aulas_concluidas}/{emp.aulas_total}
+          </div>
+        )}
       </td>
       <td style={{ padding: '10px 8px' }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -532,9 +537,11 @@ function ZonaPerigoMentorado({ m }) {
   )
 }
 
-function CardMentorado({ m }) {
+function CardMentorado({ m, turmaAulas }) {
   const [expandido, setExpandido] = useState(false)
+  const [progressoAberto, setProgressoAberto] = useState(false)
   const [zonaPerigo, setZonaPerigo] = useState(false)
+  const concluidasSet = new Set(m.aulas_concluidas_ids || [])
   const dificuldades = m.plano_negocio
     ? Object.keys(ETAPA_LABEL).filter(k => m.plano_negocio[`${k}_dificuldade`])
     : []
@@ -590,6 +597,29 @@ function CardMentorado({ m }) {
 
       {expandido && <SecaoSessoes empresaId={m.id} />}
 
+      {turmaAulas.length > 0 && (
+        <div style={{ marginTop: 10, borderTop: '1px solid var(--bo)', paddingTop: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: 11, color: 'var(--tx3)' }}>
+              🎓 Progresso na turma: {concluidasSet.size} de {turmaAulas.length} aulas
+            </div>
+            <button onClick={() => setProgressoAberto(x => !x)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#6366F1', fontSize: 12, fontWeight: 600 }}>
+              {progressoAberto ? 'Fechar ▲' : 'Ver aulas ▼'}
+            </button>
+          </div>
+          {progressoAberto && (
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {turmaAulas.map(a => (
+                <div key={a.id} style={{ fontSize: 12, display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <span>{concluidasSet.has(a.id) ? '✅' : '⬜'}</span>
+                  <span style={{ color: concluidasSet.has(a.id) ? 'var(--tx1)' : 'var(--tx3)' }}>{a.numero}. {a.titulo}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={{ marginTop: 8, textAlign: 'right' }}>
         <button onClick={() => setZonaPerigo(x => !x)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--tx3)', fontSize: 10 }}>
           {zonaPerigo ? 'Ocultar' : 'Encerrar mentoria / excluir dados'}
@@ -618,7 +648,9 @@ function ResumoMentoria({ mentorados, combinadosAbertos }) {
 }
 
 function SecaoMentorados() {
-  const { data: mentorados = [], isLoading } = useMentorados()
+  const { data, isLoading } = useMentorados()
+  const mentorados = data?.mentorados ?? []
+  const turmaAulas = data?.turma_aulas ?? []
   const { data: combinadosAbertos = [] } = useCombinadosAbertos()
   const ordenados = [...mentorados].sort((a, b) => urgencia(b) - urgencia(a))
 
@@ -636,7 +668,7 @@ function SecaoMentorados() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {ordenados.map(m => <CardMentorado key={m.id} m={m} />)}
+            {ordenados.map(m => <CardMentorado key={m.id} m={m} turmaAulas={turmaAulas} />)}
           </div>
         )}
       </div>

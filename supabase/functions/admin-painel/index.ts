@@ -123,6 +123,26 @@ serve(async (req) => {
       const clientesPorEmpresa: Record<string, number> = {}
       for (const c of clientesRows ?? []) clientesPorEmpresa[c.empresa_id] = (clientesPorEmpresa[c.empresa_id] || 0) + 1
 
+      // Progresso na Mentoria em Grupo: quantas aulas da turma ativa cada
+      // mentorado já concluiu. turma_aulas_progresso é RLS por empresa_id,
+      // então só dá pra ler assim (service role) — o client normal só vê a
+      // própria empresa.
+      const idsMentorados = (empresas ?? []).filter(e => e.mentorado_bpo_lucrativo).map(e => e.id)
+      let aulasTotal = 0
+      const progressoPorEmpresa: Record<string, number> = {}
+      if (idsMentorados.length) {
+        const { data: turmaAtiva } = await supabase.from('turma_grupo').select('id').eq('ativo', true).order('criado_em', { ascending: false }).limit(1).maybeSingle()
+        if (turmaAtiva) {
+          const { data: aulasRows } = await supabase.from('turma_aulas').select('id').eq('turma_id', turmaAtiva.id)
+          aulasTotal = (aulasRows ?? []).length
+          const aulaIds = (aulasRows ?? []).map(a => a.id)
+          if (aulaIds.length) {
+            const { data: progRows } = await supabase.from('turma_aulas_progresso').select('empresa_id').in('empresa_id', idsMentorados).in('aula_id', aulaIds)
+            for (const p of progRows ?? []) progressoPorEmpresa[p.empresa_id] = (progressoPorEmpresa[p.empresa_id] || 0) + 1
+          }
+        }
+      }
+
       // Consulta a Asaas em paralelo só pra quem já tem cliente criado lá —
       // é o que da a resposta real de "em dia x deve", além do que o plano
       // (que só é atualizado quando o webhook do Asaas dispara) já mostra.
@@ -139,6 +159,8 @@ serve(async (req) => {
         clientes_count: clientesPorEmpresa[e.id] || 0,
         pagamento: pagamentos[i],
         assinatura: assinaturas[i],
+        aulas_concluidas: progressoPorEmpresa[e.id] || 0,
+        aulas_total: aulasTotal,
       }))
 
       return ok({ success: true, empresas: resultado })
@@ -385,7 +407,24 @@ serve(async (req) => {
       if (error) return ok({ error: error.message })
 
       const ids = (empresas ?? []).map(e => e.id)
-      if (ids.length === 0) return ok({ success: true, mentorados: [] })
+      if (ids.length === 0) return ok({ success: true, mentorados: [], turma_aulas: [] })
+
+      const { data: turmaAtiva } = await supabase.from('turma_grupo').select('id').eq('ativo', true).order('criado_em', { ascending: false }).limit(1).maybeSingle()
+      let turmaAulas: { id: string; numero: number; titulo: string }[] = []
+      if (turmaAtiva) {
+        const { data: aulasRows } = await supabase.from('turma_aulas').select('id, numero, titulo').eq('turma_id', turmaAtiva.id).order('numero')
+        turmaAulas = aulasRows ?? []
+      }
+      const aulaIds = turmaAulas.map(a => a.id)
+      const { data: progressoRows } = aulaIds.length
+        ? await supabase.from('turma_aulas_progresso').select('empresa_id, aula_id').in('empresa_id', ids).in('aula_id', aulaIds)
+        : { data: [] as { empresa_id: string; aula_id: string }[] }
+
+      const progressoPorEmpresa: Record<string, string[]> = {}
+      for (const p of progressoRows ?? []) {
+        if (!progressoPorEmpresa[p.empresa_id]) progressoPorEmpresa[p.empresa_id] = []
+        progressoPorEmpresa[p.empresa_id].push(p.aula_id)
+      }
 
       const { data: planos } = await supabase
         .from('plano_negocio')
@@ -445,10 +484,11 @@ serve(async (req) => {
           radar: rad
             ? { pior_semaforo: rad.pior, score_medio: rad.scores.length ? Math.round(rad.scores.reduce((a, b) => a + b, 0) / rad.scores.length) : null, total_clientes: rad.totalClientes }
             : null,
+          aulas_concluidas_ids: progressoPorEmpresa[e.id] || [],
         }
       })
 
-      return ok({ success: true, mentorados: resultado })
+      return ok({ success: true, mentorados: resultado, turma_aulas: turmaAulas })
     }
 
     // ── Ação: listar sessões de mentoria de um mentorado ───────────────────
