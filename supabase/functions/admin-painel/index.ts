@@ -111,7 +111,7 @@ serve(async (req) => {
     if (action === 'list_empresas') {
       const { data: empresas, error } = await supabase
         .from('empresas')
-        .select('id, nome, email, cnpj, plano, trial_expira_em, criado_em, asaas_customer_id, asaas_subscription_id')
+        .select('id, nome, email, cnpj, plano, trial_expira_em, criado_em, asaas_customer_id, asaas_subscription_id, mentorado_bpo_lucrativo')
         .order('criado_em', { ascending: false })
       if (error) return ok({ error: error.message })
 
@@ -202,9 +202,9 @@ serve(async (req) => {
 
     // ── Ação: cria/atualiza a turma da Mentoria em Grupo ────────────────────
     if (action === 'salvar_turma') {
-      const { id, nome, data_inicio, ativo, checkout_url } = payload
+      const { id, nome, data_inicio, ativo, checkout_url, grupo_whatsapp_url } = payload
       if (!nome) return ok({ error: 'nome é obrigatório' })
-      const linha = { nome, data_inicio: data_inicio || null, ativo: ativo !== false, checkout_url: checkout_url || null }
+      const linha = { nome, data_inicio: data_inicio || null, ativo: ativo !== false, checkout_url: checkout_url || null, grupo_whatsapp_url: grupo_whatsapp_url || null }
       const { data, error } = id
         ? await supabase.from('turma_grupo').update(linha).eq('id', id).select().single()
         : await supabase.from('turma_grupo').insert(linha).select().single()
