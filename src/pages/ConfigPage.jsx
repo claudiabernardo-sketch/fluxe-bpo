@@ -345,13 +345,13 @@ export default function ConfigPage() {
   const [planSel, setPlanSel] = useState('pro')
   const [assinando, setAssinando] = useState(false)
 
-  const handleAssinar = async () => {
+  const handleAssinar = async (planoForcado) => {
     const cnpj = empresa?.cnpj || window.prompt('Informe o CNPJ ou CPF para faturamento (só números):')
     if (!cnpj) return
     setAssinando(true)
     try {
       const { data, error } = await supabase.functions.invoke('asaas-create-subscription', {
-        body: { plano: planSel, cpfCnpj: cnpj },
+        body: { plano: planoForcado || planSel, cpfCnpj: cnpj },
       })
       if (error) {
         let detail = error.message
@@ -1417,6 +1417,12 @@ export default function ConfigPage() {
           { id:'essencial', nome:'Essencial', preco:'R$ 97/mês',  desc:'Sistema completo (Radar, CRM, Capacidade, Meta de crescimento) · Usuários ilimitados · Sem WhatsApp integrado' },
           { id:'pro',       nome:'Completo',  preco:'R$ 197/mês', desc:'Tudo do Essencial + WhatsApp integrado (oficial da Meta ou conexão rápida) · Suporte prioritário', destaque:true },
         ]
+        // Mentorado do BPO Lucrativo usando o Pro de cortesia (sem assinatura
+        // real) — oferece a conversão pra assinante mensal, preço especial.
+        const ofereceConversaoMentorado = plano === 'pro'
+          && empresa?.mentorado_bpo_lucrativo
+          && !empresa?.asaas_subscription_id
+          && !empresa?.oferta_conversao_oculta
         return (
           <Card>
             <CardHeader title="Meu Plano" icon="💳" />
@@ -1443,6 +1449,25 @@ export default function ConfigPage() {
                 )}
               </div>
 
+              {/* Conversão de mentorado pra assinante mensal */}
+              {ofereceConversaoMentorado && (
+                <div style={{ border:'2px solid #6366F1', borderRadius:12, padding:16, background:'#F5F3FF' }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:'#0F172A', marginBottom:4 }}>Continuar usando o Fluxe</div>
+                  <div style={{ fontSize:12, color:'#475569', marginBottom:12, lineHeight:1.5 }}>
+                    Você está usando o Fluxe com o acesso liberado da mentoria BPO Lucrativo. Pra continuar usando depois, é só assinar:
+                  </div>
+                  <div style={{ fontSize:24, fontWeight:800, color:'#6366F1', marginBottom:12 }}>
+                    R$ 147<span style={{ fontSize:14, fontWeight:400, color:'#94A3B8' }}>/mês</span>
+                  </div>
+                  <button
+                    onClick={() => handleAssinar('mentorado')}
+                    disabled={assinando}
+                    style={{ display:'block', width:'100%', textAlign:'center', background: assinando ? '#A5B4FC' : 'linear-gradient(135deg,#6366F1,#8B5CF6)', color:'#fff', padding:'13px', borderRadius:10, fontSize:14, fontWeight:700, border:'none', cursor: assinando ? 'not-allowed' : 'pointer' }}>
+                    {assinando ? 'Gerando link...' : 'Assinar por R$ 147/mês →'}
+                  </button>
+                </div>
+              )}
+
               {/* Planos */}
               {plano === 'trial' && (
                 <>
@@ -1462,7 +1487,7 @@ export default function ConfigPage() {
                     })}
                   </div>
                   <button
-                    onClick={handleAssinar}
+                    onClick={() => handleAssinar()}
                     disabled={assinando}
                     style={{ display:'block', width:'100%', textAlign:'center', background: assinando ? '#A5B4FC' : 'linear-gradient(135deg,#6366F1,#8B5CF6)', color:'#fff', padding:'13px', borderRadius:10, fontSize:14, fontWeight:700, border:'none', cursor: assinando ? 'not-allowed' : 'pointer' }}>
                     {assinando ? 'Gerando link...' : `Assinar plano ${planSel === 'pro' ? 'Completo' : 'Essencial'} →`}
