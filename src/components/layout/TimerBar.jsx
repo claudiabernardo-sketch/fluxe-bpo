@@ -6,13 +6,13 @@ import { useQueryClient } from '@tanstack/react-query'
 
 // Timer global store
 export const useTimerStore = create((set, get) => ({
-  active: null,   // { taskId, taskTitle, clientId, clientName, start, paused, totalPaused }
+  active: null,   // { taskId, taskTitle, clientId, clientName, isAvulsa, start, paused, totalPaused }
   elapsed: 0,
 
-  start: (taskId, taskTitle, clientId, clientName) => {
+  start: (taskId, taskTitle, clientId, clientName, isAvulsa = false) => {
     const { active } = get()
     if (active) get().stop(false)
-    set({ active: { taskId, taskTitle, clientId, clientName, start: Date.now(), paused: false, totalPaused: 0 }, elapsed: 0 })
+    set({ active: { taskId, taskTitle, clientId, clientName, isAvulsa, start: Date.now(), paused: false, totalPaused: 0 }, elapsed: 0 })
   },
   pause: () => {
     const { active } = get()
@@ -30,14 +30,21 @@ export const useTimerStore = create((set, get) => ({
     if (!active) return
     if (save && elapsed > 10) {
       const profile = useAuthStore.getState().profile
-      await supabase.from('apontamentos').insert({
-        tarefa_id:   active.taskId   || null,
-        cliente_id:  active.clientId || null,
-        usuario_id:  profile?.id     || null,
-        inicio:      new Date(active.start).toISOString(),
-        fim:         new Date().toISOString(),
-        segundos:    elapsed,
+      const empresa = useAuthStore.getState().empresa
+      const { error } = await supabase.from('apontamentos').insert({
+        empresa_id:       empresa?.id   || null,
+        tarefa_id:        active.isAvulsa ? null : (active.taskId || null),
+        tarefa_avulsa_id: active.isAvulsa ? (active.taskId || null) : null,
+        cliente_id:       active.clientId || null,
+        usuario_id:       profile?.id     || null,
+        inicio:           new Date(active.start).toISOString(),
+        fim:              new Date().toISOString(),
+        segundos:         elapsed,
       })
+      if (error) {
+        console.error('[Fluxe] apontamento', error)
+        alert('Não foi possível salvar o apontamento de tempo: ' + error.message)
+      }
       // cache invalidation handled by TimerBar component
     }
     set({ active: null, elapsed: 0 })
