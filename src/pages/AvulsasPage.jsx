@@ -337,7 +337,7 @@ export default function AvulsasPage() {
                 <Btn small onClick={e => {
                   e.stopPropagation()
                   const cl = clients.find(c=>c.id===av.cliente_id)
-                  startTimer(av.id, av.titulo, av.cliente_id, cl?.fantasia||cl?.razao_social||'')
+                  startTimer(av.id, av.titulo, av.cliente_id, cl?.fantasia||cl?.razao_social||'', true)
                 }}>▶</Btn>
               )}
             </div>

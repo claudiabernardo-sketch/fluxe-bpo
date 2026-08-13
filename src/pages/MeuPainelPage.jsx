@@ -23,7 +23,7 @@ function LinhaApontamento({ ap }) {
   const remover = useDeleteApontamento()
 
   const cliente = ap.clientes?.fantasia || ap.clientes?.razao_social
-  const titulo = ap.tarefas?.titulo || cliente || 'Apontamento avulso'
+  const titulo = ap.tarefas?.titulo || ap.tarefas_avulsas?.titulo || cliente || 'Apontamento avulso'
   const dataFmt = new Date(ap.inicio).toLocaleDateString('pt-BR')
   const horasDecimal = ap.segundos / 3600
   // Timer esquecido ligado costuma passar de 6h numa tarefa só — sinaliza pra facilitar achar o problema.
@@ -103,7 +103,7 @@ export default function MeuPainelPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from('apontamentos')
-        .select('*, clientes(razao_social, fantasia), tarefas(titulo)')
+        .select('*, clientes(razao_social, fantasia), tarefas(titulo), tarefas_avulsas(titulo)')
         .eq('usuario_id', profile?.id)
         .gte('inicio', mesStart.toISOString())
         .order('inicio', { ascending: false })
