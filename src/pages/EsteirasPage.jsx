@@ -255,7 +255,8 @@ export default function EsteirasPage() {
         })
         if (task.checklist?.length && created?.id) {
           const items = task.checklist.map((texto, ordem) => ({ tarefa_id: created.id, texto, ordem, empresa_id: empresa?.id }))
-          await supabase.from('tarefa_checklists').insert(items)
+          const { error } = await supabase.from('tarefa_checklists').insert(items)
+          if (error) throw error
         }
       }
       setApplied(true)

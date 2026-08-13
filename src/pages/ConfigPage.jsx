@@ -420,14 +420,20 @@ export default function ConfigPage() {
 
   const editarUser = useMutation({
     mutationFn: async (u) => {
-      await supabase.from('usuarios').update({ nome: u.nome, perfil: u.perfil, custo_hora: u.custo_hora, ativo: u.ativo }).eq('id', u.id)
+      const { data, error } = await supabase.from('usuarios').update({ nome: u.nome, perfil: u.perfil, custo_hora: u.custo_hora, ativo: u.ativo }).eq('id', u.id).select()
+      if (error) throw error
+      if (!data || data.length === 0) throw new Error('Não foi possível editar — sem permissão ou usuário não encontrado.')
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['usuarios'] }); setEditUser(null) },
     onError: (err) => alert('Erro ao editar usuário: ' + err.message),
   })
 
   const excluirUser = useMutation({
-    mutationFn: async (u) => { await supabase.from('usuarios').delete().eq('id', u.id) },
+    mutationFn: async (u) => {
+      const { data, error } = await supabase.from('usuarios').delete().eq('id', u.id).select()
+      if (error) throw error
+      if (!data || data.length === 0) throw new Error('Não foi possível excluir — sem permissão ou usuário não encontrado.')
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['usuarios'] }); setDeleteUser(null) },
     onError: (err) => alert('Erro ao excluir usuário: ' + err.message),
   })

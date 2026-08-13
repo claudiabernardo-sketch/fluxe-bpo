@@ -240,7 +240,8 @@ export default function AgendaPage() {
     e.preventDefault(); setDragOver(null)
     if (!draggedId.current) return
     const id = draggedId.current; draggedId.current = null
-    await supabase.from('tarefas').update({ status: newStatus }).eq('id', id).eq('empresa_id', empresa?.id)
+    const { error } = await supabase.from('tarefas').update({ status: newStatus }).eq('id', id).eq('empresa_id', empresa?.id)
+    if (error) { console.error('[Fluxe] mover tarefa', error); alert('Não foi possível mover a tarefa: ' + error.message) }
     qc.invalidateQueries({ queryKey: ['tasks'] })
   }
 

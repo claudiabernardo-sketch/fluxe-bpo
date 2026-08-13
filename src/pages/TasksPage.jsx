@@ -127,7 +127,8 @@ export default function TasksPage() {
 
   const toggleCheck = useMutation({
     mutationFn: async ({ id, concluido }) => {
-      await supabase.from('tarefa_checklists').update({ concluido }).eq('id', id)
+      const { error } = await supabase.from('tarefa_checklists').update({ concluido }).eq('id', id)
+      if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['checklists', selTask] }),
     onError: (err) => alert('Erro ao atualizar checklist: ' + err.message),
@@ -135,7 +136,8 @@ export default function TasksPage() {
 
   const deleteCheck = useMutation({
     mutationFn: async (id) => {
-      await supabase.from('tarefa_checklists').delete().eq('id', id)
+      const { error } = await supabase.from('tarefa_checklists').delete().eq('id', id)
+      if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['checklists', selTask] }),
     onError: (err) => alert('Erro ao remover item: ' + err.message),
@@ -238,9 +240,12 @@ export default function TasksPage() {
       // Se veio de um modelo com checklist pronto, já cria os itens na tarefa nova
       const modeloOrigem = modal.modeloId ? modelos.find(m => m.id === modal.modeloId) : null
       if (modeloOrigem?.checklist_items?.length) {
+        let falhas = 0
         for (const texto of modeloOrigem.checklist_items) {
-          await supabase.from('tarefa_checklists').insert({ tarefa_id: t.id, empresa_id: empresa?.id, texto })
+          const { error } = await supabase.from('tarefa_checklists').insert({ tarefa_id: t.id, empresa_id: empresa?.id, texto })
+          if (error) { console.error('[Fluxe] checklist do modelo', error); falhas++ }
         }
+        if (falhas > 0) alert(`Tarefa criada, mas ${falhas} item${falhas > 1 ? 's' : ''} do checklist não foi${falhas > 1 ? 'ram' : ''} salvo${falhas > 1 ? 's' : ''}.`)
         qc.invalidateQueries({ queryKey: ['checklists', t.id] })
       }
     } else {
@@ -555,9 +560,12 @@ export default function TasksPage() {
                 <button
                   onClick={async () => {
                     const items = CHECKLIST_TEMPLATES[selectedTask.categoria]
+                    let falhas = 0
                     for (const texto of items) {
-                      await supabase.from('tarefa_checklists').insert({ tarefa_id: selTask, empresa_id: empresaId, texto })
+                      const { error } = await supabase.from('tarefa_checklists').insert({ tarefa_id: selTask, empresa_id: empresaId, texto })
+                      if (error) { console.error('[Fluxe] checklist template', error); falhas++ }
                     }
+                    if (falhas > 0) alert(`${falhas} item${falhas > 1 ? 's' : ''} do checklist não foi${falhas > 1 ? 'ram' : ''} salvo${falhas > 1 ? 's' : ''}.`)
                     qc.invalidateQueries({ queryKey: ['checklists', selTask] })
                   }}
                   style={{ fontSize:9, padding:'3px 8px', borderRadius:6, border:'1px solid #6366F1', background:'#EEF2FF', color:'#6366F1', cursor:'pointer', fontWeight:600, whiteSpace:'nowrap' }}>
