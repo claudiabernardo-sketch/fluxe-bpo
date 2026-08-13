@@ -172,10 +172,15 @@ export default function ModelosPage() {
     const tituloMod = cm.tarefa_modelos?.titulo || 'modelo'
     if (!confirm(`Desvincular "${tituloMod}"? As tarefas abertas futuras deste modelo serão removidas.`)) return
     const hoje = new Date().toLocaleDateString('en-CA')
-    await supabase.from('tarefas')
+    const { error } = await supabase.from('tarefas')
       .update({ deleted_at: new Date().toISOString() })
       .eq('cliente_id', fCliente).eq('modelo_id', cm.modelo_id)
       .neq('status', 'concluida').gte('data_execucao', hoje).is('deleted_at', null)
+    if (error) {
+      console.error('[Fluxe] remover tarefas do modelo', error)
+      alert('Não foi possível remover as tarefas futuras deste modelo: ' + error.message)
+      return
+    }
     desvincularModelo.mutate({ id: cm.id, clienteId: fCliente })
   }
 

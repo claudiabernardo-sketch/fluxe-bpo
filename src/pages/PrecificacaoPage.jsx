@@ -1710,13 +1710,12 @@ export default function PrecificacaoPage() {
                     }
                     // Salva os dados no cadastro do lead — o contrato consome dados, o cadastro é o dono deles
                     if (leadIdRef.current) {
-                      try {
-                        await supabase.from('leads').update({
-                          cnpj: contratoForm.clienteCnpj || undefined,
-                          contato: contratoForm.clienteRep || undefined,
-                          email: contratoForm.clienteEmail || undefined,
-                        }).eq('id', leadIdRef.current)
-                      } catch (e) { console.error('Erro ao atualizar lead:', e) }
+                      const { error: leadError } = await supabase.from('leads').update({
+                        cnpj: contratoForm.clienteCnpj || undefined,
+                        contato: contratoForm.clienteRep || undefined,
+                        email: contratoForm.clienteEmail || undefined,
+                      }).eq('id', leadIdRef.current)
+                      if (leadError) console.error('[Fluxe] atualizar lead com dados do contrato:', leadError)
                     }
                   }}>Gerar contrato →</button>
                 </div>

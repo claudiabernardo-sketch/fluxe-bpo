@@ -91,9 +91,10 @@ function ModalCriarTarefa({ msg, contato, onClose, onSuccess }) {
       if (error) throw error
 
       // Marca mensagem como transformada em tarefa
-      await supabase.from('whatsapp_mensagens')
+      const { error: msgError } = await supabase.from('whatsapp_mensagens')
         .update({ tarefa_id: tarefa.id })
         .eq('id', msg.id)
+      if (msgError) console.error('[Fluxe] vincular mensagem à tarefa', msgError)
 
       onSuccess(tarefa)
     } catch (e) {
@@ -267,10 +268,11 @@ export default function MensagensPage() {
         .order('enviado_em', { ascending: true })
       if (error) throw error
       // Marca como lidas
-      await supabase.from('whatsapp_mensagens')
+      const { error: lidaError } = await supabase.from('whatsapp_mensagens')
         .update({ lida: true })
         .eq('contato_id', contatoAtivo.id)
         .eq('lida', false)
+      if (lidaError) console.error('[Fluxe] marcar mensagens como lidas', lidaError)
       return data
     },
     enabled: !!contatoAtivo?.id,
