@@ -22,6 +22,12 @@ async function asaas(path: string, method = 'GET', body?: object) {
   return res.json()
 }
 
+const VALOR_PLANO: Record<string, { valor: number; desc: string }> = {
+  pro:       { valor: 197.00, desc: 'Plano Completo' },
+  essencial: { valor: 97.00,  desc: 'Plano Essencial' },
+  mentorado: { valor: 147.00, desc: 'Plano Fluxe — ex-mentorado BPO Lucrativo' },
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -31,6 +37,101 @@ serve(async (req) => {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
+  // ── Modo individual: usuário logado clicando em "Assinar" no Config ────
+  // Só entra aqui se vier um corpo com cpfCnpj — senão cai no modo em lote
+  // (varredura de trials vencidos, usada pelo cron).
+  let bodyPayload: { plano?: string; cpfCnpj?: string } = {}
+  try { bodyPayload = await req.json() } catch { /* sem corpo = modo em lote */ }
+
+  if (bodyPayload.cpfCnpj) {
+    const authHeader = req.headers.get('Authorization') || ''
+    const jwt = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: userErr } = await supabase.auth.getUser(jwt)
+    if (userErr || !user) {
+      return new Response(JSON.stringify({ error: 'Não autenticado' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const { data: usuarioRow } = await supabase.from('usuarios').select('empresa_id').eq('id', user.id).single()
+    if (!usuarioRow?.empresa_id) {
+      return new Response(JSON.stringify({ error: 'Usuário sem empresa vinculada' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const { data: empresa } = await supabase.from('empresas')
+      .select('id, nome, email, cnpj, plano, mentorado_bpo_lucrativo, oferta_conversao_oculta, asaas_customer_id, asaas_subscription_id')
+      .eq('id', usuarioRow.empresa_id).single()
+    if (!empresa) {
+      return new Response(JSON.stringify({ error: 'Empresa não encontrada' }), {
+        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    if (empresa.asaas_subscription_id) {
+      return new Response(JSON.stringify({ error: 'Essa empresa já tem uma assinatura ativa' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const planoEscolhido = bodyPayload.plano === 'mentorado'
+      ? (empresa.mentorado_bpo_lucrativo && !empresa.oferta_conversao_oculta ? 'mentorado' : null)
+      : (bodyPayload.plano === 'essencial' ? 'essencial' : 'pro')
+    if (!planoEscolhido) {
+      return new Response(JSON.stringify({ error: 'Plano inválido para essa empresa' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const { valor, desc } = VALOR_PLANO[planoEscolhido]
+    try {
+      const customer = await asaas('/customers', 'POST', {
+        name: empresa.nome, email: empresa.email, cpfCnpj: bodyPayload.cpfCnpj, notificationDisabled: false,
+      })
+      if (!customer.id) {
+        return new Response(JSON.stringify({ error: 'Falha ao criar cliente Asaas', detail: customer }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const dueDate = new Date(); dueDate.setDate(dueDate.getDate() + 1)
+      const subscription = await asaas('/subscriptions', 'POST', {
+        customer: customer.id,
+        billingType: 'UNDEFINED',
+        value: valor,
+        nextDueDate: dueDate.toISOString().split('T')[0],
+        cycle: 'MONTHLY',
+        description: `Fluxe BPO - ${desc}`,
+        sendPaymentByPostalService: false,
+      })
+      if (!subscription.id) {
+        return new Response(JSON.stringify({ error: 'Falha ao criar assinatura', detail: subscription }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const payments = await asaas(`/subscriptions/${subscription.id}/payments`)
+      const paymentUrl = payments.data?.[0]?.invoiceUrl || null
+
+      await supabase.from('empresas').update({
+        plano: planoEscolhido === 'mentorado' ? 'pro' : planoEscolhido,
+        cnpj: empresa.cnpj || bodyPayload.cpfCnpj,
+        asaas_customer_id: customer.id,
+        asaas_subscription_id: subscription.id,
+        asaas_payment_url: paymentUrl,
+      }).eq('id', empresa.id)
+
+      return new Response(JSON.stringify({ success: true, customerId: customer.id, subscriptionId: subscription.id, paymentUrl }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    } catch (e) {
+      return new Response(JSON.stringify({ error: String(e) }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+  }
+
+  // ── Modo em lote: cron varrendo trials vencidos ─────────────────────────
   // Busca empresas com trial expirado sem assinatura criada
   const { data: empresas, error } = await supabase
     .from('empresas')
