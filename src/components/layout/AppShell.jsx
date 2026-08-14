@@ -227,9 +227,11 @@ export default function AppShell() {
               <button className="user-menu-item" onClick={() => goTo('/meu-painel')}>
                 <i className="fa-solid fa-circle-user"></i> Meu Painel
               </button>
-              <button className="user-menu-item" onClick={() => goTo('/config')}>
-                <i className="fa-solid fa-gear"></i> Configurações
-              </button>
+              {podeAcessarRota(profile?.perfil, '/config') && (
+                <button className="user-menu-item" onClick={() => goTo('/config')}>
+                  <i className="fa-solid fa-gear"></i> Configurações
+                </button>
+              )}
               <div className="user-menu-sep" />
               <button className="user-menu-item" onClick={() => goTo('/ajuda')}>
                 <i className="fa-solid fa-circle-question"></i> Central de Ajuda
@@ -357,9 +359,11 @@ export default function AppShell() {
             <button className="mob-more-item" onClick={() => nav('/meu-painel')}>
               <i className="fa-solid fa-circle-user" /> <span>Meu Painel</span>
             </button>
-            <button className="mob-more-item" onClick={() => nav('/config')}>
-              <i className="fa-solid fa-gear" /> <span>Configurações</span>
-            </button>
+            {podeAcessarRota(profile?.perfil, '/config') && (
+              <button className="mob-more-item" onClick={() => nav('/config')}>
+                <i className="fa-solid fa-gear" /> <span>Configurações</span>
+              </button>
+            )}
             <button className="mob-more-item" onClick={() => nav('/ajuda')}>
               <i className="fa-solid fa-circle-question" /> <span>Central de Ajuda</span>
             </button>
