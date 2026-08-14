@@ -6,9 +6,11 @@ const CATS = [
     id:'inicio', icon:'fa-solid fa-rocket', cor:'#6366F1', bg:'#EEF2FF',
     titulo:'Primeiros Passos', artigos:[
       { titulo:'Visão geral do Fluxe BPO', tempo:'3 min', conteudo:'O Fluxe é uma plataforma de gestão operacional para escritórios de BPO. Aqui você gerencia clientes, esteiras de processos, tarefas recorrentes, equipe e resultados em um só lugar. Acesse a Central Operacional (ícone de foguete) para ver o painel em tempo real.' },
-      { titulo:'Cadastrar empresa e equipe', tempo:'5 min', conteudo:'Vá em Configurações > Empresa para preencher os dados do seu BPO. Em seguida, acesse Configurações > Equipe para convidar colaboradores por e-mail e definir seus perfis: Admin, Gestor, Supervisor ou Operador.' },
+      { titulo:'Cadastrar empresa e equipe', tempo:'5 min', conteudo:'Vá em Configurações > Empresa para preencher os dados do seu BPO. Em seguida, acesse Configurações > Equipe para convidar colaboradores por e-mail e definir seus perfis: Admin, Gestor, Supervisor, Operador ou Comercial.' },
       { titulo:'Criar o primeiro cliente', tempo:'2 min', conteudo:'Acesse o módulo Clientes e clique em "Novo Cliente". Preencha nome, CNPJ e contato. Depois, associe as esteiras de serviço contratadas — isso fará com que as tarefas recorrentes sejam geradas automaticamente.' },
-      { titulo:'Entendendo os perfis de acesso', tempo:'4 min', conteudo:'Admin: acesso total. Gestor: gerencia equipe, tarefas e relatórios. Operador: executa tarefas e vê apenas suas próprias atribuições. Supervisor: visão ampla sem acesso a configurações.' },
+      { titulo:'Cadastrar um novo colaborador', tempo:'3 min', conteudo:'Acesse Configurações > Equipe e clique em "+ Novo colaborador" (ou botão equivalente no topo da lista). Preencha nome, e-mail, escolha o Perfil de acesso (esse é o momento de decidir o que essa pessoa vai poder ver no Fluxe — veja o artigo "Os tipos de acesso e o que cada um vê") e o custo/hora dela, que alimenta a Precificação e a Capacidade da Equipe. Ao clicar em "Enviar convite", o Fluxe cria o acesso e manda um e-mail com o link de primeiro login; se o e-mail não chegar, aparece um botão pra copiar login e senha e mandar por WhatsApp.' },
+      { titulo:'Alterar o perfil de um colaborador', tempo:'2 min', conteudo:'Em Configurações > Equipe, encontre a pessoa na lista e clique no ícone de lápis (✏) na frente do nome dela. No formulário que abre, troque o campo "Perfil" pelo novo nível de acesso e clique em Salvar. A mudança vale a partir do próximo login (ou do próximo recarregamento da página, se a pessoa já estiver com o Fluxe aberto) — não precisa recriar o cadastro nem reenviar convite.' },
+      { titulo:'Os tipos de acesso e o que cada um vê', tempo:'4 min', conteudo:'Admin: acesso total a tudo, sem exceção — inclusive Configurações, Segurança, Integrações e o plano de assinatura do Fluxe. Costuma ser o dono do BPO ou o sócio.\n\nGestor: acesso quase total — vê e usa Tarefas, Modelos, CRM, Precificação, Clientes, Esteiras, Executivo, Rentabilidade, Equipe, Cofre, Relatórios e Configurações — menos as abas de Integrações, Segurança e o Meu Plano (financeiro da assinatura), que ficam só com o Admin. Perfil pra quem coordena a operação no dia a dia.\n\nSupervisor: acesso operacional amplo, mas sem dado financeiro estratégico — vê Tarefas, Modelos, Pendências, Avulsas, Clientes, Esteiras e Mensagens. Não vê CRM, Precificação, Executivo, Rentabilidade, Equipe (custo/hora), Cofre nem Configurações.\n\nOperador: o mais restrito — só o necessário pra executar o trabalho: Tarefas, Avulsas, Clientes (sem as abas Financeiro, Radar, Relatório 360 e Cofre, que ficam ocultas mesmo dentro do cadastro do cliente), Central Operacional, Meu Painel e Ajuda.\n\nComercial: foco em vendas — CRM, Precificação e Clientes, sem acesso à operação (Tarefas, Modelos, Esteiras) nem a Configurações.\n\nEm todo perfil que não seja Admin, o item de menu some sozinho quando a pessoa não tem acesso àquela tela — e mesmo se ela tentar entrar direto pelo link, o Fluxe redireciona pro Dashboard.' },
     ]
   },
   {
@@ -180,7 +182,7 @@ export default function AjudaPage() {
             {artigo.cat?.titulo} · {artigo.tempo} de leitura
           </div>
           <h1 style={{ fontSize:18, fontWeight:800, color:'var(--tx)', letterSpacing:'-.4px', marginBottom:16 }}>{artigo.titulo}</h1>
-          <p style={{ fontSize:13, color:'var(--tx2)', lineHeight:1.75 }}>{artigo.conteudo}</p>
+          <p style={{ fontSize:13, color:'var(--tx2)', lineHeight:1.75, whiteSpace:'pre-line' }}>{artigo.conteudo}</p>
           {artigo.video && (
             <a href={artigo.video} target="_blank" rel="noopener noreferrer"
               style={{ display:'inline-flex', alignItems:'center', gap:8, marginTop:16, padding:'9px 16px', background:'#EEF2FF', color:'#4338CA', borderRadius:8, fontSize:12, fontWeight:700, textDecoration:'none' }}>
@@ -208,7 +210,7 @@ export default function AjudaPage() {
           </div>
           <div>
             <div style={{ fontSize:16, fontWeight:800, color:'var(--tx)' }}>{catSel.titulo}</div>
-            <div style={{ fontSize:11, color:'var(--tx3)' }}>{catSel.artigos.length} artigos</div>
+            <div style={{ fontSize:11, color:'var(--tx3)' }}>{catSel.artigos.length} {catSel.artigos.length === 1 ? 'artigo' : 'artigos'}</div>
           </div>
         </div>
         <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
@@ -332,7 +334,7 @@ function CatCard({ cat, onClick }) {
         <i className={cat.icon}></i>
       </div>
       <div style={{ fontSize:12, fontWeight:700, color:'var(--tx)' }}>{cat.titulo}</div>
-      <div style={{ fontSize:10, color:'var(--tx3)' }}>{cat.artigos.length} artigos</div>
+      <div style={{ fontSize:10, color:'var(--tx3)' }}>{cat.artigos.length} {cat.artigos.length === 1 ? 'artigo' : 'artigos'}</div>
     </button>
   )
 }
