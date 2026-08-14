@@ -171,9 +171,11 @@ export default function MentoriaPage() {
 
   async function salvar() {
     if (!podeSalvar) return
-    await criar.mutateAsync({ ...form, arquivo: tipo === 'arquivo' ? arquivo : null })
-    setForm({ titulo: '', url: '', descricao: '' })
-    setArquivo(null)
+    try {
+      await criar.mutateAsync({ ...form, arquivo: tipo === 'arquivo' ? arquivo : null })
+      setForm({ titulo: '', url: '', descricao: '' })
+      setArquivo(null)
+    } catch { /* erro já mostrado pelo onError da mutação */ }
   }
 
   const fi = { padding: '8px 10px', border: '1px solid var(--bo)', borderRadius: 8, fontSize: 13, fontFamily: 'inherit' }

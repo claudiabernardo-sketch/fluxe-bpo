@@ -1841,7 +1841,12 @@ export function useCreateMentoriaLink() {
     mutationFn: async ({ titulo, url, descricao, arquivo }) => {
       let arquivo_path = null
       if (arquivo) {
-        const path = `${empresa?.id}/mentoria-materiais/${Date.now()}-${arquivo.name}`
+        // Nome do arquivo pode ter acento/espaço (comum em PT-BR) — limpa antes
+        // de usar como chave no storage pra evitar falha de upload.
+        const nomeLimpo = arquivo.name
+          .normalize('NFD').replace(/[̀-ͯ]/g, '') // remove acentos
+          .replace(/[^a-zA-Z0-9._-]/g, '_')
+        const path = `${empresa?.id}/mentoria-materiais/${Date.now()}-${nomeLimpo}`
         const { error: upErr } = await supabase.storage.from('tarefas').upload(path, arquivo, { upsert: false, cacheControl: '3600' })
         if (upErr) throw upErr
         arquivo_path = path
@@ -1855,7 +1860,7 @@ export function useCreateMentoriaLink() {
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['mentoria_links'] }),
-    onError: (err) => console.error('[Fluxe]', err),
+    onError: (err) => { console.error('[Fluxe]', err); alert('Não foi possível salvar o material: ' + err.message) },
   })
 }
 
