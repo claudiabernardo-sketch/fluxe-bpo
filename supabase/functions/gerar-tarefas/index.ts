@@ -247,6 +247,7 @@ serve(async (req) => {
             dias_semana,
             hora,
             responsavel_id,
+            checklist_items_override,
             tarefa_modelos!inner (
               id, titulo, categoria, prioridade,
               recorrencia, dia_mes, dias_semana, dias_mes,
@@ -266,14 +267,20 @@ serve(async (req) => {
         if (errVinc) { erros.push(`[${empId}] vinculos: ${errVinc.message}`); continue }
         if (!vinculos?.length) continue
 
-        // Checklist padrão de cada modelo — copiado pra tarefa_checklists de
-        // cada tarefa gerada, mesmo comportamento da criação manual em
-        // TasksPage.jsx (senão o checklist do modelo nunca chega em quem
-        // executa a tarefa, já que a imensa maioria é gerada por aqui).
-        const checklistPorModelo: Record<string, string[]> = {}
+        // Checklist de cada vínculo cliente+modelo — copiado pra
+        // tarefa_checklists de cada tarefa gerada, mesmo comportamento da
+        // criação manual em TasksPage.jsx (senão o checklist nunca chega em
+        // quem executa a tarefa, já que a imensa maioria é gerada por aqui).
+        // Prioriza checklist_items_override do vínculo (específico daquele
+        // cliente); se não tiver, cai no checklist_items padrão do modelo —
+        // por isso é indexado por cliente+modelo, não só por modelo, já que
+        // dois clientes com o mesmo modelo podem ter checklists diferentes.
+        const checklistPorClienteModelo: Record<string, string[]> = {}
         for (const v of (vinculos as any[])) {
-          const items = v.tarefa_modelos?.checklist_items
-          if (Array.isArray(items) && items.length) checklistPorModelo[v.modelo_id] = items
+          const items = (Array.isArray(v.checklist_items_override) && v.checklist_items_override.length)
+            ? v.checklist_items_override
+            : v.tarefa_modelos?.checklist_items
+          if (Array.isArray(items) && items.length) checklistPorClienteModelo[`${v.cliente_id}::${v.modelo_id}`] = items
         }
 
         // ── 5. Processar cada data ─────────────────────────────────────────
@@ -412,7 +419,7 @@ serve(async (req) => {
                     empresa_id: empId, cliente_id: ins.cliente_id, modelo_id: ins.modelo_id,
                     data_alvo: dataAlvo, resultado: 'gerada', motivo: null, tarefa_id: ins.id,
                   })
-                  const items = ins.modelo_id ? checklistPorModelo[ins.modelo_id] : null
+                  const items = ins.modelo_id ? checklistPorClienteModelo[`${ins.cliente_id}::${ins.modelo_id}`] : null
                   if (items?.length) {
                     for (const texto of items) checklistRows.push({ tarefa_id: ins.id, empresa_id: empId, texto })
                   }
