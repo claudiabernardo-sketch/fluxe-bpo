@@ -497,7 +497,7 @@ export default function ModelosPage() {
                                 🔧 só p/ este cliente
                               </span>
                             )}
-                            {vinculo.checklist_items_override?.length > 0 && (
+                            {vinculo?.checklist_items_override?.length > 0 && (
                               <span style={{ marginLeft:4, padding:'2px 8px', borderRadius:99,
                                 background:'#FEF3C7', color:'#92400E', fontSize:10, fontWeight:600 }} title="Checklist diferente do padrão do modelo, só pra este cliente">
                                 📋 checklist próprio
