@@ -8,6 +8,7 @@ import {
 } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
+import { podeVerAbaCliente } from '../config/permissoes'
 import { BANCOS_LIST, normalizarBancos } from '../utils/bancos'
 import { SOFTWARES } from '../utils/softwares'
 import { Badge, Loader, fmtR } from '../components/ui'
@@ -46,7 +47,7 @@ function fmtCNPJ(v) { return v.replace(/\D/g,'').slice(0,14).replace(/(\d{2})(\d
 export default function ClientePage() {
   const { id: clienteId } = useParams()
   const navigate = useNavigate()
-  const { empresa } = useAuthStore()
+  const { empresa, profile } = useAuthStore()
 
   const { data: clients = [], isLoading: clientesLoading } = useClients()
   const updateClient = useUpdateClient()
@@ -108,11 +109,14 @@ export default function ClientePage() {
   // uma vez, na primeira montagem. O useEffect sincroniza sempre que a URL
   // muda, mesmo sem remontar o componente.
   const [searchParams] = useSearchParams()
-  const [tab, setTab] = useState(searchParams.get('tab') || 'dados')
+  const [tab, setTab] = useState(() => {
+    const inicial = searchParams.get('tab') || 'dados'
+    return podeVerAbaCliente(profile?.perfil, inicial) ? inicial : 'dados'
+  })
   useEffect(() => {
     const tabNaUrl = searchParams.get('tab')
-    if (tabNaUrl) setTab(tabNaUrl)
-  }, [searchParams])
+    if (tabNaUrl) setTab(podeVerAbaCliente(profile?.perfil, tabNaUrl) ? tabNaUrl : 'dados')
+  }, [searchParams, profile?.perfil])
 
   // Rotinas
   const { data: rotinas = [] } = useRotinas(clienteId)
@@ -395,7 +399,7 @@ export default function ClientePage() {
             ['rotina','🔁 Rotina'],
             ['radar','🩺 Radar'],
             ['relatorio360','📄 Relatório 360'],
-          ].map(([id, label]) => (
+          ].filter(([id]) => podeVerAbaCliente(profile?.perfil, id)).map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)}
               style={{ padding:'10px 16px', border:'none', background:'transparent', cursor:'pointer', fontSize:12, fontWeight:600, whiteSpace:'nowrap',
                 color: tab===id?'var(--br)':'var(--tx3)', borderBottom: tab===id?'2px solid var(--br)':'2px solid transparent', marginBottom:-1 }}>

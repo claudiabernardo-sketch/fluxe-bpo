@@ -5,6 +5,7 @@ import LOGO_SRC from '../../assets/logo-fluxe.png'
 import TimerBar from './TimerBar'
 import TrialGuard from '../ui/TrialGuard'
 import RadarPanelOverlay from '../ui/RadarPanelOverlay'
+import { podeAcessarRota } from '../../config/permissoes'
 
 
 // Captura erros de render em páginas lazy — evita tela em branco
@@ -28,6 +29,13 @@ class PageErrorBoundary extends Component {
     }
     return this.props.children
   }
+}
+
+// Barra a rota se o perfil do usuário não tiver permissão — usada em toda
+// rota que não seja "comum a todos" (ver ROTAS_POR_PERFIL em config/permissoes.js).
+function RotaProtegida({ path, perfil, children }) {
+  if (!podeAcessarRota(perfil, path)) return <Navigate to="/" replace />
+  return children
 }
 
 // Lazy load — cada página vira chunk separado, carrega só quando o usuário navega
@@ -137,9 +145,19 @@ export default function AppShell() {
   const menuRef = useRef(null)
   const title = TITLES[loc.pathname] || 'Fluxe BPO'
   const initials = profile?.nome?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?'
-  const navItems = profile?.fluxe_staff
+  const navBase = profile?.fluxe_staff
     ? [...NAV, { grp:'FLUXE STAFF' }, { path:'/admin', icon:'fa-solid fa-user-shield', label:'Admin' }]
     : NAV
+  // Filtra itens (e remove separadores de grupo que ficariam sem nenhum item embaixo)
+  const navItems = navBase.filter((item, i) => {
+    if (item.grp) {
+      const proximo = navBase.slice(i + 1).findIndex(x => x.grp)
+      const fatia = proximo === -1 ? navBase.slice(i + 1) : navBase.slice(i + 1, i + 1 + proximo)
+      return fatia.some(x => x.path && podeAcessarRota(profile?.perfil, x.path))
+    }
+    if (item.path === '/admin') return !!profile?.fluxe_staff // rota da equipe Fluxe, independe do perfil dentro da empresa
+    return podeAcessarRota(profile?.perfil, item.path)
+  })
 
   // Fecha menu ao clicar fora
   useEffect(() => {
@@ -269,27 +287,27 @@ export default function AppShell() {
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/"           element={<DashPage />} />
-                <Route path="/exec"       element={<ExecPage />} />
-                <Route path="/tasks"      element={<TasksPage />} />
-                <Route path="/avulsas"    element={<AvulsasPage />} />
-                <Route path="/modelos"    element={<ModelosPage />} />
-                <Route path="/esteiras"   element={<EsteirasPage />} />
-                <Route path="/clientes"   element={<ClientsPage />} />
-                <Route path="/clientes/:id" element={<ClientePage />} />
-                <Route path="/pendencias" element={<PendenciasPage />} />
+                <Route path="/exec"       element={<RotaProtegida path="/exec" perfil={profile?.perfil}><ExecPage /></RotaProtegida>} />
+                <Route path="/tasks"      element={<RotaProtegida path="/tasks" perfil={profile?.perfil}><TasksPage /></RotaProtegida>} />
+                <Route path="/avulsas"    element={<RotaProtegida path="/avulsas" perfil={profile?.perfil}><AvulsasPage /></RotaProtegida>} />
+                <Route path="/modelos"    element={<RotaProtegida path="/modelos" perfil={profile?.perfil}><ModelosPage /></RotaProtegida>} />
+                <Route path="/esteiras"   element={<RotaProtegida path="/esteiras" perfil={profile?.perfil}><EsteirasPage /></RotaProtegida>} />
+                <Route path="/clientes"   element={<RotaProtegida path="/clientes" perfil={profile?.perfil}><ClientsPage /></RotaProtegida>} />
+                <Route path="/clientes/:id" element={<RotaProtegida path="/clientes" perfil={profile?.perfil}><ClientePage /></RotaProtegida>} />
+                <Route path="/pendencias" element={<RotaProtegida path="/pendencias" perfil={profile?.perfil}><PendenciasPage /></RotaProtegida>} />
                 <Route path="/agenda"     element={<AgendaPage />} />
-                <Route path="/rent"       element={<RentPage />} />
-                <Route path="/cap"        element={<CapPage />} />
-                <Route path="/cofre"      element={<CofrePage />} />
-                <Route path="/crm"          element={<CRMPage />} />
-                <Route path="/precificacao" element={<PrecificacaoPage />} />
-                <Route path="/mensagens"  element={<MensagensPage />} />
-                <Route path="/relatorios" element={<RelatoriosPage />} />
-                <Route path="/config"     element={<ConfigPage />} />
+                <Route path="/rent"       element={<RotaProtegida path="/rent" perfil={profile?.perfil}><RentPage /></RotaProtegida>} />
+                <Route path="/cap"        element={<RotaProtegida path="/cap" perfil={profile?.perfil}><CapPage /></RotaProtegida>} />
+                <Route path="/cofre"      element={<RotaProtegida path="/cofre" perfil={profile?.perfil}><CofrePage /></RotaProtegida>} />
+                <Route path="/crm"          element={<RotaProtegida path="/crm" perfil={profile?.perfil}><CRMPage /></RotaProtegida>} />
+                <Route path="/precificacao" element={<RotaProtegida path="/precificacao" perfil={profile?.perfil}><PrecificacaoPage /></RotaProtegida>} />
+                <Route path="/mensagens"  element={<RotaProtegida path="/mensagens" perfil={profile?.perfil}><MensagensPage /></RotaProtegida>} />
+                <Route path="/relatorios" element={<RotaProtegida path="/relatorios" perfil={profile?.perfil}><RelatoriosPage /></RotaProtegida>} />
+                <Route path="/config"     element={<RotaProtegida path="/config" perfil={profile?.perfil}><ConfigPage /></RotaProtegida>} />
                 <Route path="/meu-painel" element={<MeuPainelPage />} />
                 <Route path="/ajuda"      element={<AjudaPage />} />
-                <Route path="/mentoria"   element={<MentoriaPage />} />
-                <Route path="/plano-negocio" element={<PlanoNegocioPage />} />
+                <Route path="/mentoria"   element={<RotaProtegida path="/mentoria" perfil={profile?.perfil}><MentoriaPage /></RotaProtegida>} />
+                <Route path="/plano-negocio" element={<RotaProtegida path="/plano-negocio" perfil={profile?.perfil}><PlanoNegocioPage /></RotaProtegida>} />
                 <Route path="/admin"      element={profile?.fluxe_staff ? <AdminPage /> : <Navigate to="/" replace />} />
               </Routes>
             </Suspense>
