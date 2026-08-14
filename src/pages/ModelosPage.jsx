@@ -104,6 +104,12 @@ export default function ModelosPage() {
   const [overrideForm, setOverrideForm] = useState(null)
   const [overrideErr, setOverrideErr] = useState('')
 
+  // Override de checklist só para este cliente (não mexe no modelo geral)
+  const [ckOverrideId, setCkOverrideId] = useState(null)
+  const [ckOverrideItems, setCkOverrideItems] = useState(null)
+  const [ckOverrideNew, setCkOverrideNew] = useState('')
+  const [ckOverrideErr, setCkOverrideErr] = useState('')
+
   // Geração
   const [dataInicio, setDataInicio] = useState(() => new Date().toLocaleDateString('en-CA'))
   const [geracaoMsg, setGeracaoMsg] = useState(null)
@@ -215,6 +221,33 @@ export default function ModelosPage() {
       await updateVinculo.mutateAsync({ id: overrideId, clienteId: fCliente, recorrencia: null, dias_semana: null, dia_mes: null, hora: null })
       setOverrideId(null)
     } catch (err) { setOverrideErr(err.message || 'Erro ao limpar') }
+  }
+
+  function abrirChecklistOverride(vinculo, modelo) {
+    setCkOverrideErr(''); setCkOverrideNew('')
+    setCkOverrideItems(vinculo.checklist_items_override?.length ? [...vinculo.checklist_items_override] : [...(modelo.checklist_items || [])])
+    setCkOverrideId(vinculo.id)
+  }
+  function addCkOverrideItem() {
+    const txt = ckOverrideNew.trim(); if (!txt) return
+    setCkOverrideItems(items => [...items, txt]); setCkOverrideNew('')
+  }
+  function removeCkOverrideItem(i) {
+    setCkOverrideItems(items => items.filter((_, j) => j !== i))
+  }
+  async function salvarChecklistOverride() {
+    try {
+      setCkOverrideErr('')
+      await updateVinculo.mutateAsync({ id: ckOverrideId, clienteId: fCliente, checklist_items_override: ckOverrideItems.length ? ckOverrideItems : null })
+      setCkOverrideId(null)
+    } catch (err) { setCkOverrideErr(err.message || 'Erro ao salvar') }
+  }
+  async function usarPadraoChecklist() {
+    try {
+      setCkOverrideErr('')
+      await updateVinculo.mutateAsync({ id: ckOverrideId, clienteId: fCliente, checklist_items_override: null })
+      setCkOverrideId(null)
+    } catch (err) { setCkOverrideErr(err.message || 'Erro ao limpar') }
   }
 
   async function handleGerar() {
@@ -464,6 +497,12 @@ export default function ModelosPage() {
                                 🔧 só p/ este cliente
                               </span>
                             )}
+                            {vinculo.checklist_items_override?.length > 0 && (
+                              <span style={{ marginLeft:4, padding:'2px 8px', borderRadius:99,
+                                background:'#FEF3C7', color:'#92400E', fontSize:10, fontWeight:600 }} title="Checklist diferente do padrão do modelo, só pra este cliente">
+                                📋 checklist próprio
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <div style={{ fontSize:11, color:'#94A3B8', marginTop:2 }}>
@@ -479,6 +518,13 @@ export default function ModelosPage() {
                             style={{ padding:'5px 10px', borderRadius:6, border:'1px solid #E2E8F0',
                               background:'#fff', color:'#475569', cursor:'pointer', fontSize:11, fontWeight:600, whiteSpace:'nowrap' }} title="Ajustar recorrência só para este cliente">
                             🔁 Recorrência
+                          </button>
+                        )}
+                        {vinculado && (
+                          <button onClick={() => abrirChecklistOverride(vinculo, modelo)}
+                            style={{ padding:'5px 10px', borderRadius:6, border:'1px solid #E2E8F0',
+                              background:'#fff', color:'#475569', cursor:'pointer', fontSize:11, fontWeight:600, whiteSpace:'nowrap' }} title="Ajustar checklist só para este cliente">
+                            📋 Checklist
                           </button>
                         )}
                         {modelo && (
@@ -577,6 +623,54 @@ export default function ModelosPage() {
                           </button>
                         </div>
                         {overrideErr && <div style={{ fontSize:11, color:'#EF4444', marginTop:6 }}>{overrideErr}</div>}
+                      </div>
+                    )}
+
+                    {/* Inline: ajustar checklist só para este cliente */}
+                    {vinculado && ckOverrideId === vinculo.id && ckOverrideItems !== null && (
+                      <div style={{ background:'#FFFBEB', border:'1px solid #FDE68A', borderRadius:10, padding:'12px 16px', marginTop:4 }}>
+                        <div style={{ fontSize:11, fontWeight:700, color:'#92400E', marginBottom:8 }}>
+                          📋 Checklist de "{modelo.titulo}" só para {clienteNome}
+                        </div>
+                        <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:10 }}>
+                          {ckOverrideItems.length === 0 && (
+                            <div style={{ fontSize:12, color:'#B45309' }}>Nenhum item — a tarefa gerada não terá checklist.</div>
+                          )}
+                          {ckOverrideItems.map((item, i) => (
+                            <div key={i} style={{ display:'flex', alignItems:'center', gap:8 }}>
+                              <span style={{ flex:1, fontSize:12, color:'#78350F', background:'#fff', border:'1px solid #FDE68A', borderRadius:6, padding:'6px 10px' }}>{item}</span>
+                              <button type="button" onClick={() => removeCkOverrideItem(i)}
+                                style={{ padding:'5px 8px', borderRadius:6, border:'1px solid #FDE68A', background:'#fff', color:'#B45309', cursor:'pointer', fontSize:11 }}>✕</button>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap' }}>
+                          <input value={ckOverrideNew} onChange={e => setCkOverrideNew(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCkOverrideItem() } }}
+                            placeholder="Novo item do checklist"
+                            style={{ ...fi, flex:1, minWidth:200, borderColor:'#FDE68A' }} />
+                          <button type="button" onClick={addCkOverrideItem}
+                            style={{ padding:'8px 14px', borderRadius:8, border:'1px solid #FDE68A', background:'#fff', color:'#92400E', cursor:'pointer', fontSize:12, fontWeight:600 }}>
+                            + Adicionar
+                          </button>
+                        </div>
+                        <div style={{ display:'flex', gap:8, marginTop:10 }}>
+                          <button onClick={salvarChecklistOverride} disabled={updateVinculo.isPending}
+                            style={{ padding:'8px 14px', borderRadius:8, border:'none', background:'#D97706', color:'#fff', cursor:'pointer', fontSize:12, fontWeight:600 }}>
+                            {updateVinculo.isPending ? 'Salvando…' : 'Salvar'}
+                          </button>
+                          {vinculo.checklist_items_override?.length > 0 && (
+                            <button onClick={usarPadraoChecklist} disabled={updateVinculo.isPending}
+                              style={{ padding:'8px 14px', borderRadius:8, border:'1px solid #E2E8F0', background:'#fff', color:'#64748B', cursor:'pointer', fontSize:12 }}>
+                              Usar padrão do modelo
+                            </button>
+                          )}
+                          <button onClick={() => setCkOverrideId(null)}
+                            style={{ padding:'8px 14px', borderRadius:8, border:'1px solid #E2E8F0', background:'#fff', color:'#64748B', cursor:'pointer', fontSize:12 }}>
+                            Cancelar
+                          </button>
+                        </div>
+                        {ckOverrideErr && <div style={{ fontSize:11, color:'#EF4444', marginTop:6 }}>{ckOverrideErr}</div>}
                       </div>
                     )}
                     </div>

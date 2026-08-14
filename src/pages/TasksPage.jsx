@@ -237,11 +237,21 @@ export default function TasksPage() {
     if (modal.mode === 'new') {
       const t = await createTask.mutateAsync({ ...payload, modelo_id: modal.modeloId || null })
       await logHistorico(t.id, 'Tarefa criada')
-      // Se veio de um modelo com checklist pronto, já cria os itens na tarefa nova
+      // Se veio de um modelo com checklist pronto, já cria os itens na tarefa nova.
+      // Se o cliente tiver um checklist próprio pra esse modelo (configurado em
+      // Modelos > vínculo do cliente), usa ele em vez do padrão do modelo.
       const modeloOrigem = modal.modeloId ? modelos.find(m => m.id === modal.modeloId) : null
-      if (modeloOrigem?.checklist_items?.length) {
+      let checklistParaCriar = modeloOrigem?.checklist_items || []
+      if (modeloOrigem && payload.cliente_id) {
+        const { data: vinculo } = await supabase.from('cliente_modelos')
+          .select('checklist_items_override')
+          .eq('cliente_id', payload.cliente_id).eq('modelo_id', modal.modeloId)
+          .maybeSingle()
+        if (vinculo?.checklist_items_override?.length) checklistParaCriar = vinculo.checklist_items_override
+      }
+      if (checklistParaCriar.length) {
         let falhas = 0
-        for (const texto of modeloOrigem.checklist_items) {
+        for (const texto of checklistParaCriar) {
           const { error } = await supabase.from('tarefa_checklists').insert({ tarefa_id: t.id, empresa_id: empresa?.id, texto })
           if (error) { console.error('[Fluxe] checklist do modelo', error); falhas++ }
         }
