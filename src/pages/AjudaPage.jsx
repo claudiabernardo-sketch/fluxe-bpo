@@ -75,6 +75,9 @@ const CATS = [
     id:'crm', icon:'fa-solid fa-chart-line', cor:'#8B5CF6', bg:'#F5F3FF',
     titulo:'CRM Comercial', artigos:[
       { titulo:'Pipeline de leads', tempo:'3 min', conteudo:'Cadastre leads e acompanhe cada um pelas etapas do funil comercial: Lead novo → Contato → Diagnóstico → Proposta → Fechado (ou Perdido, se não fechar). Vincule direto com uma proposta gerada na Precificação.' },
+      { titulo:'Buscar um lead', tempo:'1 min', conteudo:'Na barra de ações do CRM, use o campo "🔍 Buscar por nome, contato, e-mail..." pra encontrar um lead rapidamente. A busca considera nome/razão social, nome fantasia, contato, e-mail e WhatsApp — funciona tanto na visão Kanban quanto na Lista.' },
+      { titulo:'Excluir um lead', tempo:'2 min', conteudo:'Abra o lead (botão Editar) e clique em "🗑 Excluir lead" no rodapé do modal. O histórico de interações desse lead é apagado junto. Se o lead já tiver uma proposta gerada na Precificação, o Fluxe recusa a exclusão de propósito — pra não perder um documento comercial — e mostra uma mensagem explicando.' },
+      { titulo:'Anexar um arquivo na conversa do lead', tempo:'2 min', conteudo:'Dentro do histórico de um lead ("▼ Histórico"), o formulário de novo registro tem um campo de arquivo, ao lado do texto da interação. Use pra anexar um diagnóstico, proposta ou qualquer documento trocado com o lead por fora do Fluxe. Depois de salvo, aparece um link "📎 anexo" ao lado da interação, pra baixar quando precisar.' },
     ]
   },
   {
