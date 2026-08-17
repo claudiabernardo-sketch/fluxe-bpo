@@ -3,8 +3,43 @@ import { useClients, useTasks, usePendencias, useApontamentosMes, useUsuarios, u
 import { KpiCard, Card, CardHeader, Loader, Badge, fmtR } from '../components/ui'
 import { computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore, aplicarAjustesManuais, aplicarMetricaMes, CUSTO_HORA_PADRAO } from '../utils/radar'
 import { formatBRL, parseBRL } from '../utils/currency'
+import { useAuthStore } from '../store/authStore'
+import { supabase } from '../lib/supabase'
+
+// ── Diagnóstico do meu BPO: autoavaliação de maturidade (não é o Radar de
+// cliente — é sobre a operação da própria empresa como um todo).
+const NIVEIS_BPO = [
+  { nivel: 1, nome: 'Executa', cor: 'red', desc: 'Você executa as rotinas financeiras dos clientes — a entrega é o operacional em dia.' },
+  { nivel: 2, nome: 'Transforma em informação', cor: 'yellow', desc: 'Você entrega relatórios e indicadores organizados — os clientes recebem números, mas nem sempre uma recomendação junto.' },
+  { nivel: 3, nome: 'Ajuda a decidir', cor: 'green', desc: 'Você liga causa, impacto e recomendação — os clientes tomam decisão com base no que você traz.' },
+]
+const AFIRMACOES_DIAGNOSTICO = [
+  { chave: 'exec1', nivel: 1, texto: 'Minha equipe executa as rotinas financeiras dos clientes (pagar, receber, conciliar, cobrar).' },
+  { chave: 'exec2', nivel: 1, texto: 'As entregas são, na maioria, lançamentos e conciliações em dia — sem relatório gerencial regular.' },
+  { chave: 'info1', nivel: 2, texto: 'Envio relatórios gerenciais (DRE, fluxo de caixa, indicadores) com regularidade.' },
+  { chave: 'info2', nivel: 2, texto: 'Os clientes recebem números organizados, mas raramente uma recomendação junto.' },
+  { chave: 'dec1', nivel: 3, texto: 'Quando um número foge do esperado, eu explico a causa e recomendo uma ação — não só aponto o número.' },
+  { chave: 'dec2', nivel: 3, texto: 'Meus clientes tomam decisões (contratar, cortar custo, mudar preço) com base no que eu trago.' },
+]
+function calcularNivelBpo(marcadas) {
+  if (AFIRMACOES_DIAGNOSTICO.some(a => a.nivel === 3 && marcadas.includes(a.chave))) return 3
+  if (AFIRMACOES_DIAGNOSTICO.some(a => a.nivel === 2 && marcadas.includes(a.chave))) return 2
+  return 1
+}
 
 export default function ExecPage() {
+  const { empresa, updateEmpresa } = useAuthStore()
+  const [diagForm, setDiagForm] = useState(null) // null = não editando; array de chaves quando editando
+  const diagnostico = empresa?.diagnostico_bpo || null
+
+  async function salvarDiagnostico() {
+    const nivel = calcularNivelBpo(diagForm)
+    const payload = { diagnostico_bpo: { marcadas: diagForm, nivel, calculado_em: new Date().toISOString() } }
+    const { error } = await supabase.from('empresas').update(payload).eq('id', empresa.id)
+    if (error) return alert('Não foi possível salvar: ' + error.message)
+    updateEmpresa(payload)
+    setDiagForm(null)
+  }
   const { data: clients = [], isLoading } = useClients()
   const { data: tasks = [] } = useTasks()
   const { data: pends = [] } = usePendencias({ status:'aberta' })
@@ -189,6 +224,62 @@ export default function ExecPage() {
               )}
             </div>
           )}
+        </div>
+      </Card>
+
+      <Card style={{ marginBottom:14 }}>
+        <CardHeader title="Diagnóstico do meu BPO" icon="🧭" />
+        <div style={{ padding:16 }}>
+          {diagForm !== null ? (
+            <div>
+              <div style={{ fontSize:12, color:'#64748B', marginBottom:12 }}>Marque as afirmações que descrevem como sua operação funciona HOJE, na maioria dos clientes:</div>
+              {AFIRMACOES_DIAGNOSTICO.map(a => (
+                <label key={a.chave} style={{ display:'flex', gap:8, alignItems:'flex-start', padding:'6px 0', fontSize:13, color:'#0F172A', cursor:'pointer' }}>
+                  <input type="checkbox" checked={diagForm.includes(a.chave)}
+                    onChange={() => setDiagForm(f => f.includes(a.chave) ? f.filter(x => x !== a.chave) : [...f, a.chave])}
+                    style={{ marginTop:3 }} />
+                  <span>{a.texto}</span>
+                </label>
+              ))}
+              <div style={{ display:'flex', gap:8, marginTop:12 }}>
+                <button onClick={salvarDiagnostico}
+                  style={{ padding:'8px 16px', borderRadius:8, border:'none', background:'#6366F1', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
+                  Calcular meu nível
+                </button>
+                {diagnostico && (
+                  <button onClick={() => setDiagForm(null)}
+                    style={{ padding:'8px 16px', borderRadius:8, border:'1px solid #E2E8F0', background:'#fff', cursor:'pointer', fontSize:13 }}>
+                    Cancelar
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : !diagnostico ? (
+            <div style={{ textAlign:'center', padding:10 }}>
+              <div style={{ fontSize:12, color:'#64748B', marginBottom:10 }}>Você ainda não fez sua autoavaliação.</div>
+              <button onClick={() => setDiagForm([])}
+                style={{ padding:'8px 16px', borderRadius:8, border:'none', background:'#6366F1', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
+                + Fazer diagnóstico
+              </button>
+            </div>
+          ) : (() => {
+            const info = NIVEIS_BPO.find(n => n.nivel === diagnostico.nivel)
+            return (
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:10 }}>
+                  <Badge color={info.cor} label={`Nível ${info.nivel} · ${info.nome}`} />
+                </div>
+                <div style={{ fontSize:13, color:'#334155', marginBottom:10 }}>{info.desc}</div>
+                <div style={{ fontSize:11, color:'#94A3B8', marginBottom:10 }}>
+                  Calculado em {new Date(diagnostico.calculado_em).toLocaleDateString('pt-BR')}
+                </div>
+                <button onClick={() => setDiagForm(diagnostico.marcadas || [])}
+                  style={{ background:'none', border:'none', cursor:'pointer', color:'#6366F1', fontSize:11, fontWeight:600, padding:0 }}>
+                  ↻ Refazer diagnóstico
+                </button>
+              </div>
+            )
+          })()}
         </div>
       </Card>
 
