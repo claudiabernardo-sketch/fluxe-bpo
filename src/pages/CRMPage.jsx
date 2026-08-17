@@ -1,8 +1,9 @@
-import { useLeads, useCreateLead, useUpdateLead, useConvertLeadToClient, useLeadInteracoes, useCreateLeadInteracao, useDeleteLeadInteracao, usePropostas, usePropostasByLead, useUpdateProposta, useCrmTemplates, useCreateCrmTemplate, useUpdateCrmTemplate, useDeleteCrmTemplate } from '../hooks/useData'
+import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, useConvertLeadToClient, useLeadInteracoes, useCreateLeadInteracao, useDeleteLeadInteracao, usePropostas, usePropostasByLead, useUpdateProposta, useCrmTemplates, useCreateCrmTemplate, useUpdateCrmTemplate, useDeleteCrmTemplate } from '../hooks/useData'
 import { Card, Loader, EmptyState, Btn, fmtR } from '../components/ui'
 import { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { supabase } from '../lib/supabase'
 import { findHeaderRowIndex } from '../utils/excelMappings'
 import { parseBRL, formatBRL } from '../utils/currency'
 
@@ -301,7 +302,9 @@ function LinhaDoTempo({ lead }) {
   const criar = useCreateLeadInteracao()
   const deletar = useDeleteLeadInteracao()
   const [form, setForm] = useState({ tipo:'whatsapp', nota:'', proximo_contato:'' })
+  const [arquivo, setArquivo] = useState(null)
   const [expandido, setExpandido] = useState(false)
+  const fileRef = useRef()
 
   async function salvar() {
     if (!form.nota.trim()) return
@@ -309,8 +312,15 @@ function LinhaDoTempo({ lead }) {
       lead_id: lead.id,
       ...form,
       proximo_contato: form.proximo_contato || null,
+      arquivo,
     })
     setForm({ tipo:'whatsapp', nota:'', proximo_contato:'' })
+    setArquivo(null)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  function urlAnexo(path) {
+    return supabase.storage.from('tarefas').getPublicUrl(path).data.publicUrl
   }
 
   const fi = { width:'100%', padding:'6px 8px', border:'1px solid #E2E8F0', borderRadius:6, fontSize:11, fontFamily:'inherit', boxSizing:'border-box' }
@@ -339,6 +349,14 @@ function LinhaDoTempo({ lead }) {
             <textarea value={form.nota} onChange={e => setForm(f => ({...f, nota:e.target.value}))}
               placeholder="O que aconteceu? O que o cliente disse?"
               style={{ ...fi, height:56, resize:'none', marginBottom:6 }} />
+            <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
+              <input ref={fileRef} type="file" onChange={e => setArquivo(e.target.files?.[0] || null)}
+                style={{ fontSize:10, flex:1, minWidth:0 }} />
+              {arquivo && (
+                <button onClick={() => { setArquivo(null); if (fileRef.current) fileRef.current.value = '' }}
+                  style={{ border:'none', background:'none', cursor:'pointer', color:'#EF4444', fontSize:10, flexShrink:0 }}>remover</button>
+              )}
+            </div>
             <div style={{ display:'flex', gap:6, alignItems:'center' }}>
               <div style={{ flex:1 }}>
                 <div style={{ fontSize:9, color:'#94A3B8', marginBottom:2 }}>Próximo follow-up</div>
@@ -366,9 +384,15 @@ function LinhaDoTempo({ lead }) {
                     <span style={{ fontSize:14, flexShrink:0, marginTop:1 }}>{tipo.icon}</span>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:11, color:'#0F172A', lineHeight:1.4 }}>{i.nota}</div>
-                      <div style={{ fontSize:9, color:'#94A3B8', marginTop:2 }}>{data}</div>
+                      <div style={{ fontSize:9, color:'#94A3B8', marginTop:2 }}>
+                        {data}
+                        {i.arquivo_path && (
+                          <a href={urlAnexo(i.arquivo_path)} target="_blank" rel="noopener noreferrer"
+                            style={{ marginLeft:8, color:'#6366F1', fontWeight:600, textDecoration:'none' }}>📎 anexo</a>
+                        )}
+                      </div>
                     </div>
-                    <button onClick={() => deletar.mutate({ id:i.id, lead_id:lead.id })}
+                    <button onClick={() => deletar.mutate({ id:i.id, lead_id:lead.id, arquivo_path:i.arquivo_path })}
                       style={{ border:'none', background:'none', cursor:'pointer', color:'#CBD5E1', fontSize:12, padding:0, flexShrink:0 }}>×</button>
                   </div>
                 )
@@ -385,6 +409,7 @@ export default function CRMPage() {
   const { data: leads = [], isLoading } = useLeads()
   const create  = useCreateLead()
   const update  = useUpdateLead()
+  const del     = useDeleteLead()
   const convert = useConvertLeadToClient()
   const nav     = useNavigate()
 
@@ -506,6 +531,7 @@ export default function CRMPage() {
   const [perdaModal, setPerdaModal]   = useState(null) // { id, nome, nextEtapa }
   const [perdaForm, setPerdaForm]     = useState({ motivo:'', obs:'' })
   const [view, setView]               = useState('kanban')
+  const [busca, setBusca]             = useState('')
   const [templateModal, setTemplateModal] = useState(null) // { lead, template }
   const [templateCopiado, setTemplateCopiado] = useState(false)
 
@@ -548,6 +574,17 @@ export default function CRMPage() {
   }
 
   // ── Métricas (hooks devem ficar antes de qualquer early return) ──
+  // Busca por nome/razão social, nome fantasia, contato, e-mail ou WhatsApp —
+  // usada nas visões Kanban e Lista. Métricas do topo continuam olhando pra
+  // todos os leads, não só pro resultado filtrado.
+  const leadsFiltrados = useMemo(() => {
+    const termo = busca.trim().toLowerCase()
+    if (!termo) return leads
+    return leads.filter(l =>
+      [l.nome, l.fantasia, l.contato, l.email, l.whatsapp].some(campo => campo?.toLowerCase().includes(termo))
+    )
+  }, [leads, busca])
+
   const ativos     = useMemo(() => leads.filter(l => l.etapa !== 'perdido' && l.etapa !== 'convertido'), [leads])
   const fechados   = useMemo(() => leads.filter(l => l.etapa === 'fechado'  || l.etapa === 'convertido'), [leads])
   const perdidos   = useMemo(() => leads.filter(l => l.etapa === 'perdido'), [leads])
@@ -634,6 +671,16 @@ export default function CRMPage() {
       closeModal()
     } catch (e) {
       setErro(e?.message || 'Erro ao salvar. Tente novamente.')
+    }
+  }
+
+  async function excluirLead() {
+    if (!confirm(`Excluir "${form.nome}"? O histórico de interações também será apagado. Essa ação não pode ser desfeita.`)) return
+    try {
+      await del.mutateAsync(editId)
+      closeModal()
+    } catch (e) {
+      setErro(e?.message || 'Erro ao excluir lead.')
     }
   }
 
@@ -743,6 +790,15 @@ export default function CRMPage() {
             </button>
           ))}
         </div>
+        <div style={{ position:'relative', width:240 }}>
+          <input value={busca} onChange={e => setBusca(e.target.value)}
+            placeholder="🔍 Buscar por nome, contato, e-mail..."
+            style={{ width:'100%', padding:'6px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:11, fontFamily:'inherit', boxSizing:'border-box' }} />
+          {busca && (
+            <button onClick={() => setBusca('')} title="Limpar busca"
+              style={{ position:'absolute', right:6, top:'50%', transform:'translateY(-50%)', border:'none', background:'none', cursor:'pointer', color:'#94A3B8', fontSize:13, padding:0 }}>×</button>
+          )}
+        </div>
         <div style={{ flex:1 }} />
         <input ref={importRef} type="file" accept=".xlsx,.xls" style={{ display:'none' }} onChange={importarLeads} />
         <button onClick={baixarModeloImportacao} title="Baixa a planilha modelo para preencher e importar"
@@ -768,7 +824,7 @@ export default function CRMPage() {
       {view === 'kanban' && (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:10, overflowX:'auto' }}>
           {ETAPAS.map(et => {
-            const etLeads = leads.filter(l =>
+            const etLeads = leadsFiltrados.filter(l =>
               et.id === 'fechado' ? (l.etapa === 'fechado' || l.etapa === 'convertido') : l.etapa === et.id
             )
             const mrr = etLeads.reduce((a, l) => a + (l.valor_estimado || 0), 0)
@@ -890,7 +946,7 @@ export default function CRMPage() {
       {/* ══ LISTA ══ */}
       {view === 'lista' && (
         <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-          {leads.filter(l => l.etapa !== 'perdido').map(l => {
+          {leadsFiltrados.filter(l => l.etapa !== 'perdido').map(l => {
             const et = ETAPAS.find(e => e.id === l.etapa) || ETAPAS[0]
             const diasFU = diasAte(l.proximo_contato)
             const fuVencido = diasFU !== null && diasFU <= 0
@@ -933,7 +989,7 @@ export default function CRMPage() {
               </div>
             )
           })}
-          {leads.filter(l => l.etapa !== 'perdido').length === 0 && (
+          {leadsFiltrados.filter(l => l.etapa !== 'perdido').length === 0 && (
             <div style={{ textAlign:'center', padding:'32px', color:'#94A3B8', fontSize:13 }}>Nenhum lead ativo ainda.</div>
           )}
         </div>
@@ -1093,11 +1149,21 @@ export default function CRMPage() {
                   </div>
                 )}
 
-                <div style={{ display:'flex', gap:8, marginTop:16, justifyContent:'flex-end' }}>
-                  <Btn onClick={closeModal}>Cancelar</Btn>
-                  <Btn variant="primary" onClick={save} disabled={isSaving}>
-                    {isSaving ? 'Salvando…' : modal === 'edit' ? 'Salvar' : 'Criar lead'}
-                  </Btn>
+                <div style={{ display:'flex', gap:8, marginTop:16, justifyContent:'space-between', alignItems:'center' }}>
+                  <div>
+                    {modal === 'edit' && (
+                      <button onClick={excluirLead} disabled={del.isPending}
+                        style={{ padding:'8px 14px', borderRadius:8, border:'1px solid #FECDD3', background:'#FEF2F2', color:'#DC2626', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                        {del.isPending ? 'Excluindo…' : '🗑 Excluir lead'}
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ display:'flex', gap:8 }}>
+                    <Btn onClick={closeModal}>Cancelar</Btn>
+                    <Btn variant="primary" onClick={save} disabled={isSaving}>
+                      {isSaving ? 'Salvando…' : modal === 'edit' ? 'Salvar' : 'Criar lead'}
+                    </Btn>
+                  </div>
                 </div>
               </>
             )}

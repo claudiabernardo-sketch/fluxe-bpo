@@ -298,6 +298,24 @@ export function useUpdateLead() {
   })
 }
 
+// Interações/atividades do lead são apagadas junto (ON DELETE CASCADE). Se o
+// lead tiver proposta gerada, o banco recusa o delete (FK sem cascade) — de
+// propósito, pra não sumir um documento comercial sem querer.
+export function useDeleteLead() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('leads').delete().eq('id', id)
+      if (error) {
+        if (error.code === '23503') throw new Error('Esse lead tem proposta(s) gerada(s) e não pode ser excluído — para manter o histórico comercial.')
+        throw error
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leads'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
 export function useConvertLeadToClient() {
   const qc = useQueryClient()
   return useMutation({
@@ -1245,12 +1263,25 @@ export function useLeadInteracoes(leadId) {
 export function useCreateLeadInteracao() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ lead_id, tipo, nota, proximo_contato }) => {
+    mutationFn: async ({ lead_id, tipo, nota, proximo_contato, arquivo }) => {
       const empresa_id = useAuthStore.getState().empresa?.id
       if (!empresa_id) throw new Error('Sessão inválida')
+
+      let arquivo_path = null
+      if (arquivo) {
+        // Nome do arquivo pode ter acento/espaço — limpa antes de usar no storage
+        const nomeLimpo = arquivo.name
+          .normalize('NFD').replace(/[̀-ͯ]/g, '')
+          .replace(/[^a-zA-Z0-9._-]/g, '_')
+        const path = `${empresa_id}/lead-documentos/${lead_id}/${Date.now()}-${nomeLimpo}`
+        const { error: upErr } = await supabase.storage.from('tarefas').upload(path, arquivo, { upsert: false, cacheControl: '3600' })
+        if (upErr) throw upErr
+        arquivo_path = path
+      }
+
       const { data, error } = await supabase
         .from('lead_interacoes')
-        .insert({ lead_id, tipo, nota, empresa_id })
+        .insert({ lead_id, tipo, nota, empresa_id, arquivo_path })
         .select()
       if (error) throw error
       // Atualiza próximo follow-up no lead se informado
@@ -1261,16 +1292,17 @@ export function useCreateLeadInteracao() {
       return data
     },
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['lead_interacoes', vars.lead_id] }),
-    onError: (err) => console.error('[Fluxe]', err),
+    onError: (err) => { console.error('[Fluxe]', err); alert('Não foi possível registrar: ' + err.message) },
   })
 }
 
 export function useDeleteLeadInteracao() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, lead_id }) => {
+    mutationFn: async ({ id, lead_id, arquivo_path }) => {
       const { error } = await supabase.from('lead_interacoes').delete().eq('id', id)
       if (error) throw error
+      if (arquivo_path) await supabase.storage.from('tarefas').remove([arquivo_path])
     },
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['lead_interacoes', vars.lead_id] }),
     onError: (err) => console.error('[Fluxe]', err),
