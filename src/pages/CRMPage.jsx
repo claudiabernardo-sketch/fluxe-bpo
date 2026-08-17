@@ -23,15 +23,24 @@ function DocsComerciaisTab({ leadId }) {
   const nav = useNavigate()
   const fmtD = (d) => d ? new Date(d).toLocaleDateString('pt-BR') : '—'
   const fmtV = (v) => v != null ? Number(v).toLocaleString('pt-BR', { style:'currency', currency:'BRL' }) : '—'
+  const dicaAnexo = (
+    <div style={{ background:'#EEF2FF', border:'1px solid #C7D2FE', borderRadius:8, padding:'8px 12px', fontSize:11, color:'#3730A3', marginBottom:12 }}>
+      💡 Essa aba é só pra propostas geradas aqui no Fluxe (botão 💰 Proposta). Pra anexar um arquivo trocado por fora (diagnóstico, proposta em PDF, etc.), use o <strong>📎 Histórico</strong> do lead — lá tem campo de anexo em cada registro.
+    </div>
+  )
   if (isLoading) return <div style={{ padding:'20px 0', textAlign:'center', color:'#94A3B8', fontSize:12 }}>Carregando…</div>
   if (!propostas.length) return (
-    <div style={{ padding:'32px 0', textAlign:'center', color:'#94A3B8', fontSize:12 }}>
-      Nenhuma proposta gerada para este lead ainda.<br />
-      <span style={{ fontSize:11 }}>Use o botão 💰 Proposta para criar uma.</span>
+    <div>
+      {dicaAnexo}
+      <div style={{ padding:'32px 0', textAlign:'center', color:'#94A3B8', fontSize:12 }}>
+        Nenhuma proposta gerada para este lead ainda.<br />
+        <span style={{ fontSize:11 }}>Use o botão 💰 Proposta para criar uma.</span>
+      </div>
     </div>
   )
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+      {dicaAnexo}
       {propostas.map(p => {
         const st = STATUS_PROP[p.status] || STATUS_PROP.rascunho
         return (
