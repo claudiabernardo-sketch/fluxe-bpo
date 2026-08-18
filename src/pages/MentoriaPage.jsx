@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { useMentoriaLinks, useCreateMentoriaLink, useDeleteMentoriaLink, useMeusCombinados, useAtualizarMeuCombinado, useTurmaAtualPublica, useMeuProgressoAulas, useToggleProgressoAula } from '../hooks/useData'
+import { useMentoriaLinks, useCreateMentoriaLink, useDeleteMentoriaLink, useMeusCombinados, useAtualizarMeuCombinado, useTurmaAtualPublica, useMeuProgressoAulas, useToggleProgressoAula, useMateriaisApoioPublico } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import { Card, CardHeader, Btn, Loader } from '../components/ui'
+import { ETAPAS_BPO } from '../data/etapasBpo'
 
 function urlDoMaterial(l) {
   if (l.arquivo_path) return supabase.storage.from('tarefas').getPublicUrl(l.arquivo_path).data.publicUrl
@@ -136,6 +137,43 @@ function SecaoAulasDaTurma() {
   )
 }
 
+function SecaoMateriaisApoio() {
+  const { empresa } = useAuthStore()
+  const { data: materiais = [], isLoading } = useMateriaisApoioPublico()
+  const grupos = ETAPAS_BPO.map(e => ({ ...e, itens: materiais.filter(m => m.etapa === e.v) })).filter(g => g.itens.length > 0)
+
+  if (!empresa?.mentorado_bpo_lucrativo) return null
+  if (isLoading) return null
+  if (grupos.length === 0) return null
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <CardHeader title="Materiais de Apoio" icon="fa-solid fa-book-open" />
+      <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {grupos.map(g => (
+          <div key={g.v}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--tx2)', textTransform: 'uppercase', marginBottom: 6 }}>{g.label}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {g.itens.map(m => (
+                <a key={m.id} href={urlDoMaterial(m)} target="_blank" rel="noopener noreferrer" style={{
+                  border: '1px solid var(--bo)', borderRadius: 10, padding: '12px 14px', display: 'flex', gap: 12, alignItems: 'flex-start', textDecoration: 'none', color: 'inherit',
+                }}>
+                  <div style={{ fontSize: 18, marginTop: 2 }}>{m.arquivo_path ? '📎' : '🔗'}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#6366F1' }}>{m.titulo}</div>
+                    {m.descricao && <div style={{ fontSize: 12, color: 'var(--tx2)', marginTop: 2 }}>{m.descricao}</div>}
+                  </div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--tx3)', flexShrink: 0 }}>Baixar ↓</div>
+                </a>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  )
+}
+
 function SecaoMeusCombinados() {
   const { empresa } = useAuthStore()
   const { data: combinados = [], isLoading } = useMeusCombinados()
@@ -189,6 +227,7 @@ export default function MentoriaPage() {
       </div>
 
       <SecaoAulasDaTurma />
+      <SecaoMateriaisApoio />
       <SecaoMeusCombinados />
 
       <Card style={{ marginBottom: 16 }}>

@@ -623,7 +623,37 @@ serve(async (req) => {
       return ok({ success: true })
     }
 
-    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | excluir_empresa | get_turma_atual | salvar_turma | salvar_aula | excluir_aula | estender_trial | atualizar_valor_assinatura | toggle_mentorado | criar_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria | listar_sessoes_avulsas | listar_combinados_abertos | concluir_combinado | excluir_dados_mentoria' })
+    // ── Ação: lista todos os materiais de apoio (visão do Admin, todas as etapas) ──
+    if (action === 'get_materiais_gerais') {
+      const { data, error } = await supabase.from('materiais_gerais').select('*').order('etapa').order('criado_em', { ascending: false })
+      if (error) return ok({ error: error.message })
+      return ok({ success: true, materiais: data ?? [] })
+    }
+
+    // ── Ação: cria um material de apoio (não tem edição, só criar/excluir) ──
+    if (action === 'salvar_material_geral') {
+      const { etapa, titulo, descricao, url, arquivo_path } = payload
+      if (!etapa || !titulo) return ok({ error: 'etapa e titulo são obrigatórios' })
+      if (!url && !arquivo_path) return ok({ error: 'informe um link ou um arquivo' })
+      const { data, error } = await supabase.from('materiais_gerais')
+        .insert({ etapa, titulo, descricao: descricao || null, url: url || null, arquivo_path: arquivo_path || null, criado_por: user.id })
+        .select().single()
+      if (error) return ok({ error: error.message })
+      return ok({ success: true, material: data })
+    }
+
+    // ── Ação: exclui um material de apoio (linha + arquivo no storage, se houver) ──
+    if (action === 'excluir_material_geral') {
+      const { id } = payload
+      if (!id) return ok({ error: 'id é obrigatório' })
+      const { data: material } = await supabase.from('materiais_gerais').select('arquivo_path').eq('id', id).single()
+      const { error } = await supabase.from('materiais_gerais').delete().eq('id', id)
+      if (error) return ok({ error: error.message })
+      if (material?.arquivo_path) await supabase.storage.from('tarefas').remove([material.arquivo_path])
+      return ok({ success: true })
+    }
+
+    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | excluir_empresa | get_turma_atual | salvar_turma | salvar_aula | excluir_aula | estender_trial | atualizar_valor_assinatura | toggle_mentorado | criar_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria | listar_sessoes_avulsas | listar_combinados_abertos | concluir_combinado | excluir_dados_mentoria | get_materiais_gerais | salvar_material_geral | excluir_material_geral' })
 
   } catch (e) {
     return ok({ error: e.message || 'Erro interno' })
