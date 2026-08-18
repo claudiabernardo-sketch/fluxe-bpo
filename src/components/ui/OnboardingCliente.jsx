@@ -106,6 +106,9 @@ export default function OnboardingCliente({ clienteId }) {
         <div style={{ fontSize: 12, color: 'var(--tx2)', margin: '6px 0 10px' }}>
           Kick-off & Acessos · Mapeamento & Estruturação Interna · Testes, Validações & Primeiros Relatórios · Go-live Oficial · Acompanhamento & Feedback
         </div>
+        <div style={{ background: '#EEF2FF', border: '1px solid #C7D2FE', borderRadius: 8, padding: '8px 12px', fontSize: 11, color: '#3730A3', margin: '0 0 10px' }}>
+          💡 Quer o passo a passo pronto de cada uma dessas 5 etapas — com roteiro de kick-off, diagnóstico do regime tributário, mapeamento de contas e mais — em vez de montar do zero? Em <strong>Modelos</strong>, clique em <strong>"📚 Importar biblioteca de modelos"</strong> (uma vez só) e depois vincule os modelos de Pré-Onboarding/Onboarding/Implantação a este cliente.
+        </div>
         {tarefasCriadas ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 12, color: 'var(--grt)', fontWeight: 600 }}>✓ 5 tarefas criadas na categoria Onboarding</span>
