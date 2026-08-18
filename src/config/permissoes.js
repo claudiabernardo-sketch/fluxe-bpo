@@ -11,7 +11,7 @@
 // Operacional ficam liberados pra todo mundo — não têm dado sensível e são
 // necessários no dia a dia de qualquer perfil.
 
-const ROTAS_COMUNS = ['/', '/meu-painel', '/ajuda', '/agenda']
+const ROTAS_COMUNS = ['/', '/meu-painel', '/ajuda', '/agenda', '/materiais-apoio']
 
 export const ROTAS_POR_PERFIL = {
   admin: null,
