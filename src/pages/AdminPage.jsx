@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
-import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados, useSessoesMentoria, useCriarSessaoMentoria, useExcluirSessaoMentoria, useSessoesAvulsas, useCombinadosAbertos, useConcluirCombinado, useExcluirDadosMentoria, useAdminTurma } from '../hooks/useData'
+import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados, useSessoesMentoria, useCriarSessaoMentoria, useExcluirSessaoMentoria, useSessoesAvulsas, useCombinadosAbertos, useConcluirCombinado, useExcluirDadosMentoria, useAdminTurma, useAdminMateriaisApoio, useSalvarMaterialApoio, useExcluirMaterialApoio } from '../hooks/useData'
 import { Card, CardHeader, Btn, Badge, Loader } from '../components/ui'
+import { ETAPAS_BPO } from '../data/etapasBpo'
 
 const PLANO_COLOR = { trial:'yellow', trial_expirado:'orange', bloqueado:'red', essencial:'green', pro:'green' }
 const PLANO_LABEL = { trial:'Trial', trial_expirado:'Trial expirado', bloqueado:'Bloqueada', essencial:'Essencial', pro:'Pro' }
@@ -903,6 +904,100 @@ function SecaoTurmaGrupo() {
   )
 }
 
+function NovoMaterialApoioForm({ salvar }) {
+  const [tipo, setTipo] = useState('link')
+  const [form, setForm] = useState({ etapa: ETAPAS_BPO[0].v, titulo: '', descricao: '', url: '' })
+  const [arquivo, setArquivo] = useState(null)
+  const fi = { padding: '7px 10px', border: '1px solid var(--bo)', borderRadius: 8, fontSize: 12, fontFamily: 'inherit' }
+  const podeSalvar = form.titulo.trim() && (tipo === 'link' ? form.url.trim() : !!arquivo)
+
+  function enviar() {
+    salvar.mutate({ etapa: form.etapa, titulo: form.titulo, descricao: form.descricao || null, url: tipo === 'link' ? form.url : null, arquivo: tipo === 'arquivo' ? arquivo : null }, {
+      onSuccess: () => { setForm({ etapa: form.etapa, titulo: '', descricao: '', url: '' }); setArquivo(null) },
+    })
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16, background: 'var(--bg2)', padding: 10, borderRadius: 8 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <select style={{ ...fi, flex: '0 0 180px' }} value={form.etapa} onChange={e => setForm(f => ({ ...f, etapa: e.target.value }))}>
+          {ETAPAS_BPO.map(e => <option key={e.v} value={e.v}>{e.label}</option>)}
+        </select>
+        <input style={{ ...fi, flex: '1 1 220px' }} placeholder="Título (ex: Kit de Planilhas do Mentorado)" value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))} />
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button onClick={() => setTipo('link')} style={{ flex: '0 0 90px', padding: '7px 10px', borderRadius: 8, border: tipo === 'link' ? '2px solid #6366F1' : '1px solid var(--bo)', background: tipo === 'link' ? 'rgba(99,102,241,.08)' : 'transparent', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>🔗 Link</button>
+        <button onClick={() => setTipo('arquivo')} style={{ flex: '0 0 100px', padding: '7px 10px', borderRadius: 8, border: tipo === 'arquivo' ? '2px solid #6366F1' : '1px solid var(--bo)', background: tipo === 'arquivo' ? 'rgba(99,102,241,.08)' : 'transparent', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>📎 Arquivo</button>
+        {tipo === 'link' ? (
+          <input style={{ ...fi, flex: 1 }} placeholder="Link (https://...)" value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} />
+        ) : (
+          <input type="file" style={{ ...fi, flex: 1 }} onChange={e => setArquivo(e.target.files?.[0] || null)} />
+        )}
+      </div>
+      <textarea style={{ ...fi, minHeight: 50, resize: 'vertical' }} placeholder="Descrição (opcional)" value={form.descricao} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} />
+      <div>
+        <Btn small variant="primary" disabled={salvar.isPending || !podeSalvar} onClick={enviar}>
+          {salvar.isPending ? 'Enviando...' : '+ Adicionar material'}
+        </Btn>
+      </div>
+    </div>
+  )
+}
+
+function SecaoMateriaisApoio() {
+  const { data: materiais = [], isLoading } = useAdminMateriaisApoio()
+  const salvar = useSalvarMaterialApoio()
+  const excluir = useExcluirMaterialApoio()
+  const [confirmDel, setConfirmDel] = useState(null)
+  const grupos = ETAPAS_BPO.map(e => ({ ...e, itens: materiais.filter(m => m.etapa === e.v) })).filter(g => g.itens.length > 0)
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <CardHeader title="Materiais de Apoio" icon="fa-solid fa-book-open" />
+      <div style={{ padding: 16 }}>
+        <div style={{ fontSize: 12, color: 'var(--tx3)', marginBottom: 12 }}>
+          Biblioteca de materiais (planilhas, PDFs, links) organizada por etapa do ciclo do cliente — visível pra todo mentorado, dentro do Fluxe.
+        </div>
+        {isLoading ? <Loader /> : (
+          <>
+            <NovoMaterialApoioForm salvar={salvar} />
+            {grupos.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>Nenhum material cadastrado ainda.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {grupos.map(g => (
+                  <div key={g.v}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--tx2)', textTransform: 'uppercase', marginBottom: 6 }}>{g.label}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {g.itens.map(m => (
+                        <div key={m.id} style={{ border: '1px solid var(--bo)', borderRadius: 8, padding: '8px 10px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                          <div style={{ fontSize: 15, marginTop: 1 }}>{m.arquivo_path ? '📎' : '🔗'}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>{m.titulo}</div>
+                            {m.descricao && <div style={{ fontSize: 11, color: 'var(--tx2)', marginTop: 2 }}>{m.descricao}</div>}
+                          </div>
+                          {confirmDel === m.id ? (
+                            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                              <Btn small variant="danger" onClick={() => { excluir.mutate(m.id); setConfirmDel(null) }}>Excluir</Btn>
+                              <Btn small variant="outline" onClick={() => setConfirmDel(null)}>Cancelar</Btn>
+                            </div>
+                          ) : (
+                            <button onClick={() => setConfirmDel(m.id)} style={{ flexShrink: 0, border: 'none', background: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: 13 }}>🗑</button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 export default function AdminPage() {
   return (
     <div>
@@ -913,6 +1008,7 @@ export default function AdminPage() {
       <SecaoCombinadosAbertos />
       <SecaoSessoesAvulsas />
       <SecaoTurmaGrupo />
+      <SecaoMateriaisApoio />
       <SecaoEmpresas />
       <SecaoBugs />
     </div>

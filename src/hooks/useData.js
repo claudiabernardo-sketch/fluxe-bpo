@@ -1872,6 +1872,95 @@ export function useToggleProgressoAula() {
   })
 }
 
+// ── MATERIAIS DE APOIO (biblioteca global por etapa do BPO) ──────────
+// Leitura pública (RLS permite anon+authenticated), igual à turma — visível
+// pra todo mentorado, sem depender de qual empresa (diferente de
+// mentoria_links, que é por empresa_id). Não passa pelo admin-painel.
+export function useMateriaisApoioPublico() {
+  return useQuery({
+    queryKey: ['materiais_apoio_publico'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('materiais_gerais').select('*').order('etapa').order('criado_em', { ascending: false })
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 60_000,
+  })
+}
+
+// Leitura pelo Admin (via admin-painel, checagem de fluxe_staff).
+export function useAdminMateriaisApoio() {
+  return useQuery({
+    queryKey: ['admin_materiais_apoio'],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-painel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_materiais_gerais' }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      return data.materiais ?? []
+    },
+    staleTime: 15_000,
+  })
+}
+
+export function useSalvarMaterialApoio() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ etapa, titulo, descricao, url, arquivo }) => {
+      let arquivo_path = null
+      if (arquivo) {
+        const nomeLimpo = arquivo.name
+          .normalize('NFD').replace(/[̀-ͯ]/g, '')
+          .replace(/[^a-zA-Z0-9._-]/g, '_')
+        const path = `materiais-apoio/${Date.now()}-${nomeLimpo}`
+        const { error: upErr } = await supabase.storage.from('tarefas').upload(path, arquivo, { upsert: false, cacheControl: '3600' })
+        if (upErr) throw upErr
+        arquivo_path = path
+      }
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-painel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'salvar_material_geral', etapa, titulo, descricao, url, arquivo_path }),
+      })
+      const result = await res.json()
+      if (result.error) throw new Error(result.error)
+      return result.material
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin_materiais_apoio'] })
+      qc.invalidateQueries({ queryKey: ['materiais_apoio_publico'] })
+    },
+    onError: (err) => { console.error('[Fluxe]', err); alert('Não foi possível salvar o material: ' + err.message) },
+  })
+}
+
+export function useExcluirMaterialApoio() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-painel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'excluir_material_geral', id }),
+      })
+      const result = await res.json()
+      if (result.error) throw new Error(result.error)
+      return result
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin_materiais_apoio'] })
+      qc.invalidateQueries({ queryKey: ['materiais_apoio_publico'] })
+    },
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
 // ── MENTORIA (links) ─────────────────────────────────
 export function useMentoriaLinks() {
   const { empresa } = useAuthStore()
