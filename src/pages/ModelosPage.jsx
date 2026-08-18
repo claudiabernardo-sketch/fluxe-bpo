@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTarefaModelos, useCreateModelo, useUpdateModelo, useDeleteModelo, useClients,
          useClienteModelos, useVincularModelo, useDesvincularModelo, useGerarTarefas,
-         useRotinas, useUpdateClienteModelo, useAtivarOperacaoManual } from '../hooks/useData'
+         useRotinas, useUpdateClienteModelo, useAtivarOperacaoManual, useImportarBibliotecaModelos } from '../hooks/useData'
 import { Card, Btn, Loader } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 import { supabase } from '../lib/supabase'
@@ -98,6 +98,18 @@ export default function ModelosPage() {
   const updateVinculo     = useUpdateClienteModelo()
   const ativarOperacao    = useAtivarOperacaoManual()
   const gerarTarefas      = useGerarTarefas()
+  const importarBiblioteca = useImportarBibliotecaModelos()
+  const [bibliotecaMsg, setBibliotecaMsg] = useState(null)
+
+  async function handleImportarBiblioteca() {
+    setBibliotecaMsg(null)
+    try {
+      const r = await importarBiblioteca.mutateAsync()
+      setBibliotecaMsg(r.importados > 0
+        ? `✓ ${r.importados} modelo(s) novo(s) importado(s)${r.jaExistiam ? ` — ${r.jaExistiam} já existiam e foram ignorados` : ''}.`
+        : 'Todos os 50 modelos da biblioteca já estavam importados.')
+    } catch (err) { setBibliotecaMsg('Erro ao importar: ' + err.message) }
+  }
 
   // Override de recorrência só para este cliente (não mexe no modelo geral)
   const [overrideId, setOverrideId] = useState(null)
@@ -326,12 +338,24 @@ export default function ModelosPage() {
       />
 
       {/* HEADER */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, gap:10, flexWrap:'wrap' }}>
         <div style={{ fontSize:13, color:'#64748B' }}>
           Selecione um cliente para cruzar as rotinas com os modelos e gerar tarefas.
         </div>
-        <Btn variant="primary" onClick={() => abrirNovo()}>+ Novo modelo</Btn>
+        <div style={{ display:'flex', gap:8 }}>
+          <button onClick={handleImportarBiblioteca} disabled={importarBiblioteca.isPending}
+            style={{ padding:'8px 14px', borderRadius:8, border:'1px solid #E2E8F0', background:'#fff', color:'#334155', cursor:'pointer', fontSize:13, fontWeight:600 }}>
+            {importarBiblioteca.isPending ? 'Importando…' : '📚 Importar biblioteca de modelos'}
+          </button>
+          <Btn variant="primary" onClick={() => abrirNovo()}>+ Novo modelo</Btn>
+        </div>
       </div>
+      {bibliotecaMsg && (
+        <div style={{ fontSize:12, color: bibliotecaMsg.startsWith('Erro') ? '#991B1B' : '#166534', marginBottom:12 }}>
+          {bibliotecaMsg}
+        </div>
+      )}
+      <div style={{ marginBottom:20 }} />
 
       {/* FILTROS */}
       <div style={{ marginBottom:20, display:'flex', gap:8 }}>

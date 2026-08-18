@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../store/authStore'
+import { BIBLIOTECA_BPO } from '../data/bibliotecaBpo'
 
 // ── AUDIT LOG ────────────────────────────────────────
 async function logAudit(acao, tabela, registroId, detalhes = {}) {
@@ -243,6 +244,30 @@ export function useDeleteModelo() {
         .eq('id', id)
       if (error) throw error
       await logAudit('DELETE', 'tarefa_modelos', id)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['tarefa_modelos'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+// Importa a Biblioteca BPO (50 modelos prontos, comercial → encerramento) pra
+// empresa logada — só insere os que ainda não existem (por título), pra
+// permitir rodar de novo sem duplicar depois que a biblioteca for ampliada.
+export function useImportarBibliotecaModelos() {
+  const qc = useQueryClient()
+  const { empresa } = useAuthStore()
+  return useMutation({
+    mutationFn: async () => {
+      const { data: existentes, error: errExist } = await supabase
+        .from('tarefa_modelos').select('titulo').eq('empresa_id', empresa?.id)
+      if (errExist) throw errExist
+      const titulosExistentes = new Set((existentes || []).map(m => m.titulo))
+      const novos = BIBLIOTECA_BPO.filter(m => !titulosExistentes.has(m.titulo))
+      if (novos.length === 0) return { importados: 0, jaExistiam: BIBLIOTECA_BPO.length }
+      const { error } = await supabase.from('tarefa_modelos')
+        .insert(novos.map(m => ({ ...m, empresa_id: empresa?.id })))
+      if (error) throw error
+      return { importados: novos.length, jaExistiam: BIBLIOTECA_BPO.length - novos.length }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tarefa_modelos'] }),
     onError: (err) => console.error('[Fluxe]', err),
