@@ -9,9 +9,12 @@ import { supabase } from '../lib/supabase'
 // ── Diagnóstico do meu BPO: autoavaliação de maturidade (não é o Radar de
 // cliente — é sobre a operação da própria empresa como um todo).
 const NIVEIS_BPO = [
-  { nivel: 1, nome: 'Executa', cor: 'red', desc: 'Você executa as rotinas financeiras dos clientes — a entrega é o operacional em dia.' },
-  { nivel: 2, nome: 'Transforma em informação', cor: 'yellow', desc: 'Você entrega relatórios e indicadores organizados — os clientes recebem números, mas nem sempre uma recomendação junto.' },
-  { nivel: 3, nome: 'Ajuda a decidir', cor: 'green', desc: 'Você liga causa, impacto e recomendação — os clientes tomam decisão com base no que você traz.' },
+  { nivel: 1, nome: 'Executa', cor: 'red', desc: 'Você executa as rotinas financeiras dos clientes — a entrega é o operacional em dia.',
+    proximoPasso: 'Próximo passo: comece a enviar um relatório gerencial simples (fluxo de caixa ou DRE) pros clientes principais, com regularidade mensal — é o primeiro passo pro nível 2.' },
+  { nivel: 2, nome: 'Transforma em informação', cor: 'yellow', desc: 'Você entrega relatórios e indicadores organizados — os clientes recebem números, mas nem sempre uma recomendação junto.',
+    proximoPasso: 'Próximo passo: escolha 1 cliente e, no próximo relatório, ligue causa → impacto → recomendação — não só mostre o número, explique por que ele mudou e o que fazer a respeito.' },
+  { nivel: 3, nome: 'Ajuda a decidir', cor: 'green', desc: 'Você liga causa, impacto e recomendação — os clientes tomam decisão com base no que você traz.',
+    proximoPasso: 'Próximo passo: confirme se todos os clientes-chave já recebem recomendação, não só os relatórios — e considere formalizar isso como parte do seu pacote.' },
 ]
 const AFIRMACOES_DIAGNOSTICO = [
   { chave: 'exec1', nivel: 1, texto: 'Minha equipe executa as rotinas financeiras dos clientes (pagar, receber, conciliar, cobrar).' },
@@ -30,11 +33,18 @@ function calcularNivelBpo(marcadas) {
 export default function ExecPage() {
   const { empresa, updateEmpresa } = useAuthStore()
   const [diagForm, setDiagForm] = useState(null) // null = não editando; array de chaves quando editando
-  const diagnostico = empresa?.diagnostico_bpo || null
+
+  // Formato salvo: { atual: {marcadas,nivel,calculado_em}, historico: [...anteriores] }.
+  // Dado salvo antes do histórico existir vinha "achatado" (sem .atual) — normaliza aqui.
+  const diagRaw = empresa?.diagnostico_bpo || null
+  const diagnostico = diagRaw ? (diagRaw.atual ? diagRaw : { atual: diagRaw, historico: [] }) : null
 
   async function salvarDiagnostico() {
     const nivel = calcularNivelBpo(diagForm)
-    const payload = { diagnostico_bpo: { marcadas: diagForm, nivel, calculado_em: new Date().toISOString() } }
+    const novoAtual = { marcadas: diagForm, nivel, calculado_em: new Date().toISOString() }
+    const historicoAnterior = diagnostico?.historico || []
+    const novoHistorico = diagnostico?.atual ? [...historicoAnterior, diagnostico.atual] : historicoAnterior
+    const payload = { diagnostico_bpo: { atual: novoAtual, historico: novoHistorico } }
     const { error } = await supabase.from('empresas').update(payload).eq('id', empresa.id)
     if (error) return alert('Não foi possível salvar: ' + error.message)
     updateEmpresa(payload)
@@ -263,20 +273,37 @@ export default function ExecPage() {
               </button>
             </div>
           ) : (() => {
-            const info = NIVEIS_BPO.find(n => n.nivel === diagnostico.nivel)
+            const info = NIVEIS_BPO.find(n => n.nivel === diagnostico.atual.nivel)
             return (
               <div>
                 <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:10 }}>
                   <Badge color={info.cor} label={`Nível ${info.nivel} · ${info.nome}`} />
                 </div>
                 <div style={{ fontSize:13, color:'#334155', marginBottom:10 }}>{info.desc}</div>
-                <div style={{ fontSize:11, color:'#94A3B8', marginBottom:10 }}>
-                  Calculado em {new Date(diagnostico.calculado_em).toLocaleDateString('pt-BR')}
+                <div style={{ fontSize:12, color:'#3730A3', background:'#EEF2FF', border:'1px solid #C7D2FE', borderRadius:8, padding:'8px 12px', marginBottom:10 }}>
+                  💡 {info.proximoPasso}
                 </div>
-                <button onClick={() => setDiagForm(diagnostico.marcadas || [])}
+                <div style={{ fontSize:11, color:'#94A3B8', marginBottom:10 }}>
+                  Calculado em {new Date(diagnostico.atual.calculado_em).toLocaleDateString('pt-BR')}
+                </div>
+                <button onClick={() => setDiagForm(diagnostico.atual.marcadas || [])}
                   style={{ background:'none', border:'none', cursor:'pointer', color:'#6366F1', fontSize:11, fontWeight:600, padding:0 }}>
                   ↻ Refazer diagnóstico
                 </button>
+                {diagnostico.historico.length > 0 && (
+                  <div style={{ marginTop:14, paddingTop:12, borderTop:'1px solid #F1F5F9' }}>
+                    <div style={{ fontSize:11, fontWeight:600, color:'#64748B', marginBottom:6 }}>Histórico</div>
+                    {[...diagnostico.historico].reverse().map((h, i) => {
+                      const infoH = NIVEIS_BPO.find(n => n.nivel === h.nivel)
+                      return (
+                        <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 0', fontSize:11, color:'#475569' }}>
+                          <span style={{ color:'#94A3B8', width:80, flexShrink:0 }}>{new Date(h.calculado_em).toLocaleDateString('pt-BR')}</span>
+                          <Badge color={infoH?.cor || 'gray'} label={`Nível ${h.nivel} · ${infoH?.nome || ''}`} />
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             )
           })()}
