@@ -1,7 +1,12 @@
+import { Link } from 'react-router-dom'
 import { useMateriaisApoioPublico } from '../hooks/useData'
 import { Card, CardHeader, Loader } from '../components/ui'
 import { ETAPAS_BPO } from '../data/etapasBpo'
 import { supabase } from '../lib/supabase'
+
+// Materiais que têm uma apresentação em tela cheia dentro do Fluxe, além do
+// arquivo pra baixar — casado pelo título do material.
+const APRESENTACOES = { 'Cheat Sheet de Vendas': '/apresentacao-vendas' }
 
 function urlDoMaterial(m) {
   if (m.arquivo_path) return supabase.storage.from('tarefas').getPublicUrl(m.arquivo_path).data.publicUrl
@@ -31,16 +36,24 @@ export default function MateriaisApoioPage() {
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--tx2)', textTransform: 'uppercase', marginBottom: 6 }}>{g.label}</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {g.itens.map(m => (
-                        <a key={m.id} href={urlDoMaterial(m)} target="_blank" rel="noopener noreferrer" style={{
-                          border: '1px solid var(--bo)', borderRadius: 10, padding: '12px 14px', display: 'flex', gap: 12, alignItems: 'flex-start', textDecoration: 'none', color: 'inherit',
+                        <div key={m.id} style={{
+                          border: '1px solid var(--bo)', borderRadius: 10, padding: '12px 14px', display: 'flex', gap: 12, alignItems: 'center',
                         }}>
-                          <div style={{ fontSize: 18, marginTop: 2 }}>{m.arquivo_path ? '📎' : '🔗'}</div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 14, fontWeight: 600, color: '#6366F1' }}>{m.titulo}</div>
-                            {m.descricao && <div style={{ fontSize: 12, color: 'var(--tx2)', marginTop: 2 }}>{m.descricao}</div>}
-                          </div>
+                          <a href={urlDoMaterial(m)} target="_blank" rel="noopener noreferrer" style={{ flex: 1, minWidth: 0, display: 'flex', gap: 12, alignItems: 'flex-start', textDecoration: 'none', color: 'inherit' }}>
+                            <div style={{ fontSize: 18, marginTop: 2 }}>{m.arquivo_path ? '📎' : '🔗'}</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 14, fontWeight: 600, color: '#6366F1' }}>{m.titulo}</div>
+                              {m.descricao && <div style={{ fontSize: 12, color: 'var(--tx2)', marginTop: 2 }}>{m.descricao}</div>}
+                            </div>
+                          </a>
+                          {APRESENTACOES[m.titulo] && (
+                            <Link to={APRESENTACOES[m.titulo]} style={{
+                              fontSize: 11, fontWeight: 700, color: '#4F46E5', textDecoration: 'none', flexShrink: 0,
+                              border: '1px solid #C7D2FE', background: '#EEF2FF', borderRadius: 8, padding: '6px 10px', whiteSpace: 'nowrap',
+                            }}>🖥️ Apresentar</Link>
+                          )}
                           <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--tx3)', flexShrink: 0 }}>Baixar ↓</div>
-                        </a>
+                        </div>
                       ))}
                     </div>
                   </div>
