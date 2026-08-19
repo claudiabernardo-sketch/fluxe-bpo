@@ -816,6 +816,42 @@ export function useSalvarOnboarding() {
   })
 }
 
+// ── DIAGNÓSTICO FINANCEIRO PÚBLICO (link sem login pro cliente preencher) ──
+// Passa pela Edge Function diagnostico-cliente (service role) porque o
+// cliente não tem conta no Fluxe — nunca lê/escreve direto na tabela.
+export function useDiagnosticoClientePublico(clienteId) {
+  return useQuery({
+    queryKey: ['diagnostico_cliente_publico', clienteId],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/diagnostico-cliente`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get', cliente_id: clienteId }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      return data
+    },
+    enabled: !!clienteId,
+    staleTime: 0,
+  })
+}
+
+export function useSalvarDiagnosticoClientePublico() {
+  return useMutation({
+    mutationFn: async ({ clienteId, ...campos }) => {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/diagnostico-cliente`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'salvar', cliente_id: clienteId, ...campos }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      return data
+    },
+  })
+}
+
 export function useSaveApontamento() {
   const qc = useQueryClient()
   const { empresa } = useAuthStore()

@@ -44,6 +44,73 @@ function linhasParaLista(texto) {
   return texto.split('\n').map(l => l.trim()).filter(Boolean)
 }
 
+function linkDiagnostico(clienteId) {
+  return `${window.location.origin}/diagnostico/${clienteId}`
+}
+
+const CAMPOS_DIAGNOSTICO_LABELS = [
+  ['regime_tributario', 'Regime tributário'],
+  ['porte', 'Porte'],
+  ['faturamento_medio', 'Faturamento médio mensal', v => v != null ? `R$ ${Number(v).toLocaleString('pt-BR')}` : null],
+  ['funcionarios_clt', 'Funcionários (CLT)'],
+  ['socios', 'Sócios'],
+  ['tem_dividas', 'Possui dívidas em aberto?', v => v == null ? null : (v ? 'Sim' : 'Não')],
+  ['dividas_valor', 'Valor das dívidas', v => v != null ? `R$ ${Number(v).toLocaleString('pt-BR')}` : null],
+  ['conta_vermelho', 'Conta no vermelho?', v => v == null ? null : (v ? 'Sim' : 'Não')],
+  ['separa_pj_pf', 'Separa PJ de PF?'],
+  ['retirada_prolabore', 'Retirada de pró-labore'],
+  ['reserva_emergencia', 'Reserva de emergência'],
+  ['bancos_utilizados', 'Bancos utilizados'],
+  ['qtd_contas_bancarias', 'Contas bancárias PJ'],
+  ['aceita_open_finance', 'Aceita Open Finance?'],
+]
+
+function SecaoDiagnosticoFinanceiro({ clienteId, onboarding }) {
+  const [copiado, setCopiado] = useState(false)
+  const preenchidoEm = onboarding?.diagnostico_preenchido_em
+  const itens = CAMPOS_DIAGNOSTICO_LABELS
+    .map(([campo, label, fmt]) => {
+      const raw = onboarding?.[campo]
+      const valor = fmt ? fmt(raw) : (raw || raw === 0 ? String(raw) : null)
+      return valor ? { label, valor } : null
+    })
+    .filter(Boolean)
+
+  function copiarLink() {
+    navigator.clipboard.writeText(linkDiagnostico(clienteId))
+    setCopiado(true)
+    setTimeout(() => setCopiado(false), 2000)
+  }
+
+  return (
+    <div style={{ border: '1px solid var(--bo)', borderRadius: 10, padding: 14, background: 'var(--s2)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 4 }}>
+        <label className="lbl" style={{ margin: 0 }}>Diagnóstico financeiro do cliente</label>
+        {preenchidoEm ? (
+          <span style={{ fontSize: 11, color: 'var(--grt)', fontWeight: 600 }}>✓ Preenchido em {new Date(preenchidoEm).toLocaleDateString('pt-BR')}</span>
+        ) : (
+          <span style={{ fontSize: 11, color: 'var(--tx3)' }}>Aguardando o cliente preencher</span>
+        )}
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--tx2)', margin: '6px 0 10px' }}>
+        Mande esse link pro cliente novo preencher sozinho (regime tributário, faturamento, dívidas, bancos) — sem precisar de conta no Fluxe.
+      </div>
+      <button className="btn bo bsm" onClick={copiarLink}>{copiado ? '✓ Link copiado!' : '🔗 Copiar link do diagnóstico'}</button>
+
+      {itens.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14 }}>
+          {itens.map(it => (
+            <div key={it.label} style={{ fontSize: 12 }}>
+              <span style={{ color: 'var(--tx3)' }}>{it.label}: </span>
+              <span style={{ fontWeight: 600 }}>{it.valor}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function OnboardingCliente({ clienteId }) {
   const navigate = useNavigate()
   const { data: onboarding, isLoading } = useClienteOnboarding(clienteId)
@@ -99,6 +166,9 @@ export default function OnboardingCliente({ clienteId }) {
         <textarea className="fi" style={{ minHeight: 90, resize: 'vertical', width: '100%' }}
           value={form.objetivosTexto} onChange={e => setForm(f => ({ ...f, objetivosTexto: e.target.value }))} />
       </div>
+
+      {/* ── Diagnóstico financeiro (link público pro cliente preencher) ── */}
+      <SecaoDiagnosticoFinanceiro clienteId={clienteId} onboarding={onboarding} />
 
       {/* ── Checklist de etapas → cria tarefas reais ── */}
       <div style={{ border: '1px solid var(--bo)', borderRadius: 10, padding: 14, background: 'var(--s2)' }}>
