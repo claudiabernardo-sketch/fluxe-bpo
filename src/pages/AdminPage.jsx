@@ -20,7 +20,7 @@ function diasTrial(trial_expira_em) {
   return dias
 }
 
-function LinhaEmpresa({ emp, onAcao, pendente }) {
+function LinhaEmpresa({ emp, onAcao, pendente, duplicadas = [] }) {
   const [confirmBloquear, setConfirmBloquear] = useState(false)
   const [confirmExcluir, setConfirmExcluir] = useState(false)
   const [textoConfirmacao, setTextoConfirmacao] = useState('')
@@ -55,6 +55,11 @@ function LinhaEmpresa({ emp, onAcao, pendente }) {
       <td style={{ padding: '10px 8px' }}>
         <div style={{ fontWeight: 600, fontSize: 13 }}>{emp.nome || '—'}</div>
         <div style={{ fontSize: 11, color: 'var(--tx3)' }}>{emp.email || emp.cnpj || ''}</div>
+        {duplicadas.length > 0 && (
+          <div style={{ fontSize: 10, color: '#B45309', marginTop: 3, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }} title="Mesmo e-mail de outra empresa — confira os Usuários de cada uma antes de Bloquear ou Excluir">
+            ⚠ Duplicado com {duplicadas.map(d => `${d.nome || '—'} (${d.usuarios_count} usuário${d.usuarios_count === 1 ? '' : 's'})`).join(', ')}
+          </div>
+        )}
       </td>
       <td style={{ padding: '10px 8px' }}>
         <Badge label={PLANO_LABEL[emp.plano] || emp.plano || '—'} color={PLANO_COLOR[emp.plano] || 'gray'} />
@@ -261,6 +266,7 @@ function SecaoEmpresas() {
   const { data: empresas = [], isLoading } = useAdminEmpresas()
   const acao = useAdminAcaoEmpresa()
   const [filtro, setFiltro] = useState('ativas') // 'ativas' | 'inativas' | 'todas'
+  const [busca, setBusca] = useState('')
 
   function handleAcao(action, empresa_id, extra = {}) {
     acao.mutate({ action, empresa_id, ...extra })
@@ -268,10 +274,24 @@ function SecaoEmpresas() {
 
   if (isLoading) return <Loader />
 
+  // Agrupa por e-mail pra avisar quando duas empresas são a mesma pessoa
+  // (ex: cadastro próprio no Fluxe + compra depois pela Kiwify) — evita
+  // bloquear/excluir a conta errada por engano.
+  const porEmail = {}
+  empresas.forEach(e => {
+    if (!e.email) return
+    const chave = e.email.trim().toLowerCase()
+    ;(porEmail[chave] ||= []).push(e)
+  })
+
   const empresasFiltradas = empresas.filter(e => {
-    if (filtro === 'todas') return true
-    const inativa = e.plano === 'bloqueado'
-    return filtro === 'inativas' ? inativa : !inativa
+    if (filtro === 'todas') { /* segue */ } else {
+      const inativa = e.plano === 'bloqueado'
+      if (filtro === 'inativas' ? !inativa : inativa) return false
+    }
+    if (!busca.trim()) return true
+    const q = busca.trim().toLowerCase()
+    return (e.nome || '').toLowerCase().includes(q) || (e.email || '').toLowerCase().includes(q)
   })
 
   return (
@@ -279,7 +299,7 @@ function SecaoEmpresas() {
       <CardHeader title={`Empresas usando o Fluxe (${empresasFiltradas.length}/${empresas.length})`} icon="fa-solid fa-building" />
       <div style={{ padding: '4px 16px 16px', overflowX: 'auto' }}>
         <NovoMentoradoForm acao={acao} />
-        <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           {[['ativas', 'Ativas'], ['inativas', 'Inativas (bloqueadas)'], ['todas', 'Todas']].map(([v, label]) => (
             <button key={v} onClick={() => setFiltro(v)}
               style={{
@@ -291,6 +311,11 @@ function SecaoEmpresas() {
               {label}
             </button>
           ))}
+          <input
+            value={busca} onChange={e => setBusca(e.target.value)}
+            placeholder="🔍 Buscar por nome ou e-mail..."
+            style={{ marginLeft: 'auto', flex: '0 1 260px', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--bo)', fontSize: 12 }}
+          />
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
           <thead>
@@ -308,9 +333,11 @@ function SecaoEmpresas() {
             </tr>
           </thead>
           <tbody>
-            {empresasFiltradas.map(emp => (
-              <LinhaEmpresa key={emp.id} emp={emp} onAcao={handleAcao} pendente={acao.isPending} />
-            ))}
+            {empresasFiltradas.map(emp => {
+              const chave = (emp.email || '').trim().toLowerCase()
+              const duplicadas = chave ? (porEmail[chave] || []).filter(d => d.id !== emp.id) : []
+              return <LinhaEmpresa key={emp.id} emp={emp} onAcao={handleAcao} pendente={acao.isPending} duplicadas={duplicadas} />
+            })}
           </tbody>
         </table>
       </div>
