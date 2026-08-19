@@ -44,6 +44,96 @@ function SlideMapa() {
   )
 }
 
+const CANAIS_PROSPECCAO = ['Instagram', 'Indicação', 'Networking presencial', 'Google Maps', 'LinkedIn', 'Parceiros (contadores)', 'Clientes atuais', 'Comunidades']
+
+function SlideProspeccao() {
+  return (
+    <div style={{ width: '100%', maxWidth: 820 }}>
+      <h2 style={{ fontSize: 30, fontWeight: 800, color: '#fff', marginBottom: 20, textAlign: 'center' }}>Prospecção, onde encontrar clientes</h2>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center', marginBottom: 24 }}>
+        {CANAIS_PROSPECCAO.map(c => (
+          <div key={c} style={{ background: 'rgba(99,102,241,.18)', border: '1px solid rgba(99,102,241,.4)', borderRadius: 20, padding: '8px 16px', color: '#C7D2FE', fontSize: 15, fontWeight: 600 }}>{c}</div>
+        ))}
+      </div>
+      <div style={{ background: 'rgba(255,255,255,.08)', borderRadius: 10, padding: '16px 20px', marginBottom: 16 }}>
+        <div style={{ color: '#94A3B8', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>EXEMPLO, WHATSAPP FRIO</div>
+        <div style={{ color: '#fff', fontSize: 17, fontStyle: 'italic' }}>"Oi, {'{'}nome{'}'}! Sou a {'{'}seu nome{'}'}, cuido do financeiro de empresas de {'{'}segmento{'}'} aqui da região. Vi {'{'}motivo do contato{'}'} e fiquei curiosa, como vocês estão organizando o financeiro hoje?"</div>
+      </div>
+      <div style={{ textAlign: 'center', color: '#FCD34D', fontSize: 15, fontWeight: 600 }}>⭐ "Vou prospectar empresas" não é estratégia. Defina o perfil antes de sair procurando.</div>
+    </div>
+  )
+}
+
+function SlideQualificacao() {
+  const criterios = [
+    ['Dor', 'O quanto o problema realmente incomoda hoje'],
+    ['Urgência', 'Resolver agora ou "algum dia"'],
+    ['Autoridade', 'Quem está na conversa decide ou só influencia'],
+    ['Capacidade', 'Tem estrutura e orçamento pra pagar'],
+    ['Fit', 'Seu serviço resolve esse tipo de problema'],
+  ]
+  return (
+    <div style={{ width: '100%', maxWidth: 760 }}>
+      <h2 style={{ fontSize: 30, fontWeight: 800, color: '#fff', marginBottom: 8, textAlign: 'center' }}>Qualificação, nem todo lead merece proposta</h2>
+      <div style={{ fontSize: 15, color: '#94A3B8', textAlign: 'center', marginBottom: 24 }}>5 critérios, dê uma nota de 0 (baixo) a 2 (alto) pro seu próximo lead</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {criterios.map(([nome, desc]) => (
+          <div key={nome} style={{ display: 'flex', gap: 16, alignItems: 'center', background: 'rgba(255,255,255,.08)', borderRadius: 10, padding: '12px 18px' }}>
+            <div style={{ color: '#818CF8', fontWeight: 800, fontSize: 17, width: 120, flexShrink: 0 }}>{nome}</div>
+            <div style={{ color: '#E2E8F0', fontSize: 15 }}>{desc}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function SlideObjecaoExemplo() {
+  const passos = [
+    ['Acolher', '"Entendo."'],
+    ['Investigar', '"O que exatamente ficou caro pra você?"'],
+    ['Responder', 'Retome o problema, o escopo e o valor.'],
+    ['Confirmar', '"Faz sentido pra você considerando esse escopo?"'],
+  ]
+  return (
+    <div style={{ width: '100%', maxWidth: 700 }}>
+      <h2 style={{ fontSize: 30, fontWeight: 800, color: '#fff', marginBottom: 24, textAlign: 'center' }}>Exemplo real: "Está caro"</h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {passos.map(([nome, fala], i) => (
+          <div key={nome} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+            <div style={{ background: INDIGO, color: '#fff', width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>{i + 1}</div>
+            <div>
+              <div style={{ color: '#A5B4FC', fontWeight: 700, fontSize: 15 }}>{nome}</div>
+              <div style={{ color: '#fff', fontSize: 17, fontStyle: 'italic' }}>{fala}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function SlideFechamento() {
+  const falas = [
+    'Faz sentido essa estrutura pra você?',
+    'O que falta pra conseguirmos começar?',
+    'Se estiver de acordo, envio o contrato hoje. Você prefere começar na segunda ou na quarta?',
+  ]
+  return (
+    <div style={{ width: '100%', maxWidth: 720 }}>
+      <h2 style={{ fontSize: 30, fontWeight: 800, color: '#fff', marginBottom: 24, textAlign: 'center' }}>Técnicas de fechamento</h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+        {falas.map(f => (
+          <div key={f} style={{ background: 'rgba(255,255,255,.08)', borderRadius: 10, padding: '14px 20px', color: '#fff', fontSize: 17, fontStyle: 'italic' }}>"{f}"</div>
+        ))}
+      </div>
+      <div style={{ background: 'rgba(220,38,38,.15)', border: '1px solid rgba(220,38,38,.4)', borderRadius: 10, padding: '14px 20px', color: '#FCA5A5', fontSize: 14 }}>
+        ⚠ Só use fechamento por alternativa quando houver sinais reais de compra. O objetivo é conduzir, não pressionar.
+      </div>
+    </div>
+  )
+}
+
 function SlideVendedor() {
   const pares = [
     ['Fala demais', 'Faz perguntas'],
@@ -171,15 +261,19 @@ function SlideCitacaoConduzir() {
 const SLIDES = [
   { render: SlideTitulo },
   { render: SlideMapa },
+  { render: SlideProspeccao },
   { render: SlideVendedor },
   { render: SlideRegraDeOuro },
   { render: () => SlideSpin(SPIN[0]) },
   { render: () => SlideSpin(SPIN[1]) },
   { render: () => SlideSpin(SPIN[2]) },
   { render: () => SlideSpin(SPIN[3]) },
+  { render: SlideQualificacao },
   { render: SlideRoteiroPerguntas },
   { render: SlideCitacaoConduzir },
   { render: SlideObjecoes },
+  { render: SlideObjecaoExemplo },
+  { render: SlideFechamento },
   { render: SlidePratica },
 ]
 
