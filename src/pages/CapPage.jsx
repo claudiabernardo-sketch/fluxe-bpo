@@ -13,9 +13,15 @@ export default function CapPage() {
   const { data: usuarios = [] } = useUsuarios()
   const { data: clients = [] } = useClients()
   const [semanasContratar, setSemanasContratar] = useState(6)
+  const [simTab, setSimTab] = useState('novo')
   const [simN, setSimN] = useState(3)
   const [simTicketStr, setSimTicketStr] = useState('')
   const [simHorasStr, setSimHorasStr] = useState('')
+  const [simClientePerdaId, setSimClientePerdaId] = useState('')
+  const [simClienteRenegId, setSimClienteRenegId] = useState('')
+  const [simNovoHonorarioStr, setSimNovoHonorarioStr] = useState('')
+  const [simSalarioNovoStr, setSimSalarioNovoStr] = useState('')
+  const [simHorasNovoStr, setSimHorasNovoStr] = useState('')
 
   if (isLoading) return <Loader />
 
@@ -98,6 +104,35 @@ export default function CapPage() {
   const horasMediaAnalista = usuarios.length ? horasTotal/usuarios.length : HORAS_MES_PADRAO
   const horasExcedentesSim = Math.max(0, horasProjSim - horasTotal*0.85)
   const analistasNecessariosSim = horasExcedentesSim > 0 ? Math.ceil(horasExcedentesSim/horasMediaAnalista) : 0
+
+  // ── Cenário: perda de cliente ──────────────────────────────────────
+  const clientePerda = ativos.find(c => c.id === simClientePerdaId) || null
+  const margemPerda = clientePerda ? margensAtuais.find(m => m.clienteId === clientePerda.id) : null
+  const honorarioPerdido = clientePerda?.valor_mrr || 0
+  const custoPerdido = margemPerda?.custo || 0
+  const mrrSemEle = mrrAtual - honorarioPerdido
+  const custoSemEle = custoAtualTotal - custoPerdido
+  const margemSemEle = mrrSemEle - custoSemEle
+  const margemPctSemEle = mrrSemEle > 0 ? (margemSemEle/mrrSemEle*100) : 0
+
+  // ── Cenário: renegociar um cliente específico ────────────────────────
+  const clienteReneg = ativos.find(c => c.id === simClienteRenegId) || null
+  const margemReneg = clienteReneg ? margensAtuais.find(m => m.clienteId === clienteReneg.id) : null
+  const honorarioAtualReneg = clienteReneg?.valor_mrr || 0
+  const custoReneg = margemReneg?.custo || 0
+  const novoHonorarioReneg = parseBRL(simNovoHonorarioStr) || 0
+  const margemAtualReneg = honorarioAtualReneg - custoReneg
+  const margemNovaReneg = novoHonorarioReneg - custoReneg
+  const margemPctNovaReneg = novoHonorarioReneg > 0 ? (margemNovaReneg/novoHonorarioReneg*100) : 0
+  const impactoMargemReneg = margemNovaReneg - margemAtualReneg
+
+  // ── Cenário: contratação de funcionário novo ─────────────────────────
+  const salarioNovo = parseBRL(simSalarioNovoStr) || 0
+  const horasNovoFunc = Number(simHorasNovoStr) || 0
+  const custoHoraNovoFunc = horasNovoFunc > 0 ? salarioNovo/horasNovoFunc : 0
+  const clientesNecessariosContratacao = ticketMedioAtual > 0 ? Math.ceil(salarioNovo/ticketMedioAtual) : 0
+  const horasTotalComNovoFunc = horasTotal + horasNovoFunc
+  const ocupacaoComNovoFunc = horasTotalComNovoFunc > 0 ? Math.round(horasUsadas/horasTotalComNovoFunc*100) : 0
 
   return (
     <div>
@@ -223,51 +258,194 @@ export default function CapPage() {
         <Card>
           <CardHeader title="Simule um cenário" icon="🧪" />
           <div style={{ padding:16 }}>
-            <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:8, fontSize:12, color:'#64748B', marginBottom:16 }}>
-              <span>E se eu fechar mais</span>
-              <input type="number" min={0} max={50} value={simN}
-                onChange={e => setSimN(Math.max(0, Number(e.target.value)||0))}
-                style={{ width:44, padding:'3px 6px', border:'1px solid #E2E8F0', borderRadius:6, textAlign:'center' }} />
-              <span>clientes de</span>
-              <input type="text" inputMode="decimal" placeholder={formatBRL(ticketMedioAtual)} value={simTicketStr}
-                onChange={e => setSimTicketStr(e.target.value)}
-                style={{ width:90, padding:'3px 6px', border:'1px solid #E2E8F0', borderRadius:6, textAlign:'center' }} />
-              <span>R$/mês cada, usando</span>
-              <input type="number" min={1} max={200} placeholder={String(Math.round(horasPorClienteMedia))} value={simHorasStr}
-                onChange={e => setSimHorasStr(e.target.value)}
-                style={{ width:50, padding:'3px 6px', border:'1px solid #E2E8F0', borderRadius:6, textAlign:'center' }} />
-              <span>h/mês cada?</span>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:16 }}>
+              {[
+                { v:'novo', label:'Cliente novo' },
+                { v:'perda', label:'Perda de cliente' },
+                { v:'renegociar', label:'Renegociar cliente' },
+                { v:'contratacao', label:'Contratação' },
+              ].map(t => (
+                <button key={t.v} onClick={() => setSimTab(t.v)} style={{
+                  padding:'6px 12px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer',
+                  border: simTab===t.v ? '2px solid #6366F1' : '1px solid #E2E8F0',
+                  background: simTab===t.v ? 'rgba(99,102,241,.08)' : 'transparent',
+                  color: simTab===t.v ? '#4338CA' : '#64748B',
+                }}>{t.label}</button>
+              ))}
             </div>
 
-            {simNClientes === 0 ? (
-              <div style={{ textAlign:'center', color:'#94A3B8', fontSize:12, padding:10 }}>Informe quantos clientes simular.</div>
-            ) : (
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:12 }}>
-                <div style={{ background:'#F8FAFC', borderRadius:10, padding:'12px 16px' }}>
-                  <div style={{ fontSize:11, color:'#64748B', marginBottom:4 }}>Ocupação da equipe</div>
-                  <div style={{ fontSize:18, fontWeight:800, color: ocupSim>=85?'#EF4444':ocupSim>=60?'#F97316':'#22C55E' }}>
-                    {ocupacao}% → {ocupSim}%
-                  </div>
-                  {analistasNecessariosSim > 0 && (
-                    <div style={{ fontSize:10, color:'#991B1B', marginTop:2 }}>
-                      Precisaria de ~{analistasNecessariosSim} analista{analistasNecessariosSim>1?'s':''} a mais pra caber com folga
+            {simTab === 'novo' && (
+              <>
+                <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:8, fontSize:12, color:'#64748B', marginBottom:16 }}>
+                  <span>E se eu fechar mais</span>
+                  <input type="number" min={0} max={50} value={simN}
+                    onChange={e => setSimN(Math.max(0, Number(e.target.value)||0))}
+                    style={{ width:44, padding:'3px 6px', border:'1px solid #E2E8F0', borderRadius:6, textAlign:'center' }} />
+                  <span>clientes de</span>
+                  <input type="text" inputMode="decimal" placeholder={formatBRL(ticketMedioAtual)} value={simTicketStr}
+                    onChange={e => setSimTicketStr(e.target.value)}
+                    style={{ width:90, padding:'3px 6px', border:'1px solid #E2E8F0', borderRadius:6, textAlign:'center' }} />
+                  <span>R$/mês cada, usando</span>
+                  <input type="number" min={1} max={200} placeholder={String(Math.round(horasPorClienteMedia))} value={simHorasStr}
+                    onChange={e => setSimHorasStr(e.target.value)}
+                    style={{ width:50, padding:'3px 6px', border:'1px solid #E2E8F0', borderRadius:6, textAlign:'center' }} />
+                  <span>h/mês cada?</span>
+                </div>
+
+                {simNClientes === 0 ? (
+                  <div style={{ textAlign:'center', color:'#94A3B8', fontSize:12, padding:10 }}>Informe quantos clientes simular.</div>
+                ) : (
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:12 }}>
+                    <div style={{ background:'#F8FAFC', borderRadius:10, padding:'12px 16px' }}>
+                      <div style={{ fontSize:11, color:'#64748B', marginBottom:4 }}>Ocupação da equipe</div>
+                      <div style={{ fontSize:18, fontWeight:800, color: ocupSim>=85?'#EF4444':ocupSim>=60?'#F97316':'#22C55E' }}>
+                        {ocupacao}% → {ocupSim}%
+                      </div>
+                      {analistasNecessariosSim > 0 && (
+                        <div style={{ fontSize:10, color:'#991B1B', marginTop:2 }}>
+                          Precisaria de ~{analistasNecessariosSim} analista{analistasNecessariosSim>1?'s':''} a mais pra caber com folga
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div style={{ background:'#F8FAFC', borderRadius:10, padding:'12px 16px' }}>
-                  <div style={{ fontSize:11, color:'#64748B', marginBottom:4 }}>MRR</div>
-                  <div style={{ fontSize:18, fontWeight:800, color:'#0F172A' }}>
-                    R$ {mrrAtual.toLocaleString('pt-BR',{maximumFractionDigits:0})} → R$ {mrrNovoSim.toLocaleString('pt-BR',{maximumFractionDigits:0})}
+                    <div style={{ background:'#F8FAFC', borderRadius:10, padding:'12px 16px' }}>
+                      <div style={{ fontSize:11, color:'#64748B', marginBottom:4 }}>MRR</div>
+                      <div style={{ fontSize:18, fontWeight:800, color:'#0F172A' }}>
+                        R$ {mrrAtual.toLocaleString('pt-BR',{maximumFractionDigits:0})} → R$ {mrrNovoSim.toLocaleString('pt-BR',{maximumFractionDigits:0})}
+                      </div>
+                      <div style={{ fontSize:10, color:'#16A34A', marginTop:2 }}>+R$ {mrrAdicionalSim.toLocaleString('pt-BR',{maximumFractionDigits:0})}/mês</div>
+                    </div>
+                    <div style={{ background:'#F8FAFC', borderRadius:10, padding:'12px 16px' }}>
+                      <div style={{ fontSize:11, color:'#64748B', marginBottom:4 }}>Margem da carteira</div>
+                      <div style={{ fontSize:18, fontWeight:800, color: margemGlobalNovaPct>=margemGlobalAtualPct?'#16A34A':'#EF4444' }}>
+                        {margemGlobalAtualPct.toFixed(0)}% → {margemGlobalNovaPct.toFixed(0)}%
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ fontSize:10, color:'#16A34A', marginTop:2 }}>+R$ {mrrAdicionalSim.toLocaleString('pt-BR',{maximumFractionDigits:0})}/mês</div>
+                )}
+              </>
+            )}
+
+            {simTab === 'perda' && (
+              <>
+                <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:8, fontSize:12, color:'#64748B', marginBottom:16 }}>
+                  <span>E se eu perder</span>
+                  <select value={simClientePerdaId} onChange={e => setSimClientePerdaId(e.target.value)}
+                    style={{ padding:'5px 8px', border:'1px solid #E2E8F0', borderRadius:6, fontSize:12, maxWidth:220 }}>
+                    <option value="">selecione um cliente</option>
+                    {ativos.map(c => <option key={c.id} value={c.id}>{c.fantasia || c.razao_social}</option>)}
+                  </select>
+                  <span>?</span>
                 </div>
-                <div style={{ background:'#F8FAFC', borderRadius:10, padding:'12px 16px' }}>
-                  <div style={{ fontSize:11, color:'#64748B', marginBottom:4 }}>Margem da carteira</div>
-                  <div style={{ fontSize:18, fontWeight:800, color: margemGlobalNovaPct>=margemGlobalAtualPct?'#16A34A':'#EF4444' }}>
-                    {margemGlobalAtualPct.toFixed(0)}% → {margemGlobalNovaPct.toFixed(0)}%
+
+                {!clientePerda ? (
+                  <div style={{ textAlign:'center', color:'#94A3B8', fontSize:12, padding:10 }}>Selecione um cliente pra simular.</div>
+                ) : (
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:12 }}>
+                    <div style={{ background:'#FEF2F2', borderRadius:10, padding:'12px 16px' }}>
+                      <div style={{ fontSize:11, color:'#64748B', marginBottom:4 }}>Esse cliente hoje</div>
+                      <div style={{ fontSize:16, fontWeight:800, color:'#991B1B' }}>
+                        R$ {honorarioPerdido.toLocaleString('pt-BR',{maximumFractionDigits:0})}/mês
+                      </div>
+                      <div style={{ fontSize:10, color:'#64748B', marginTop:2 }}>Custo: R$ {custoPerdido.toLocaleString('pt-BR',{maximumFractionDigits:0})}/mês</div>
+                    </div>
+                    <div style={{ background:'#F8FAFC', borderRadius:10, padding:'12px 16px' }}>
+                      <div style={{ fontSize:11, color:'#64748B', marginBottom:4 }}>MRR sem ele</div>
+                      <div style={{ fontSize:18, fontWeight:800, color:'#0F172A' }}>
+                        R$ {mrrAtual.toLocaleString('pt-BR',{maximumFractionDigits:0})} → R$ {mrrSemEle.toLocaleString('pt-BR',{maximumFractionDigits:0})}
+                      </div>
+                    </div>
+                    <div style={{ background:'#F8FAFC', borderRadius:10, padding:'12px 16px' }}>
+                      <div style={{ fontSize:11, color:'#64748B', marginBottom:4 }}>Margem da carteira sem ele</div>
+                      <div style={{ fontSize:18, fontWeight:800, color: margemPctSemEle>=margemGlobalAtualPct?'#16A34A':'#EF4444' }}>
+                        {margemGlobalAtualPct.toFixed(0)}% → {margemPctSemEle.toFixed(0)}%
+                      </div>
+                    </div>
                   </div>
+                )}
+              </>
+            )}
+
+            {simTab === 'renegociar' && (
+              <>
+                <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:8, fontSize:12, color:'#64748B', marginBottom:16 }}>
+                  <span>E se eu renegociar</span>
+                  <select value={simClienteRenegId} onChange={e => setSimClienteRenegId(e.target.value)}
+                    style={{ padding:'5px 8px', border:'1px solid #E2E8F0', borderRadius:6, fontSize:12, maxWidth:220 }}>
+                    <option value="">selecione um cliente</option>
+                    {ativos.map(c => <option key={c.id} value={c.id}>{c.fantasia || c.razao_social}</option>)}
+                  </select>
+                  <span>pra R$</span>
+                  <input type="text" inputMode="decimal" placeholder={honorarioAtualReneg ? String(Math.round(honorarioAtualReneg)) : '0'} value={simNovoHonorarioStr}
+                    onChange={e => setSimNovoHonorarioStr(e.target.value)}
+                    style={{ width:90, padding:'3px 6px', border:'1px solid #E2E8F0', borderRadius:6, textAlign:'center' }} />
+                  <span>/mês?</span>
                 </div>
-              </div>
+
+                {!clienteReneg ? (
+                  <div style={{ textAlign:'center', color:'#94A3B8', fontSize:12, padding:10 }}>Selecione um cliente pra simular.</div>
+                ) : (
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:12 }}>
+                    <div style={{ background:'#F8FAFC', borderRadius:10, padding:'12px 16px' }}>
+                      <div style={{ fontSize:11, color:'#64748B', marginBottom:4 }}>Honorário do cliente</div>
+                      <div style={{ fontSize:16, fontWeight:800, color:'#0F172A' }}>
+                        R$ {honorarioAtualReneg.toLocaleString('pt-BR',{maximumFractionDigits:0})} → R$ {novoHonorarioReneg.toLocaleString('pt-BR',{maximumFractionDigits:0})}
+                      </div>
+                    </div>
+                    <div style={{ background:'#F8FAFC', borderRadius:10, padding:'12px 16px' }}>
+                      <div style={{ fontSize:11, color:'#64748B', marginBottom:4 }}>Margem do cliente</div>
+                      <div style={{ fontSize:18, fontWeight:800, color: margemNovaReneg>=margemAtualReneg?'#16A34A':'#EF4444' }}>
+                        {margemAtualReneg.toLocaleString('pt-BR',{maximumFractionDigits:0})} → R$ {margemNovaReneg.toLocaleString('pt-BR',{maximumFractionDigits:0})}
+                      </div>
+                      <div style={{ fontSize:10, color:'#64748B', marginTop:2 }}>{margemPctNovaReneg.toFixed(0)}% de margem</div>
+                    </div>
+                    <div style={{ background:'#F8FAFC', borderRadius:10, padding:'12px 16px' }}>
+                      <div style={{ fontSize:11, color:'#64748B', marginBottom:4 }}>Impacto na margem total</div>
+                      <div style={{ fontSize:18, fontWeight:800, color: impactoMargemReneg>=0?'#16A34A':'#EF4444' }}>
+                        {impactoMargemReneg>=0?'+':''}R$ {impactoMargemReneg.toLocaleString('pt-BR',{maximumFractionDigits:0})}/mês
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {simTab === 'contratacao' && (
+              <>
+                <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:8, fontSize:12, color:'#64748B', marginBottom:16 }}>
+                  <span>E se eu contratar alguém com salário de R$</span>
+                  <input type="text" inputMode="decimal" placeholder="2.500" value={simSalarioNovoStr}
+                    onChange={e => setSimSalarioNovoStr(e.target.value)}
+                    style={{ width:90, padding:'3px 6px', border:'1px solid #E2E8F0', borderRadius:6, textAlign:'center' }} />
+                  <span>/mês, trabalhando</span>
+                  <input type="number" min={1} max={300} placeholder="176" value={simHorasNovoStr}
+                    onChange={e => setSimHorasNovoStr(e.target.value)}
+                    style={{ width:50, padding:'3px 6px', border:'1px solid #E2E8F0', borderRadius:6, textAlign:'center' }} />
+                  <span>h/mês?</span>
+                </div>
+
+                {salarioNovo === 0 || horasNovoFunc === 0 ? (
+                  <div style={{ textAlign:'center', color:'#94A3B8', fontSize:12, padding:10 }}>Informe salário e horas/mês pra simular.</div>
+                ) : (
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:12 }}>
+                    <div style={{ background:'#F8FAFC', borderRadius:10, padding:'12px 16px' }}>
+                      <div style={{ fontSize:11, color:'#64748B', marginBottom:4 }}>Custo/hora do novo</div>
+                      <div style={{ fontSize:18, fontWeight:800, color:'#0F172A' }}>R$ {custoHoraNovoFunc.toFixed(2)}/h</div>
+                    </div>
+                    <div style={{ background:'#F8FAFC', borderRadius:10, padding:'12px 16px' }}>
+                      <div style={{ fontSize:11, color:'#64748B', marginBottom:4 }}>Clientes p/ cobrir o salário</div>
+                      <div style={{ fontSize:18, fontWeight:800, color:'#0F172A' }}>{clientesNecessariosContratacao}</div>
+                      <div style={{ fontSize:10, color:'#64748B', marginTop:2 }}>no ticket médio de R$ {ticketMedioAtual.toLocaleString('pt-BR',{maximumFractionDigits:0})}</div>
+                    </div>
+                    <div style={{ background:'#F8FAFC', borderRadius:10, padding:'12px 16px' }}>
+                      <div style={{ fontSize:11, color:'#64748B', marginBottom:4 }}>Ocupação da equipe</div>
+                      <div style={{ fontSize:18, fontWeight:800, color: ocupacaoComNovoFunc>85?'#EF4444':ocupacaoComNovoFunc>60?'#F97316':'#22C55E' }}>
+                        {ocupacao}% → {ocupacaoComNovoFunc}%
+                      </div>
+                      <div style={{ fontSize:10, color:'#16A34A', marginTop:2 }}>+{horasNovoFunc}h/mês de capacidade</div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </Card>
