@@ -12,9 +12,9 @@ const SLATE = '#475569'
 const PASSOS = ['Prospecção', 'Abertura da conversa', 'Rapport e contexto', 'Investigação (SPIN)', 'Qualificação', 'Diagnóstico → Solução', 'Valor e preço', 'Objeções', 'Sinais de compra', 'Fechamento', 'Ativação no Fluxe', 'Follow-up']
 
 const SPIN = [
-  { letra: 'S', nome: 'Situação', cor: INDIGO, desc: 'Perguntas neutras de contexto — ainda não expõem problema, só mapeiam o cenário.', exemplos: ['Quem cuida do financeiro hoje?', 'Quantas contas bancárias vocês movimentam?', 'Como fazem a conciliação?'] },
+  { letra: 'S', nome: 'Situação', cor: INDIGO, desc: 'Perguntas neutras de contexto, ainda não expõem problema, só mapeiam o cenário.', exemplos: ['Quem cuida do financeiro hoje?', 'Quantas contas bancárias vocês movimentam?', 'Como fazem a conciliação?'] },
   { letra: 'P', nome: 'Problema', cor: AMBER, desc: 'A partir do cenário, perguntas que procuram atrito ou insatisfação.', exemplos: ['O que mais dá trabalho nessa rotina?', 'Já aconteceu de o saldo não bater com o banco?', 'O que hoje depende exclusivamente de você?'] },
-  { letra: 'I', nome: 'Implicação', cor: RED, desc: 'Mostram o custo — tempo, dinheiro, risco — de continuar sem resolver.', exemplos: ['E quando isso acontece, o que impacta?', 'Quanto tempo vocês gastam tentando descobrir a diferença?', 'Quanto isso pode estar custando pra empresa?'] },
+  { letra: 'I', nome: 'Implicação', cor: RED, desc: 'Mostram o custo em tempo, dinheiro e risco de continuar sem resolver.', exemplos: ['E quando isso acontece, o que impacta?', 'Quanto tempo vocês gastam tentando descobrir a diferença?', 'Quanto isso pode estar custando pra empresa?'] },
   { letra: 'N', nome: 'Necessidade de solução', cor: GREEN, desc: 'Fazem o próprio cliente descrever o benefício de resolver.', exemplos: ['Se tivesse o financeiro conciliado, o que mudaria na sua rotina?', 'Se recebesse uma visão clara de caixa, o que faria diferente?'] },
 ]
 
@@ -31,7 +31,7 @@ function SlideTitulo() {
 function SlideMapa() {
   return (
     <div style={{ width: '100%' }}>
-      <h2 style={{ fontSize: 30, fontWeight: 800, color: '#fff', marginBottom: 28, textAlign: 'center' }}>O mapa da venda — 12 passos</h2>
+      <h2 style={{ fontSize: 30, fontWeight: 800, color: '#fff', marginBottom: 28, textAlign: 'center' }}>O mapa da venda em 12 passos</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
         {PASSOS.map((p, i) => (
           <div key={p} style={{ background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 12, padding: '16px 18px' }}>
@@ -99,13 +99,13 @@ function SlideSpin(s) {
 function SlideObjecoes() {
   const passos = [
     ['1. Acolher', 'Validar o que o cliente sentiu, sem discordar.'],
-    ['2. Investigar', 'Descobrir o motivo real — raramente é só o preço.'],
+    ['2. Investigar', 'Descobrir o motivo real, raramente é só o preço.'],
     ['3. Responder', 'Retomar o problema, o escopo e o valor já construídos.'],
     ['4. Confirmar', 'Checar se a resposta resolveu a dúvida.'],
   ]
   return (
     <div style={{ width: '100%', maxWidth: 900 }}>
-      <h2 style={{ fontSize: 30, fontWeight: 800, color: '#fff', marginBottom: 28, textAlign: 'center' }}>Tratando uma objeção — A.I.R.C.</h2>
+      <h2 style={{ fontSize: 30, fontWeight: 800, color: '#fff', marginBottom: 28, textAlign: 'center' }}>Tratando uma objeção com o método A.I.R.C.</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
         {passos.map(([nome, desc], i) => (
           <div key={nome} style={{ background: i % 2 === 0 ? 'rgba(99,102,241,.18)' : 'rgba(255,255,255,.08)', borderRadius: 12, padding: '18px 14px' }}>
@@ -125,9 +125,45 @@ function SlidePratica() {
       <div style={{ fontSize: 34, fontWeight: 800, color: '#fff', marginBottom: 16 }}>Agora é praticar</div>
       <div style={{ fontSize: 19, color: '#CBD5E1', lineHeight: 1.6 }}>
         Formem trios: cliente, vendedor e observador.<br />
-        3 casos, 8 a 10 minutos cada — troquem os papéis a cada rodada.<br /><br />
+        3 casos, 8 a 10 minutos cada, troquem os papéis a cada rodada.<br /><br />
         Abram o <strong style={{ color: '#fff' }}>Kit de Role-Play</strong> em Materiais de Apoio.
       </div>
+    </div>
+  )
+}
+
+const ROTEIRO_PERGUNTAS = [
+  { bloco: 'Consciência', cor: INDIGO, perguntas: ['Hoje, você sabe quanto realmente sobra no seu caixa?', 'Como você toma decisões financeiras no seu negócio?', 'Você confia nos números que tem hoje?'] },
+  { bloco: 'Amplificação', cor: AMBER, perguntas: ['Isso já te fez tomar alguma decisão errada?', 'Isso já te gerou prejuízo ou insegurança?', 'Até quando você pretende decidir sem essa clareza?'] },
+  { bloco: 'Direcionamento', cor: GREEN, perguntas: ['Se você tivesse isso organizado hoje, o que mudaria no seu negócio?', 'É exatamente isso que um BPO financeiro resolve.'] },
+]
+
+function SlideRoteiroPerguntas() {
+  return (
+    <div style={{ width: '100%', maxWidth: 820 }}>
+      <h2 style={{ fontSize: 30, fontWeight: 800, color: '#fff', marginBottom: 8, textAlign: 'center' }}>Roteiro de Perguntas que Vendem BPO</h2>
+      <div style={{ fontSize: 15, color: '#94A3B8', textAlign: 'center', marginBottom: 24 }}>Uma versão curta do SPIN, pronta pra usar numa conversa</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {ROTEIRO_PERGUNTAS.map(b => (
+          <div key={b.bloco} style={{ background: 'rgba(255,255,255,.08)', borderLeft: `4px solid ${b.cor}`, borderRadius: 10, padding: '16px 20px' }}>
+            <div style={{ color: b.cor, fontWeight: 800, fontSize: 17, marginBottom: 8 }}>{b.bloco}</div>
+            {b.perguntas.map(p => (
+              <div key={p} style={{ color: '#E2E8F0', fontSize: 16, marginBottom: 4 }}>"{p}"</div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function SlideCitacaoConduzir() {
+  return (
+    <div style={{ textAlign: 'center', maxWidth: 720 }}>
+      <div style={{ fontSize: 32, fontWeight: 800, color: '#fff', lineHeight: 1.5, marginBottom: 20 }}>
+        Quem conduz bem a conversa não precisa convencer.
+      </div>
+      <div style={{ fontSize: 16, color: '#A5B4FC' }}>Salva esse roteiro pra usar na próxima reunião.</div>
     </div>
   )
 }
@@ -141,6 +177,8 @@ const SLIDES = [
   { render: () => SlideSpin(SPIN[1]) },
   { render: () => SlideSpin(SPIN[2]) },
   { render: () => SlideSpin(SPIN[3]) },
+  { render: SlideRoteiroPerguntas },
+  { render: SlideCitacaoConduzir },
   { render: SlideObjecoes },
   { render: SlidePratica },
 ]
