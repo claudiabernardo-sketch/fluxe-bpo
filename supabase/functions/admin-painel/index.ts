@@ -625,9 +625,22 @@ serve(async (req) => {
 
     // ── Ação: lista todos os materiais de apoio (visão do Admin, todas as etapas) ──
     if (action === 'get_materiais_gerais') {
-      const { data, error } = await supabase.from('materiais_gerais').select('*').order('etapa').order('criado_em', { ascending: false })
+      const { data, error } = await supabase.from('materiais_gerais').select('*')
+        .order('etapa').order('ordem', { ascending: true, nullsFirst: false }).order('criado_em', { ascending: false })
       if (error) return ok({ error: error.message })
       return ok({ success: true, materiais: data ?? [] })
+    }
+
+    // ── Ação: regrava a ordem de exibição de um grupo de materiais (dentro
+    // da mesma etapa) — recebe os ids já na ordem desejada e numera 10 em 10 ──
+    if (action === 'reordenar_materiais_gerais') {
+      const { ids } = payload
+      if (!Array.isArray(ids) || ids.length === 0) return ok({ error: 'ids é obrigatório' })
+      for (let i = 0; i < ids.length; i++) {
+        const { error } = await supabase.from('materiais_gerais').update({ ordem: (i + 1) * 10 }).eq('id', ids[i])
+        if (error) return ok({ error: error.message })
+      }
+      return ok({ success: true })
     }
 
     // ── Ação: cria um material de apoio (não tem edição, só criar/excluir) ──
@@ -653,7 +666,7 @@ serve(async (req) => {
       return ok({ success: true })
     }
 
-    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | excluir_empresa | get_turma_atual | salvar_turma | salvar_aula | excluir_aula | estender_trial | atualizar_valor_assinatura | toggle_mentorado | criar_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria | listar_sessoes_avulsas | listar_combinados_abertos | concluir_combinado | excluir_dados_mentoria | get_materiais_gerais | salvar_material_geral | excluir_material_geral' })
+    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | excluir_empresa | get_turma_atual | salvar_turma | salvar_aula | excluir_aula | estender_trial | atualizar_valor_assinatura | toggle_mentorado | criar_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria | listar_sessoes_avulsas | listar_combinados_abertos | concluir_combinado | excluir_dados_mentoria | get_materiais_gerais | salvar_material_geral | excluir_material_geral | reordenar_materiais_gerais' })
 
   } catch (e) {
     return ok({ error: e.message || 'Erro interno' })
