@@ -63,6 +63,7 @@ const AdminPage          = lazy(() => import('../../pages/AdminPage'))
 const MentoriaPage       = lazy(() => import('../../pages/MentoriaPage'))
 const PlanoNegocioPage   = lazy(() => import('../../pages/PlanoNegocioPage'))
 const MateriaisApoioPage = lazy(() => import('../../pages/MateriaisApoioPage'))
+const ApresentacaoVendasPage = lazy(() => import('../../pages/ApresentacaoVendasPage'))
 
 const PageLoader = () => (
   <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'60vh' }}>
@@ -313,6 +314,7 @@ export default function AppShell() {
                 <Route path="/ajuda"      element={<AjudaPage />} />
                 <Route path="/mentoria"   element={<RotaProtegida path="/mentoria" perfil={profile?.perfil}><MentoriaPage /></RotaProtegida>} />
                 <Route path="/materiais-apoio" element={<MateriaisApoioPage />} />
+                <Route path="/apresentacao-vendas" element={<ApresentacaoVendasPage />} />
                 <Route path="/plano-negocio" element={<RotaProtegida path="/plano-negocio" perfil={profile?.perfil}><PlanoNegocioPage /></RotaProtegida>} />
                 <Route path="/admin"      element={profile?.fluxe_staff ? <AdminPage /> : <Navigate to="/" replace />} />
               </Routes>
