@@ -22,6 +22,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage'
 import PrivacidadePage from './pages/PrivacidadePage'
 import TermosPage from './pages/TermosPage'
 import MentoriaGrupoPage from './pages/MentoriaGrupoPage'
+import DiagnosticoClientePage from './pages/DiagnosticoClientePage'
 import AppShell from './components/layout/AppShell'
 
 const qc = new QueryClient({
@@ -66,6 +67,7 @@ export default function App() {
           <Route path="/privacidade" element={<PrivacidadePage />} />
           <Route path="/termos" element={<TermosPage />} />
           <Route path="/mentoriaBPOlucrativo" element={<MentoriaGrupoPage />} />
+          <Route path="/diagnostico/:clienteId" element={<DiagnosticoClientePage />} />
           <Route path="/*" element={
             <AuthGuard>
               <AppShell />
