@@ -152,6 +152,20 @@ export default function ModelosPage() {
 
   async function salvar() {
     if (!form.titulo.trim()) return alert('Informe o título do modelo.')
+    // Modelo com o mesmo título já existente na biblioteca — isso já causou
+    // tarefa duplicada de verdade (título igual, registros diferentes), pra
+    // um mentorado, por engano.
+    if (modal === 'new') {
+      const tituloNorm = form.titulo.trim().toLowerCase()
+      const parecido = modelos.find(m => m.titulo?.trim().toLowerCase() === tituloNorm)
+      if (parecido) {
+        const continuar = confirm(
+          `Já existe um modelo chamado "${parecido.titulo}" na sua biblioteca.\n\n` +
+          `Tem certeza que quer criar outro com o mesmo nome, em vez de usar o existente?`
+        )
+        if (!continuar) return
+      }
+    }
     const payload = {
       titulo: form.titulo.trim(), descricao: form.descricao?.trim() || null,
       categoria: form.categoria || null, etapa: form.etapa || null,
