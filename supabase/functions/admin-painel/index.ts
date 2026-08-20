@@ -305,6 +305,19 @@ serve(async (req) => {
       return ok({ success: true })
     }
 
+    // ── Ação: classificar mentorado como Turma (Mentoria em Grupo) ou
+    // Individual, pro Painel do Mentor conseguir filtrar os dois separados ──
+    if (action === 'set_mentoria_origem') {
+      const { empresa_id, origem } = payload
+      if (!empresa_id) return ok({ error: 'empresa_id é obrigatório' })
+      if (origem !== 'grupo' && origem !== 'individual' && origem !== null) {
+        return ok({ error: 'origem precisa ser "grupo", "individual" ou null' })
+      }
+      const { error } = await supabase.from('empresas').update({ mentoria_origem: origem }).eq('id', empresa_id)
+      if (error) return ok({ error: error.message })
+      return ok({ success: true })
+    }
+
     // ── Ação: definir senha temporária pra um usuário (fallback quando o
     // link de acesso expira/é consumido por pré-visualização do WhatsApp
     // ou de algum filtro de segurança de e-mail corporativo) ───────────────
@@ -347,12 +360,12 @@ serve(async (req) => {
       if (usuarioExistente?.empresa_id) {
         empresaId = usuarioExistente.empresa_id
         await supabase.from('empresas')
-          .update({ mentorado_bpo_lucrativo: true, mentorado_expira_em: mentoradoExpiraEm })
+          .update({ mentorado_bpo_lucrativo: true, mentorado_expira_em: mentoradoExpiraEm, mentoria_origem: 'individual' })
           .eq('id', empresaId)
       } else {
         const { data: empresaRow, error: empresaErr } = await supabase
           .from('empresas')
-          .insert({ nome: nome_empresa, email, plano: 'pro', mentorado_bpo_lucrativo: true, mentorado_expira_em: mentoradoExpiraEm })
+          .insert({ nome: nome_empresa, email, plano: 'pro', mentorado_bpo_lucrativo: true, mentorado_expira_em: mentoradoExpiraEm, mentoria_origem: 'individual' })
           .select('id')
           .single()
         if (empresaErr) return ok({ error: empresaErr.message })
@@ -413,7 +426,7 @@ serve(async (req) => {
     if (action === 'list_mentorados') {
       const { data: empresas, error } = await supabase
         .from('empresas')
-        .select('id, nome, email, criado_em')
+        .select('id, nome, email, criado_em, mentoria_origem')
         .eq('mentorado_bpo_lucrativo', true)
         .order('nome')
       if (error) return ok({ error: error.message })
@@ -678,7 +691,7 @@ serve(async (req) => {
       return ok({ success: true })
     }
 
-    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | excluir_empresa | get_turma_atual | salvar_turma | salvar_aula | excluir_aula | estender_trial | atualizar_valor_assinatura | toggle_mentorado | criar_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria | listar_sessoes_avulsas | listar_combinados_abertos | concluir_combinado | excluir_dados_mentoria | get_materiais_gerais | salvar_material_geral | excluir_material_geral | reordenar_materiais_gerais' })
+    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | excluir_empresa | get_turma_atual | salvar_turma | salvar_aula | excluir_aula | estender_trial | atualizar_valor_assinatura | toggle_mentorado | set_mentoria_origem | criar_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria | listar_sessoes_avulsas | listar_combinados_abertos | concluir_combinado | excluir_dados_mentoria | get_materiais_gerais | salvar_material_geral | excluir_material_geral | reordenar_materiais_gerais' })
 
   } catch (e) {
     return ok({ error: e.message || 'Erro interno' })

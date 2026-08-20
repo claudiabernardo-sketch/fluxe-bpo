@@ -574,6 +574,23 @@ function ZonaPerigoMentorado({ m }) {
   )
 }
 
+function SeletorOrigem({ m }) {
+  const acao = useAdminAcaoEmpresa()
+  return (
+    <select
+      value={m.mentoria_origem || ''}
+      disabled={acao.isPending}
+      onChange={e => acao.mutate({ action: 'set_mentoria_origem', empresa_id: m.id, origem: e.target.value || null })}
+      title="Veio pela Mentoria em Grupo (turma) ou é mentorado individual?"
+      style={{ fontSize: 11, padding: '3px 6px', borderRadius: 6, border: '1px solid var(--bo)', color: m.mentoria_origem ? 'var(--tx1)' : '#B45309', background: m.mentoria_origem ? 'var(--sur)' : '#FFFBEB' }}
+    >
+      <option value="">❓ Classificar</option>
+      <option value="grupo">🎓 Turma</option>
+      <option value="individual">👤 Individual</option>
+    </select>
+  )
+}
+
 function CardMentorado({ m, turmaAulas }) {
   const [expandido, setExpandido] = useState(false)
   const [progressoAberto, setProgressoAberto] = useState(false)
@@ -583,6 +600,7 @@ function CardMentorado({ m, turmaAulas }) {
     ? Object.keys(ETAPA_LABEL).filter(k => m.plano_negocio[`${k}_dificuldade`])
     : []
   const diasSemSessao = diasDesde(m.sessoes?.ultima_data)
+  const mostraTurma = m.mentoria_origem === 'grupo' && turmaAulas.length > 0
 
   return (
     <div style={{ border: '1px solid var(--bo)', borderRadius: 10, padding: '14px 16px' }}>
@@ -590,7 +608,8 @@ function CardMentorado({ m, turmaAulas }) {
         <div>
           <div style={{ fontWeight: 700, fontSize: 14 }}>{m.nome || '—'}</div>
           <div style={{ fontSize: 11, color: 'var(--tx3)' }}>{m.email || ''}</div>
-          <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+          <div style={{ display: 'flex', gap: 6, marginTop: 6, alignItems: 'center' }}>
+            <SeletorOrigem m={m} />
             {planoCompleto(m.plano_negocio) && <span title="Plano de Negócio completo" style={{ fontSize: 15 }}>🎯</span>}
             {m.radar?.total_clientes > 0 && <span title="Primeiro cliente operacional" style={{ fontSize: 15 }}>🤝</span>}
             {m.proposta_aprovada && <span title="Primeira proposta aprovada" style={{ fontSize: 15 }}>📄</span>}
@@ -634,7 +653,7 @@ function CardMentorado({ m, turmaAulas }) {
 
       {expandido && <SecaoSessoes empresaId={m.id} />}
 
-      {turmaAulas.length > 0 && (
+      {mostraTurma && (
         <div style={{ marginTop: 10, borderTop: '1px solid var(--bo)', paddingTop: 8 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ fontSize: 11, color: 'var(--tx3)' }}>
@@ -689,7 +708,25 @@ function SecaoMentorados() {
   const mentorados = data?.mentorados ?? []
   const turmaAulas = data?.turma_aulas ?? []
   const { data: combinadosAbertos = [] } = useCombinadosAbertos()
-  const ordenados = [...mentorados].sort((a, b) => urgencia(b) - urgencia(a))
+  const [filtro, setFiltro] = useState('todos') // todos | grupo | individual | null
+
+  const contagem = {
+    todos: mentorados.length,
+    grupo: mentorados.filter(m => m.mentoria_origem === 'grupo').length,
+    individual: mentorados.filter(m => m.mentoria_origem === 'individual').length,
+    null: mentorados.filter(m => !m.mentoria_origem).length,
+  }
+  const filtrados = filtro === 'todos' ? mentorados
+    : filtro === 'null' ? mentorados.filter(m => !m.mentoria_origem)
+    : mentorados.filter(m => m.mentoria_origem === filtro)
+  const ordenados = [...filtrados].sort((a, b) => urgencia(b) - urgencia(a))
+
+  const abas = [
+    { id: 'todos', label: `Todos (${contagem.todos})` },
+    { id: 'grupo', label: `🎓 Turma (${contagem.grupo})` },
+    { id: 'individual', label: `👤 Individual (${contagem.individual})` },
+    ...(contagem.null > 0 ? [{ id: 'null', label: `❓ Não classificado (${contagem.null})` }] : []),
+  ]
 
   return (
     <Card style={{ marginBottom: 16 }}>
@@ -699,10 +736,30 @@ function SecaoMentorados() {
           Empresas marcadas com 🎓 na lista abaixo, ordenadas por quem precisa de mais atenção primeiro. Selos: 🎯 Plano de Negócio completo · 🤝 primeiro cliente operacional · 📄 primeira proposta aprovada.
         </div>
         <ResumoMentoria mentorados={mentorados} combinadosAbertos={combinadosAbertos} />
+        {mentorados.length > 0 && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+            {abas.map(a => (
+              <button
+                key={a.id}
+                onClick={() => setFiltro(a.id)}
+                style={{
+                  fontSize: 12, fontWeight: 600, padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
+                  border: filtro === a.id ? '2px solid #6366F1' : '1px solid var(--bo)',
+                  background: filtro === a.id ? 'rgba(99,102,241,.08)' : 'transparent',
+                  color: filtro === a.id ? '#6366F1' : 'var(--tx2)',
+                }}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+        )}
         {isLoading ? <Loader /> : mentorados.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>
             Nenhuma empresa marcada como mentorada ainda — clique no 🎓 na lista de empresas abaixo.
           </div>
+        ) : ordenados.length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>Ninguém nesse filtro.</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {ordenados.map(m => <CardMentorado key={m.id} m={m} turmaAulas={turmaAulas} />)}
