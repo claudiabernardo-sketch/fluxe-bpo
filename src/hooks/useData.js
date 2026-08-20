@@ -1916,7 +1916,8 @@ export function useMateriaisApoioPublico() {
   return useQuery({
     queryKey: ['materiais_apoio_publico'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('materiais_gerais').select('*').order('etapa').order('criado_em', { ascending: false })
+      const { data, error } = await supabase.from('materiais_gerais').select('*')
+        .order('etapa').order('ordem', { ascending: true, nullsFirst: false }).order('criado_em', { ascending: false })
       if (error) throw error
       return data ?? []
     },
@@ -1972,6 +1973,31 @@ export function useSalvarMaterialApoio() {
       qc.invalidateQueries({ queryKey: ['materiais_apoio_publico'] })
     },
     onError: (err) => { console.error('[Fluxe]', err); alert('Não foi possível salvar o material: ' + err.message) },
+  })
+}
+
+// Recebe os materiais de uma etapa já na ordem desejada e regrava a coluna
+// `ordem` de todos (10, 20, 30...) — mais simples que calcular swap de dois
+// registros, e sempre deixa espaço pra intercalar no futuro.
+export function useReordenarMateriaisApoio() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (idsEmOrdem) => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-painel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reordenar_materiais_gerais', ids: idsEmOrdem }),
+      })
+      const result = await res.json()
+      if (result.error) throw new Error(result.error)
+      return result
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin_materiais_apoio'] })
+      qc.invalidateQueries({ queryKey: ['materiais_apoio_publico'] })
+    },
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 

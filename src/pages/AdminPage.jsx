@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados, useSessoesMentoria, useCriarSessaoMentoria, useExcluirSessaoMentoria, useSessoesAvulsas, useCombinadosAbertos, useConcluirCombinado, useExcluirDadosMentoria, useAdminTurma, useAdminMateriaisApoio, useSalvarMaterialApoio, useExcluirMaterialApoio } from '../hooks/useData'
+import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados, useSessoesMentoria, useCriarSessaoMentoria, useExcluirSessaoMentoria, useSessoesAvulsas, useCombinadosAbertos, useConcluirCombinado, useExcluirDadosMentoria, useAdminTurma, useAdminMateriaisApoio, useSalvarMaterialApoio, useExcluirMaterialApoio, useReordenarMateriaisApoio } from '../hooks/useData'
 import { Card, CardHeader, Btn, Badge, Loader } from '../components/ui'
 import { ETAPAS_BPO } from '../data/etapasBpo'
 
@@ -975,8 +975,17 @@ function SecaoMateriaisApoio() {
   const { data: materiais = [], isLoading } = useAdminMateriaisApoio()
   const salvar = useSalvarMaterialApoio()
   const excluir = useExcluirMaterialApoio()
+  const reordenar = useReordenarMateriaisApoio()
   const [confirmDel, setConfirmDel] = useState(null)
   const grupos = ETAPAS_BPO.map(e => ({ ...e, itens: materiais.filter(m => m.etapa === e.v) })).filter(g => g.itens.length > 0)
+
+  function mover(itens, index, direcao) {
+    const alvo = index + direcao
+    if (alvo < 0 || alvo >= itens.length) return
+    const novaOrdem = itens.map(m => m.id)
+    ;[novaOrdem[index], novaOrdem[alvo]] = [novaOrdem[alvo], novaOrdem[index]]
+    reordenar.mutate(novaOrdem)
+  }
 
   return (
     <Card style={{ marginBottom: 16 }}>
@@ -996,8 +1005,14 @@ function SecaoMateriaisApoio() {
                   <div key={g.v}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--tx2)', textTransform: 'uppercase', marginBottom: 6 }}>{g.label}</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {g.itens.map(m => (
+                      {g.itens.map((m, idx) => (
                         <div key={m.id} style={{ border: '1px solid var(--bo)', borderRadius: 8, padding: '8px 10px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
+                            <button onClick={() => mover(g.itens, idx, -1)} disabled={idx === 0 || reordenar.isPending}
+                              style={{ border: 'none', background: 'none', cursor: idx === 0 ? 'default' : 'pointer', color: idx === 0 ? '#E2E8F0' : '#94A3B8', fontSize: 11, padding: 0, lineHeight: 1 }}>▲</button>
+                            <button onClick={() => mover(g.itens, idx, 1)} disabled={idx === g.itens.length - 1 || reordenar.isPending}
+                              style={{ border: 'none', background: 'none', cursor: idx === g.itens.length - 1 ? 'default' : 'pointer', color: idx === g.itens.length - 1 ? '#E2E8F0' : '#94A3B8', fontSize: 11, padding: 0, lineHeight: 1 }}>▼</button>
+                          </div>
                           <div style={{ fontSize: 15, marginTop: 1 }}>{m.arquivo_path ? '📎' : '🔗'}</div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 13, fontWeight: 600 }}>{m.titulo}</div>
