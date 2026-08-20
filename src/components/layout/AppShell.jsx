@@ -96,7 +96,7 @@ const NAV = [
   { path:'/mensagens',  icon:'fa-brands fa-whatsapp',           label:'Mensagens' },
   { path:'/relatorios', icon:'fa-solid fa-chart-column',        label:'Relatórios'},
   { path:'/mentoria',   icon:'fa-solid fa-graduation-cap',      label:'Mentoria'  },
-  { path:'/materiais-apoio', icon:'fa-solid fa-book-open',      label:'Materiais' },
+  { path:'/materiais-apoio', icon:'fa-solid fa-book-open',      label:'Biblioteca' },
   { path:'/plano-negocio', icon:'fa-solid fa-compass',          label:'Meu Plano' },
   { path:'/meu-painel', icon:'fa-solid fa-circle-user',         label:'Meu Painel'},
   { path:'/ajuda',      icon:'fa-solid fa-circle-question',     label:'Ajuda'     },
@@ -126,7 +126,7 @@ const TITLES = {
   '/ajuda':      'Central de Ajuda',
   '/admin':      'Painel Admin Fluxe',
   '/mentoria':   'Mentoria',
-  '/materiais-apoio': 'Materiais de Apoio',
+  '/materiais-apoio': 'Biblioteca',
   '/plano-negocio': 'Plano de Negócio em 6 Etapas',
 }
 

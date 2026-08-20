@@ -998,7 +998,7 @@ function SecaoMateriaisApoio() {
 
   return (
     <Card style={{ marginBottom: 16 }}>
-      <CardHeader title="Materiais de Apoio" icon="fa-solid fa-book-open" />
+      <CardHeader title="Biblioteca" icon="fa-solid fa-book-open" />
       <div style={{ padding: 16 }}>
         <div style={{ fontSize: 12, color: 'var(--tx3)', marginBottom: 12 }}>
           Biblioteca de materiais (planilhas, PDFs, links) organizada por etapa do ciclo do cliente — visível pra todo mentorado, dentro do Fluxe.

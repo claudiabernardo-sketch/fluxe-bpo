@@ -25,7 +25,7 @@ export default function MateriaisApoioPage() {
 
       {isLoading ? <Loader /> : (
         <Card>
-          <CardHeader title="Materiais de Apoio" icon="fa-solid fa-book-open" />
+          <CardHeader title="Biblioteca" icon="fa-solid fa-book-open" />
           <div style={{ padding: 16 }}>
             {grupos.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>Nenhum material cadastrado ainda.</div>
