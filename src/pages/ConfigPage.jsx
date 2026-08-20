@@ -259,7 +259,7 @@ export default function ConfigPage() {
   const qc = useQueryClient()
   const [saved, setSaved] = useState(false)
   const [saveError, setSaveError] = useState('')
-  const [tab, setTab] = useState('empresa')
+  const [tab, setTab] = useState(() => new URLSearchParams(window.location.search).get('tab') || 'empresa')
 
   const [empForm, setEmpForm] = useState({ nome:'', email:'', telefone:'', cnpj:'', site:'', slogan:'', cor_primaria:'#6366F1', cor_secundaria:'#8B5CF6', fonte:'Inter', logo_url:'', autentique_token:'', wa_phone_number_id:'', wa_access_token:'' })
   const [waTesting, setWaTesting] = useState(false)
@@ -342,7 +342,7 @@ export default function ConfigPage() {
   const [novoUser, setNovoUser] = useState({ nome:'', email:'', perfil:'operador', custo_hora:35, mensagem:'' })
   const [showNovoUser, setShowNovoUser] = useState(false)
   const [editUser, setEditUser] = useState(null)
-  const [planSel, setPlanSel] = useState('pro')
+  const [planSel, setPlanSel] = useState('essencial')
   const [assinando, setAssinando] = useState(false)
 
   const handleAssinar = async (planoForcado) => {
@@ -1415,7 +1415,6 @@ export default function ConfigPage() {
         const paymentUrl = empresa?.asaas_payment_url
         const PLANOS = [
           { id:'essencial', nome:'Essencial', preco:'R$ 97/mês',  desc:'Sistema completo (Radar, CRM, Capacidade, Meta de crescimento) · Usuários ilimitados · Sem WhatsApp integrado' },
-          { id:'pro',       nome:'Completo',  preco:'R$ 197/mês', desc:'Tudo do Essencial + WhatsApp integrado (oficial da Meta ou conexão rápida) · Suporte prioritário', destaque:true },
         ]
         // Mentorado do BPO Lucrativo usando o Pro de cortesia (sem assinatura
         // real) — oferece a conversão pra assinante mensal, preço especial.
@@ -1457,13 +1456,13 @@ export default function ConfigPage() {
                     Você está usando o Fluxe com o acesso liberado da mentoria BPO Lucrativo. Pra continuar usando depois, é só assinar:
                   </div>
                   <div style={{ fontSize:24, fontWeight:800, color:'#6366F1', marginBottom:12 }}>
-                    R$ 147<span style={{ fontSize:14, fontWeight:400, color:'#94A3B8' }}>/mês</span>
+                    R$ 97<span style={{ fontSize:14, fontWeight:400, color:'#94A3B8' }}>/mês</span>
                   </div>
                   <button
-                    onClick={() => handleAssinar('mentorado')}
+                    onClick={() => handleAssinar('essencial')}
                     disabled={assinando}
                     style={{ display:'block', width:'100%', textAlign:'center', background: assinando ? '#A5B4FC' : 'linear-gradient(135deg,#6366F1,#8B5CF6)', color:'#fff', padding:'13px', borderRadius:10, fontSize:14, fontWeight:700, border:'none', cursor: assinando ? 'not-allowed' : 'pointer' }}>
-                    {assinando ? 'Gerando link...' : 'Assinar por R$ 147/mês →'}
+                    {assinando ? 'Gerando link...' : 'Assinar por R$ 97/mês →'}
                   </button>
                 </div>
               )}
@@ -1472,7 +1471,7 @@ export default function ConfigPage() {
               {plano === 'trial' && (
                 <>
                   <div style={{ fontSize:13, fontWeight:700, color:'#0F172A' }}>Escolha seu plano</div>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:12, maxWidth:320 }}>
                     {PLANOS.map(p => {
                       const sel = planSel === p.id
                       return (
@@ -1490,7 +1489,7 @@ export default function ConfigPage() {
                     onClick={() => handleAssinar()}
                     disabled={assinando}
                     style={{ display:'block', width:'100%', textAlign:'center', background: assinando ? '#A5B4FC' : 'linear-gradient(135deg,#6366F1,#8B5CF6)', color:'#fff', padding:'13px', borderRadius:10, fontSize:14, fontWeight:700, border:'none', cursor: assinando ? 'not-allowed' : 'pointer' }}>
-                    {assinando ? 'Gerando link...' : `Assinar plano ${planSel === 'pro' ? 'Completo' : 'Essencial'} →`}
+                    {assinando ? 'Gerando link...' : 'Assinar plano Essencial →'}
                   </button>
                 </>
               )}

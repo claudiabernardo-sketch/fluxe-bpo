@@ -25,7 +25,6 @@ async function asaas(path: string, method = 'GET', body?: object) {
 const VALOR_PLANO: Record<string, { valor: number; desc: string }> = {
   pro:       { valor: 197.00, desc: 'Plano Completo' },
   essencial: { valor: 97.00,  desc: 'Plano Essencial' },
-  mentorado: { valor: 147.00, desc: 'Plano Fluxe — ex-mentorado BPO Lucrativo' },
 }
 
 serve(async (req) => {
@@ -40,7 +39,7 @@ serve(async (req) => {
   // ── Modo individual: usuário logado clicando em "Assinar" no Config ────
   // Só entra aqui se vier um corpo com cpfCnpj — senão cai no modo em lote
   // (varredura de trials vencidos, usada pelo cron).
-  let bodyPayload: { plano?: string; cpfCnpj?: string } = {}
+  let bodyPayload: { plano?: string; cpfCnpj?: string; empresa_id?: string } = {}
   try { bodyPayload = await req.json() } catch { /* sem corpo = modo em lote */ }
 
   if (bodyPayload.cpfCnpj) {
@@ -61,7 +60,7 @@ serve(async (req) => {
     }
 
     const { data: empresa } = await supabase.from('empresas')
-      .select('id, nome, email, cnpj, plano, mentorado_bpo_lucrativo, oferta_conversao_oculta, asaas_customer_id, asaas_subscription_id')
+      .select('id, nome, email, cnpj, plano, asaas_customer_id, asaas_subscription_id')
       .eq('id', usuarioRow.empresa_id).single()
     if (!empresa) {
       return new Response(JSON.stringify({ error: 'Empresa não encontrada' }), {
@@ -74,14 +73,7 @@ serve(async (req) => {
       })
     }
 
-    const planoEscolhido = bodyPayload.plano === 'mentorado'
-      ? (empresa.mentorado_bpo_lucrativo && !empresa.oferta_conversao_oculta ? 'mentorado' : null)
-      : (bodyPayload.plano === 'essencial' ? 'essencial' : 'pro')
-    if (!planoEscolhido) {
-      return new Response(JSON.stringify({ error: 'Plano inválido para essa empresa' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    const planoEscolhido = bodyPayload.plano === 'essencial' ? 'essencial' : 'pro'
 
     const { valor, desc } = VALOR_PLANO[planoEscolhido]
     try {
@@ -114,7 +106,7 @@ serve(async (req) => {
       const paymentUrl = payments.data?.[0]?.invoiceUrl || null
 
       await supabase.from('empresas').update({
-        plano: planoEscolhido === 'mentorado' ? 'pro' : planoEscolhido,
+        plano: planoEscolhido,
         cnpj: empresa.cnpj || bodyPayload.cpfCnpj,
         asaas_customer_id: customer.id,
         asaas_subscription_id: subscription.id,
@@ -132,13 +124,18 @@ serve(async (req) => {
   }
 
   // ── Modo em lote: cron varrendo trials vencidos ─────────────────────────
-  // Busca empresas com trial expirado sem assinatura criada
-  const { data: empresas, error } = await supabase
+  // Busca empresas com trial expirado sem assinatura criada.
+  // Aceita um empresa_id opcional pra rodar em uma única empresa manualmente
+  // (ex: suporte pedindo pra gerar o link de uma empresa específica sem
+  // esperar o cron varrer todas as outras também).
+  let query = supabase
     .from('empresas')
     .select('id, nome, email, plano')
     .eq('plano', 'trial')
     .lt('trial_expira_em', new Date().toISOString())
     .is('asaas_customer_id', null)
+  if (bodyPayload.empresa_id) query = query.eq('id', bodyPayload.empresa_id)
+  const { data: empresas, error } = await query
 
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), {
