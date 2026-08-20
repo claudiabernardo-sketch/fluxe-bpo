@@ -2,7 +2,7 @@
 // AgendaPage.jsx — Central Operacional BPO Financeiro
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useMemo, useRef } from 'react'
-import { useTasks, useClients, useApontamentos, usePendencias, useRotinas } from '../hooks/useData'
+import { useTasks, useClients, useApontamentos, usePendencias, useRotinas, useProjecaoTarefas } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
 import { Loader } from '../components/ui'
 import { useNavigate } from 'react-router-dom'
@@ -156,20 +156,28 @@ export default function AgendaPage() {
     }).sort((a,b) => a.score - b.score)
   }, [clients, tarefasAtivas, pends, today])
 
-  // Planejamento
-  const planejamento = useMemo(() => {
-    const fim7  = fmtDate(addDays(new Date(), 7))
-    const fim30 = fmtDate(addDays(new Date(), 30))
-    const fimMes = fmtDate(endOfMonth(new Date()))
-    const futuras = tarefasAtivas.filter(t => t.status !== 'concluida')
-    return {
-      hoje:    tarefasHoje.filter(t => t.status !== 'concluida').length,
-      d7:      futuras.filter(t => { const d=t.data_execucao||t.prazo; return d && d > today && d <= fim7  }).length,
-      d30:     futuras.filter(t => { const d=t.data_execucao||t.prazo; return d && d > today && d <= fim30 }).length,
-      fechamento: futuras.filter(t => { const d=t.data_execucao||t.prazo; return d && d > today && d <= fimMes }).length,
-      fimMes,
-    }
-  }, [tarefasAtivas, tarefasHoje, today])
+  // Planejamento — "Hoje" conta tarefa real (já foi gerada pelo cron do dia).
+  // Os demais são projeção: o gerador só cria a tarefa do dia, não existe
+  // "tarefa de amanhã" no banco ainda, então precisa simular a recorrência
+  // (gerar-tarefas em dry_run) pra saber quantas VÃO existir.
+  const amanha = fmtDate(addDays(new Date(), 1))
+  const fim7   = fmtDate(addDays(new Date(), 7))
+  const fim30  = fmtDate(addDays(new Date(), 30))
+  const fimMesStr = fmtDate(endOfMonth(new Date()))
+  const fimFechamento = fimMesStr >= amanha ? fimMesStr : null
+
+  const { data: proj7,   isLoading: proj7Loading }   = useProjecaoTarefas(amanha, fim7)
+  const { data: proj30,  isLoading: proj30Loading }  = useProjecaoTarefas(amanha, fim30)
+  const { data: projFechamento, isLoading: projFechamentoLoading } = useProjecaoTarefas(amanha, fimFechamento)
+
+  const planejamento = useMemo(() => ({
+    hoje:       tarefasHoje.filter(t => t.status !== 'concluida').length,
+    d7:         proj7 ?? 0,
+    d30:        proj30 ?? 0,
+    fechamento: fimFechamento ? (projFechamento ?? 0) : 0,
+    carregando: proj7Loading || proj30Loading || projFechamentoLoading,
+    fimMes:     fimMesStr,
+  }), [tarefasHoje, proj7, proj30, projFechamento, proj7Loading, proj30Loading, projFechamentoLoading, fimFechamento, fimMesStr])
 
   // Kanban tasks
   const kanbanTasks = useMemo(() => {
@@ -532,11 +540,11 @@ export default function AgendaPage() {
               </div>
               <div style={{ padding:'12px 16px', display:'flex', flexDirection:'column', gap:8 }}>
                 {[
-                  { label:'Hoje',               value:planejamento.hoje, icon:'☀️', color:'#6366F1', sub:today },
-                  { label:'Próximos 7 dias',     value:planejamento.d7,   icon:'📅', color:'#0EA5E9', sub:'excluindo hoje' },
-                  { label:'Próximos 30 dias',    value:planejamento.d30,  icon:'🗓', color:'#8B5CF6', sub:'excluindo hoje' },
-                  { label:'Até o fechamento',    value:planejamento.fechamento, icon:'📊', color:'#F59E0B',
-                    sub:`até ${new Date(planejamento.fimMes+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})}` },
+                  { label:'Hoje',               value:planejamento.hoje, icon:'☀️', color:'#6366F1', sub:today, projetado:false },
+                  { label:'Próximos 7 dias',     value:planejamento.d7,   icon:'📅', color:'#0EA5E9', sub:'excluindo hoje · projeção', projetado:true },
+                  { label:'Próximos 30 dias',    value:planejamento.d30,  icon:'🗓', color:'#8B5CF6', sub:'excluindo hoje · projeção', projetado:true },
+                  { label:'Até o fechamento',    value:planejamento.fechamento, icon:'📊', color:'#F59E0B', projetado:true,
+                    sub:`projeção até ${new Date(planejamento.fimMes+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})}` },
                 ].map(p => (
                   <div key={p.label} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', background:'#F8FAFC', borderRadius:10, border:'1px solid #F1F5F9' }}>
                     <span style={{ fontSize:18 }}>{p.icon}</span>
@@ -544,10 +552,15 @@ export default function AgendaPage() {
                       <div style={{ fontSize:12, fontWeight:600, color:'#334155' }}>{p.label}</div>
                       <div style={{ fontSize:9, color:'#94A3B8' }}>{p.sub}</div>
                     </div>
-                    <div style={{ fontSize:24, fontWeight:800, color:p.value>0?p.color:'#CBD5E1' }}>{p.value}</div>
+                    <div style={{ fontSize:24, fontWeight:800, color:p.value>0?p.color:'#CBD5E1' }}>
+                      {p.projetado && planejamento.carregando ? '…' : p.value}
+                    </div>
                     <div style={{ fontSize:10, color:'#94A3B8' }}>tarefas</div>
                   </div>
                 ))}
+                <div style={{ fontSize:9, color:'#CBD5E1', textAlign:'center', marginTop:2 }}>
+                  "Projeção" simula a recorrência configurada, ainda não existe como tarefa gerada
+                </div>
               </div>
             </section>
           </div>

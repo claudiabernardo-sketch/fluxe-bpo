@@ -778,6 +778,32 @@ export function useSalvarMetricaMes() {
   })
 }
 
+// ── PROJEÇÃO DE TAREFAS FUTURAS ───────────────────────
+// O gerador de tarefas só cria a tarefa do dia, não existe tarefa "de
+// amanhã" já no banco — por isso "Próximos 7/30 dias" não pode contar
+// tarefas reais, precisa simular a recorrência (via gerar-tarefas em
+// dry_run, sem escrever nada) pra saber quantas VÃO existir.
+export function useProjecaoTarefas(dataInicio, dataFim) {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['projecao_tarefas', empresa?.id, dataInicio, dataFim],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/projetar-tarefas`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data_inicio: dataInicio, data_fim: dataFim }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      return data.total ?? 0
+    },
+    staleTime: 5 * 60_000,
+    enabled: !!empresa?.id && !!dataInicio && !!dataFim,
+    retry: false,
+  })
+}
+
 export function useRadarMetricasHistorico(clienteId, limite = 6) {
   return useQuery({
     queryKey: ['radar_metricas_historico', clienteId],
