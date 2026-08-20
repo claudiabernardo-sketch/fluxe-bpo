@@ -306,8 +306,33 @@ export default function ClientsPage() {
     )
   }
 
+  // Mesmo CNPJ, ou mesmo nome (razão social ou fantasia) já cadastrado —
+  // pega o caso mais comum de cadastro em duplicidade, cliente cadastrado
+  // de novo do zero em vez de editar o que já existe.
+  function encontrarClienteParecido(cnpj, razaoSocial, fantasia) {
+    const cnpjNum = (cnpj || '').replace(/\D/g, '')
+    const nomeNorm = s => (s || '').trim().toLowerCase()
+    return clients.find(c => {
+      if (cnpjNum && (c.cnpj || '').replace(/\D/g, '') === cnpjNum) return true
+      const cRazao = nomeNorm(c.razao_social), cFantasia = nomeNorm(c.fantasia)
+      if (razaoSocial && cRazao && cRazao === nomeNorm(razaoSocial)) return true
+      if (fantasia && cFantasia && cFantasia === nomeNorm(fantasia)) return true
+      return false
+    })
+  }
+
   async function save() {
     if (!form.razao_social) { alert('Razão social é obrigatória'); return }
+    if (modal.mode === 'new') {
+      const parecido = encontrarClienteParecido(form.cnpj, form.razao_social, form.fantasia)
+      if (parecido) {
+        const continuar = confirm(
+          `Já existe um cliente parecido: "${parecido.fantasia || parecido.razao_social}"${parecido.cnpj ? ` (CNPJ ${parecido.cnpj})` : ''}.\n\n` +
+          `Tem certeza que quer cadastrar de novo, em vez de editar o que já existe?`
+        )
+        if (!continuar) return
+      }
+    }
     const mrrNum = parseFloat(String(form.valor_mrr||'0').replace(/\./g,'').replace(',','.')) || 0
     const vencDia = form.vencimento_dia ? parseInt(form.vencimento_dia, 10) || null : null
     // Whitelist explícita — só colunas reais da tabela clientes
