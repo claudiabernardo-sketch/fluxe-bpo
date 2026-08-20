@@ -122,6 +122,15 @@ function LinhaEmpresa({ emp, onAcao, pendente, duplicadas = [] }) {
             {emp.aulas_concluidas}/{emp.aulas_total}
           </div>
         )}
+        {emp.mentorado_bpo_lucrativo && emp.mentorado_expira_em && (() => {
+          const diasMent = Math.ceil((new Date(emp.mentorado_expira_em) - new Date()) / (1000 * 60 * 60 * 24))
+          return (
+            <div style={{ fontSize: 10, color: diasMent < 0 ? 'var(--rd)' : diasMent <= 30 ? 'var(--yw)' : 'var(--tx3)', marginTop: 2 }}
+              title={`Acesso grátis de 1 ano até ${new Date(emp.mentorado_expira_em).toLocaleDateString('pt-BR')}`}>
+              {diasMent < 0 ? `venceu há ${Math.abs(diasMent)}d` : `${diasMent}d de acesso`}
+            </div>
+          )
+        })()}
       </td>
       <td style={{ padding: '10px 8px' }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>

@@ -98,13 +98,19 @@ serve(async (req) => {
       .eq('email', email)
       .maybeSingle()
 
+    // Mentoria em Grupo dá 1 ano de acesso ao Fluxe, contado da compra.
+    const mentoradoExpiraEm = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+
     let empresaId: string
     if (usuarioExistente?.empresa_id) {
       empresaId = usuarioExistente.empresa_id
+      await supabase.from('empresas')
+        .update({ mentorado_bpo_lucrativo: true, mentorado_expira_em: mentoradoExpiraEm })
+        .eq('id', empresaId)
     } else {
       const { data: empresaRow, error: empresaErr } = await supabase
         .from('empresas')
-        .insert({ nome, email, plano: 'pro', mentorado_bpo_lucrativo: true })
+        .insert({ nome, email, plano: 'pro', mentorado_bpo_lucrativo: true, mentorado_expira_em: mentoradoExpiraEm })
         .select('id')
         .single()
       if (empresaErr) return ok({ error: empresaErr.message })

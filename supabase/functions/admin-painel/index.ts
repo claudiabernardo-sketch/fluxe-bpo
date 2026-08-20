@@ -111,7 +111,7 @@ serve(async (req) => {
     if (action === 'list_empresas') {
       const { data: empresas, error } = await supabase
         .from('empresas')
-        .select('id, nome, email, cnpj, plano, trial_expira_em, criado_em, asaas_customer_id, asaas_subscription_id, mentorado_bpo_lucrativo')
+        .select('id, nome, email, cnpj, plano, trial_expira_em, criado_em, asaas_customer_id, asaas_subscription_id, mentorado_bpo_lucrativo, mentorado_expira_em')
         .order('criado_em', { ascending: false })
       if (error) return ok({ error: error.message })
 
@@ -291,10 +291,16 @@ serve(async (req) => {
     }
 
     // ── Ação: marcar/desmarcar empresa como mentorada do BPO Lucrativo ─────
+    // Marcar como mentorada (re)inicia a contagem do ano de acesso grátis a
+    // partir de hoje; desmarcar limpa a data, pra não ficar um resquício de
+    // uma janela de acesso que não vale mais.
     if (action === 'toggle_mentorado') {
       const { empresa_id, valor } = payload
       if (!empresa_id) return ok({ error: 'empresa_id é obrigatório' })
-      const { error } = await supabase.from('empresas').update({ mentorado_bpo_lucrativo: !!valor }).eq('id', empresa_id)
+      const update = valor
+        ? { mentorado_bpo_lucrativo: true, mentorado_expira_em: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() }
+        : { mentorado_bpo_lucrativo: false, mentorado_expira_em: null }
+      const { error } = await supabase.from('empresas').update(update).eq('id', empresa_id)
       if (error) return ok({ error: error.message })
       return ok({ success: true })
     }
@@ -334,13 +340,19 @@ serve(async (req) => {
         .eq('email', email)
         .maybeSingle()
 
+      // Mentoria dá 1 ano de acesso ao Fluxe, contado do cadastro.
+      const mentoradoExpiraEm = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+
       let empresaId: string
       if (usuarioExistente?.empresa_id) {
         empresaId = usuarioExistente.empresa_id
+        await supabase.from('empresas')
+          .update({ mentorado_bpo_lucrativo: true, mentorado_expira_em: mentoradoExpiraEm })
+          .eq('id', empresaId)
       } else {
         const { data: empresaRow, error: empresaErr } = await supabase
           .from('empresas')
-          .insert({ nome: nome_empresa, email, plano: 'pro', mentorado_bpo_lucrativo: true })
+          .insert({ nome: nome_empresa, email, plano: 'pro', mentorado_bpo_lucrativo: true, mentorado_expira_em: mentoradoExpiraEm })
           .select('id')
           .single()
         if (empresaErr) return ok({ error: empresaErr.message })

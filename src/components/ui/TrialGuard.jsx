@@ -14,7 +14,15 @@ export default function TrialGuard() {
   const bloqueado     = plano === 'bloqueado'
   const aguardando    = plano === 'trial_expirado'
 
-  if (!trialManualExp && !bloqueado && !aguardando) return null
+  // Ano grátis de acesso de quem comprou a Mentoria em Grupo, contado do
+  // cadastro. Só bloqueia quem não tem assinatura Asaas real (senão vira um
+  // ex-mentorado pagante normal, que não deve ser barrado por essa data).
+  const mentoradoExpirado = empresa.mentorado_bpo_lucrativo
+    && empresa.mentorado_expira_em
+    && new Date(empresa.mentorado_expira_em) < new Date()
+    && !empresa.asaas_subscription_id
+
+  if (!trialManualExp && !bloqueado && !aguardando && !mentoradoExpirado) return null
 
   // ── Conteúdo do overlay ─────────────────────────────────────────
 
@@ -56,18 +64,22 @@ export default function TrialGuard() {
         <h1 style={{ color: '#F1F5F9', fontSize: 24, fontWeight: 700, marginBottom: 12 }}>
           {isBloqueado
             ? 'Acesso suspenso'
-            : 'Seu período de teste encerrou'}
+            : mentoradoExpirado
+              ? 'Seu ano de acesso pela mentoria encerrou'
+              : 'Seu período de teste encerrou'}
         </h1>
 
         {/* Descrição */}
         <p style={{ color: '#94A3B8', fontSize: 15, lineHeight: 1.6, marginBottom: 32 }}>
           {isBloqueado
             ? 'Identificamos uma pendência no pagamento. Regularize para continuar usando o Fluxe BPO.'
-            : aguardando
-              ? 'Geramos sua cobrança automática. Pague para continuar — seus dados estão seguros.'
-              : diasAtras > 0
-                ? `Seu trial expirou há ${diasAtras} ${diasAtras === 1 ? 'dia' : 'dias'}. Continue sem perder nenhum dado.`
-                : 'Os 14 dias de teste chegaram ao fim. Continue com o Fluxe BPO.'}
+            : mentoradoExpirado
+              ? 'O acesso gratuito de 1 ano pela Mentoria BPO Lucrativo chegou ao fim. Continue usando o Fluxe sem perder nenhum dado.'
+              : aguardando
+                ? 'Geramos sua cobrança automática. Pague para continuar — seus dados estão seguros.'
+                : diasAtras > 0
+                  ? `Seu trial expirou há ${diasAtras} ${diasAtras === 1 ? 'dia' : 'dias'}. Continue sem perder nenhum dado.`
+                  : 'Os 14 dias de teste chegaram ao fim. Continue com o Fluxe BPO.'}
         </p>
 
         {/* Preço */}
@@ -86,7 +98,24 @@ export default function TrialGuard() {
         </div>
 
         {/* Botão de pagamento */}
-        {paymentUrl ? (
+        {mentoradoExpirado ? (
+          <a
+            href="/config?tab=plano"
+            style={{
+              display: 'block',
+              background: 'linear-gradient(135deg, #7C3AED, #6D28D9)',
+              color: '#fff',
+              borderRadius: 10,
+              padding: '14px 24px',
+              fontSize: 16,
+              fontWeight: 600,
+              textDecoration: 'none',
+              marginBottom: 12,
+            }}
+          >
+            Continuar usando o Fluxe →
+          </a>
+        ) : paymentUrl ? (
           <a
             href={paymentUrl}
             target="_blank"
