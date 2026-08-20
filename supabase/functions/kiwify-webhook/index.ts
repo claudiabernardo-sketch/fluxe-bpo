@@ -105,12 +105,12 @@ serve(async (req) => {
     if (usuarioExistente?.empresa_id) {
       empresaId = usuarioExistente.empresa_id
       await supabase.from('empresas')
-        .update({ mentorado_bpo_lucrativo: true, mentorado_expira_em: mentoradoExpiraEm })
+        .update({ mentorado_bpo_lucrativo: true, mentorado_expira_em: mentoradoExpiraEm, mentoria_origem: 'grupo' })
         .eq('id', empresaId)
     } else {
       const { data: empresaRow, error: empresaErr } = await supabase
         .from('empresas')
-        .insert({ nome, email, plano: 'pro', mentorado_bpo_lucrativo: true, mentorado_expira_em: mentoradoExpiraEm })
+        .insert({ nome, email, plano: 'pro', mentorado_bpo_lucrativo: true, mentorado_expira_em: mentoradoExpiraEm, mentoria_origem: 'grupo' })
         .select('id')
         .single()
       if (empresaErr) return ok({ error: empresaErr.message })
