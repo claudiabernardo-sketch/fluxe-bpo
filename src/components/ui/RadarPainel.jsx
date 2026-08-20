@@ -8,8 +8,8 @@ import { useNavigate } from 'react-router-dom'
 import { useRadarPanelStore } from '../../store/radarPanelStore'
 import {
   useClients, useTasks, useApontamentos, useApontamentosMes, useUsuarios,
-  useRadarScore, useRadarAjustesManuais, useSalvarAjusteManual, useRemoverAjusteManual,
-  useRadarMetricaMes, useSalvarMetricaMes,
+  useRadarScore, useRadarScoreHistorico, useRadarAjustesManuais, useSalvarAjusteManual, useRemoverAjusteManual,
+  useRadarMetricaMes, useSalvarMetricaMes, useRadarMetricasHistorico,
 } from '../../hooks/useData'
 import {
   computeMargemPorCliente, computeAreaStatusPorCliente, computeRadarScore,
@@ -95,6 +95,7 @@ export default function RadarPainel({ clienteId }) {
       valor_a_pagar: formatBRL(metricaServer?.valor_a_pagar),
       valor_pago: formatBRL(metricaServer?.valor_pago),
       saldo_caixa: formatBRL(metricaServer?.saldo_caixa),
+      observacao: metricaServer?.observacao || '',
     })
   }
   async function salvarMetricasDoMes() {
@@ -107,10 +108,19 @@ export default function RadarPainel({ clienteId }) {
         valor_a_pagar: parseBRL(metricaForm.valor_a_pagar),
         valor_pago: parseBRL(metricaForm.valor_pago),
         saldo_caixa: parseBRL(metricaForm.saldo_caixa),
+        observacao: metricaForm.observacao || null,
       })
     } catch (err) {
       setMetricaErro(err?.message || 'Erro ao salvar métricas')
     }
+  }
+
+  const mesLabel = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+  const [historicoAberto, setHistoricoAberto] = useState(false)
+  const { data: scoreHistorico = [] } = useRadarScoreHistorico(clienteId)
+  const { data: metricasHistorico = [] } = useRadarMetricasHistorico(clienteId)
+  function mesCurto(mesRef) {
+    return new Date(mesRef + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
   }
 
   if (!cliente || !areasRadar || metricaForm === null) return <Loader />
@@ -143,8 +153,8 @@ export default function RadarPainel({ clienteId }) {
 
       <div style={{ border:'1px solid var(--bo)', borderRadius:'var(--r)', padding:'14px 16px', marginBottom:16, background:'var(--sur)' }}>
         <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom:6, flexWrap:'wrap', gap:6 }}>
-          <div style={{ fontSize:11, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.05em' }}>
-            📊 Métricas reais do mês
+          <div style={{ fontSize:13, fontWeight:700, color:'var(--tx)' }}>
+            📊 Métricas de {mesLabel}
           </div>
           {metricaServer?.atualizado_em && (
             <div style={{ fontSize:10, color:'var(--tx3)' }}>
@@ -152,6 +162,11 @@ export default function RadarPainel({ clienteId }) {
             </div>
           )}
         </div>
+        {!metricaServer && (
+          <div style={{ fontSize:11, fontWeight:600, color:'#B45309', background:'#FFFBEB', border:'1px solid #FDE68A', borderRadius:8, padding:'8px 10px', marginBottom:10 }}>
+            ⚠️ Esse mês ainda não foi preenchido. Todo mês começa em branco de novo, preencha os números atuais pra manter o Radar confiável.
+          </div>
+        )}
         <div style={{ fontSize:11, color:'var(--tx3)', marginBottom:10, lineHeight:1.4 }}>
           Preencha os números reais desse cliente — o Radar usa eles pra calcular Recebíveis, Pagtos, Fluxo de Caixa e Caixa, em vez de só olhar se a tarefa está em dia.
           "Em aberto" é o valor pendente agora (não pago/recebido ainda), não uma previsão futura.
@@ -177,12 +192,64 @@ export default function RadarPainel({ clienteId }) {
             </div>
           ))}
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        <div style={{ marginBottom:10 }}>
+          <label style={{ fontSize:10, color:'var(--tx3)', display:'block', marginBottom:3 }}>Observação do mês (opcional)</label>
+          <textarea
+            placeholder="Ex: recebimento atrasou porque o maior cliente pagou com 20 dias de atraso"
+            value={metricaForm.observacao}
+            onChange={e => setMetricaForm(f => ({ ...f, observacao: e.target.value }))}
+            rows={2}
+            style={{ width:'100%', fontSize:12, padding:'6px 8px', border:'1px solid var(--bo)', borderRadius:6, background:'var(--sur)', color:'var(--tx)', boxSizing:'border-box', resize:'vertical', fontFamily:'inherit' }}
+          />
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
           <button className="btn bp bsm" disabled={salvarMetrica.isPending} onClick={salvarMetricasDoMes}>
             {salvarMetrica.isPending ? 'Salvando…' : 'Salvar métricas'}
           </button>
           {metricaErro && <div style={{ fontSize:10, color:'#EF4444' }}>{metricaErro}</div>}
+          <button
+            onClick={() => setHistoricoAberto(x => !x)}
+            style={{ marginLeft:'auto', border:'none', background:'none', cursor:'pointer', color:'#6366F1', fontSize:11, fontWeight:600 }}
+          >
+            {historicoAberto ? 'Fechar histórico ▲' : 'Ver histórico de meses anteriores ▼'}
+          </button>
         </div>
+
+        {historicoAberto && (
+          <div style={{ marginTop:12, paddingTop:12, borderTop:'1px solid var(--bo)' }}>
+            {metricasHistorico.length === 0 ? (
+              <div style={{ fontSize:11, color:'var(--tx3)' }}>Nenhum mês anterior preenchido ainda.</div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {metricasHistorico.map(m => (
+                  <div key={m.mes_referencia} style={{ fontSize:11, border:'1px solid var(--bo)', borderRadius:8, padding:'8px 10px' }}>
+                    <div style={{ fontWeight:700, color:'var(--tx)', marginBottom:4, textTransform:'capitalize' }}>{mesCurto(m.mes_referencia)}</div>
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(110px,1fr))', gap:4, color:'var(--tx2)' }}>
+                      <div>A receber: {formatBRL(m.valor_a_receber) || '—'}</div>
+                      <div>Recebido: {formatBRL(m.valor_recebido) || '—'}</div>
+                      <div>A pagar: {formatBRL(m.valor_a_pagar) || '—'}</div>
+                      <div>Pago: {formatBRL(m.valor_pago) || '—'}</div>
+                      <div>Caixa: {formatBRL(m.saldo_caixa) || '—'}</div>
+                    </div>
+                    {m.observacao && <div style={{ marginTop:4, fontStyle:'italic', color:'var(--tx3)' }}>"{m.observacao}"</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {scoreHistorico.length > 1 && (
+              <div style={{ marginTop:12 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:'var(--tx3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:6 }}>Score ao longo do tempo</div>
+                <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                  {[...scoreHistorico].reverse().map((s, i) => (
+                    <div key={i} title={new Date(s.calculado_em).toLocaleDateString('pt-BR')} style={{ fontSize:11, fontWeight:700, padding:'4px 8px', borderRadius:6, background:'var(--s2)', color: SEMAFORO_COR[s.semaforo] }}>
+                      {s.score ?? '—'}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {alertaRadar && (
@@ -220,7 +287,13 @@ export default function RadarPainel({ clienteId }) {
       </div>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))', gap:8 }}>
         {Object.entries(areasRadar).map(([id, a]) => (
-          <div key={id} style={{ padding:'10px 12px', border:'1px solid var(--bo)', borderRadius:'var(--r)', background: a.status==='sem_dado' ? 'var(--s2)' : 'var(--sur)', opacity: a.status==='sem_dado' && editandoArea!==id ? .6 : 1 }}>
+          <div key={id} style={{
+            padding:'10px 12px', borderRadius:'var(--r)',
+            border: a.manual ? '1px solid #6366F1' : '1px solid var(--bo)',
+            borderLeft: a.manual ? '4px solid #6366F1' : '1px solid var(--bo)',
+            background: a.manual ? 'rgba(99,102,241,.05)' : a.status==='sem_dado' ? 'var(--s2)' : 'var(--sur)',
+            opacity: a.status==='sem_dado' && editandoArea!==id ? .6 : 1,
+          }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
               <div style={{ fontSize:11, fontWeight:600, color:'var(--tx)', display:'flex', alignItems:'center', gap:4 }}>
                 {AREA_LABEL[id]}
@@ -287,9 +360,10 @@ export default function RadarPainel({ clienteId }) {
               <>
                 <span className={`b b-${a.status==='sem_dado' ? 'gy' : STATUS_BADGE_RADAR[a.status]}`}>{a.status==='sem_dado' ? 'Sem dado' : STATUS_LABEL_RADAR[a.status]}</span>
                 {a.manual && (
-                  <div style={{ fontSize:9, color:'var(--tx3)', marginTop:4, lineHeight:1.4 }}>
-                    ✏️ Manual{a.criado_por_nome ? ` por ${a.criado_por_nome}` : ''} · {a.criado_em ? new Date(a.criado_em).toLocaleDateString('pt-BR') : ''}
-                    {a.observacao && <div style={{ marginTop:2, fontStyle:'italic' }}>"{a.observacao}"</div>}
+                  <div style={{ fontSize:10, fontWeight:700, color:'#6366F1', marginTop:5, lineHeight:1.4 }}>
+                    ✏️ Ajustado manualmente{a.criado_por_nome ? ` por ${a.criado_por_nome}` : ''}
+                    <div style={{ fontWeight:400, color:'var(--tx3)' }}>{a.criado_em ? new Date(a.criado_em).toLocaleDateString('pt-BR') : ''}</div>
+                    {a.observacao && <div style={{ marginTop:2, fontStyle:'italic', fontWeight:400, color:'var(--tx2)' }}>"{a.observacao}"</div>}
                   </div>
                 )}
               </>

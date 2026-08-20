@@ -712,6 +712,7 @@ function mesReferenciaAtual() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
 }
+export { mesReferenciaAtual }
 
 export function useRadarMetricaMes(clienteId) {
   return useQuery({
@@ -754,14 +755,14 @@ export function useSalvarMetricaMes() {
   const qc = useQueryClient()
   const { empresa, user } = useAuthStore()
   return useMutation({
-    mutationFn: async ({ clienteId, valor_a_receber, valor_recebido, valor_a_pagar, valor_pago, saldo_caixa }) => {
+    mutationFn: async ({ clienteId, valor_a_receber, valor_recebido, valor_a_pagar, valor_pago, saldo_caixa, observacao }) => {
       const { data, error } = await supabase
         .from('radar_metricas_mensais')
         .upsert({
           empresa_id: empresa?.id,
           cliente_id: clienteId,
           mes_referencia: mesReferenciaAtual(),
-          valor_a_receber, valor_recebido, valor_a_pagar, valor_pago, saldo_caixa,
+          valor_a_receber, valor_recebido, valor_a_pagar, valor_pago, saldo_caixa, observacao,
           atualizado_por: user?.id,
           atualizado_em: new Date().toISOString(),
         }, { onConflict: 'cliente_id,mes_referencia' })
@@ -772,7 +773,28 @@ export function useSalvarMetricaMes() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['radar_metrica_mes', vars.clienteId] })
       qc.invalidateQueries({ queryKey: ['radar_metricas_mes_todos'] })
+      qc.invalidateQueries({ queryKey: ['radar_metricas_historico', vars.clienteId] })
     },
+  })
+}
+
+export function useRadarMetricasHistorico(clienteId, limite = 6) {
+  return useQuery({
+    queryKey: ['radar_metricas_historico', clienteId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('radar_metricas_mensais')
+        .select('*')
+        .eq('cliente_id', clienteId)
+        .lt('mes_referencia', mesReferenciaAtual())
+        .order('mes_referencia', { ascending: false })
+        .limit(limite)
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 60_000,
+    enabled: !!clienteId,
+    retry: false,
   })
 }
 
