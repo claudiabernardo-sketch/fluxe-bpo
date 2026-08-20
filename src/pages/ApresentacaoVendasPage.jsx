@@ -216,7 +216,7 @@ function SlidePratica() {
       <div style={{ fontSize: 19, color: '#CBD5E1', lineHeight: 1.6 }}>
         Formem trios: cliente, vendedor e observador.<br />
         3 casos, 8 a 10 minutos cada, troquem os papéis a cada rodada.<br /><br />
-        Abram o <strong style={{ color: '#fff' }}>Kit de Role-Play</strong> em Materiais de Apoio.
+        Abram o <strong style={{ color: '#fff' }}>Kit de Role-Play</strong> na Biblioteca.
       </div>
     </div>
   )
