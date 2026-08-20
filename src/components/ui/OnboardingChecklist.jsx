@@ -23,7 +23,7 @@ export default function OnboardingChecklist() {
     enabled: !!empresa?.id,
   })
 
-  // Modelos de tarefa
+  // Modelos de tarefa (biblioteca, ainda não necessariamente vinculados)
   const { data: modelos = [] } = useQuery({
     queryKey: ['modelos_onb', empresa?.id],
     queryFn: async () => {
@@ -43,7 +43,47 @@ export default function OnboardingChecklist() {
     enabled: !!empresa?.id,
   })
 
+  // Plano de Negócio preenchido
+  const { data: planoNegocio = [] } = useQuery({
+    queryKey: ['plano_negocio_onb', empresa?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('plano_negocio').select('id').eq('empresa_id', empresa.id).limit(1)
+      return data || []
+    },
+    enabled: !!empresa?.id,
+  })
+
+  // Rotina configurada em algum cliente
+  const { data: rotinas = [] } = useQuery({
+    queryKey: ['rotinas_onb', empresa?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('rotinas').select('id').eq('empresa_id', empresa.id).limit(1)
+      return data || []
+    },
+    enabled: !!empresa?.id,
+  })
+
+  // Modelo de fato vinculado a um cliente (não só existindo na biblioteca) —
+  // é essa vínculo que ativa a geração automática de tarefas.
+  const { data: vinculos = [] } = useQuery({
+    queryKey: ['cliente_modelos_onb', empresa?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('cliente_modelos').select('id').eq('empresa_id', empresa.id).eq('ativo', true).limit(1)
+      return data || []
+    },
+    enabled: !!empresa?.id,
+  })
+
   const steps = [
+    {
+      id: 'plano_negocio',
+      done: planoNegocio.length > 0,
+      icon: '🧭',
+      title: 'Preencha o Plano de Negócio',
+      desc: 'Mapeie as 6 etapas do seu negócio de BPO antes de começar a operar os clientes.',
+      action: () => nav('/plano-negocio'),
+      cta: 'Preencher plano',
+    },
     {
       id: 'equipe',
       done: usuarios.some(u => u.custo_hora),
@@ -67,9 +107,27 @@ export default function OnboardingChecklist() {
       done: modelos.length > 0,
       icon: '🔁',
       title: 'Crie modelos de tarefas recorrentes',
-      desc: 'Configure uma vez e o sistema gera automaticamente todo mês — folha, DRE, conciliação.',
+      desc: 'Configure uma vez e o sistema gera automaticamente todo mês, folha, DRE, conciliação.',
       action: () => nav('/modelos'),
       cta: 'Criar modelo',
+    },
+    {
+      id: 'rotina',
+      done: rotinas.length > 0,
+      icon: '📅',
+      title: 'Configure a Rotina do cliente',
+      desc: 'Entre no cliente cadastrado e defina a rotina dele, é o que conecta o cliente aos modelos de tarefa.',
+      action: () => nav('/clientes'),
+      cta: 'Configurar rotina',
+    },
+    {
+      id: 'vinculo',
+      done: vinculos.length > 0,
+      icon: '🔗',
+      title: 'Vincule um modelo e inicie a operação',
+      desc: 'Sem esse vínculo o sistema não gera tarefa nenhuma automaticamente, mesmo com cliente e modelo prontos.',
+      action: () => nav('/modelos'),
+      cta: 'Vincular modelo',
     },
     {
       id: 'cofre',
@@ -79,6 +137,15 @@ export default function OnboardingChecklist() {
       desc: 'Centralize os logins dos sistemas dos clientes. Quando um analista sai, a operação não para.',
       action: () => nav('/cofre'),
       cta: 'Abrir cofre',
+    },
+    {
+      id: 'biblioteca',
+      done: !!empresa?.biblioteca_visitada_em,
+      icon: '📚',
+      title: 'Conheça a Biblioteca de materiais',
+      desc: 'Playbooks, checklists e modelos prontos, separados por etapa do ciclo do cliente, pra você não começar do zero.',
+      action: () => nav('/materiais-apoio'),
+      cta: 'Abrir Biblioteca',
     },
   ]
 

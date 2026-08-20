@@ -1,8 +1,10 @@
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useMateriaisApoioPublico } from '../hooks/useData'
 import { Card, CardHeader, Loader } from '../components/ui'
 import { ETAPAS_BPO } from '../data/etapasBpo'
 import { supabase } from '../lib/supabase'
+import { useAuthStore } from '../store/authStore'
 
 // Materiais que têm uma apresentação em tela cheia dentro do Fluxe, além do
 // arquivo pra baixar — casado pelo título do material.
@@ -17,10 +19,22 @@ export default function MateriaisApoioPage() {
   const { data: materiais = [], isLoading } = useMateriaisApoioPublico()
   const grupos = ETAPAS_BPO.map(e => ({ ...e, itens: materiais.filter(m => m.etapa === e.v) })).filter(g => g.itens.length > 0)
 
+  // Marca a primeira visita — usado só pra fechar o passo "Conheça a
+  // Biblioteca" do checklist de primeiros passos, calculado sozinho.
+  const { empresa, updateEmpresa } = useAuthStore()
+  useEffect(() => {
+    if (empresa?.id && !empresa.biblioteca_visitada_em) {
+      const agora = new Date().toISOString()
+      supabase.from('empresas').update({ biblioteca_visitada_em: agora }).eq('id', empresa.id).then(() => {
+        updateEmpresa?.({ biblioteca_visitada_em: agora })
+      })
+    }
+  }, [empresa?.id])
+
   return (
     <div style={{ maxWidth: 760, margin: '0 auto' }}>
       <div style={{ fontSize: 12, color: 'var(--tx3)', marginBottom: 16 }}>
-        Planilhas, PDFs e links organizados por etapa do ciclo do cliente — pra usar no dia a dia da operação.
+        Planilhas, PDFs e links organizados por etapa do ciclo do cliente, pra usar no dia a dia da operação.
       </div>
 
       {isLoading ? <Loader /> : (
