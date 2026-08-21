@@ -144,6 +144,21 @@ export default function AppShell() {
   const { profile, empresa, signOut } = useAuthStore()
   const nav = useNavigate()
   const loc = useLocation()
+  // Clicar num item do menu que já é a página atual não navega nada (o
+  // React Router não remonta a rota), então parecia que o clique "não ia
+  // pra lugar nenhum" — pra quem já puxou uma proposta nova, por exemplo,
+  // e clica em Precificação de novo esperando a tela recarregar do zero.
+  // Aqui força um reload completo nesse caso específico, avisando antes
+  // se pode ter algo não salvo.
+  function irPara(path) {
+    if (loc.pathname === path) {
+      if (confirm('Recarregar essa página agora? Qualquer coisa não salva nela vai se perder.')) {
+        window.location.reload()
+      }
+    } else {
+      nav(path)
+    }
+  }
   const [showMenu, setShowMenu] = useState(false)
   const [showMore, setShowMore] = useState(false)
   const menuRef = useRef(null)
@@ -208,7 +223,7 @@ export default function AppShell() {
             return (
               <div key={item.path}
                 className={`si${active ? ' on' : ''}`}
-                onClick={() => nav(item.path)}
+                onClick={() => irPara(item.path)}
                 title={item.label}
               >
                 <i className={item.icon}></i>
@@ -331,7 +346,7 @@ export default function AppShell() {
         return (
           <button key={item.path || 'more'}
             className={`mob-nav-item${active ? ' on' : ''}${item.more && showMore ? ' on' : ''}`}
-            onClick={() => item.more ? setShowMore(v => !v) : nav(item.path)}
+            onClick={() => item.more ? setShowMore(v => !v) : irPara(item.path)}
           >
             <i className={item.icon} />
             <span>{item.label}</span>
@@ -355,18 +370,18 @@ export default function AppShell() {
               if (item.grp) return <div key={i} className="sb-grp-lbl">{item.grp}</div>
               if (MOB_NAV_PATHS.has(item.path)) return null
               return (
-                <button key={item.path} className="mob-more-item" onClick={() => nav(item.path)}>
+                <button key={item.path} className="mob-more-item" onClick={() => irPara(item.path)}>
                   <i className={item.icon} />
                   <span>{item.label}</span>
                 </button>
               )
             })}
             <div className="sb-grp-lbl">CONTA</div>
-            <button className="mob-more-item" onClick={() => nav('/meu-painel')}>
+            <button className="mob-more-item" onClick={() => irPara('/meu-painel')}>
               <i className="fa-solid fa-circle-user" /> <span>Meu Painel</span>
             </button>
             {podeAcessarRota(profile?.perfil, '/config') && (
-              <button className="mob-more-item" onClick={() => nav('/config')}>
+              <button className="mob-more-item" onClick={() => irPara('/config')}>
                 <i className="fa-solid fa-gear" /> <span>Configurações</span>
               </button>
             )}
