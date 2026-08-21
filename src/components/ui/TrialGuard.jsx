@@ -1,8 +1,38 @@
+import { useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
+import { supabase } from '../../lib/supabase'
 
 export default function TrialGuard() {
   const { empresa, signOut } = useAuthStore()
+  const [assinando, setAssinando] = useState(false)
+  const [erroAssinar, setErroAssinar] = useState('')
   if (!empresa) return null
+
+  // Essa tela cobre o app inteiro em qualquer rota, então não dá pra mandar
+  // a pessoa pra Configurações assinar lá, ela nunca sai daqui pra conseguir
+  // clicar. O botão precisa resolver a assinatura sozinho, aqui mesmo.
+  async function assinarAgora() {
+    const cpfCnpj = empresa.cnpj || window.prompt('Informe o CNPJ ou CPF para faturamento (só números):')
+    if (!cpfCnpj) return
+    setAssinando(true)
+    setErroAssinar('')
+    try {
+      const { data, error } = await supabase.functions.invoke('asaas-create-subscription', {
+        body: { plano: 'essencial', cpfCnpj },
+      })
+      if (error) {
+        let detail = error.message
+        try { const body = await error.context?.json(); detail = JSON.stringify(body) } catch {}
+        throw new Error(detail)
+      }
+      if (!data?.paymentUrl) throw new Error('Sem link de pagamento na resposta.')
+      window.open(data.paymentUrl, '_blank')
+    } catch (e) {
+      setErroAssinar(e.message || 'Erro ao gerar assinatura')
+    } finally {
+      setAssinando(false)
+    }
+  }
 
   const plano = empresa.plano || 'trial'
   const paymentUrl = empresa.asaas_payment_url
@@ -76,7 +106,7 @@ export default function TrialGuard() {
             : mentoradoExpirado
               ? 'O acesso gratuito de 1 ano pela Mentoria BPO Lucrativo chegou ao fim. Continue usando o Fluxe sem perder nenhum dado.'
               : aguardando
-                ? 'Geramos sua cobrança automática. Pague para continuar — seus dados estão seguros.'
+                ? 'Geramos sua cobrança automática. Pague para continuar, seus dados estão seguros.'
                 : diasAtras > 0
                   ? `Seu trial expirou há ${diasAtras} ${diasAtras === 1 ? 'dia' : 'dias'}. Continue sem perder nenhum dado.`
                   : 'Os 14 dias de teste chegaram ao fim. Continue com o Fluxe BPO.'}
@@ -98,24 +128,7 @@ export default function TrialGuard() {
         </div>
 
         {/* Botão de pagamento */}
-        {mentoradoExpirado ? (
-          <a
-            href="/config?tab=plano"
-            style={{
-              display: 'block',
-              background: 'linear-gradient(135deg, #7C3AED, #6D28D9)',
-              color: '#fff',
-              borderRadius: 10,
-              padding: '14px 24px',
-              fontSize: 16,
-              fontWeight: 600,
-              textDecoration: 'none',
-              marginBottom: 12,
-            }}
-          >
-            Continuar usando o Fluxe →
-          </a>
-        ) : paymentUrl ? (
+        {paymentUrl ? (
           <a
             href={paymentUrl}
             target="_blank"
@@ -135,24 +148,28 @@ export default function TrialGuard() {
             Pagar agora →
           </a>
         ) : (
-          <a
-            href={`https://wa.me/5511917101173?text=Quero+ativar+o+Fluxe+BPO+-+Empresa:+${encodeURIComponent(empresa.nome || '')}`}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={assinarAgora}
+            disabled={assinando}
             style={{
               display: 'block',
-              background: 'linear-gradient(135deg, #7C3AED, #6D28D9)',
+              width: '100%',
+              background: assinando ? '#6D28D9AA' : 'linear-gradient(135deg, #7C3AED, #6D28D9)',
               color: '#fff',
               borderRadius: 10,
               padding: '14px 24px',
               fontSize: 16,
               fontWeight: 600,
-              textDecoration: 'none',
+              border: 'none',
+              cursor: assinando ? 'not-allowed' : 'pointer',
               marginBottom: 12,
             }}
           >
-            Ativar meu plano →
-          </a>
+            {assinando ? 'Gerando link...' : mentoradoExpirado ? 'Assinar e continuar usando →' : 'Assinar agora →'}
+          </button>
+        )}
+        {erroAssinar && (
+          <p style={{ color: '#FCA5A5', fontSize: 12, marginTop: -6, marginBottom: 16 }}>{erroAssinar}</p>
         )}
 
         {/* Suporte */}
