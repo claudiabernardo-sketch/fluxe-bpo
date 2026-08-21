@@ -35,12 +35,44 @@ serve(async (req) => {
   const customerId = payment.customer as string | undefined
   if (!customerId) return new Response('No customer', { status: 200 })
 
-  // Busca empresa pelo asaas_customer_id
-  const { data: empresa } = await supabase
+  // Busca empresa pelo asaas_customer_id, cobre o fluxo normal, onde a
+  // assinatura foi criada pelo asaas-create-subscription.
+  let { data: empresa } = await supabase
     .from('empresas')
     .select('id, plano')
     .eq('asaas_customer_id', customerId)
-    .single()
+    .maybeSingle()
+
+  // Fallback por e-mail: cobre cobrança/assinatura criada direto no Asaas
+  // (fora do Fluxe, ex: link manual pra alguém que já tinha trial aqui),
+  // sem isso o plano nunca atualiza sozinho e alguém precisa lembrar de
+  // liberar o acesso na mão toda vez que isso acontecer.
+  if (!empresa) {
+    const ASAAS_BASE = Deno.env.get('ASAAS_SANDBOX') === 'true'
+      ? 'https://sandbox.asaas.com/api/v3'
+      : 'https://api.asaas.com/v3'
+    try {
+      const custRes = await fetch(`${ASAAS_BASE}/customers/${customerId}`, {
+        headers: { 'access_token': Deno.env.get('ASAAS_API_KEY')! },
+      })
+      const cust = await custRes.json()
+      if (cust?.email) {
+        const { data: porEmail } = await supabase
+          .from('empresas')
+          .select('id, plano')
+          .eq('email', cust.email)
+          .maybeSingle()
+        if (porEmail) {
+          empresa = porEmail
+          // Grava o vínculo agora, pra próxima notificação já bater direto
+          await supabase.from('empresas').update({ asaas_customer_id: customerId }).eq('id', porEmail.id)
+          console.log(`Empresa ${porEmail.id} vinculada por e-mail (${cust.email}) ao customer ${customerId}`)
+        }
+      }
+    } catch (e) {
+      console.error('Falha ao buscar customer no Asaas pra fallback por e-mail:', e)
+    }
+  }
 
   if (!empresa) {
     console.log(`Empresa não encontrada para customer: ${customerId}`)
