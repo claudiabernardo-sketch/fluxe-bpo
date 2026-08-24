@@ -49,7 +49,11 @@ const PARA_QUEM = [
 ]
 const PARA_QUEM_NAO = ['Fórmulas mágicas.', 'Resultado sem executar.', 'Apenas assistir aulas.', 'Atalhos.']
 
-const INCLUSO = ['15 encontros ao vivo', '1 ano de acesso ao Fluxe', 'Exercícios práticos', 'Materiais exclusivos', 'Templates', 'Ferramentas', 'Comunidade', 'Certificado']
+const INCLUSO = [
+  '15 encontros ao vivo', '1 ano de acesso ao Fluxe', 'Exercícios práticos',
+  'Playbook de Conciliação Financeira com IA', 'Playbook de Análises Estratégicas e Dashboard',
+  'Templates', 'Ferramentas', 'Comunidade', 'Certificado',
+]
 
 export default function MentoriaGrupoPage() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
