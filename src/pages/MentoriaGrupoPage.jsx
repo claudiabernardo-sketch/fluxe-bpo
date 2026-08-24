@@ -427,8 +427,36 @@ export default function MentoriaGrupoPage() {
         </div>
       </section>
 
+      {/* ── COMUNIDADE ──────────────────────────────────────────── */}
+      <section style={{ padding: isMobile ? '64px 20px' : '120px 48px', background: '#05070E' }}>
+        <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
+          <Reveal>
+            <div style={eyebrow}>VOCÊ NÃO CONSTRÓI SOZINHA</div>
+            <h2 style={{ ...h2, fontSize: isMobile ? 24 : 34, marginBottom: 24 }}>Uma turma de gente que está construindo o mesmo tipo de negócio que você.</h2>
+            <p style={{ fontSize: 15, color: '#94A3B8', lineHeight: 1.8, margin: '0 0 28px' }}>
+              Você entra num grupo exclusivo da turma, com quem está no mesmo momento que você, resolvendo os mesmos problemas, trocando ideia sobre proposta, precificação e cliente difícil. Não é só teoria comigo, é apoio de gente que entende exatamente o que você está passando, na hora que você mais precisa.
+            </p>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 12 }}>
+              {[
+                ['💬', 'Grupo exclusivo da turma', 'Pra tirar dúvida e trocar experiência entre os encontros, não só uma vez por semana comigo.'],
+                ['👥', 'Gente no mesmo momento', 'Ninguém constrói sozinho, você vê outros aplicando o método em tempo real, junto com você.'],
+                ['🤝', 'Rede que continua depois', 'As conexões que você faz na turma não terminam quando o programa acaba.'],
+              ].map(([icon, titulo, desc]) => (
+                <div key={titulo} style={{ padding: '20px 18px', background: 'rgba(255,255,255,.025)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 14, textAlign: 'left' }}>
+                  <div style={{ fontSize: 22, marginBottom: 10 }}>{icon}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#F1F5F9', marginBottom: 6 }}>{titulo}</div>
+                  <div style={{ fontSize: 13, color: '#94A3B8', lineHeight: 1.6 }}>{desc}</div>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       {/* ── SOBRE MIM ────────────────────────────────────────────── */}
-      <section style={{ padding: isMobile ? '64px 20px' : '130px 48px', background: '#05070E', position: 'relative', overflow: 'hidden' }}>
+      <section style={{ padding: isMobile ? '64px 20px' : '130px 48px', background: '#080B14', position: 'relative', overflow: 'hidden' }}>
         <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1.3fr', gap: isMobile ? 32 : 64, alignItems: 'center' }}>
           <Reveal>
             <div style={{ position: 'relative' }}>
@@ -474,6 +502,19 @@ export default function MentoriaGrupoPage() {
               <div style={{ fontSize: 14, color: '#94A3B8', marginBottom: 8 }}>ou em até 12x no cartão (com juros)</div>
               <div style={{ display: 'inline-block', fontSize: 12, color: '#A855F7', fontWeight: 700, background: 'rgba(168,85,247,.1)', border: '1px solid rgba(168,85,247,.25)', borderRadius: 99, padding: '6px 16px', marginBottom: 24 }}>
                 Menos do que o Fluxe custaria sozinho no ano, e você ainda leva a mentoria
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 10, marginBottom: 28, textAlign: 'left' }}>
+                {[
+                  ['📅', 'Por dia de acesso', 'R$ 2,73/dia ao longo do ano de acesso ao Fluxe incluso no programa.'],
+                  ['🎓', 'Por encontro', 'R$ 66,47 por aula ao vivo, com 2 encontros por semana durante os 2 meses.'],
+                  ['💸', 'Custo de continuar como está', 'Um único cliente mal precificado pode custar, sozinho, muito mais que isso ao longo de um ano.'],
+                ].map(([icon, titulo, desc]) => (
+                  <div key={titulo} style={{ padding: '16px 14px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 12 }}>
+                    <div style={{ fontSize: 18, marginBottom: 6 }}>{icon}</div>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: '#F1F5F9', marginBottom: 4 }}>{titulo}</div>
+                    <div style={{ fontSize: 11.5, color: '#94A3B8', lineHeight: 1.5 }}>{desc}</div>
+                  </div>
+                ))}
               </div>
               <div>
                 <button onClick={abrirCheckout}
