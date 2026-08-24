@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMentoriaLinks, useCreateMentoriaLink, useDeleteMentoriaLink, useMeusCombinados, useAtualizarMeuCombinado, useTurmaAtualPublica, useMeuProgressoAulas, useToggleProgressoAula } from '../hooks/useData'
+import { useMentoriaLinks, useCreateMentoriaLink, useDeleteMentoriaLink, useMeusCombinados, useAtualizarMeuCombinado, useTurmaAtualPublica, useMeuProgressoAulas, useToggleProgressoAula, useMentoriaPosts, useCriarPost, useExcluirPost, useMentoriaCurtidas, useToggleCurtida, useComentariosDoPost, useCriarComentario } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import { Card, CardHeader, Btn, Loader } from '../components/ui'
@@ -136,6 +136,150 @@ function SecaoAulasDaTurma() {
   )
 }
 
+function ComentariosDoPost({ postId }) {
+  const { profile } = useAuthStore()
+  const { data: comentarios = [], isLoading } = useComentariosDoPost(postId, true)
+  const criar = useCriarComentario()
+  const [texto, setTexto] = useState('')
+
+  function enviar() {
+    if (!texto.trim()) return
+    criar.mutate({ post_id: postId, conteudo: texto.trim() })
+    setTexto('')
+  }
+
+  return (
+    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--bo)' }}>
+      {isLoading ? (
+        <div style={{ fontSize: 11, color: 'var(--tx3)' }}>Carregando comentários...</div>
+      ) : comentarios.length === 0 ? (
+        <div style={{ fontSize: 11, color: 'var(--tx3)', marginBottom: 8 }}>Nenhum comentário ainda, seja a primeira.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+          {comentarios.map(c => (
+            <div key={c.id} style={{ fontSize: 12, background: 'var(--s2)', borderRadius: 8, padding: '6px 10px' }}>
+              <span style={{ fontWeight: 700 }}>{c.autor_nome}</span>{' '}
+              <span style={{ color: 'var(--tx3)', fontSize: 10 }}>{new Date(c.criado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+              <div>{c.conteudo}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 6 }}>
+        <input
+          style={{ flex: 1, padding: '6px 8px', border: '1px solid var(--bo)', borderRadius: 6, fontSize: 12, fontFamily: 'inherit' }}
+          placeholder="Escreva um comentário..."
+          value={texto}
+          onChange={e => setTexto(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && enviar()}
+        />
+        <Btn small variant="outline" disabled={criar.isPending || !texto.trim()} onClick={enviar}>Enviar</Btn>
+      </div>
+    </div>
+  )
+}
+
+function PostComunidade({ post, curtido, totalCurtidas }) {
+  const { profile } = useAuthStore()
+  const toggleCurtida = useToggleCurtida()
+  const excluir = useExcluirPost()
+  const [mostrarComentarios, setMostrarComentarios] = useState(false)
+  const [confirmDel, setConfirmDel] = useState(false)
+  const souAutor = post.autor_id === profile?.id
+
+  return (
+    <div style={{ border: '1px solid var(--bo)', borderRadius: 10, padding: '12px 14px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <span style={{ fontSize: 13, fontWeight: 700 }}>{post.autor_nome}</span>
+          {post.empresa_nome && <span style={{ fontSize: 11, color: 'var(--tx3)' }}> · {post.empresa_nome}</span>}
+          <div style={{ fontSize: 10, color: 'var(--tx3)' }}>
+            {new Date(post.criado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </div>
+        {souAutor && (
+          confirmDel ? (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => excluir.mutate(post.id)} style={{ border: 'none', background: 'none', color: '#DC2626', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Excluir</button>
+              <button onClick={() => setConfirmDel(false)} style={{ border: 'none', background: 'none', color: 'var(--tx3)', fontSize: 11, cursor: 'pointer' }}>Cancelar</button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmDel(true)} style={{ border: 'none', background: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: 12 }}>🗑</button>
+          )
+        )}
+      </div>
+      <div style={{ fontSize: 13, marginTop: 8, whiteSpace: 'pre-wrap' }}>{post.conteudo}</div>
+      <div style={{ display: 'flex', gap: 14, marginTop: 10 }}>
+        <button
+          onClick={() => toggleCurtida.mutate({ post_id: post.id, curtido })}
+          disabled={toggleCurtida.isPending}
+          style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: curtido ? '#EF4444' : 'var(--tx3)', display: 'flex', alignItems: 'center', gap: 4 }}
+        >
+          {curtido ? '❤️' : '🤍'} {totalCurtidas > 0 ? totalCurtidas : ''}
+        </button>
+        <button
+          onClick={() => setMostrarComentarios(v => !v)}
+          style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--tx3)' }}
+        >
+          💬 Comentar
+        </button>
+      </div>
+      {mostrarComentarios && <ComentariosDoPost postId={post.id} />}
+    </div>
+  )
+}
+
+function SecaoComunidade() {
+  const { empresa } = useAuthStore()
+  const { data: posts = [], isLoading } = useMentoriaPosts()
+  const { data: curtidas = [] } = useMentoriaCurtidas()
+  const criarPost = useCriarPost()
+  const [texto, setTexto] = useState('')
+
+  if (!empresa?.mentorado_bpo_lucrativo) return null
+
+  function publicar() {
+    if (!texto.trim()) return
+    criarPost.mutate({ conteudo: texto.trim() })
+    setTexto('')
+  }
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <CardHeader title="Comunidade" icon="fa-solid fa-comments" />
+      <div style={{ padding: 16 }}>
+        <div style={{ fontSize: 12, color: 'var(--tx3)', marginBottom: 12 }}>
+          Um espaço pra trocar ideia com outros mentorados, que estão construindo o mesmo tipo de negócio que você.
+        </div>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+          <textarea
+            style={{ flex: 1, padding: '8px 10px', border: '1px solid var(--bo)', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', minHeight: 50, resize: 'vertical' }}
+            placeholder="Compartilhe uma dúvida, uma vitória ou uma ideia com a turma..."
+            value={texto}
+            onChange={e => setTexto(e.target.value)}
+          />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <Btn variant="primary" disabled={criarPost.isPending || !texto.trim()} onClick={publicar}>
+            {criarPost.isPending ? 'Publicando...' : 'Publicar'}
+          </Btn>
+        </div>
+        {isLoading ? <Loader /> : posts.length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>Ninguém postou ainda, seja a primeira pessoa a compartilhar algo.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {posts.map(post => {
+              const curtidasDoPost = curtidas.filter(c => c.post_id === post.id)
+              const curtido = curtidasDoPost.some(c => c.empresa_id === empresa.id)
+              return <PostComunidade key={post.id} post={post} curtido={curtido} totalCurtidas={curtidasDoPost.length} />
+            })}
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 function SecaoMeusCombinados() {
   const { empresa } = useAuthStore()
   const { data: combinados = [], isLoading } = useMeusCombinados()
@@ -189,6 +333,7 @@ export default function MentoriaPage() {
       </div>
 
       <SecaoAulasDaTurma />
+      <SecaoComunidade />
       <SecaoMeusCombinados />
 
       <Card style={{ marginBottom: 16 }}>

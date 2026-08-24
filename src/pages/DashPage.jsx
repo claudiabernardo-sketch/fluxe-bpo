@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import { useClients, useTasks, usePendencias } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
 import { Loader, fmt, isVencida } from '../components/ui'
@@ -56,6 +56,17 @@ export default function DashPage() {
   const { data: clients = [], isLoading: clLoad } = useClients()
   const { data: tasks = [],   isLoading: tLoad  } = useTasks()
   const { data: pends = [] } = usePendencias({ status: 'aberta' })
+
+  // Mentorado entra direto na Mentoria no primeiro acesso da sessão, pra
+  // sentir que abriu um app de mentoria, não só uma ferramenta de trabalho.
+  // Depois disso ele navega livre, o "/" continua sendo a Central Operacional.
+  useEffect(() => {
+    if (!empresa?.mentorado_bpo_lucrativo) return
+    const chave = `mentoria_entrada_${empresa.id}`
+    if (sessionStorage.getItem(chave)) return
+    sessionStorage.setItem(chave, '1')
+    nav('/mentoria', { replace: true })
+  }, [empresa?.mentorado_bpo_lucrativo, empresa?.id, nav])
 
   const { data: apontamentos = [] } = useQuery({
     queryKey: ['apontamentos_dash', empresa?.id],
