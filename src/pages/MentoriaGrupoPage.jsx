@@ -6,11 +6,11 @@ import CLAUDIA_SOBRE_MIM_SRC from '../assets/claudia-sobre-mim.jpg'
 
 const WHATSAPP_MENTORIA_GRUPO = 'https://wa.me/5511917101173?text=Quero+construir+meu+BPO+com+o+Programa+BPO+Lucrativo'
 
-const HERO_CHECKLIST = [
-  'Início: 12 de agosto',
-  '15 encontros ao vivo',
+const HERO_CHECKLIST_BASE = [
+  '15 encontros ao vivo, 2 por semana',
   'Exercícios práticos dentro do Fluxe',
   'Correções e acompanhamento',
+  '1 ano de acesso ao Fluxe incluso',
 ]
 
 const VIRADA_ITEMS = [
@@ -49,7 +49,7 @@ const PARA_QUEM = [
 ]
 const PARA_QUEM_NAO = ['Fórmulas mágicas.', 'Resultado sem executar.', 'Apenas assistir aulas.', 'Atalhos.']
 
-const INCLUSO = ['15 encontros ao vivo', 'Acesso ao Fluxe', 'Exercícios semanais', 'Materiais exclusivos', 'Templates', 'Ferramentas', 'Comunidade', 'Certificado']
+const INCLUSO = ['15 encontros ao vivo', '1 ano de acesso ao Fluxe', 'Exercícios práticos', 'Materiais exclusivos', 'Templates', 'Ferramentas', 'Comunidade', 'Certificado']
 
 export default function MentoriaGrupoPage() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
@@ -59,7 +59,8 @@ export default function MentoriaGrupoPage() {
   const checkoutUrl = turma?.checkout_url || WHATSAPP_MENTORIA_GRUPO
   const dataInicioLabel = turma?.data_inicio
     ? new Date(turma.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })
-    : '12 de agosto'
+    : 'em breve'
+  const heroChecklist = [`Início: ${dataInicioLabel}`, ...HERO_CHECKLIST_BASE]
 
   useEffect(() => {
     const prev = {
@@ -158,7 +159,7 @@ export default function MentoriaGrupoPage() {
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 32, alignItems: isMobile ? 'center' : 'flex-start' }}>
-                {HERO_CHECKLIST.map(item => (
+                {heroChecklist.map(item => (
                   <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#CBD5E1', fontWeight: 500 }}>
                     <span style={{ color: '#4ADE80' }}>✅</span> {item}
                   </div>
@@ -243,7 +244,7 @@ export default function MentoriaGrupoPage() {
             </div>
             <h2 style={{ ...h2, fontSize: isMobile ? 26 : 36, marginBottom: 24 }}>É uma construção guiada.</h2>
             <p style={{ fontSize: 16, color: '#94A3B8', lineHeight: 1.8, margin: 0 }}>
-              Durante 15 semanas vamos montar, juntos, o seu BPO. Cada encontro gera uma entrega. Cada entrega gera um exercício. Cada exercício aproxima você de uma empresa mais organizada, lucrativa e preparada para crescer. Ao final do programa, você terá construído algo que continuará usando todos os dias.
+              São 15 encontros, 2 por semana, e vamos montar, juntos, o seu BPO. Cada encontro gera uma entrega. Cada entrega gera um exercício. Cada exercício aproxima você de uma empresa mais organizada, lucrativa e preparada para crescer. Ao final do programa, você terá construído algo que continuará usando todos os dias.
             </p>
           </Reveal>
         </div>
@@ -294,7 +295,7 @@ export default function MentoriaGrupoPage() {
           </Reveal>
           <Reveal delay={0.15}>
             <p style={{ textAlign: 'center', fontSize: 15, color: '#94A3B8', marginTop: 32, lineHeight: 1.7 }}>
-              Durante 15 semanas esse ciclo se repete. É impossível terminar o programa sem ter colocado a mão na massa.
+              Esse ciclo se repete a cada encontro, 2 vezes por semana. É impossível terminar o programa sem ter colocado a mão na massa.
             </p>
           </Reveal>
         </div>
@@ -464,13 +465,18 @@ export default function MentoriaGrupoPage() {
           <Reveal delay={0.1}>
             <div style={{ background: 'linear-gradient(135deg,rgba(99,102,241,.16),rgba(59,130,246,.1))', border: '1px solid rgba(99,102,241,.3)', borderRadius: 24, padding: isMobile ? '36px 24px' : '48px 44px' }}>
               <p style={{ fontSize: 13, color: '#94A3B8', margin: '0 0 4px' }}>Essa transformação poderia custar milhares de reais.</p>
-              <p style={{ fontSize: 14, color: '#CBD5E1', margin: '0 0 24px' }}>Mas a primeira turma do Programa BPO Lucrativo™ terá um investimento especial de lançamento.</p>
-              <div style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 44 : 56, fontWeight: 900, color: '#F8FAFC', letterSpacing: '-.02em', marginBottom: 4 }}>R$ 797</div>
-              <div style={{ fontSize: 14, color: '#94A3B8', marginBottom: 28 }}>ou em até 12x no cartão</div>
-              <button onClick={abrirCheckout}
-                style={{ padding: '16px 40px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 10px 36px rgba(99,102,241,.5)' }}>
-                Quero construir meu BPO →
-              </button>
+              <p style={{ fontSize: 14, color: '#CBD5E1', margin: '0 0 20px' }}>E o investimento já inclui 1 ano de acesso ao Fluxe, que sozinho custaria R$ 1.164 no período.</p>
+              <div style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 44 : 56, fontWeight: 900, color: '#F8FAFC', letterSpacing: '-.02em', marginBottom: 4 }}>R$ 997</div>
+              <div style={{ fontSize: 14, color: '#94A3B8', marginBottom: 8 }}>ou em até 12x no cartão (com juros)</div>
+              <div style={{ display: 'inline-block', fontSize: 12, color: '#A855F7', fontWeight: 700, background: 'rgba(168,85,247,.1)', border: '1px solid rgba(168,85,247,.25)', borderRadius: 99, padding: '6px 16px', marginBottom: 24 }}>
+                Menos do que o Fluxe custaria sozinho no ano, e você ainda leva a mentoria
+              </div>
+              <div>
+                <button onClick={abrirCheckout}
+                  style={{ padding: '16px 40px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 10px 36px rgba(99,102,241,.5)' }}>
+                  Quero construir meu BPO →
+                </button>
+              </div>
             </div>
           </Reveal>
         </div>
