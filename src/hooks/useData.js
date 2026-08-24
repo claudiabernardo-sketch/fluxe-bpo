@@ -2174,6 +2174,127 @@ export function useDeleteMentoriaLink() {
   })
 }
 
+// ── COMUNIDADE DA MENTORIA (mural entre mentorados) ──────────────────
+// Feed comum a todo mentorado (grupo ou individual), RLS libera leitura
+// pra qualquer empresa com mentorado_bpo_lucrativo=true, ver MIGRATION_32.
+export function useMentoriaPosts() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['mentoria_posts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('mentoria_posts')
+        .select('*')
+        .order('criado_em', { ascending: false })
+        .limit(100)
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 15_000,
+    enabled: !!empresa?.mentorado_bpo_lucrativo,
+  })
+}
+
+export function useCriarPost() {
+  const qc = useQueryClient()
+  const { empresa, profile } = useAuthStore()
+  return useMutation({
+    mutationFn: async ({ conteudo }) => {
+      const { data, error } = await supabase
+        .from('mentoria_posts')
+        .insert({
+          empresa_id: empresa.id,
+          autor_id: profile.id,
+          autor_nome: profile.nome || 'Mentorado',
+          empresa_nome: empresa.nome || null,
+          conteudo,
+        })
+        .select()
+      if (error) throw error
+      return data[0]
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['mentoria_posts'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+export function useExcluirPost() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('mentoria_posts').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['mentoria_posts'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+export function useMentoriaCurtidas() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['mentoria_post_curtidas'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('mentoria_post_curtidas').select('post_id, empresa_id')
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 15_000,
+    enabled: !!empresa?.mentorado_bpo_lucrativo,
+  })
+}
+
+export function useToggleCurtida() {
+  const qc = useQueryClient()
+  const { empresa } = useAuthStore()
+  return useMutation({
+    mutationFn: async ({ post_id, curtido }) => {
+      if (curtido) {
+        const { error } = await supabase.from('mentoria_post_curtidas').delete().eq('post_id', post_id).eq('empresa_id', empresa.id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('mentoria_post_curtidas').insert({ post_id, empresa_id: empresa.id })
+        if (error) throw error
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['mentoria_post_curtidas'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+export function useComentariosDoPost(postId, ativo) {
+  return useQuery({
+    queryKey: ['mentoria_post_comentarios', postId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('mentoria_post_comentarios')
+        .select('*')
+        .eq('post_id', postId)
+        .order('criado_em', { ascending: true })
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!postId && !!ativo,
+    staleTime: 10_000,
+  })
+}
+
+export function useCriarComentario() {
+  const qc = useQueryClient()
+  const { empresa, profile } = useAuthStore()
+  return useMutation({
+    mutationFn: async ({ post_id, conteudo }) => {
+      const { error } = await supabase.from('mentoria_post_comentarios').insert({
+        post_id, empresa_id: empresa.id, autor_id: profile.id,
+        autor_nome: profile.nome || 'Mentorado', conteudo,
+      })
+      if (error) throw error
+    },
+    onSuccess: (_, { post_id }) => qc.invalidateQueries({ queryKey: ['mentoria_post_comentarios', post_id] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
 // ── PLANO DE NEGÓCIOS (6 etapas) ─────────────────────
 // Uma linha por empresa — busca com maybeSingle pois pode não existir ainda
 // (empresa nova que nunca preencheu).
