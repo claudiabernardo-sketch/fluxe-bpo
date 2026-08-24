@@ -1,17 +1,21 @@
 import { useState, useEffect, useRef } from 'react'
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import { useAuthStore } from '../../store/authStore'
 import { supabase } from '../../lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
 
-// Timer global store
-export const useTimerStore = create((set, get) => ({
+// Timer global store, persistido no localStorage pra sobreviver a um
+// F5/fechar aba. Sem isso, recarregar a página fazia a barra sumir e,
+// pior, iniciar de novo na mesma tarefa descartava o tempo já rodado
+// sem salvar apontamento nenhum.
+export const useTimerStore = create(persist((set, get) => ({
   active: null,   // { taskId, taskTitle, clientId, clientName, isAvulsa, start, paused, totalPaused }
   elapsed: 0,
 
   start: (taskId, taskTitle, clientId, clientName, isAvulsa = false) => {
     const { active } = get()
-    if (active) get().stop(false)
+    if (active) get().stop(true)
     set({ active: { taskId, taskTitle, clientId, clientName, isAvulsa, start: Date.now(), paused: false, totalPaused: 0 }, elapsed: 0 })
   },
   pause: () => {
@@ -55,6 +59,11 @@ export const useTimerStore = create((set, get) => ({
     const elapsed = Math.round((Date.now() - active.start - active.totalPaused) / 1000)
     set({ elapsed })
   },
+}), {
+  name: 'fluxe-timer',
+  // Só o essencial pra retomar a contagem, elapsed é recalculado a partir
+  // de active.start assim que a página carrega de novo.
+  partialize: (state) => ({ active: state.active }),
 }))
 
 function fmtHHMM(s) {
@@ -77,6 +86,7 @@ export default function TimerBar() {
 
   useEffect(() => {
     if (active && !active.paused) {
+      tick() // recalcula na hora, sem esperar o primeiro intervalo de 1s (importante logo após um F5)
       intRef.current = setInterval(tick, 1000)
     } else {
       clearInterval(intRef.current)
