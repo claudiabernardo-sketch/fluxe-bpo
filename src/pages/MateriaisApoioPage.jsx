@@ -8,7 +8,10 @@ import { useAuthStore } from '../store/authStore'
 
 // Materiais que têm uma apresentação em tela cheia dentro do Fluxe, além do
 // arquivo pra baixar — casado pelo título do material.
-const APRESENTACOES = { 'Cheat Sheet de Vendas': '/apresentacao-vendas' }
+const APRESENTACOES = {
+  'Cheat Sheet de Vendas': '/apresentacao-vendas',
+  'Apresentação: Manual Operacional do BPO': '/apresentacao-manual-operacional',
+}
 
 function urlDoMaterial(m) {
   if (m.arquivo_path) return supabase.storage.from('tarefas').getPublicUrl(m.arquivo_path).data.publicUrl
