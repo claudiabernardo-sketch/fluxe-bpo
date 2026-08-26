@@ -641,17 +641,32 @@ export default function PrecificacaoPage() {
   const montarServicosPadrao = (c) => {
     const d = c.d
     const qtd = {
-      'Conciliação bancária':          d.bancos > 0 ? `${d.bancos} conta${d.bancos>1?'s':''}` : null,
-      'Contas a pagar':                d.capag > 0 ? `até ${d.capag}/mês` : null,
-      'Cobranças manuais a receber':   d.carec > 0 ? `até ${d.carec}/mês` : null,
-      'Agendamento bancário':          d.agend > 0 && d.capag > 0 ? `${d.capag} pagamentos/mês` : null,
+      'Conciliação bancária':          d.bancos > 0 ? `${d.bancos} conta${d.bancos>1?'s':''} bancária${d.bancos>1?'s':''}` : null,
+      'Contas a pagar':                d.capag > 0 ? `até ${d.capag} pagamentos/mês` : null,
+      'Cobranças manuais a receber':   d.carec > 0 ? `até ${d.carec} cobranças/mês` : null,
+      'Agendamento bancário':          d.agend > 0 && d.capag > 0 ? `${d.capag} agendamentos/mês` : null,
       'Emissão de notas fiscais':      d.nfs > 0 ? `até ${d.nfs} NFs/mês` : null,
-      'Emissão de boletos':            d.boletos > 0 ? `até ${d.boletos}/mês` : null,
-      'Relatórios gerenciais':         d.relat == 2 ? 'DRE + Fluxo + Indicadores' : 'DRE + Fluxo de Caixa',
-      'Reunião estratégica mensal':    d.reuniao >= 1.5 ? '1h presencial/mês' : '1h online/mês',
+      'Emissão de boletos':            d.boletos > 0 ? `até ${d.boletos} boletos/mês` : null,
+      'Conciliação sistema de cobrança': d.sistcob > 0 ? 'Asaas / Iugu ou similar' : null,
+      'Conciliação de cartões de crédito': d.cartao > 0 ? `${d.cartao} cartão${d.cartao>1?'ões':''} de crédito` : null,
       'Conciliação outras plataformas': d.plat > 0 ? `${d.plat} plataforma${d.plat>1?'s':''}` : null,
+      'Envio de documentos à contabilidade': 'organização e envio mensal',
+      'Relatórios gerenciais':         d.relat == 2 ? 'DRE + Fluxo de Caixa + Indicadores' : 'DRE + Fluxo de Caixa',
+      'Reunião estratégica mensal':    d.reuniao >= 1.5 ? '1h presencial/mês' : '1h online/mês',
+      'Consultoria e planejamento':    d.consult == 2 ? 'planejamento completo mensal' : 'análises estratégicas mensais',
+      'Lembretes de vencimento':       'via WhatsApp',
     }
-    return c.items.map(it => { const desc = qtd[it.nome]; return desc ? `${it.nome} · ${desc}` : it.nome })
+    const linhas = c.items.map(it => { const desc = qtd[it.nome]; return desc ? `${it.nome} · ${desc}` : it.nome })
+    if (d.erp) {
+      const licenca = {
+        cliente_direto: 'contratada e paga diretamente pelo cliente',
+        bpo_embutida: 'inclusa na mensalidade',
+        repasse: `repassada mensalmente (${fmt(c.licencaRepasse || 0)}/mês, reajustada conforme a plataforma)`,
+        contabilidade: 'fornecida pela contabilidade do cliente',
+      }[d.licencaModalidade] || ''
+      linhas.push(`Sistema financeiro: ${d.erp === 'Outro' ? (d.erpOutro || 'Outro') : d.erp} · licença ${licenca}`)
+    }
+    return linhas
   }
 
   const montarEscopoPadrao = (c) => {
@@ -1385,44 +1400,27 @@ export default function PrecificacaoPage() {
               <div className="prec-card-title">Escopo do serviço</div>
               <div className="prec-card-desc">Gerado automaticamente com base no diagnóstico. Revise antes de apresentar ao cliente.</div>
 
-              {/* Serviços incluídos */}
+              {/* Serviços incluídos, editável, mesmo texto usado na proposta final */}
               <div className="prec-scope-block">
-                <div className="prec-scope-title"><span>📋</span> Serviços incluídos</div>
-                {calc.items.map((it, i) => {
-                  // Monta descrição com quantidades em vez de horas
-                  const d = calc.d
-                  const qtd = {
-                    'Conciliação bancária':          d.bancos > 0 ? `${d.bancos} conta${d.bancos>1?'s':''} bancária${d.bancos>1?'s':''}` : null,
-                    'Contas a pagar':                d.capag > 0 ? `até ${d.capag} pagamentos/mês` : null,
-                    'Cobranças manuais a receber':   d.carec > 0 ? `até ${d.carec} cobranças/mês` : null,
-                    'Agendamento bancário':          d.agend > 0 && d.capag > 0 ? `${d.capag} agendamentos/mês` : null,
-                    'Emissão de notas fiscais':      d.nfs > 0 ? `até ${d.nfs} NFs/mês` : null,
-                    'Emissão de boletos':            d.boletos > 0 ? `até ${d.boletos} boletos/mês` : null,
-                    'Conciliação sistema de cobrança': d.sistcob > 0 ? 'Asaas / Iugu ou similar' : null,
-                    'Conciliação de cartões de crédito': d.cartao > 0 ? `${d.cartao} cartão${d.cartao>1?'ões':''} de crédito` : null,
-                    'Conciliação outras plataformas': d.plat > 0 ? `${d.plat} plataforma${d.plat>1?'s':''}` : null,
-                    'Envio de documentos à contabilidade': 'organização e envio mensal',
-                    'Relatórios gerenciais': d.relat == 2 ? 'DRE + Fluxo de Caixa + Indicadores' : 'DRE + Fluxo de Caixa',
-                    'Reunião estratégica mensal': d.reuniao >= 1.5 ? '1h presencial/mês' : '1h online/mês',
-                    'Consultoria e planejamento': d.consult == 2 ? 'planejamento completo mensal' : 'análises estratégicas mensais',
-                    'Lembretes de vencimento': 'via WhatsApp',
-                  }
-                  const desc = qtd[it.nome]
-                  return (
-                    <div key={i} className="prec-scope-item">
-                      {it.nome}{desc ? ` — ${desc}` : ''}
-                    </div>
-                  )
-                })}
-                {calc.d.erp && (
-                  <div className="prec-scope-item">
-                    Sistema financeiro: {calc.d.erp === 'Outro' ? (calc.d.erpOutro || 'Outro') : calc.d.erp} — licença {{
-                      cliente_direto: 'contratada e paga diretamente pelo cliente',
-                      bpo_embutida: 'inclusa na mensalidade',
-                      repasse: `repassada mensalmente (${fmt(calc.licencaRepasse || 0)}/mês, reajustada conforme a plataforma)`,
-                      contabilidade: 'fornecida pela contabilidade do cliente',
-                    }[calc.d.licencaModalidade] || ''}
-                  </div>
+                <div className="prec-scope-title" style={{ display:'flex', alignItems:'center' }}>
+                  <span>📋</span> Serviços incluídos
+                  <button
+                    onClick={() => { if (!servicosProposta) setServicosProposta(montarServicosPadrao(calc)); setServicosPropostaEdit(v => !v) }}
+                    style={{ marginLeft:'auto', border:'none', background:'transparent', color:'#6366F1', fontSize:11, fontWeight:700, cursor:'pointer' }}
+                  >{servicosPropostaEdit ? '✓ Concluir' : '✏️ Editar'}</button>
+                </div>
+                {servicosPropostaEdit ? (
+                  <textarea
+                    value={(servicosProposta || montarServicosPadrao(calc)).join('\n')}
+                    onChange={e => setServicosProposta(e.target.value.split('\n'))}
+                    onBlur={e => setServicosProposta(e.target.value.split('\n').map(l => l.trim()).filter(Boolean))}
+                    style={{ width:'100%', minHeight:180, fontSize:12, fontFamily:'inherit', border:'1px solid #C7D2FE', borderRadius:8, padding:10, lineHeight:1.7 }}
+                    placeholder="Um serviço por linha"
+                  />
+                ) : (
+                  (servicosProposta || montarServicosPadrao(calc)).map((linha, i) => (
+                    <div key={i} className="prec-scope-item">{linha}</div>
+                  ))
                 )}
               </div>
 
@@ -1508,26 +1506,11 @@ export default function PrecificacaoPage() {
               </div>
 
               <div style={{ marginBottom:20 }}>
-                <div style={{ display:'flex', alignItems:'center', marginBottom:10 }}>
-                  <div style={{ fontSize:12, fontWeight:600, color:'var(--ptext2)' }}>Serviços incluídos:</div>
-                  <button
-                    onClick={() => { if (!servicosProposta) setServicosProposta(montarServicosPadrao(calc)); setServicosPropostaEdit(v => !v) }}
-                    style={{ marginLeft:'auto', border:'none', background:'transparent', color:'#6366F1', fontSize:11, fontWeight:700, cursor:'pointer' }}
-                  >{servicosPropostaEdit ? '✓ Concluir' : '✏️ Editar'}</button>
-                </div>
-                {servicosPropostaEdit ? (
-                  <textarea
-                    value={(servicosProposta || montarServicosPadrao(calc)).join('\n')}
-                    onChange={e => setServicosProposta(e.target.value.split('\n'))}
-                    onBlur={e => setServicosProposta(e.target.value.split('\n').map(l => l.trim()).filter(Boolean))}
-                    style={{ width:'100%', minHeight:140, fontSize:12, fontFamily:'inherit', border:'1px solid #C7D2FE', borderRadius:8, padding:10, lineHeight:1.7 }}
-                    placeholder="Um serviço por linha"
-                  />
-                ) : (
-                  (servicosProposta || montarServicosPadrao(calc)).map((linha, i) => (
-                    <div key={i} style={{ padding:'7px 0', borderBottom:'1px solid var(--pborder)', fontSize:12 }}>{linha}</div>
-                  ))
-                )}
+                <div style={{ fontSize:12, fontWeight:600, color:'var(--ptext2)', marginBottom:10 }}>Serviços incluídos:</div>
+                {(servicosProposta || montarServicosPadrao(calc)).map((linha, i) => (
+                  <div key={i} style={{ padding:'7px 0', borderBottom:'1px solid var(--pborder)', fontSize:12 }}>{linha}</div>
+                ))}
+                <div style={{ fontSize:11, color:'var(--ptext3)', marginTop:6, fontStyle:'italic' }}>Pra ajustar, edite em "Serviços incluídos" na Etapa 05, acima.</div>
               </div>
 
               <div style={{ background: 'var(--psurface2)', borderRadius: 8, padding: 14, fontSize: 12, color: 'var(--ptext2)', lineHeight: 1.6 }}>
