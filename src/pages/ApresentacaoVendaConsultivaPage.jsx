@@ -358,26 +358,25 @@ function SlidePrecificacao() {
   )
 }
 
-// ── Bloco 11 · Modelos de plano ────────────────────────────────────────
+// ── Bloco 11 · Precificação sob medida ─────────────────────────────────
 function SlidePlanos() {
-  const planos = [
-    ['Essencial', 'Operação simples', ['Contas a pagar', 'Contas a receber', 'Conciliação bancária', 'Relatório básico'], INDIGO],
-    ['Gestão', 'Precisa de acompanhamento', ['Tudo do essencial', 'Fluxo de caixa', 'DRE gerencial', 'Indicadores', 'Reunião mensal'], AMBER],
-    ['Estratégico', 'Gestão financeira próxima', ['Tudo do gestão', 'Análise de margem', 'Orçamento', 'Dashboard', 'Plano de ação'], GREEN],
-  ]
+  const pecas = ['Contas a pagar', 'Contas a receber', 'Conciliação bancária', 'Fluxo de caixa', 'DRE gerencial', 'Indicadores', 'Reunião mensal', 'Análise de margem', 'Orçamento', 'Dashboard', 'Plano de ação']
   return (
-    <div style={{ width: '100%', maxWidth: 940 }}>
-      <Titulo>Modelos de plano</Titulo>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 16 }}>
-        {planos.map(([nome, sub, itens, cor]) => (
-          <div key={nome} style={{ background: 'rgba(255,255,255,.07)', border: `1px solid ${cor}55`, borderRadius: 12, padding: '16px 18px' }}>
-            <div style={{ color: cor, fontWeight: 800, fontSize: 16, marginBottom: 2 }}>{nome}</div>
-            <div style={{ color: '#94A3B8', fontSize: 11.5, marginBottom: 10, fontStyle: 'italic' }}>{sub}</div>
-            <Check itens={itens} cor={cor} />
-          </div>
-        ))}
+    <div style={{ width: '100%', maxWidth: 900 }}>
+      <Titulo>Não existe cardápio, existe diagnóstico</Titulo>
+      <ErradoCerto
+        errado="Escolha entre o plano Essencial, Gestão ou Estratégico."
+        certo="Eu diagnostico o seu negócio, entendo exatamente o que você precisa, e monto um valor sob medida pra sua demanda."
+      />
+      <div style={{ marginTop: 16, marginBottom: 4 }}>
+        <div style={{ color: '#94A3B8', fontSize: 12, textAlign: 'center', marginBottom: 10 }}>As mesmas peças, mas cada proposta entra com as que o diagnóstico mostrar que fazem sentido, nunca as três colunas de uma vez:</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+          {pecas.map(p => (
+            <div key={p} style={{ background: 'rgba(255,255,255,.08)', borderRadius: 20, padding: '7px 14px', color: '#C7D2FE', fontSize: 12.5, fontWeight: 600 }}>{p}</div>
+          ))}
+        </div>
       </div>
-      <div style={{ textAlign: 'center', color: '#FCD34D', fontSize: 13.5, fontWeight: 600 }}>⚠ Plano não pode virar cardápio engessado. Ele orienta, mas o diagnóstico manda.</div>
+      <div style={{ textAlign: 'center', color: '#FCD34D', fontSize: 14, fontWeight: 700, marginTop: 18 }}>Direcionamento vem do diagnóstico. Nunca de um menu pronto.</div>
     </div>
   )
 }
