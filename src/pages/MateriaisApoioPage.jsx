@@ -11,6 +11,7 @@ import { useAuthStore } from '../store/authStore'
 const APRESENTACOES = {
   'Cheat Sheet de Vendas': '/apresentacao-vendas',
   'Apresentação: Manual Operacional do BPO': '/apresentacao-manual-operacional',
+  'Apresentação: Comercial e Precificação Consultiva': '/apresentacao-venda-consultiva',
 }
 
 function urlDoMaterial(m) {
