@@ -528,6 +528,7 @@ export default function PrecificacaoPage() {
       if (dc.calc) setCalc(dc.calc)
       if (dc.valorProposta) setValorProposta(formatBRL(parseValorPropostaSalvo(dc.valorProposta)))
       if (dc.escopo) setEscopo(dc.escopo)
+      if (dc.servicosProposta) setServicosProposta(dc.servicosProposta)
       const cli = p.dados_cliente || {}
       setContratoForm(f => ({
         ...f,
@@ -579,11 +580,12 @@ export default function PrecificacaoPage() {
   // preenchia as atividades e saía sem chegar até o Escopo perdia tudo: a
   // proposta nunca tinha sido salva, então "Importar proposta" não achava
   // nada (ou achava uma versão antiga, sem as atividades mais recentes).
-  const salvarOuAtualizarProposta = async ({ dOverride, calcOverride, valorPropostaOverride, escopoOverride } = {}) => {
+  const salvarOuAtualizarProposta = async ({ dOverride, calcOverride, valorPropostaOverride, escopoOverride, servicosOverride } = {}) => {
     const dAtual = dOverride || d
     const calcAtual = calcOverride !== undefined ? calcOverride : calc
     const valorAtual = valorPropostaOverride !== undefined ? valorPropostaOverride : valorProposta
     const escopoAtual = escopoOverride !== undefined ? escopoOverride : escopo
+    const servicosAtual = servicosOverride !== undefined ? servicosOverride : servicosProposta
     if (!calcAtual) return // nada pra salvar ainda (nenhuma atividade calculada)
 
     const payload = {
@@ -597,7 +599,7 @@ export default function PrecificacaoPage() {
         whatsapp: dAtual._clienteWhatsapp || '',
         segmento: dAtual._clienteSegmento || '',
       },
-      dados_calculo: { d: dAtual, calc: calcAtual, valorProposta: valorAtual, escopo: escopoAtual },
+      dados_calculo: { d: dAtual, calc: calcAtual, valorProposta: valorAtual, escopo: escopoAtual, servicosProposta: servicosAtual },
     }
     try {
       if (propostaIdRef.current) {
@@ -631,6 +633,26 @@ export default function PrecificacaoPage() {
   // Escopo editável (Responsabilidades / Limites / SLA) — padrão da empresa + edição por proposta
   const [escopo, setEscopo] = useState(null)
   const [escopoEdit, setEscopoEdit] = useState(null) // bloco em edição: 'resp' | 'limites' | 'sla'
+
+  // Serviços incluídos, na proposta impressa/enviada, o Fluxe puxa do
+  // diagnóstico, mas o texto final pode ser ajustado antes de mandar pro cliente.
+  const [servicosProposta, setServicosProposta] = useState(null)
+  const [servicosPropostaEdit, setServicosPropostaEdit] = useState(false)
+  const montarServicosPadrao = (c) => {
+    const d = c.d
+    const qtd = {
+      'Conciliação bancária':          d.bancos > 0 ? `${d.bancos} conta${d.bancos>1?'s':''}` : null,
+      'Contas a pagar':                d.capag > 0 ? `até ${d.capag}/mês` : null,
+      'Cobranças manuais a receber':   d.carec > 0 ? `até ${d.carec}/mês` : null,
+      'Agendamento bancário':          d.agend > 0 && d.capag > 0 ? `${d.capag} pagamentos/mês` : null,
+      'Emissão de notas fiscais':      d.nfs > 0 ? `até ${d.nfs} NFs/mês` : null,
+      'Emissão de boletos':            d.boletos > 0 ? `até ${d.boletos}/mês` : null,
+      'Relatórios gerenciais':         d.relat == 2 ? 'DRE + Fluxo + Indicadores' : 'DRE + Fluxo de Caixa',
+      'Reunião estratégica mensal':    d.reuniao >= 1.5 ? '1h presencial/mês' : '1h online/mês',
+      'Conciliação outras plataformas': d.plat > 0 ? `${d.plat} plataforma${d.plat>1?'s':''}` : null,
+    }
+    return c.items.map(it => { const desc = qtd[it.nome]; return desc ? `${it.nome} · ${desc}` : it.nome })
+  }
 
   const montarEscopoPadrao = (c) => {
     const padrao = empresa?.config?.escopoPadrao
@@ -697,6 +719,7 @@ export default function PrecificacaoPage() {
     if (dc.calc) setCalc(dc.calc)
     if (dc.valorProposta) setValorProposta(formatBRL(parseValorPropostaSalvo(dc.valorProposta)))
     setEscopo(dc.escopo || null)
+    setServicosProposta(dc.servicosProposta || null)
     if (modo === 'editar') {
       propostaIdRef.current = proposta.id
       propostaStatusRef.current = proposta.status
@@ -1485,28 +1508,26 @@ export default function PrecificacaoPage() {
               </div>
 
               <div style={{ marginBottom:20 }}>
-                <div style={{ fontSize:12, fontWeight:600, color:'var(--ptext2)', marginBottom:10 }}>Serviços incluídos:</div>
-                {calc.items.map((it, i) => {
-                  const d = calc.d
-                  const qtd = {
-                    'Conciliação bancária':          d.bancos > 0 ? `${d.bancos} conta${d.bancos>1?'s':''}` : null,
-                    'Contas a pagar':                d.capag > 0 ? `até ${d.capag}/mês` : null,
-                    'Cobranças manuais a receber':   d.carec > 0 ? `até ${d.carec}/mês` : null,
-                    'Agendamento bancário':          d.agend > 0 && d.capag > 0 ? `${d.capag} pagamentos/mês` : null,
-                    'Emissão de notas fiscais':      d.nfs > 0 ? `até ${d.nfs} NFs/mês` : null,
-                    'Emissão de boletos':            d.boletos > 0 ? `até ${d.boletos}/mês` : null,
-                    'Relatórios gerenciais':         d.relat == 2 ? 'DRE + Fluxo + Indicadores' : 'DRE + Fluxo de Caixa',
-                    'Reunião estratégica mensal':    d.reuniao >= 1.5 ? '1h presencial/mês' : '1h online/mês',
-                    'Conciliação outras plataformas': d.plat > 0 ? `${d.plat} plataforma${d.plat>1?'s':''}` : null,
-                  }
-                  const desc = qtd[it.nome]
-                  return (
-                    <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid var(--pborder)', fontSize:12 }}>
-                      <span>{it.nome}</span>
-                      <span style={{ color:'var(--ptext3)', fontStyle: desc ? 'normal' : 'italic' }}>{desc || 'incluso'}</span>
-                    </div>
-                  )
-                })}
+                <div style={{ display:'flex', alignItems:'center', marginBottom:10 }}>
+                  <div style={{ fontSize:12, fontWeight:600, color:'var(--ptext2)' }}>Serviços incluídos:</div>
+                  <button
+                    onClick={() => { if (!servicosProposta) setServicosProposta(montarServicosPadrao(calc)); setServicosPropostaEdit(v => !v) }}
+                    style={{ marginLeft:'auto', border:'none', background:'transparent', color:'#6366F1', fontSize:11, fontWeight:700, cursor:'pointer' }}
+                  >{servicosPropostaEdit ? '✓ Concluir' : '✏️ Editar'}</button>
+                </div>
+                {servicosPropostaEdit ? (
+                  <textarea
+                    value={(servicosProposta || montarServicosPadrao(calc)).join('\n')}
+                    onChange={e => setServicosProposta(e.target.value.split('\n'))}
+                    onBlur={e => setServicosProposta(e.target.value.split('\n').map(l => l.trim()).filter(Boolean))}
+                    style={{ width:'100%', minHeight:140, fontSize:12, fontFamily:'inherit', border:'1px solid #C7D2FE', borderRadius:8, padding:10, lineHeight:1.7 }}
+                    placeholder="Um serviço por linha"
+                  />
+                ) : (
+                  (servicosProposta || montarServicosPadrao(calc)).map((linha, i) => (
+                    <div key={i} style={{ padding:'7px 0', borderBottom:'1px solid var(--pborder)', fontSize:12 }}>{linha}</div>
+                  ))
+                )}
               </div>
 
               <div style={{ background: 'var(--psurface2)', borderRadius: 8, padding: 14, fontSize: 12, color: 'var(--ptext2)', lineHeight: 1.6 }}>
@@ -1522,6 +1543,7 @@ export default function PrecificacaoPage() {
                         <div className="prec-btn-row">
               <button className="prec-btn prec-btn-ghost" onClick={() => irPara(4)}>← Ajustar valor</button>
               <button className="prec-btn prec-btn-ghost" onClick={() => {
+                if (servicosPropostaEdit) { alert('Clique em "✓ Concluir" nos Serviços incluídos antes de imprimir.'); return }
                 const w = window.open('', '_blank', 'width=900,height=700')
                 const el = document.getElementById('proposta-print')
                 w.document.write('<html><head><title>Proposta</title><style>body{font-family:DM Sans,sans-serif;margin:0;padding:32px;color:#1a1a1a;font-size:13px;line-height:1.7}@page{margin:1.5cm}*{box-sizing:border-box}.prec-scope-block{background:#F9F8F5;border:1px solid #E8E5DE;border-radius:8px;padding:16px;margin-bottom:12px}.prec-scope-title{font-size:11px;font-weight:600;color:#6A6760;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;gap:6px}.prec-scope-item{font-size:12px;color:#6A6760;padding:4px 0;display:flex;gap:6px}.prec-scope-item::before{content:"→";color:#1A4D3A;flex-shrink:0}</style></head><body>' + el.innerHTML + '</body></html>')
@@ -1537,7 +1559,7 @@ export default function PrecificacaoPage() {
                   `INVESTIMENTO MENSAL: ${fmt(parseBRL(valorProposta))}`,
                   ``,
                   `SERVIÇOS INCLUÍDOS:`,
-                  ...calc.items.map(it => `• ${it.nome}`),
+                  ...(servicosProposta || montarServicosPadrao(calc)).map(s => `• ${s}`),
                   ``,
                   `APRESENTADA POR: ${empresa?.nome || 'Seu BPO'}`,
                   empresa?.slogan ? `"${empresa.slogan}"` : '',
