@@ -552,6 +552,7 @@ export default function PrecificacaoPage() {
       .from('usuarios')
       .select('custo_hora, nome')
       .eq('empresa_id', profile.empresa_id)
+      .eq('ativo', true)
       .not('custo_hora', 'is', null)
       .then(({ data }) => {
         if (!data || data.length === 0) return
