@@ -174,6 +174,7 @@ serve(async (req) => {
   const dryRun          = body?.dry_run === true
   const filtroClienteId = body?.cliente_id ?? null   // gerar só para este cliente
   const filtroEmpresaId = body?.empresa_id ?? null   // gerar só para esta empresa
+  const filtroModeloId  = body?.modelo_id  ?? null   // gerar só para este modelo
 
   // Datas a processar: range ou data única ou hoje
   let datasAlvo: string[]
@@ -262,6 +263,11 @@ serve(async (req) => {
           .is('tarefa_modelos.deleted_at', null)
 
         if (filtroClienteId) queryVinculos = queryVinculos.eq('cliente_id', filtroClienteId)
+        // Filtro por modelo: usado quando se muda a recorrência de um vínculo e
+        // só as tarefas daquela rotina precisam ser refeitas — sem ele a
+        // regeração adiantaria o mês inteiro de todas as outras rotinas do
+        // cliente, que ninguém pediu.
+        if (filtroModeloId)  queryVinculos = queryVinculos.eq('modelo_id',  filtroModeloId)
 
         const { data: vinculos, error: errVinc } = await queryVinculos
         if (errVinc) { erros.push(`[${empId}] vinculos: ${errVinc.message}`); continue }

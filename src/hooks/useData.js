@@ -1117,6 +1117,77 @@ export function useClienteModelos(clienteId) {
   })
 }
 
+// Chamada crua da Edge Function de geração. Compartilhada por todo mundo que
+// precisa gerar tarefas (botão manual, ativação de operação, ressincronização
+// depois de mudar recorrência) pra não espalhar três fetches iguais pelo arquivo.
+async function postGerarTarefas(body) {
+  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gerar-tarefas`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? `HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
+// toLocaleDateString('en-CA'), não toISOString() — ver comentário em
+// ativarOperacaoCliente logo abaixo.
+function hojeLocal() {
+  return new Date().toLocaleDateString('en-CA')
+}
+function fimDoMesLocal() {
+  const d = new Date()
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0).toLocaleDateString('en-CA')
+}
+
+// Trocar a recorrência de um vínculo não desfazia as tarefas que já tinham sido
+// geradas com a regra antiga: elas continuavam na agenda em dias que não existem
+// mais no cadastro (rotina virou "mensal, dia 21" e as tarefas de dias úteis do
+// mês seguiram aparecendo). Aqui a gente apaga as futuras que ninguém encostou
+// ainda e manda gerar de novo pela regra nova, deixando o gerador ser a única
+// fonte da verdade sobre recorrência — refazer essa conta no front só criaria
+// duas versões da mesma regra pra divergirem depois.
+//
+// Só mexe em 'aberta': o que já está em andamento ou pendente é trabalho da
+// operação e não pode sumir por causa de um ajuste de cadastro.
+async function ressincronizarTarefasDoVinculo(vinculo, clienteId, empresaId) {
+  if (!vinculo?.modelo_id || !clienteId) return null
+  const hoje = hojeLocal()
+
+  const { data: removidas, error } = await supabase
+    .from('tarefas')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('cliente_id', clienteId)
+    .eq('modelo_id', vinculo.modelo_id)
+    .eq('status', 'aberta')
+    .gte('data_execucao', hoje)
+    .is('deleted_at', null)
+    .select('data_execucao')
+  if (error) throw error
+
+  // Regera até onde a agenda ia antes, senão mudar a recorrência encurtaria em
+  // silêncio o horizonte de quem já tinha gerado o mês inteiro adiantado.
+  const ate = (removidas ?? []).reduce(
+    (max, t) => (t.data_execucao > max ? t.data_execucao : max),
+    fimDoMesLocal()
+  )
+  const resultado = await postGerarTarefas({
+    empresa_id:  empresaId,
+    cliente_id:  clienteId,
+    modelo_id:   vinculo.modelo_id,
+    data_inicio: hoje,
+    data_fim:    ate,
+  })
+
+  return { removidas: removidas?.length ?? 0, geradas: resultado?.tarefas_geradas ?? 0 }
+}
+
 // Ativa a rotina de um cliente (status_operacional='operacional' +
 // operacao_iniciada_em=hoje) e dispara a geração de tarefas do dia — usada
 // tanto ao vincular o primeiro modelo (automático) quanto pelo botão manual
@@ -1130,11 +1201,8 @@ async function ativarOperacaoCliente(clienteId, empresaId, motivo) {
   const hoje = new Date().toLocaleDateString('en-CA')
   await supabase.from('clientes').update({ status_operacional: 'operacional', operacao_iniciada_em: hoje }).eq('id', clienteId)
   await logAudit('UPDATE', 'clientes', clienteId, { status_operacional: 'operacional', operacao_iniciada_em: hoje, motivo })
-  fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gerar-tarefas`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
-    body: JSON.stringify({ cliente_id: clienteId, empresa_id: empresaId, data_inicio: hoje, data_fim: hoje }),
-  }).catch(() => {})
+  postGerarTarefas({ cliente_id: clienteId, empresa_id: empresaId, data_inicio: hoje, data_fim: hoje })
+    .catch(() => {})
 }
 
 // Vincular modelo a um cliente. Se for o primeiro vínculo do cliente (ainda
@@ -1210,6 +1278,7 @@ export function useDesvincularModelo() {
 // Atualizar campos de override do vínculo (sem alterar o modelo original)
 export function useUpdateClienteModelo() {
   const qc = useQueryClient()
+  const { empresa } = useAuthStore()
   return useMutation({
     mutationFn: async ({ id, clienteId, ...updates }) => {
       const { data, error } = await supabase
@@ -1219,9 +1288,21 @@ export function useUpdateClienteModelo() {
         .select()
       if (error) throw error
       await logAudit('UPDATE', 'cliente_modelos', id, { campos: Object.keys(updates) })
-      return data?.[0]
+
+      // Mudou a regra de quando a tarefa nasce? As que já estavam na agenda
+      // seguem a regra velha e viram entulho — refaz. Alterações de checklist
+      // ou responsável não mexem em data, então passam direto.
+      const mexeuNaData = ['recorrencia', 'dias_semana', 'dia_mes'].some(c => c in updates)
+      const ressync = mexeuNaData
+        ? await ressincronizarTarefasDoVinculo(data?.[0], clienteId, empresa?.id)
+        : null
+
+      return { ...data?.[0], ressync }
     },
-    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['cliente_modelos', vars.clienteId] }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['cliente_modelos', vars.clienteId] })
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+    },
     onError: (err) => console.error('[Fluxe]', err),
   })
 }
@@ -1278,22 +1359,7 @@ export function useGerarTarefas() {
       if (dataInicio) body.data_inicio = dataInicio
       if (dataFim)    body.data_fim    = dataFim
 
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gerar-tarefas`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify(body),
-        }
-      )
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err?.error ?? `HTTP ${res.status}`)
-      }
-      return res.json()
+      return postGerarTarefas(body)
     },
     onSuccess: (_, vars) => {
       if (!vars?.dryRun) qc.invalidateQueries({ queryKey: ['tasks'] })

@@ -227,10 +227,20 @@ export default function ModelosPage() {
     setOverrideId(vinculo.id)
   }
 
+  // A troca de recorrência refaz as tarefas futuras dessa rotina. Avisa no
+  // banner de geração, que fica visível depois que o painel de override fecha.
+  function avisarRessync(resultado) {
+    const r = resultado?.ressync
+    if (!r || (!r.removidas && !r.geradas)) return
+    setGeracaoMsg({ ok: true, texto:
+      `Recorrência salva. ${r.removidas} tarefa(s) futura(s) pela regra antiga ` +
+      `foram removidas e ${r.geradas} foram criadas pela regra nova.` })
+  }
+
   async function salvarOverride() {
     try {
       setOverrideErr('')
-      await updateVinculo.mutateAsync({
+      const resultado = await updateVinculo.mutateAsync({
         id: overrideId, clienteId: fCliente,
         recorrencia: overrideForm.recorrencia,
         dias_semana: overrideForm.recorrencia === 'semanal' ? overrideForm.dias_semana : null,
@@ -238,14 +248,16 @@ export default function ModelosPage() {
         hora: overrideForm.hora || null,
       })
       setOverrideId(null)
+      avisarRessync(resultado)
     } catch (err) { setOverrideErr(err.message || 'Erro ao salvar') }
   }
 
   async function usarPadraoModelo() {
     try {
       setOverrideErr('')
-      await updateVinculo.mutateAsync({ id: overrideId, clienteId: fCliente, recorrencia: null, dias_semana: null, dia_mes: null, hora: null })
+      const resultado = await updateVinculo.mutateAsync({ id: overrideId, clienteId: fCliente, recorrencia: null, dias_semana: null, dia_mes: null, hora: null })
       setOverrideId(null)
+      avisarRessync(resultado)
     } catch (err) { setOverrideErr(err.message || 'Erro ao limpar') }
   }
 
