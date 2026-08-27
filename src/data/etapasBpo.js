@@ -1,5 +1,5 @@
 // Categorias usadas pra agrupar os Materiais Gerais da Mentoria (Biblioteca).
-// As primeiras seguem o ciclo de vida do cliente no BPO — "IA" é diferente,
+// As primeiras seguem o ciclo de vida do cliente no BPO, "IA" é diferente,
 // é transversal (serve pra qualquer etapa), por isso fica à parte, não é
 // mais uma etapa do cliente.
 export const ETAPAS_BPO = [
