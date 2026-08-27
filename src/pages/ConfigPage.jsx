@@ -773,6 +773,38 @@ export default function ConfigPage() {
         </Card>
       )}
 
+      {tab === 'empresa' && (
+        <Card style={{ marginTop:16 }}>
+          <CardHeader title="Integração com seu site" icon="🔗" />
+          <div style={{ padding:16 }}>
+            <div style={{ fontSize:12, color:'#64748B', marginBottom:12, lineHeight:1.6 }}>
+              Se você tem um site próprio com formulário de diagnóstico ou precificação, pode enviar esses dados direto pro CRM do Fluxe, o lead já cai automaticamente na etapa "Lead novo". Passe esse ID pra quem monta seu site.
+            </div>
+            <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>ID da sua empresa (pra integrações)</label>
+            <div style={{ display:'flex', gap:8, marginBottom:14 }}>
+              <input readOnly value={empresa?.id || ''} style={{ ...fi, fontFamily:'monospace', background:'#F8FAFC' }} onFocus={e => e.target.select()} />
+              <Btn variant="outline" onClick={() => { navigator.clipboard.writeText(empresa?.id || ''); alert('✓ ID copiado!') }}>Copiar</Btn>
+            </div>
+            <div style={{ fontSize:11, fontWeight:700, color:'#334155', marginBottom:6 }}>Exemplo (JavaScript, no formulário do site):</div>
+            <pre style={{ background:'#0F172A', color:'#E2E8F0', padding:12, borderRadius:8, fontSize:11, overflowX:'auto', lineHeight:1.6 }}>
+{`fetch('https://zwvmprcuxhvhbuvdcybs.supabase.co/functions/v1/lead-site', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    empresa_id: '${empresa?.id || 'SEU_ID_AQUI'}',
+    nome: 'Nome do prospect',
+    email: 'email@prospect.com',
+    whatsapp: '11999999999',
+    segmento: 'Segmento informado no diagnóstico',
+    origem: 'Site'
+  })
+})`}
+            </pre>
+            <div style={{ fontSize:10, color:'#94A3B8', marginTop:8 }}>Só "empresa_id" e "nome" são obrigatórios, os demais campos são opcionais.</div>
+          </div>
+        </Card>
+      )}
+
       {/* ABA EQUIPE */}
       {tab === 'equipe' && (() => {
         const limiteUsuarios = empresa?.plano === 'essencial' ? 3 : null
