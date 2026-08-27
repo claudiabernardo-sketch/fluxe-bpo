@@ -38,6 +38,15 @@ function normalizarBancos(lista: string[]): string[] {
   return [...new Set((lista || []).map(normalizarBanco))]
 }
 
+// Identidade de uma tarefa gerada: modelo + cliente + banco. Antes a trava
+// anti duplicidade comparava o texto do título, que é campo livre e muda
+// (renomear o modelo, cadastrar o banco do cliente depois das tarefas já
+// geradas) — quando mudava, a trava não reconhecia a tarefa que já existia e
+// criava outra pro mesmo dia.
+function chaveTarefa(modeloId: string, clienteId: string | null, banco: string | null): string {
+  return `${modeloId}::${clienteId ?? 'null'}::${banco ?? ''}`
+}
+
 // ── Timezone: Brasil (BRT = UTC-3) ──────────────────────────────────────────
 function getHojeBRT(): string {
   const now = new Date()
@@ -174,6 +183,7 @@ serve(async (req) => {
   const dryRun          = body?.dry_run === true
   const filtroClienteId = body?.cliente_id ?? null   // gerar só para este cliente
   const filtroEmpresaId = body?.empresa_id ?? null   // gerar só para esta empresa
+  const filtroModeloId  = body?.modelo_id  ?? null   // gerar só para este modelo
 
   // Datas a processar: range ou data única ou hoje
   let datasAlvo: string[]
@@ -249,7 +259,7 @@ serve(async (req) => {
             responsavel_id,
             checklist_items_override,
             tarefa_modelos!inner (
-              id, titulo, categoria, prioridade,
+              id, titulo, categoria, prioridade, expandir_por_banco,
               recorrencia, dia_mes, dias_semana, dias_mes,
               checklist_items,
               ativo, deleted_at
@@ -262,6 +272,11 @@ serve(async (req) => {
           .is('tarefa_modelos.deleted_at', null)
 
         if (filtroClienteId) queryVinculos = queryVinculos.eq('cliente_id', filtroClienteId)
+        // Filtro por modelo: usado quando se muda a recorrência de um vínculo e
+        // só as tarefas daquela rotina precisam ser refeitas — sem ele a
+        // regeração adiantaria o mês inteiro de todas as outras rotinas do
+        // cliente, que ninguém pediu.
+        if (filtroModeloId)  queryVinculos = queryVinculos.eq('modelo_id',  filtroModeloId)
 
         const { data: vinculos, error: errVinc } = await queryVinculos
         if (errVinc) { erros.push(`[${empId}] vinculos: ${errVinc.message}`); continue }
@@ -290,14 +305,14 @@ serve(async (req) => {
           const modeloIds = [...new Set((vinculos as any[]).map((v: any) => v.modelo_id))]
           const { data: existentes } = await supabase
             .from('tarefas')
-            .select('modelo_id, cliente_id, titulo')
+            .select('modelo_id, cliente_id, banco')
             .eq('empresa_id', empId)
             .in('modelo_id', modeloIds)
             .eq('data_execucao', dataAlvo)
             .is('deleted_at', null)
 
           const existSet = new Set(
-            (existentes ?? []).map((t: any) => `${t.modelo_id}::${t.cliente_id ?? 'null'}::${t.titulo}`)
+            (existentes ?? []).map((t: any) => chaveTarefa(t.modelo_id, t.cliente_id, t.banco))
           )
 
           const toInsert: any[] = []
@@ -344,19 +359,20 @@ serve(async (req) => {
               continue
             }
 
-            // Expandir por banco se for conciliação bancária — usa a categoria
-            // (campo fixo e confiável), não o título (texto livre, pode variar)
-            const isConciliacao = modelo.categoria === 'Conciliação Bancária'
-            const bancosCliente: string[] = (isConciliacao && Array.isArray(cliente.bancos) && cliente.bancos.length > 0)
+            // Uma tarefa por conta bancária do cliente. Quem manda é a chavinha
+            // do modelo, não a categoria: categoria classifica pro relatório e não
+            // tem nada a ver com quantas tarefas o dia gera. Enquanto os dois papéis
+            // moravam no mesmo campo, conciliação salva como "Contas a Pagar" não
+            // puxava banco nenhum e "Conciliação Hotmart" se multiplicaria por conta.
+            const bancosCliente: string[] = (modelo.expandir_por_banco && Array.isArray(cliente.bancos) && cliente.bancos.length > 0)
               ? normalizarBancos(cliente.bancos)
               : []
-            const titulosParaGerar = bancosCliente.length > 0
-              ? bancosCliente.map((b: string) => `${modelo.titulo} — ${b}`)
-              : [modelo.titulo]
+            const variacoes: { titulo: string; banco: string | null }[] = bancosCliente.length > 0
+              ? bancosCliente.map((b: string) => ({ titulo: `${modelo.titulo} — ${b}`, banco: b }))
+              : [{ titulo: modelo.titulo, banco: null }]
 
-            for (const tituloFinal of titulosParaGerar) {
-              // Verificar idempotência por título específico
-              const key = `${vinculo.modelo_id}::${clienteId ?? 'null'}::${tituloFinal}`
+            for (const { titulo: tituloFinal, banco } of variacoes) {
+              const key = chaveTarefa(vinculo.modelo_id, clienteId, banco)
               if (existSet.has(key)) {
                 detalhes.push({
                   empresa_id: empId, cliente_id: clienteId, modelo_id: vinculo.modelo_id,
@@ -374,6 +390,7 @@ serve(async (req) => {
                 modelo_id:     vinculo.modelo_id,
                 cliente_id:    clienteId,
                 titulo:        tituloFinal,
+                banco:         banco,
                 categoria:     modelo.categoria ?? null,
                 prioridade:    modelo.prioridade,
                 status:        'aberta',

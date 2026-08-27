@@ -40,7 +40,7 @@ const ETAPAS_MODELO = [
   { v:'acompanhamento', label:'Acompanhamento' },
   { v:'encerramento',   label:'Encerramento' },
 ]
-const EMPTY_FORM = { titulo:'', descricao:'', categoria:'', etapa:'', prioridade:'media', recorrencia:'dias_uteis', dias_semana:[], dia_mes:5, dias_mes:[], checklist_items:[], ativo:true }
+const EMPTY_FORM = { titulo:'', descricao:'', categoria:'', etapa:'', prioridade:'media', recorrencia:'dias_uteis', dias_semana:[], dia_mes:5, dias_mes:[], checklist_items:[], ativo:true, expandir_por_banco:false }
 
 const fi = { width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:13, fontFamily:'inherit', background:'#fff', outline:'none' }
 const recLabel = { unica:'⚡ Pontual', diaria:'Diária', dias_uteis:'Dias úteis', semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal', dias_especificos:'Dias espec.', bimestral:'Bimestral', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual' }
@@ -56,13 +56,23 @@ function lastDayOfMonth() {
 function normalize(s) {
   return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
 }
-function matchRotinasModelos(rotinas, modelos) {
+// A biblioteca costuma ter vários modelos de nome quase igual ("AGENDAMENTOS
+// BANCÁRIOS", "AGENDAMENTOS BANCARIOS", "AGEDAMENTOS BANCÁRIOS"). Pegar o
+// primeiro que casasse fazia a linha apontar pra um modelo diferente do que
+// estava vinculado, mostrar "não vinculado" e a pessoa clicar em Vincular de
+// novo — foi assim que um cliente acumulou quatro vínculos da mesma rotina,
+// cada um gerando a sua tarefa no mesmo dia. Vinculado ganha de não vinculado,
+// e título idêntico ganha de título parecido; empate mantém o primeiro, que é
+// o comportamento de antes pra quem ainda não vinculou nada.
+function matchRotinasModelos(rotinas, modelos, linkedModelIds = new Set()) {
   return rotinas.map(rot => {
     const nRot = normalize(rot.titulo)
-    const match = modelos.find(m => {
+    const candidatos = modelos.filter(m => {
       const nMod = normalize(m.titulo)
       return nMod === nRot || nMod.includes(nRot) || nRot.includes(nMod)
     })
+    const peso = m => (linkedModelIds.has(m.id) ? 2 : 0) + (normalize(m.titulo) === nRot ? 1 : 0)
+    const match = candidatos.reduce((melhor, m) => (!melhor || peso(m) > peso(melhor) ? m : melhor), null)
     return { rotina: rot, modelo: match || null }
   })
 }
@@ -145,7 +155,7 @@ export default function ModelosPage() {
       etapa: m.etapa || '', prioridade: m.prioridade, recorrencia: m.recorrencia,
       dias_semana: m.dias_semana || [], dia_mes: m.dia_mes || 5,
       dias_mes: m.dias_mes || [], checklist_items: m.checklist_items || [],
-      ativo: m.ativo, _id: m.id,
+      ativo: m.ativo, expandir_por_banco: !!m.expandir_por_banco, _id: m.id,
     })
     setNewCk(''); setModal('edit')
   }
@@ -174,6 +184,7 @@ export default function ModelosPage() {
       dia_mes: ['mensal','quinzenal','bimestral','trimestral','semestral','anual'].includes(form.recorrencia) ? form.dia_mes : null,
       dias_mes: form.recorrencia === 'dias_especificos' ? form.dias_mes : null,
       checklist_items: form.checklist_items, ativo: form.ativo,
+      expandir_por_banco: form.expandir_por_banco,
     }
     try {
       if (modal === 'edit') { await updateModelo.mutateAsync({ id: form._id, ...payload }) }
@@ -227,10 +238,20 @@ export default function ModelosPage() {
     setOverrideId(vinculo.id)
   }
 
+  // A troca de recorrência refaz as tarefas futuras dessa rotina. Avisa no
+  // banner de geração, que fica visível depois que o painel de override fecha.
+  function avisarRessync(resultado) {
+    const r = resultado?.ressync
+    if (!r || (!r.removidas && !r.geradas)) return
+    setGeracaoMsg({ ok: true, texto:
+      `Recorrência salva. ${r.removidas} tarefa(s) futura(s) pela regra antiga ` +
+      `foram removidas e ${r.geradas} foram criadas pela regra nova.` })
+  }
+
   async function salvarOverride() {
     try {
       setOverrideErr('')
-      await updateVinculo.mutateAsync({
+      const resultado = await updateVinculo.mutateAsync({
         id: overrideId, clienteId: fCliente,
         recorrencia: overrideForm.recorrencia,
         dias_semana: overrideForm.recorrencia === 'semanal' ? overrideForm.dias_semana : null,
@@ -238,14 +259,16 @@ export default function ModelosPage() {
         hora: overrideForm.hora || null,
       })
       setOverrideId(null)
+      avisarRessync(resultado)
     } catch (err) { setOverrideErr(err.message || 'Erro ao salvar') }
   }
 
   async function usarPadraoModelo() {
     try {
       setOverrideErr('')
-      await updateVinculo.mutateAsync({ id: overrideId, clienteId: fCliente, recorrencia: null, dias_semana: null, dia_mes: null, hora: null })
+      const resultado = await updateVinculo.mutateAsync({ id: overrideId, clienteId: fCliente, recorrencia: null, dias_semana: null, dia_mes: null, hora: null })
       setOverrideId(null)
+      avisarRessync(resultado)
     } catch (err) { setOverrideErr(err.message || 'Erro ao limpar') }
   }
 
@@ -323,7 +346,7 @@ export default function ModelosPage() {
   const naoOperacional = isSpecificClient && statusOpAtual !== 'operacional'
 
   // Cruzamento rotinas × modelos
-  const cruzamento = matchRotinasModelos(rotinas, modelos)
+  const cruzamento = matchRotinasModelos(rotinas, modelos, linkedModelIds)
   const modelosNaRotina = new Set(cruzamento.map(c => c.modelo?.id).filter(Boolean))
 
   // Modelos que NÃO aparecem na rotina (para seção "Outros modelos")
@@ -917,9 +940,20 @@ export default function ModelosPage() {
                   style={{ padding:'8px 14px', borderRadius:8, background:'#6366F1', color:'#fff', border:'none', cursor:'pointer', fontSize:13 }}>+</button>
               </div>
             </div>
-            <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, color:'#475569', marginBottom:20, cursor:'pointer' }}>
+            <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, color:'#475569', marginBottom:10, cursor:'pointer' }}>
               <input type="checkbox" checked={form.ativo} onChange={e => set('ativo', e.target.checked)} />
               Modelo ativo (gera tarefas automaticamente)
+            </label>
+            <label style={{ display:'flex', alignItems:'flex-start', gap:8, fontSize:13, color:'#475569', marginBottom:20, cursor:'pointer' }}>
+              <input type="checkbox" checked={form.expandir_por_banco} onChange={e => set('expandir_por_banco', e.target.checked)} style={{ marginTop:3 }} />
+              <span>
+                Uma tarefa por banco do cliente
+                <div style={{ fontSize:11, color:'#94A3B8', marginTop:2 }}>
+                  Cliente com Itaú e Sicoob ganha duas tarefas por dia, uma pra cada conta.
+                  Deixe desligado quando a tarefa já cobre todas as contas de uma vez,
+                  ou quando o banco já está escrito no nome do modelo.
+                </div>
+              </span>
             </label>
             <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
               <Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn>
