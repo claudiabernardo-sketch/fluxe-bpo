@@ -46,6 +46,16 @@ serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
+    // Identifica quem está chamando, pra evitar convidar a si mesmo por
+    // engano (digitou o próprio e-mail pensando estar cadastrando outra
+    // pessoa), isso já sobrescreveu nome e nível de acesso de uma conta.
+    const callerToken = (req.headers.get('authorization') || '').replace('Bearer ', '')
+    let callerId: string | null = null
+    if (callerToken && callerToken !== Deno.env.get('SUPABASE_ANON_KEY')) {
+      const { data: callerData } = await supabaseAdmin.auth.getUser(callerToken)
+      callerId = callerData?.user?.id || null
+    }
+
     // ── Limite de usuários do plano Essencial (3 usuários) ────────────────
     const { data: empresaRow } = await supabaseAdmin
       .from('empresas')
@@ -58,6 +68,7 @@ serve(async (req) => {
         .from('usuarios')
         .select('id')
         .eq('email', email)
+        .eq('empresa_id', empresa_id)
         .maybeSingle()
 
       // Só bloqueia se for usuário NOVO (editar/reenviar convite de quem já existe não deve travar)
@@ -91,11 +102,17 @@ serve(async (req) => {
     let userId: string
     const { data: existingProfile } = await supabaseAdmin
       .from('usuarios')
-      .select('id')
+      .select('id, empresa_id')
       .eq('email', email)
       .maybeSingle()
 
     if (existingProfile?.id) {
+      if (callerId && existingProfile.id === callerId) {
+        return ok({ error: 'Esse e-mail é o mesmo da sua conta. Pra convidar alguém da equipe, use o e-mail da pessoa, não o seu.' })
+      }
+      if (existingProfile.empresa_id !== empresa_id) {
+        return ok({ error: 'Esse e-mail já pertence a uma conta em outra empresa no Fluxe. Peça pra pessoa usar um e-mail diferente.' })
+      }
       userId = existingProfile.id
       const { error: pwError } = await supabaseAdmin.auth.admin.updateUserById(userId, { password: senhaTemporaria })
       if (pwError) return ok({ error: pwError.message })
