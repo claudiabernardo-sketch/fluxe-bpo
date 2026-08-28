@@ -74,19 +74,34 @@ export default function ResetPasswordPage() {
   const nav = useNavigate()
 
   useEffect(() => {
-    try {
-      supabase.auth.getSession().then(({ data: { session }, error }) => {
+    // O e-mail de redefinição manda o link como ?token_hash=...&type=recovery
+    // (não como #access_token=... nem ?code=...), esse formato não é
+    // detectado automaticamente pelo client, precisa trocar o token pela
+    // sessão explicitamente com verifyOtp antes de checar getSession.
+    async function processarLink() {
+      try {
+        const params = new URLSearchParams(window.location.search)
+        const token_hash = params.get('token_hash')
+        const type = params.get('type')
+        if (token_hash && type) {
+          const { error } = await supabase.auth.verifyOtp({ token_hash, type })
+          if (error) { setErro(true); return }
+          setReady(true)
+          return
+        }
+        const { data: { session }, error } = await supabase.auth.getSession()
         if (error) { setErro(true); return }
         if (session) setReady(true)
         else setErro(true)
-      })
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
-          setReady(true); setErro(false)
-        }
-      })
-      return () => subscription.unsubscribe()
-    } catch { setErro(true) }
+      } catch { setErro(true) }
+    }
+    processarLink()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
+        setReady(true); setErro(false)
+      }
+    })
+    return () => subscription.unsubscribe()
   }, [])
 
   async function handleSubmit(e) {
