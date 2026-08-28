@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../store/authStore'
 import LOGO_WHITE from '../assets/logo-fluxe-white.png'
 import LOGO_ICON from '../assets/logo-icon.png'
 
@@ -71,7 +72,25 @@ export default function ResetPasswordPage() {
   const [focusPass, setFocusPass]   = useState(false)
   const [focusConf, setFocusConf]   = useState(false)
   const [success, setSuccess]       = useState(false)
+  const [mfaStep, setMfaStep]       = useState(null) // { factorId, challengeId } quando precisa do código 2FA
+  const [mfaCode, setMfaCode]       = useState('')
+  const [mfaMsg, setMfaMsg]         = useState('')
+  const [mfaLoading, setMfaLoading] = useState(false)
   const nav = useNavigate()
+  const { mfaChallenge, mfaVerifyLogin } = useAuthStore()
+
+  // Quando a conta tem 2FA ativo, trocar a senha exige uma sessão AAL2,
+  // o link de recuperação sozinho só dá AAL1. Sem isso, o updateUser
+  // falha com "Uma sessão AAL2 é necessária..." sem explicar o porquê.
+  async function checarMfaEProsseguir() {
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+    if (aal?.nextLevel === 'aal2' && aal?.currentLevel !== 'aal2') {
+      const { factorId, challengeId, error } = await mfaChallenge()
+      if (error) { setErro(true); return }
+      setMfaStep({ factorId, challengeId })
+    }
+    setReady(true)
+  }
 
   useEffect(() => {
     // O e-mail de redefinição manda o link como ?token_hash=...&type=recovery
@@ -86,23 +105,31 @@ export default function ResetPasswordPage() {
         if (token_hash && type) {
           const { error } = await supabase.auth.verifyOtp({ token_hash, type })
           if (error) { setErro(true); return }
-          setReady(true)
+          await checarMfaEProsseguir()
           return
         }
         const { data: { session }, error } = await supabase.auth.getSession()
         if (error) { setErro(true); return }
-        if (session) setReady(true)
+        if (session) await checarMfaEProsseguir()
         else setErro(true)
       } catch { setErro(true) }
     }
     processarLink()
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
-        setReady(true); setErro(false)
+        checarMfaEProsseguir(); setErro(false)
       }
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  async function handleMfaSubmit(e) {
+    e.preventDefault()
+    setMfaLoading(true); setMfaMsg('')
+    const { error } = await mfaVerifyLogin(mfaStep.factorId, mfaStep.challengeId, mfaCode.replace(/\s/g, ''))
+    if (error) { setMfaMsg('Código incorreto ou expirado. Tente novamente.'); setMfaLoading(false); return }
+    setMfaStep(null); setMfaLoading(false)
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -367,6 +394,51 @@ export default function ResetPasswordPage() {
                   }} />
                   <p style={{ fontSize:13, color:'#94A3B8' }}>Verificando link de acesso...</p>
                 </div>
+
+              ) : mfaStep ? (
+                /* ── Código de verificação em duas etapas ── */
+                <form onSubmit={handleMfaSubmit}>
+                  <div style={{ marginBottom:20 }}>
+                    <label style={{
+                      display:'block', fontSize:12, fontWeight:700, color:'#374151', marginBottom:8,
+                      textTransform:'uppercase', letterSpacing:'0.6px',
+                    }}>
+                      Código de verificação
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={mfaCode}
+                      onChange={e => { setMfaCode(e.target.value); setMfaMsg('') }}
+                      required
+                      autoFocus
+                      placeholder="000000"
+                      style={{
+                        width:'100%', padding:'13px 16px', borderRadius:12, fontSize:18, letterSpacing:'4px',
+                        textAlign:'center', color:'#0F172A', background:'#F8FAFC',
+                        border:'2px solid #E2E8F0', outline:'none', boxSizing:'border-box',
+                      }}
+                    />
+                    <p style={{ fontSize:12, color:'#64748B', marginTop:8, lineHeight:1.6 }}>
+                      Sua conta tem verificação em duas etapas ativa. Digite o código do seu aplicativo autenticador pra continuar.
+                    </p>
+                    {mfaMsg && <p style={{ fontSize:12, color:'#DC2626', marginTop:6 }}>{mfaMsg}</p>}
+                  </div>
+                  <button
+                    className="reset-btn"
+                    type="submit"
+                    disabled={mfaLoading || mfaCode.length < 6}
+                    style={{
+                      width:'100%', padding:'14px', borderRadius:12, border:'none',
+                      background:'linear-gradient(135deg,#6366F1,#8B5CF6)',
+                      color:'#fff', fontSize:15, fontWeight:700, cursor: mfaLoading ? 'default' : 'pointer',
+                      opacity: mfaLoading || mfaCode.length < 6 ? .7 : 1,
+                      boxShadow:'0 4px 14px rgba(99,102,241,.3)',
+                    }}
+                  >
+                    {mfaLoading ? 'Verificando...' : 'Verificar código'}
+                  </button>
+                </form>
 
               ) : (
                 /* ── Formulário ── */
