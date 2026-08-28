@@ -378,6 +378,11 @@ export default function MentoriaGrupoPage() {
 
       {/* ── PARA QUEM É / NÃO É ─────────────────────────────────── */}
       <section style={{ padding: isMobile ? '64px 20px' : '120px 48px', background: '#05070E' }}>
+        <Reveal>
+          <p style={{ maxWidth: 700, margin: '0 auto 40px', textAlign: 'center', fontSize: 15, color: '#94A3B8', lineHeight: 1.7 }}>
+            Não importa se você está começando agora ou já tem clientes, o método se adapta ao seu momento. Quem está começando sai com posicionamento, oferta e os primeiros clientes fechados com segurança. Quem já tem clientes sai com a operação organizada, o preço corrigido e espaço pra crescer sem virar refém do próprio negócio.
+          </p>
+        </Reveal>
         <div style={{ maxWidth: 900, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2,1fr)', gap: 24 }}>
           <Reveal>
             <div style={{ padding: '28px 26px', background: 'rgba(74,222,128,.05)', border: '1px solid rgba(74,222,128,.2)', borderRadius: 16, height: '100%', boxSizing: 'border-box' }}>
