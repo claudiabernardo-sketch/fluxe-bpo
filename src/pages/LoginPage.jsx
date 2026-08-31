@@ -8,7 +8,7 @@ import CLAUDIA_ECOSSISTEMA_SRC from '../assets/claudia-hero-ecosistema.jpg'
 
 // ── Conteúdo ───────────────────────────────────────────────────────────────
 
-const WHATSAPP_DIAGNOSTICO = 'https://wa.me/5511917101173?text=Quero+agendar+um+diagn%C3%B3stico+sobre+o+Fluxe'
+const WHATSAPP_DIAGNOSTICO = `https://wa.me/5511917101173?text=${encodeURIComponent('Quero agendar um diagnóstico da minha operação de BPO')}`
 
 const METODO_FLUXE = [
   { num: '01', nome: 'Comercial' },
