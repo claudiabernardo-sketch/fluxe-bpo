@@ -103,7 +103,10 @@ export default function DiagnosticoCaosPage() {
       padding: isMobile ? '28px 14px 60px' : '44px 16px 80px',
       fontFamily: "'Poppins',sans-serif", boxSizing: 'border-box',
     }}>
-      <img src={LOGO_SRC} alt="Fluxe" style={{ height: 30, marginBottom: 22 }} />
+      <img src={LOGO_SRC} alt="Fluxe" style={{ height: 30, marginBottom: 6 }} />
+      <div style={{ fontSize: 11.5, color: '#6366F1', fontWeight: 700, marginBottom: 22, textAlign: 'center' }}>
+        O app que você vai usar na mentoria BPO Lucrativo™
+      </div>
 
       <div style={{ width: '100%', maxWidth: 600 }}>
         <div style={{
@@ -138,6 +141,9 @@ export default function DiagnosticoCaosPage() {
               )})()}
               <div style={{ fontSize: 12, color: '#94A3B8', borderTop: '1px solid #F1F5F9', paddingTop: 18, lineHeight: 1.6 }}>
                 Obrigada por participar! Cláudia vai te chamar em breve com os próximos passos.
+              </div>
+              <div style={{ fontSize: 12, color: '#4F46E5', fontWeight: 700, marginTop: 12, lineHeight: 1.6 }}>
+                Esse diagnóstico já rodou dentro do Fluxe, o app que você vai usar pra tirar sua operação do caos na mentoria BPO Lucrativo™.
               </div>
             </div>
           ) : (
