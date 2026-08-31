@@ -2,16 +2,16 @@ import { useEffect, useState } from 'react'
 import LOGO_SRC from '../assets/logo-fluxe.png'
 
 const AREAS = [
-  ['onboarding', 'Onboarding de clientes', 'fa-solid fa-handshake'],
-  ['padronizacao', 'Padronização dos processos', 'fa-solid fa-list-check'],
-  ['distribuicao', 'Distribuição de responsabilidades', 'fa-solid fa-users'],
-  ['prazos', 'Gestão de prazos', 'fa-solid fa-calendar-days'],
-  ['conciliacao', 'Conciliação e conferências', 'fa-solid fa-scale-balanced'],
-  ['aprovacoes', 'Aprovações do cliente', 'fa-solid fa-stamp'],
-  ['comunicacao', 'Comunicação com clientes', 'fa-solid fa-comments'],
-  ['erros', 'Controle de erros e retrabalho', 'fa-solid fa-triangle-exclamation'],
-  ['indicadores', 'Indicadores da operação', 'fa-solid fa-chart-line'],
-  ['capacidade', 'Capacidade para receber novos clientes', 'fa-solid fa-arrow-up-right-dots'],
+  ['onboarding', 'Onboarding de clientes', 'fa-solid fa-handshake', 'Crie um checklist padrão de entrada, com documentos, acessos e prazos definidos antes do primeiro mês do cliente.'],
+  ['padronizacao', 'Padronização dos processos', 'fa-solid fa-list-check', 'Escolha 1 processo crítico e documente passo a passo, quem faz, como faz e onde fica a prova de que foi feito.'],
+  ['distribuicao', 'Distribuição de responsabilidades', 'fa-solid fa-users', 'Defina um responsável único por cliente e por tarefa, sem depender de quem tiver tempo sobrando.'],
+  ['prazos', 'Gestão de prazos', 'fa-solid fa-calendar-days', 'Centralize todos os prazos em uma agenda única, com alerta antes do vencimento, não depois.'],
+  ['conciliacao', 'Conciliação e conferências', 'fa-solid fa-scale-balanced', 'Padronize uma rotina fixa de conferência antes de qualquer entrega ao cliente.'],
+  ['aprovacoes', 'Aprovações do cliente', 'fa-solid fa-stamp', 'Defina um fluxo claro de aprovação, com prazo de resposta do cliente combinado.'],
+  ['comunicacao', 'Comunicação com clientes', 'fa-solid fa-comments', 'Centralize a comunicação em um canal só, com histórico registrado, sem depender do WhatsApp pessoal.'],
+  ['erros', 'Controle de erros e retrabalho', 'fa-solid fa-triangle-exclamation', 'Registre todo erro e a causa dele, pra parar de repetir o mesmo problema todo mês.'],
+  ['indicadores', 'Indicadores da operação', 'fa-solid fa-chart-line', 'Acompanhe pelo menos 3 números da operação toda semana, não só no fim do mês.'],
+  ['capacidade', 'Capacidade para receber novos clientes', 'fa-solid fa-arrow-up-right-dots', 'Calcule quantas horas sua equipe tem disponível antes de aceitar o próximo cliente.'],
 ]
 
 const NOTA_LABELS = ['0', '1', '2', '3', '4', '5']
@@ -137,6 +137,25 @@ export default function DiagnosticoCaosPage() {
                   </div>
                   <div style={{ fontSize: 19, fontWeight: 800, color: r.cor, marginBottom: 10, lineHeight: 1.35 }}>{r.titulo}</div>
                   <div style={{ fontSize: 14, color: '#475569', lineHeight: 1.7, marginBottom: 24, maxWidth: 440, margin: '0 auto 24px' }}>{r.texto}</div>
+
+                  <div style={{ textAlign: 'left', background: '#FAFAFF', border: '1px solid #EEF2FF', borderRadius: 16, padding: isMobile ? '18px 16px' : '22px 24px', marginBottom: 22 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#4F46E5', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 14 }}>
+                      O que fazer primeiro
+                    </div>
+                    {[...AREAS].sort((a, b) => (notas[a[0]] ?? 0) - (notas[b[0]] ?? 0)).slice(0, 3).map(([key, label, icon, acao], i) => (
+                      <div key={key} style={{ display: 'flex', gap: 12, marginBottom: i < 2 ? 16 : 0 }}>
+                        <div style={{ width: 30, height: 30, borderRadius: 9, background: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0 }}>
+                          <i className={icon} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 12.5, fontWeight: 700, color: '#0F172A', marginBottom: 3 }}>
+                            {label} <span style={{ color: '#94A3B8', fontWeight: 600 }}>(nota {notas[key] ?? 0})</span>
+                          </div>
+                          <div style={{ fontSize: 12.5, color: '#475569', lineHeight: 1.6 }}>{acao}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </>
               )})()}
               <div style={{ fontSize: 12, color: '#94A3B8', borderTop: '1px solid #F1F5F9', paddingTop: 18, lineHeight: 1.6 }}>
