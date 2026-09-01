@@ -144,7 +144,7 @@ export default function ModelosPage() {
   const [form,  setForm]    = useState(EMPTY_FORM)
   const [newCk, setNewCk]   = useState('')
   const [confirmDel, setConfirmDel] = useState(null)
-  const [showOutros, setShowOutros] = useState(false)
+  const [showOutros, setShowOutros] = useState(true)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -369,6 +369,7 @@ export default function ModelosPage() {
         color="#F59E0B"
         tips={[
           'Selecione um cliente para ver as rotinas dele e vincular os modelos correspondentes.',
+          'Não precisa ter rotina configurada: em "Outros modelos disponíveis" dá pra vincular qualquer modelo direto ao cliente.',
           'Após vincular, clique em Gerar para criar as tarefas a partir da data escolhida.',
           'Depois da geração inicial, o sistema cria tarefas automaticamente todo dia.',
         ]}
@@ -396,7 +397,7 @@ export default function ModelosPage() {
 
       {/* FILTROS */}
       <div style={{ marginBottom:20, display:'flex', gap:8 }}>
-        <select value={fCliente} onChange={e => { setFCliente(e.target.value); setGeracaoMsg(null); setRemoverMsg(null); setShowOutros(false) }}
+        <select value={fCliente} onChange={e => { setFCliente(e.target.value); setGeracaoMsg(null); setRemoverMsg(null); setShowOutros(true) }}
           style={{ flex:1.5, padding:'9px 12px', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer',
             border:'1px solid #E2E8F0', background:'#fff', color:'#334155' }}>
           <option value="">Todos os clientes</option>
@@ -520,7 +521,7 @@ export default function ModelosPage() {
               <Card>
                 <div style={{ padding:'24px 20px', textAlign:'center', color:'#94A3B8', fontSize:13 }}>
                   Nenhuma rotina configurada para este cliente.
-                  <br /><span style={{ fontSize:12 }}>Configure na aba Rotina do cliente primeiro.</span>
+                  <br /><span style={{ fontSize:12 }}>Configure na aba Rotina do cliente, ou vincule um modelo direto na lista "Outros modelos disponíveis" logo abaixo.</span>
                 </div>
               </Card>
             ) : (
