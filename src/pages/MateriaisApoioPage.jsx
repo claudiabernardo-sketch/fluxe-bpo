@@ -12,6 +12,7 @@ const APRESENTACOES = {
   'Cheat Sheet de Vendas': '/apresentacao-vendas',
   'Apresentação: Manual Operacional do BPO': '/apresentacao-manual-operacional',
   'Apresentação: Comercial e Precificação Consultiva': '/apresentacao-venda-consultiva',
+  'Apresentação: Onboarding do Cliente (Encontro 4)': '/apresentacao-onboarding-cliente',
 }
 
 function urlDoMaterial(m) {
