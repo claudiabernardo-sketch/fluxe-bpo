@@ -135,6 +135,8 @@ function CalendarioAulas({ aulas, concluidas, onSelecionar, aulaSelecionadaId })
 }
 
 function CardAula({ a, concluida, destacada }) {
+  const hoje = fmtDataLocal(new Date())
+  const jaPassou = a.data && a.data < hoje
   return (
     <div style={{ border: `1.5px solid ${destacada ? '#6366F1' : 'var(--bo)'}`, background: destacada ? '#EEF2FF' : 'transparent', borderRadius: 10, padding: '12px 14px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
       <AulaConcluidaCheck aula={a} concluida={concluida} />
@@ -146,12 +148,14 @@ function CardAula({ a, concluida, destacada }) {
         </div>
       </div>
       <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap' }}>
-        {a.link_meet && (
+        {!jaPassou && a.link_meet && (
           <a href={a.link_meet} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#fff', textDecoration: 'none', background: '#16A34A', borderRadius: 8, padding: '6px 12px' }}>
             🎥 Entrar na aula
           </a>
         )}
-        <BotaoAgenda titulo={`Aula ${a.numero}: ${a.titulo}`} data={a.data} horario={a.horario} detalhes={a.link_meet || a.video_url || a.material_url || ''} />
+        {!jaPassou && (
+          <BotaoAgenda titulo={`Aula ${a.numero}: ${a.titulo}`} data={a.data} horario={a.horario} detalhes={a.link_meet || a.video_url || a.material_url || ''} />
+        )}
         {a.material_url && (
           <a href={a.material_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: 'var(--tx2)', textDecoration: 'none', border: '1px solid var(--bo)', borderRadius: 8, padding: '6px 12px' }}>
             📄 Material
@@ -162,7 +166,7 @@ function CardAula({ a, concluida, destacada }) {
             ▶ Assistir
           </a>
         ) : (
-          !a.material_url && <span style={{ fontSize: 11, color: 'var(--tx3)' }}>Em breve</span>
+          jaPassou && !a.material_url && <span style={{ fontSize: 11, color: 'var(--tx3)' }}>Gravação em breve</span>
         )}
       </div>
     </div>
