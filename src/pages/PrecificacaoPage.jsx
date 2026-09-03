@@ -389,6 +389,13 @@ const ACADEMIA = [
     icon: '🚨', titulo: 'Sinais de que um cliente não é rentável', desc: 'Identifique antes de fechar',
     body: <><h4>Red flags na precificação</h4><ul><li>Questiona muito o preço antes de entender o serviço</li><li>Faturamento baixo para o escopo solicitado</li><li>Alta complexidade com orçamento limitado</li><li>Prazo de pagamento muito longo (60–90 dias)</li><li>Histórico de troca frequente de prestadores</li></ul><br/><strong>Princípio Fluxe:</strong> 10 clientes rentáveis &gt; 20 clientes que drenam energia e margem.</>
   },
+  {
+    icon: '🧮', titulo: 'Margem de contribuição, o que é (e o que não é)', desc: 'Não confunda com lucro líquido',
+    body: <><h4>O conceito</h4><p>Margem de contribuição (MC) é receita menos custo direto de atendimento, a mão de obra e as ferramentas usadas pra entregar aquele cliente específico. É o que sobra pra pagar o resto do negócio.</p>
+      <h4>Exemplo</h4><p>Cliente paga R$ 1.000 por mês. Os custos diretos pra atender esse cliente, mão de obra e ferramentas, somam R$ 400. Sobram R$ 600, uma MC de 60%.</p>
+      <p>Esses R$ 600 ainda precisam pagar estrutura administrativa, comercial, pró-labore e despesas fixas. Só depois disso é que existe lucro líquido de verdade.</p>
+      <h4>Referência pro BPO</h4><p>Bom piso gerencial: 50% a 60% de margem de contribuição. Não é regra universal, uma operação bem enxuta pode funcionar abaixo disso, e uma com estrutura mais pesada pode precisar de uma MC maior. O importante é nunca confundir os R$ 600 de MC com R$ 600 de lucro.</p></>
+  },
 ]
 
 // ─── COMPONENTES MENORES ─────────────────────────────────────

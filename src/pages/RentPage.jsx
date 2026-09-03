@@ -41,7 +41,7 @@ export default function RentPage() {
         title="Como funciona a Rentabilidade"
         color="#22C55E"
         tips={[
-          'Compara o MRR do cliente com o custo real de atendimento (horas do mês × custo/hora).',
+          'Compara o MRR do cliente com o custo real de atendimento (horas do mês × custo/hora, mais o custo direto mensal cadastrado no cliente).',
           'Essa é a margem de contribuição, receita menos custo direto de atendimento. Ainda falta descontar estrutura fixa, comercial e pró-labore pra chegar no lucro líquido.',
           'Referência de mercado pro BPO: 50 a 60% de margem de contribuição. Ajuste sua meta em Configurações → Operacional.',
           'Margem negativa significa que você está perdendo dinheiro nesse cliente.',

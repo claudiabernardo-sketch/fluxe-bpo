@@ -100,7 +100,11 @@ export default function ClientePage() {
     const valorFormatado = mrrNum > 0
       ? mrrNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       : ''
-    setForm({ ...cliente, valor_mrr: valorFormatado })
+    const custoDiretoNum = cliente.custo_direto_mensal ?? 0
+    const custoDiretoFormatado = custoDiretoNum > 0
+      ? custoDiretoNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : ''
+    setForm({ ...cliente, valor_mrr: valorFormatado, custo_direto_mensal: custoDiretoFormatado })
     setSelectedBancos(normalizarBancos(cliente.bancos))
   }
 
@@ -182,6 +186,7 @@ export default function ClientePage() {
     if (!form?.razao_social) { setSaveErr('Razão social é obrigatória'); return }
     setSaveErr('')
     const mrrNum = parseFloat(String(form.valor_mrr||'0').replace(/\./g,'').replace(',','.')) || 0
+    const custoDiretoNum = parseFloat(String(form.custo_direto_mensal||'0').replace(/\./g,'').replace(',','.')) || 0
     const payload = {
       razao_social: form.razao_social || null,
       fantasia: form.fantasia || null,
@@ -193,6 +198,7 @@ export default function ClientePage() {
       status: form.status || 'ativo',
       etapa: form.etapa || 'operacional',
       valor_mrr: mrrNum || null,
+      custo_direto_mensal: custoDiretoNum || 0,
       vencimento_dia: form.vencimento_dia ? parseInt(form.vencimento_dia, 10) || null : null,
       inicio_contrato: form.inicio_contrato || null,
       escopo: form.escopo || null,
@@ -546,6 +552,11 @@ export default function ClientePage() {
                     {parseFloat(String(form.valor_mrr).replace(/\./g,'').replace(',','.')).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}/mês
                   </div>
                 )}
+              </div>
+              <div>
+                <label className="lbl">Custo direto mensal (R$)</label>
+                <input type="text" inputMode="numeric" value={form.custo_direto_mensal||''} onChange={e=>setForm(f=>({...f,custo_direto_mensal:e.target.value}))} className="fi" placeholder="Ex: 80,00" />
+                <div style={{ fontSize:10, color:'var(--tx3)', marginTop:3 }}>Ferramentas/softwares e outros custos diretos pra atender esse cliente, além da mão de obra. Usado no cálculo de margem de contribuição.</div>
               </div>
               <div>
                 <label className="lbl">Vencimento (dia do mês)</label>
