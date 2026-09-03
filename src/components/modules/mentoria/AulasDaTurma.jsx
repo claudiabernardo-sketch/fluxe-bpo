@@ -30,7 +30,8 @@ export function BotaoAgenda({ titulo, data, horario, detalhes }) {
   const url = googleCalendarUrl({ titulo, data, horario, detalhes })
   if (!url) return null
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: '#0EA5E9', textDecoration: 'none', border: '1px solid #0EA5E9', borderRadius: 8, padding: '6px 12px', whiteSpace: 'nowrap' }}>
+    <a href={url} target="_blank" rel="noopener noreferrer" title="Abre o Google Calendar já preenchido, clique em Salvar lá pra confirmar"
+      style={{ fontSize: 12, fontWeight: 600, color: '#0EA5E9', textDecoration: 'none', border: '1px solid #0EA5E9', borderRadius: 8, padding: '6px 12px', whiteSpace: 'nowrap' }}>
       📅 Agenda
     </a>
   )
