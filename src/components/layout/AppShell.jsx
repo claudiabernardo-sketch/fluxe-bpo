@@ -81,6 +81,7 @@ const PageLoader = () => (
 const NAV = [
   { path:'/',           icon:'fa-solid fa-house',               label:'Início'    },
   { path:'/agenda-mentoria', icon:'fa-solid fa-calendar-days',  label:'Agenda Mentoria', mentoradoOnly:true },
+  { path:'/mentoria',   icon:'fa-solid fa-graduation-cap',      label:'Mentoria'  },
   { path:'/tasks',      icon:'fa-solid fa-list-check',          label:'Tarefas'   },
   { path:'/modelos',    icon:'fa-solid fa-rotate',              label:'Modelos'   },
   { path:'/pendencias', icon:'fa-solid fa-circle-exclamation',  label:'Pendências'},
@@ -100,7 +101,6 @@ const NAV = [
   { grp:'FERRAMENTAS' },
   { path:'/mensagens',  icon:'fa-brands fa-whatsapp',           label:'Mensagens' },
   { path:'/relatorios', icon:'fa-solid fa-chart-column',        label:'Relatórios'},
-  { path:'/mentoria',   icon:'fa-solid fa-graduation-cap',      label:'Mentoria'  },
   { path:'/materiais-apoio', icon:'fa-solid fa-book-open',      label:'Biblioteca' },
   { path:'/plano-negocio', icon:'fa-solid fa-compass',          label:'Meu Plano' },
   { path:'/meu-painel', icon:'fa-solid fa-circle-user',         label:'Meu Painel'},
