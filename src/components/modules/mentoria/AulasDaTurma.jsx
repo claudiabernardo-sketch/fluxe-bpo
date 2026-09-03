@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useTurmaAtualPublica, useMeuProgressoAulas, useToggleProgressoAula, useMeuCheckin, useSalvarCheckin } from '../../../hooks/useData'
+import { useMinhaTurmaMentoria, useMeuProgressoAulas, useToggleProgressoAula, useMeuCheckin, useSalvarCheckin } from '../../../hooks/useData'
 import { useAuthStore } from '../../../store/authStore'
 import { Card, CardHeader, Btn } from '../../ui'
 
@@ -205,7 +205,7 @@ function CardCheckin() {
 
 export default function SecaoAulasDaTurma() {
   const { empresa, profile } = useAuthStore()
-  const { data, isLoading } = useTurmaAtualPublica()
+  const { data, isLoading } = useMinhaTurmaMentoria()
   const { data: concluidas = new Set() } = useMeuProgressoAulas()
   const [modo, setModo] = useState('calendario') // 'calendario' | 'lista'
   const [aulaSelecionadaId, setAulaSelecionadaId] = useState(null)
