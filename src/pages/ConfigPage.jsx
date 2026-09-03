@@ -268,7 +268,7 @@ function CofreEmpCopyBtn({ text, label }) {
 
 function CofreEmpresaCard() {
   const { temPermissao, profile } = useAuthStore()
-  const canSee = temPermissao('ver_senhas')
+  const canSee = temPermissao('ver_senhas') || !!profile?.acesso_cofre_empresa
   const qc = useQueryClient()
   const [revealed, setRevealed] = useState({})
   const [modal, setModal] = useState(null)
@@ -358,7 +358,7 @@ function CofreEmpresaCard() {
   const fi = { width:'100%', padding:'8px 12px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'inherit', background:'#fff', color:'#0F172A', outline:'none' }
 
   return (
-    <Card style={{ marginTop:16 }}>
+    <Card>
       <CardHeader title="Cofre da empresa" icon="🔐" />
       <div style={{ padding:16 }}>
         <div style={{ fontSize:12, color:'#64748B', marginBottom:14, lineHeight:1.6 }}>
@@ -505,6 +505,7 @@ export default function ConfigPage() {
   const [saved, setSaved] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [tab, setTab] = useState(() => new URLSearchParams(window.location.search).get('tab') || 'empresa')
+  const podeCofreEmpresa = profile?.perfil === 'admin' || !!profile?.acesso_cofre_empresa
 
   const [empForm, setEmpForm] = useState({ nome:'', email:'', telefone:'', cnpj:'', site:'', slogan:'', cor_primaria:'#6366F1', cor_secundaria:'#8B5CF6', fonte:'Inter', logo_url:'', autentique_token:'', wa_phone_number_id:'', wa_access_token:'' })
   const [waTesting, setWaTesting] = useState(false)
@@ -665,7 +666,7 @@ export default function ConfigPage() {
 
   const editarUser = useMutation({
     mutationFn: async (u) => {
-      const { data, error } = await supabase.from('usuarios').update({ nome: u.nome, perfil: u.perfil, custo_hora: u.custo_hora, ativo: u.ativo }).eq('id', u.id).select()
+      const { data, error } = await supabase.from('usuarios').update({ nome: u.nome, perfil: u.perfil, custo_hora: u.custo_hora, ativo: u.ativo, acesso_cofre_empresa: !!u.acesso_cofre_empresa }).eq('id', u.id).select()
       if (error) throw error
       if (!data || data.length === 0) throw new Error('Não foi possível editar — sem permissão ou usuário não encontrado.')
     },
@@ -939,7 +940,7 @@ export default function ConfigPage() {
 
       {/* Tabs */}
       <div style={{ display:'flex', gap:4, marginBottom:18, borderBottom:'1px solid #E2E8F0', paddingBottom:0 }}>
-        {[['empresa','🏢 Empresa'],['equipe','👥 Equipe'],['custoHora','💰 Custo/Hora'],['custosOp','📊 Custo da Operação'],['operacional','⚙️ Operacional'],...(profile?.perfil==='admin'?[['integracoes','🔗 Integrações'],['seguranca','🔐 Segurança'],['plano','💳 Meu Plano']]:[]  )].map(([id, label]) => (
+        {[['empresa','🏢 Empresa'],...(podeCofreEmpresa?[['cofre_empresa','🔐 Cofre da Empresa']]:[]),['equipe','👥 Equipe'],['custoHora','💰 Custo/Hora'],['custosOp','📊 Custo da Operação'],['operacional','⚙️ Operacional'],...(profile?.perfil==='admin'?[['integracoes','🔗 Integrações'],['seguranca','🔐 Segurança'],['plano','💳 Meu Plano']]:[]  )].map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{ padding:'8px 16px', border:'none', background:'transparent', cursor:'pointer', fontSize:12, fontWeight:600, color: tab===id?'#6366F1':'#94A3B8', borderBottom: tab===id?'2px solid #6366F1':'2px solid transparent', marginBottom:-1 }}>
             {label}
           </button>
@@ -1018,39 +1019,8 @@ export default function ConfigPage() {
         </Card>
       )}
 
-      {tab === 'empresa' && (
-        <Card style={{ marginTop:16 }}>
-          <CardHeader title="Integração com seu site" icon="🔗" />
-          <div style={{ padding:16 }}>
-            <div style={{ fontSize:12, color:'#64748B', marginBottom:12, lineHeight:1.6 }}>
-              Se você tem um site próprio com formulário de diagnóstico ou precificação, pode enviar esses dados direto pro CRM do Fluxe, o lead já cai automaticamente na etapa "Lead novo". Passe esse ID pra quem monta seu site.
-            </div>
-            <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>ID da sua empresa (pra integrações)</label>
-            <div style={{ display:'flex', gap:8, marginBottom:14 }}>
-              <input readOnly value={empresa?.id || ''} style={{ ...fi, fontFamily:'monospace', background:'#F8FAFC' }} onFocus={e => e.target.select()} />
-              <Btn variant="outline" onClick={() => { navigator.clipboard.writeText(empresa?.id || ''); alert('✓ ID copiado!') }}>Copiar</Btn>
-            </div>
-            <div style={{ fontSize:11, fontWeight:700, color:'#334155', marginBottom:6 }}>Exemplo (JavaScript, no formulário do site):</div>
-            <pre style={{ background:'#0F172A', color:'#E2E8F0', padding:12, borderRadius:8, fontSize:11, overflowX:'auto', lineHeight:1.6 }}>
-{`fetch('https://zwvmprcuxhvhbuvdcybs.supabase.co/functions/v1/lead-site', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    empresa_id: '${empresa?.id || 'SEU_ID_AQUI'}',
-    nome: 'Nome do prospect',
-    email: 'email@prospect.com',
-    whatsapp: '11999999999',
-    segmento: 'Segmento informado no diagnóstico',
-    origem: 'Site'
-  })
-})`}
-            </pre>
-            <div style={{ fontSize:10, color:'#94A3B8', marginTop:8 }}>Só "empresa_id" e "nome" são obrigatórios, os demais campos são opcionais.</div>
-          </div>
-        </Card>
-      )}
-
-      {tab === 'empresa' && <CofreEmpresaCard />}
+      {/* ABA COFRE DA EMPRESA */}
+      {tab === 'cofre_empresa' && podeCofreEmpresa && <CofreEmpresaCard />}
 
       {/* ABA EQUIPE */}
       {tab === 'equipe' && (() => {
@@ -1684,6 +1654,38 @@ export default function ConfigPage() {
           </div>
 
           <Btn variant="primary" onClick={salvarEmpresa}>Salvar dados</Btn>
+
+          {/* Integração com seu site */}
+          <div style={{ border:'1px solid #E2E8F0', borderRadius:12, padding:20, marginTop:16 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+              <span style={{ fontSize:20 }}>🔗</span>
+              <div style={{ fontWeight:700, fontSize:13 }}>Integração com seu site</div>
+            </div>
+            <div style={{ fontSize:12, color:'#64748B', marginBottom:12, lineHeight:1.6 }}>
+              Se você tem um site próprio com formulário de diagnóstico ou precificação, pode enviar esses dados direto pro CRM do Fluxe, o lead já cai automaticamente na etapa "Lead novo". Passe esse ID pra quem monta seu site.
+            </div>
+            <label style={{ fontSize:11, fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>ID da sua empresa (pra integrações)</label>
+            <div style={{ display:'flex', gap:8, marginBottom:14 }}>
+              <input readOnly value={empresa?.id || ''} style={{ ...fi, fontFamily:'monospace', background:'#F8FAFC' }} onFocus={e => e.target.select()} />
+              <Btn variant="outline" onClick={() => { navigator.clipboard.writeText(empresa?.id || ''); alert('✓ ID copiado!') }}>Copiar</Btn>
+            </div>
+            <div style={{ fontSize:11, fontWeight:700, color:'#334155', marginBottom:6 }}>Exemplo (JavaScript, no formulário do site):</div>
+            <pre style={{ background:'#0F172A', color:'#E2E8F0', padding:12, borderRadius:8, fontSize:11, overflowX:'auto', lineHeight:1.6 }}>
+{`fetch('https://zwvmprcuxhvhbuvdcybs.supabase.co/functions/v1/lead-site', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    empresa_id: '${empresa?.id || 'SEU_ID_AQUI'}',
+    nome: 'Nome do prospect',
+    email: 'email@prospect.com',
+    whatsapp: '11999999999',
+    segmento: 'Segmento informado no diagnóstico',
+    origem: 'Site'
+  })
+})`}
+            </pre>
+            <div style={{ fontSize:10, color:'#94A3B8', marginTop:8 }}>Só "empresa_id" e "nome" são obrigatórios, os demais campos são opcionais.</div>
+          </div>
         </div>
       )}
 
@@ -1816,6 +1818,12 @@ export default function ConfigPage() {
                 <input type="checkbox" checked={!!editUser.ativo} onChange={e=>setEditUser(f=>({...f,ativo:e.target.checked}))} style={{ width:16, height:16, accentColor:'#6366F1' }} />
                 Usuário ativo
               </label>
+              {editUser.perfil !== 'admin' && (
+                <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:13 }}>
+                  <input type="checkbox" checked={!!editUser.acesso_cofre_empresa} onChange={e=>setEditUser(f=>({...f,acesso_cofre_empresa:e.target.checked}))} style={{ width:16, height:16, accentColor:'#6366F1' }} />
+                  🔐 Acesso ao Cofre da empresa
+                </label>
+              )}
             </div>
             <div style={{ padding:'12px 18px', borderTop:'1px solid #F1F5F9', display:'flex', justifyContent:'flex-end', gap:8 }}>
               <Btn onClick={()=>setEditUser(null)}>Cancelar</Btn>
