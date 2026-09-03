@@ -101,7 +101,7 @@ function DiaCalendario({ d, aulasDoDia, isHoje, temSelecionada, concluidas, onSe
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        minHeight: 56, padding: '6px 6px', cursor: temAula ? 'pointer' : 'default',
+        minHeight: 88, padding: '8px 8px', cursor: temAula ? 'pointer' : 'default',
         background, transition: 'background .15s',
         borderRight: ultimaColuna ? 'none' : '1px solid var(--bo)',
         borderBottom: ultimaLinha ? 'none' : '1px solid var(--bo)',
@@ -109,18 +109,18 @@ function DiaCalendario({ d, aulasDoDia, isHoje, temSelecionada, concluidas, onSe
       }}
     >
       {isHoje && !temSelecionada && (
-        <div style={{ position: 'absolute', top: 4, left: 4, width: 6, height: 6, borderRadius: '50%', background: '#6366F1' }} />
+        <div style={{ position: 'absolute', top: 6, left: 6, width: 7, height: 7, borderRadius: '50%', background: '#6366F1' }} />
       )}
       <div style={{
-        fontSize: 11, fontWeight: isHoje || temSelecionada ? 800 : 600,
+        fontSize: 16, fontWeight: isHoje || temSelecionada ? 800 : 600,
         color: temSelecionada ? '#fff' : isHoje ? '#4F46E5' : 'var(--tx2)',
-        marginLeft: isHoje && !temSelecionada ? 10 : 0,
+        marginLeft: isHoje && !temSelecionada ? 12 : 0,
       }}>
         {d.getDate()}
       </div>
       {aulasDoDia.map(a => (
         <div key={a.id} style={{
-          fontSize: 8.5, marginTop: 3, padding: '2px 4px', borderRadius: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          fontSize: 10, marginTop: 4, padding: '3px 5px', borderRadius: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3,
           background: temSelecionada ? 'rgba(255,255,255,.22)' : concluidas.has(a.id) ? '#DCFCE7' : '#EEF2FF',
           color: temSelecionada ? '#fff' : concluidas.has(a.id) ? '#15803D' : '#4338CA',
@@ -155,7 +155,7 @@ function CalendarioAulas({ aulas, concluidas, onSelecionar, aulaSelecionadaId })
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <NavMesBtn onClick={() => setMesBase(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}>‹</NavMesBtn>
         <div style={{
-          fontSize: 15, fontWeight: 800, textAlign: 'center',
+          fontSize: 22, fontWeight: 800, textAlign: 'center',
           backgroundImage: GRAD_FLUXE, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
         }}>
           {MESES_NOME[mesBase.getMonth()]} {mesBase.getFullYear()}
@@ -163,7 +163,7 @@ function CalendarioAulas({ aulas, concluidas, onSelecionar, aulaSelecionadaId })
         <NavMesBtn onClick={() => setMesBase(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}>›</NavMesBtn>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 0, marginBottom: 8 }}>
-        {DIAS_SEMANA_MIN.map(d => <div key={d} style={{ textAlign: 'center', fontSize: 9, fontWeight: 800, color: 'var(--tx3)', textTransform: 'uppercase', letterSpacing: '.06em', paddingBottom: 8 }}>{d}</div>)}
+        {DIAS_SEMANA_MIN.map(d => <div key={d} style={{ textAlign: 'center', fontSize: 12, fontWeight: 800, color: 'var(--tx3)', textTransform: 'uppercase', letterSpacing: '.06em', paddingBottom: 8 }}>{d}</div>)}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 0, border: '1px solid var(--bo)', borderRadius: 10, overflow: 'hidden' }}>
         {diasMes.map((d, i) => {
