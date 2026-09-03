@@ -86,8 +86,8 @@ serve(async (req) => {
   const raw = await icsRes.text()
   const lines = unfoldIcs(raw)
 
-  const encontros: { numero: number; titulo: string; data: string; horario: string | null }[] = []
-  let atual: { summary?: string; dtstart?: string } | null = null
+  const encontros: { numero: number; titulo: string; data: string; horario: string | null; link_meet: string | null }[] = []
+  let atual: { summary?: string; dtstart?: string; meet?: string } | null = null
   for (const line of lines) {
     if (line === 'BEGIN:VEVENT') atual = {}
     else if (line === 'END:VEVENT') {
@@ -95,7 +95,7 @@ serve(async (req) => {
         const m = atual.summary.match(/^ENCONTRO\s+(\d+)\s+—\s+(.+)$/i)
         if (m) {
           const { data, horario } = paraDataHoraBrasilia(atual.dtstart)
-          if (data) encontros.push({ numero: Number(m[1]), titulo: tituloCaso(m[2].trim()), data, horario })
+          if (data) encontros.push({ numero: Number(m[1]), titulo: tituloCaso(m[2].trim()), data, horario, link_meet: atual.meet ?? null })
         }
       }
       atual = null
@@ -105,6 +105,7 @@ serve(async (req) => {
         const [, key, , val] = m
         if (key === 'SUMMARY') atual.summary = val.replace(/\\,/g, ',').replace(/\\n/gi, ' ')
         if (key === 'DTSTART') atual.dtstart = val
+        if (key === 'X-GOOGLE-CONFERENCE') atual.meet = val.trim()
       }
     }
   }
@@ -128,11 +129,11 @@ serve(async (req) => {
   for (const enc of encontros) {
     const existenteId = porNumero.get(enc.numero)
     if (existenteId) {
-      const { error } = await supabase.from('turma_aulas').update({ titulo: enc.titulo, data: enc.data, horario: enc.horario }).eq('id', existenteId)
+      const { error } = await supabase.from('turma_aulas').update({ titulo: enc.titulo, data: enc.data, horario: enc.horario, link_meet: enc.link_meet }).eq('id', existenteId)
       if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
       atualizados.push(enc.numero)
     } else {
-      const { error } = await supabase.from('turma_aulas').insert({ turma_id: turmaId, numero: enc.numero, titulo: enc.titulo, data: enc.data, horario: enc.horario })
+      const { error } = await supabase.from('turma_aulas').insert({ turma_id: turmaId, numero: enc.numero, titulo: enc.titulo, data: enc.data, horario: enc.horario, link_meet: enc.link_meet })
       if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
       criados.push(enc.numero)
     }

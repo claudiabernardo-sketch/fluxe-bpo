@@ -146,7 +146,12 @@ function CardAula({ a, concluida, destacada }) {
         </div>
       </div>
       <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap' }}>
-        <BotaoAgenda titulo={`Aula ${a.numero}: ${a.titulo}`} data={a.data} horario={a.horario} detalhes={a.video_url || a.material_url || ''} />
+        {a.link_meet && (
+          <a href={a.link_meet} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#fff', textDecoration: 'none', background: '#16A34A', borderRadius: 8, padding: '6px 12px' }}>
+            🎥 Entrar na aula
+          </a>
+        )}
+        <BotaoAgenda titulo={`Aula ${a.numero}: ${a.titulo}`} data={a.data} horario={a.horario} detalhes={a.link_meet || a.video_url || a.material_url || ''} />
         {a.material_url && (
           <a href={a.material_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: 'var(--tx2)', textDecoration: 'none', border: '1px solid var(--bo)', borderRadius: 8, padding: '6px 12px' }}>
             📄 Material
@@ -237,7 +242,14 @@ export default function SecaoAulasDaTurma() {
                   {proximaAula.horario && ` às ${fmtHorario(proximaAula.horario)}`}
                 </div>
               </div>
-              <BotaoAgenda titulo={`Aula ${proximaAula.numero}: ${proximaAula.titulo}`} data={proximaAula.data} horario={proximaAula.horario} detalhes={proximaAula.video_url || proximaAula.material_url || ''} />
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {proximaAula.link_meet && (
+                  <a href={proximaAula.link_meet} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#fff', textDecoration: 'none', background: '#16A34A', borderRadius: 8, padding: '6px 12px', whiteSpace: 'nowrap' }}>
+                    🎥 Entrar na aula
+                  </a>
+                )}
+                <BotaoAgenda titulo={`Aula ${proximaAula.numero}: ${proximaAula.titulo}`} data={proximaAula.data} horario={proximaAula.horario} detalhes={proximaAula.link_meet || proximaAula.video_url || proximaAula.material_url || ''} />
+              </div>
             </div>
           ) : (
             <div style={{ fontSize: 12, color: 'var(--tx3)' }}>Nenhum evento agendado</div>
