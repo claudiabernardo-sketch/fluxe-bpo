@@ -1,23 +1,33 @@
-import { useState } from 'react'
-import { useTurmaAtualPublica, useMeuProgressoAulas, useToggleProgressoAula } from '../../../hooks/useData'
+import { useState, useEffect } from 'react'
+import { useTurmaAtualPublica, useMeuProgressoAulas, useToggleProgressoAula, useMeuCheckin, useSalvarCheckin } from '../../../hooks/useData'
 import { useAuthStore } from '../../../store/authStore'
-import { Card, CardHeader } from '../../ui'
+import { Card, CardHeader, Btn } from '../../ui'
 
-// Link "Adicionar ao Google Calendar" — evento de dia inteiro, sem precisar
-// de login nem permissão nenhuma, o Google Calendar cuida de tudo sozinho.
-function googleCalendarUrl({ titulo, data, detalhes }) {
+// Link "Adicionar ao Google Calendar" — com horário quando a aula tiver um
+// definido, ou evento de dia inteiro quando não tiver. Sem precisar de
+// login nem permissão nenhuma, o Google Calendar cuida de tudo sozinho.
+function googleCalendarUrl({ titulo, data, horario, detalhes }) {
   if (!data) return null
-  const inicio = data.replace(/-/g, '')
-  const fimDate = new Date(data + 'T12:00:00')
-  fimDate.setDate(fimDate.getDate() + 1)
-  const fim = fimDate.toLocaleDateString('en-CA').replace(/-/g, '')
-  const params = new URLSearchParams({ action: 'TEMPLATE', text: titulo, dates: `${inicio}/${fim}` })
+  const diaBase = data.replace(/-/g, '')
+  let dates
+  if (horario) {
+    const [h, m] = horario.split(':').map(Number)
+    const p = n => String(n).padStart(2, '0')
+    const inicio = `${diaBase}T${p(h)}${p(m)}00`
+    const fim = `${diaBase}T${p(h + 1)}${p(m)}00`
+    dates = `${inicio}/${fim}`
+  } else {
+    const fimDate = new Date(data + 'T12:00:00')
+    fimDate.setDate(fimDate.getDate() + 1)
+    dates = `${diaBase}/${fimDate.toLocaleDateString('en-CA').replace(/-/g, '')}`
+  }
+  const params = new URLSearchParams({ action: 'TEMPLATE', text: titulo, dates })
   if (detalhes) params.set('details', detalhes)
   return `https://calendar.google.com/calendar/render?${params.toString()}`
 }
 
-export function BotaoAgenda({ titulo, data, detalhes }) {
-  const url = googleCalendarUrl({ titulo, data, detalhes })
+export function BotaoAgenda({ titulo, data, horario, detalhes }) {
+  const url = googleCalendarUrl({ titulo, data, horario, detalhes })
   if (!url) return null
   return (
     <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: '#0EA5E9', textDecoration: 'none', border: '1px solid #0EA5E9', borderRadius: 8, padding: '6px 12px', whiteSpace: 'nowrap' }}>
@@ -51,6 +61,11 @@ const MESES_NOME = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho
 function fmtDataLocal(d) { return d.toLocaleDateString('en-CA') }
 function startOfMonthLocal(d) { return new Date(d.getFullYear(), d.getMonth(), 1) }
 function endOfMonthLocal(d) { return new Date(d.getFullYear(), d.getMonth() + 1, 0) }
+function fmtHorario(h) {
+  if (!h) return ''
+  const [hh, mm] = h.split(':')
+  return mm === '00' ? `${hh}h` : `${hh}h${mm}`
+}
 
 function CalendarioAulas({ aulas, concluidas, onSelecionar, aulaSelecionadaId }) {
   const hoje = fmtDataLocal(new Date())
@@ -126,11 +141,11 @@ function CardAula({ a, concluida, destacada }) {
         <div style={{ fontSize: 14, fontWeight: 600 }}>{a.titulo}</div>
         {a.exercicio && <div style={{ fontSize: 12, color: 'var(--tx2)', marginTop: 2 }}>Exercício: {a.exercicio}</div>}
         <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 4 }}>
-          {a.data ? new Date(a.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }) : 'Data a combinar'}
+          {a.data ? new Date(a.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }) + (a.horario ? ` às ${fmtHorario(a.horario)}` : '') : 'Data a combinar'}
         </div>
       </div>
       <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap' }}>
-        <BotaoAgenda titulo={`Aula ${a.numero}: ${a.titulo}`} data={a.data} detalhes={a.video_url || a.material_url || ''} />
+        <BotaoAgenda titulo={`Aula ${a.numero}: ${a.titulo}`} data={a.data} horario={a.horario} detalhes={a.video_url || a.material_url || ''} />
         {a.material_url && (
           <a href={a.material_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: 'var(--tx2)', textDecoration: 'none', border: '1px solid var(--bo)', borderRadius: 8, padding: '6px 12px' }}>
             📄 Material
@@ -144,6 +159,46 @@ function CardAula({ a, concluida, destacada }) {
           !a.material_url && <span style={{ fontSize: 11, color: 'var(--tx3)' }}>Em breve</span>
         )}
       </div>
+    </div>
+  )
+}
+
+function CardCheckin() {
+  const { empresa } = useAuthStore()
+  const { data: checkin, isLoading } = useMeuCheckin()
+  const salvar = useSalvarCheckin()
+  const [texto, setTexto] = useState('')
+
+  useEffect(() => { setTexto(checkin?.texto || '') }, [checkin?.texto])
+
+  if (!empresa?.mentorado_bpo_lucrativo || isLoading) return null
+
+  const mudou = texto !== (checkin?.texto || '')
+
+  return (
+    <div style={{ border: '1px solid var(--bo)', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--tx)', marginBottom: 6 }}>Como você está indo com a mentoria?</div>
+      <div style={{ fontSize: 11, color: 'var(--tx3)', marginBottom: 8 }}>
+        Um espaço livre pra registrar como está sua evolução, dúvidas ou travas. Só sua mentora vê isso.
+      </div>
+      <textarea
+        style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--bo)', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', minHeight: 60, resize: 'vertical', boxSizing: 'border-box' }}
+        placeholder="Ex: essa semana travei em como precificar um cliente maior..."
+        value={texto}
+        onChange={e => setTexto(e.target.value)}
+      />
+      {mudou && (
+        <div style={{ marginTop: 8 }}>
+          <Btn small variant="primary" disabled={salvar.isPending} onClick={() => salvar.mutate(texto)}>
+            {salvar.isPending ? 'Salvando...' : 'Salvar'}
+          </Btn>
+        </div>
+      )}
+      {checkin?.atualizado_em && !mudou && (
+        <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 6 }}>
+          Atualizado em {new Date(checkin.atualizado_em).toLocaleDateString('pt-BR')}
+        </div>
+      )}
     </div>
   )
 }
@@ -178,14 +233,16 @@ export default function SecaoAulasDaTurma() {
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--tx)' }}>Aula {proximaAula.numero}: {proximaAula.titulo}</div>
                 <div style={{ fontSize: 11, color: 'var(--tx2)' }}>
                   {new Date(proximaAula.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+                  {proximaAula.horario && ` às ${fmtHorario(proximaAula.horario)}`}
                 </div>
               </div>
-              <BotaoAgenda titulo={`Aula ${proximaAula.numero}: ${proximaAula.titulo}`} data={proximaAula.data} detalhes={proximaAula.video_url || proximaAula.material_url || ''} />
+              <BotaoAgenda titulo={`Aula ${proximaAula.numero}: ${proximaAula.titulo}`} data={proximaAula.data} horario={proximaAula.horario} detalhes={proximaAula.video_url || proximaAula.material_url || ''} />
             </div>
           ) : (
             <div style={{ fontSize: 12, color: 'var(--tx3)' }}>Nenhum evento agendado</div>
           )}
         </div>
+        <CardCheckin />
         {turma.grupo_whatsapp_url && (
           <a href={turma.grupo_whatsapp_url} target="_blank" rel="noopener noreferrer" style={{
             display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: '#fff',

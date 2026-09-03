@@ -2022,6 +2022,56 @@ export function useToggleProgressoAula() {
   })
 }
 
+// ── CHECK-IN LIVRE DA MENTORADA ("como está indo?"), lido pela Claudia
+// no painel admin (via admin-painel, ve todo mundo). Um registro por
+// empresa, sempre sobrescrito, sem historico.
+export function useMeuCheckin() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['mentoria_checkin', empresa?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('mentoria_checkins').select('*').maybeSingle()
+      if (error) throw error
+      return data
+    },
+    staleTime: 15_000,
+    enabled: !!empresa?.mentorado_bpo_lucrativo,
+  })
+}
+
+export function useSalvarCheckin() {
+  const qc = useQueryClient()
+  const { empresa } = useAuthStore()
+  return useMutation({
+    mutationFn: async (texto) => {
+      const { error } = await supabase
+        .from('mentoria_checkins')
+        .upsert({ empresa_id: empresa.id, texto, atualizado_em: new Date().toISOString() }, { onConflict: 'empresa_id' })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['mentoria_checkin', empresa?.id] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+export function useCheckinsMentoradas() {
+  return useQuery({
+    queryKey: ['admin_checkins_mentoradas'],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-painel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'listar_checkins' }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      return data.checkins ?? []
+    },
+    staleTime: 15_000,
+  })
+}
+
 // ── MATERIAIS DE APOIO (biblioteca global por etapa do BPO) ──────────
 // Leitura pública (RLS permite anon+authenticated), igual à turma — visível
 // pra todo mentorado, sem depender de qual empresa (diferente de

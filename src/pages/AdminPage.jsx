@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados, useSessoesMentoria, useCriarSessaoMentoria, useExcluirSessaoMentoria, useSessoesAvulsas, useCombinadosAbertos, useConcluirCombinado, useExcluirDadosMentoria, useAdminTurma, useAdminMateriaisApoio, useSalvarMaterialApoio, useExcluirMaterialApoio, useReordenarMateriaisApoio } from '../hooks/useData'
+import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados, useSessoesMentoria, useCriarSessaoMentoria, useExcluirSessaoMentoria, useSessoesAvulsas, useCombinadosAbertos, useConcluirCombinado, useExcluirDadosMentoria, useAdminTurma, useAdminMateriaisApoio, useSalvarMaterialApoio, useExcluirMaterialApoio, useReordenarMateriaisApoio, useCheckinsMentoradas } from '../hooks/useData'
 import { Card, CardHeader, Btn, Badge, Loader } from '../components/ui'
 import { ETAPAS_BPO } from '../data/etapasBpo'
 
@@ -770,6 +770,38 @@ function SecaoMentorados() {
   )
 }
 
+function SecaoCheckins() {
+  const { data: checkins = [], isLoading } = useCheckinsMentoradas()
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <CardHeader title={`Check-ins das mentoradas (${checkins.length})`} icon="fa-solid fa-comment-dots" />
+      <div style={{ padding: 16 }}>
+        <div style={{ fontSize: 11, color: 'var(--tx3)', marginBottom: 12 }}>
+          "Como você está indo com a mentoria?" — atualizado por elas mesmas, quando quiserem, direto na Agenda.
+        </div>
+        {isLoading ? <Loader /> : checkins.length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>Nenhum check-in registrado ainda.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {checkins.map(c => (
+              <div key={c.id} style={{ border: '1px solid var(--bo)', borderRadius: 8, padding: '10px 12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                  <b style={{ fontSize: 13 }}>{c.empresas?.nome || '—'}</b>
+                  <span style={{ fontSize: 10, color: 'var(--tx3)', whiteSpace: 'nowrap' }}>
+                    {new Date(c.atualizado_em).toLocaleDateString('pt-BR')}
+                  </span>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--tx2)', marginTop: 4, whiteSpace: 'pre-wrap' }}>{c.texto}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 function SecaoCombinadosAbertos() {
   const { data: combinados = [], isLoading } = useCombinadosAbertos()
   const hoje = new Date().toLocaleDateString('en-CA')
@@ -1113,6 +1145,7 @@ export default function AdminPage() {
         Visível só pra você — controle de todas as empresas que usam o Fluxe e registro interno de bugs.
       </div>
       <SecaoMentorados />
+      <SecaoCheckins />
       <SecaoCombinadosAbertos />
       <SecaoSessoesAvulsas />
       <SecaoTurmaGrupo />
