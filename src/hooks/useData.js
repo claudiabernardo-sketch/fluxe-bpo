@@ -2396,7 +2396,7 @@ export function useExcluirPost() {
 }
 
 export function useMentoriaCurtidas() {
-  const { empresa } = useAuthStore()
+  const { empresa, profile } = useAuthStore()
   return useQuery({
     queryKey: ['mentoria_post_curtidas'],
     queryFn: async () => {
@@ -2405,7 +2405,7 @@ export function useMentoriaCurtidas() {
       return data ?? []
     },
     staleTime: 15_000,
-    enabled: !!empresa?.mentorado_bpo_lucrativo,
+    enabled: !!empresa?.mentorado_bpo_lucrativo || !!profile?.fluxe_staff,
   })
 }
 
