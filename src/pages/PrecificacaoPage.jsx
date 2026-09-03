@@ -394,7 +394,9 @@ const ACADEMIA = [
     body: <><h4>O conceito</h4><p>Margem de contribuição (MC) é receita menos custo direto de atendimento, a mão de obra e as ferramentas usadas pra entregar aquele cliente específico. É o que sobra pra pagar o resto do negócio.</p>
       <h4>Exemplo</h4><p>Cliente paga R$ 1.000 por mês. Os custos diretos pra atender esse cliente, mão de obra e ferramentas, somam R$ 400. Sobram R$ 600, uma MC de 60%.</p>
       <p>Esses R$ 600 ainda precisam pagar estrutura administrativa, comercial, pró-labore e despesas fixas. Só depois disso é que existe lucro líquido de verdade.</p>
-      <h4>Referência pro BPO</h4><p>Bom piso gerencial: 50% a 60% de margem de contribuição. Não é regra universal, uma operação bem enxuta pode funcionar abaixo disso, e uma com estrutura mais pesada pode precisar de uma MC maior. O importante é nunca confundir os R$ 600 de MC com R$ 600 de lucro.</p></>
+      <h4>Referência pro BPO</h4><p>Bom piso gerencial: 50% a 60% de margem de contribuição. Não é regra universal, uma operação bem enxuta pode funcionar abaixo disso, e uma com estrutura mais pesada pode precisar de uma MC maior. O importante é nunca confundir os R$ 600 de MC com R$ 600 de lucro.</p>
+      <h4>Markup não é a mesma coisa que margem</h4><p>Markup é a % que você soma em cima do custo pra chegar no preço. Margem é a % que sobra em cima do preço. São contas diferentes, e trocar uma pela outra costuma fazer você cobrar menos do que precisa.</p>
+      <p><strong>Exemplo:</strong> seu custo pra atender um cliente é R$ 600.</p><ul><li>Aplicando <strong>50% de markup</strong>: preço = R$ 600 × 1,50 = <strong>R$ 900</strong>. Só que a margem real desse preço é (900 − 600) ÷ 900 = <strong>33%</strong>, bem abaixo dos 50% que você imaginava.</li><li>Pra chegar de fato em <strong>50% de margem</strong>: preço = R$ 600 ÷ (1 − 0,50) = <strong>R$ 1.200</strong>.</li></ul><p>São R$ 300 de diferença por mês, só por confundir os dois conceitos. Na dúvida, pense sempre em margem, é a % que fica de verdade no seu bolso sobre o que o cliente paga.</p></>
   },
 ]
 
