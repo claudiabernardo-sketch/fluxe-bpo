@@ -9,6 +9,29 @@ function urlDoMaterial(l) {
   return l.url
 }
 
+// Link "Adicionar ao Google Calendar" — evento de dia inteiro, sem precisar
+// de login nem permissão nenhuma, o Google Calendar cuida de tudo sozinho.
+function googleCalendarUrl({ titulo, data, detalhes }) {
+  if (!data) return null
+  const inicio = data.replace(/-/g, '')
+  const fimDate = new Date(data + 'T12:00:00')
+  fimDate.setDate(fimDate.getDate() + 1)
+  const fim = fimDate.toLocaleDateString('en-CA').replace(/-/g, '')
+  const params = new URLSearchParams({ action: 'TEMPLATE', text: titulo, dates: `${inicio}/${fim}` })
+  if (detalhes) params.set('details', detalhes)
+  return `https://calendar.google.com/calendar/render?${params.toString()}`
+}
+
+function BotaoAgenda({ titulo, data, detalhes }) {
+  const url = googleCalendarUrl({ titulo, data, detalhes })
+  if (!url) return null
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: '#0EA5E9', textDecoration: 'none', border: '1px solid #0EA5E9', borderRadius: 8, padding: '6px 12px', whiteSpace: 'nowrap' }}>
+      📅 Agenda
+    </a>
+  )
+}
+
 function ItemMeuCombinado({ c }) {
   const atualizar = useAtualizarMeuCombinado()
   const [status, setStatus] = useState(c.status_mentorado || '')
@@ -27,6 +50,11 @@ function ItemMeuCombinado({ c }) {
             </div>
           )}
         </div>
+        {!c.concluido && c.prazo && (
+          <div onClick={e => e.stopPropagation()}>
+            <BotaoAgenda titulo={`Combinado: ${c.texto}`} data={c.prazo} />
+          </div>
+        )}
       </label>
       <div style={{ display: 'flex', gap: 6, marginTop: 8, marginLeft: 26 }}>
         <input
@@ -149,6 +177,7 @@ function CardAula({ a, concluida, destacada }) {
         </div>
       </div>
       <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap' }}>
+        <BotaoAgenda titulo={`Aula ${a.numero}: ${a.titulo}`} data={a.data} detalhes={a.video_url || a.material_url || ''} />
         {a.material_url && (
           <a href={a.material_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: 'var(--tx2)', textDecoration: 'none', border: '1px solid var(--bo)', borderRadius: 8, padding: '6px 12px' }}>
             📄 Material
