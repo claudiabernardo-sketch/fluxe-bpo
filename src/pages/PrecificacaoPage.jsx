@@ -449,6 +449,7 @@ export default function PrecificacaoPage() {
     dataInicio: new Date().toISOString().split('T')[0],
   })
   const { empresa, profile } = useAuthStore()
+  const metaMC = Number(empresa?.config?.margemContribuicaoBenchmark) || 50
 
   // Impacto na capacidade da equipe + margem do book — mesma fonte que
   // Capacidade e Rentabilidade já usam (horas do mês corrente).
@@ -485,7 +486,7 @@ export default function PrecificacaoPage() {
           sistcob: 0, cartao: 0, plat: 0, agend: 0,
           contab: 0, relat: 0, reuniao: 0, consult: 0, lembrete: 0,
           erp: '', erpOutro: '', licencaModalidade: 'cliente_direto', licencaValor: '',
-          custoHora: '50', margem: 35, overhead: '600', regime: 6,
+          custoHora: '50', margem: metaMC, overhead: '600', regime: 6,
           // Dados do cliente pré-preenchidos
           _clienteNome: lead.nome || lead.fantasia || '',
           _clienteCnpj: lead.cnpj || '',
@@ -1121,7 +1122,7 @@ export default function PrecificacaoPage() {
                   <input className="prec-input" type="text" inputMode="decimal" value={d.custoHora}
                     onChange={e => { set('custoHora', e.target.value); setCustoHoraFonte(null) }} placeholder="Ex: 50,00" />
                 </Campo>
-                <Campo label="Margem de lucro desejada" hint="BPOs saudáveis operam com 30–45% de margem. Abaixo de 20% o negócio fica frágil.">
+                <Campo label="Margem de contribuição desejada" hint={`Referência de mercado pro BPO: ${metaMC}% (ajustável em Configurações). É receita menos custo direto de atendimento, antes das despesas fixas e do lucro líquido.`}>
                   <div className="prec-range-wrap">
                     <input type="range" min="10" max="60" value={d.margem} onChange={e => set('margem', e.target.value)} />
                     <span className="prec-range-val">{d.margem}%</span>

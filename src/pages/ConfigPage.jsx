@@ -516,7 +516,7 @@ export default function ConfigPage() {
   const [zapiTesting, setZapiTesting] = useState(false)
   const [zapiStatus, setZapiStatus] = useState(null)
   const [zapiRiscoConfirmado, setZapiRiscoConfirmado] = useState(false)
-  const [opForm, setOpForm] = useState({ custoHora:35, fechamentoDia:5, nfDia:1, reuniaoDia:10 })
+  const [opForm, setOpForm] = useState({ custoHora:35, fechamentoDia:5, nfDia:1, reuniaoDia:10, margemContribuicaoBenchmark:50 })
   const [custosOp, setCustosOp] = useState({ itens: [], clientesAtivos: '' })
   const { data: feriados = [] } = useFeriados()
   const createFeriado = useCreateFeriado()
@@ -1264,6 +1264,7 @@ export default function ConfigPage() {
               { label:'Dia fechamento mensal',            key:'fechamentoDia',   type:'number', hint:'Dia do mês para fechar o período' },
               { label:'Dia emissão NF',                   key:'nfDia',           type:'number', hint:'Dia do mês para emitir notas fiscais' },
               { label:'Dia reunião estratégica',          key:'reuniaoDia',      type:'number', hint:'Dia do mês para reunião com clientes' },
+              { label:'Meta de margem de contribuição (%)', key:'margemContribuicaoBenchmark', type:'number', hint:'Referência de mercado pro BPO: 50 a 60%. É receita menos o custo direto de atendimento (mão de obra, ferramentas), antes das despesas fixas e do lucro líquido.' },
             ].map(({ label, key, type, hint }) => (
               <div key={key}>
                 <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>{label}</label>
