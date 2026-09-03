@@ -5,6 +5,43 @@ import { supabase } from '../lib/supabase'
 import { Card, CardHeader, Btn, Loader } from '../components/ui'
 import { BotaoAgenda } from '../components/modules/mentoria/AulasDaTurma'
 
+const EMOJIS_COMUNIDADE = ['👍','❤️','🎉','😂','😍','🙌','👏','🔥','💡','✅','🤔','😅','😊','🙏','💪','🚀','📈','💰','🎯','😢','👀','⭐','🤝','💬']
+
+function EmojiPicker({ onSelect }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        title="Inserir emoji"
+        style={{ border: '1px solid var(--bo)', background: '#fff', borderRadius: 8, width: 34, height: 34, cursor: 'pointer', fontSize: 16, flexShrink: 0 }}
+      >
+        😀
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', bottom: '110%', left: 0, zIndex: 20, background: '#fff', border: '1px solid var(--bo)',
+          borderRadius: 10, padding: 8, boxShadow: '0 8px 24px rgba(0,0,0,.14)', display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 2, width: 208,
+        }}>
+          {EMOJIS_COMUNIDADE.map(e => (
+            <button
+              key={e}
+              type="button"
+              onClick={() => { onSelect(e); setOpen(false) }}
+              style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 17, padding: 4, borderRadius: 6 }}
+              onMouseEnter={ev => { ev.currentTarget.style.background = 'var(--s2)' }}
+              onMouseLeave={ev => { ev.currentTarget.style.background = 'none' }}
+            >
+              {e}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function urlDoMaterial(l) {
   if (l.arquivo_path) return supabase.storage.from('tarefas').getPublicUrl(l.arquivo_path).data.publicUrl
   return l.url
@@ -80,7 +117,8 @@ function ComentariosDoPost({ postId }) {
           ))}
         </div>
       )}
-      <div style={{ display: 'flex', gap: 6 }}>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <EmojiPicker onSelect={e => setTexto(t => t + e)} />
         <input
           style={{ flex: 1, padding: '6px 8px', border: '1px solid var(--bo)', borderRadius: 6, fontSize: 12, fontFamily: 'inherit' }}
           placeholder="Escreva um comentário..."
@@ -188,7 +226,8 @@ function SecaoComunidade() {
             onChange={e => setTexto(e.target.value)}
           />
         </div>
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
+          <EmojiPicker onSelect={e => setTexto(t => t + e)} />
           <Btn variant="primary" disabled={criarPost.isPending || !texto.trim()} onClick={publicar}>
             {criarPost.isPending ? 'Publicando...' : 'Publicar'}
           </Btn>
