@@ -2,12 +2,16 @@ import { useClients, useApontamentosMes, useUsuarios } from '../hooks/useData'
 import { KpiCard, Card, CardHeader, Loader, fmtR } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 import { computeMargemPorCliente, CUSTO_HORA_PADRAO } from '../utils/radar'
+import { useAuthStore } from '../store/authStore'
 
 export default function RentPage() {
+  const { empresa } = useAuthStore()
   const { data: clients = [], isLoading } = useClients()
   const { data: aponts = [] } = useApontamentosMes()
   const { data: usuarios = [] } = useUsuarios()
   if (isLoading) return <Loader />
+
+  const metaMC = Number(empresa?.config?.margemContribuicaoBenchmark) || 50
 
   // Custo/hora médio real da equipe (configurado em Capacidade), ou fallback R$35
   const usuariosComCusto = usuarios.filter(u => u.custo_hora)
@@ -38,6 +42,8 @@ export default function RentPage() {
         color="#22C55E"
         tips={[
           'Compara o MRR do cliente com o custo real de atendimento (horas do mês × custo/hora).',
+          'Essa é a margem de contribuição, receita menos custo direto de atendimento. Ainda falta descontar estrutura fixa, comercial e pró-labore pra chegar no lucro líquido.',
+          'Referência de mercado pro BPO: 50 a 60% de margem de contribuição. Ajuste sua meta em Configurações → Operacional.',
           'Margem negativa significa que você está perdendo dinheiro nesse cliente.',
           'Para o cálculo ser preciso, registre horas via timer nas tarefas.',
           'Configure o custo/hora de cada analista em Capacidade.',
@@ -49,7 +55,7 @@ export default function RentPage() {
         <KpiCard label="Ticket médio" value={`R$ ${tm.toLocaleString('pt-BR')}`} color="cyan" />
         <KpiCard label="LTV estimado" value={`R$ ${(tm*24/1000).toFixed(1)}k`} color="purple" sub="24 meses" />
         <KpiCard label="Custo/hora" value={`R$ ${CUSTO_HORA}`} color="orange" sub="configurável" />
-        <KpiCard label="Margem global" value={`${margemGlobal.toFixed(1)}%`} color={margemGlobal>40?'green':margemGlobal>0?'yellow':'red'} />
+        <KpiCard label="Margem de Contribuição" value={`${margemGlobal.toFixed(1)}%`} color={margemGlobal>metaMC?'green':margemGlobal>0?'yellow':'red'} sub={`meta: ${metaMC}%`} />
       </div>
 
       <Card>
@@ -58,16 +64,16 @@ export default function RentPage() {
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
             <thead>
               <tr style={{ borderBottom:'1px solid #F1F5F9' }}>
-                {['Cliente','Valor/mês','Horas/mês','Custo (R$)','Margem R$','Margem %','Situação'].map(h=>(
+                {['Cliente','Valor/mês','Horas/mês','Custo (R$)','MC R$','MC %','Situação'].map(h=>(
                   <th key={h} style={{ padding:'10px 14px', textAlign:'left', fontSize:10, fontWeight:700, color:'#94A3B8', textTransform:'uppercase', letterSpacing:'.06em' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {rows.map(r => {
-                const cor = r.pct > 40 ? '#15803D' : r.pct > 0 ? '#92400E' : '#991B1B'
-                const bgCor = r.pct > 40 ? '#F0FDF4' : r.pct > 0 ? '#FFFBEB' : '#FEF2F2'
-                const label = r.pct > 40 ? 'Lucrativo' : r.pct > 0 ? 'Margem baixa' : 'Prejuízo'
+                const cor = r.pct > metaMC ? '#15803D' : r.pct > 0 ? '#92400E' : '#991B1B'
+                const bgCor = r.pct > metaMC ? '#F0FDF4' : r.pct > 0 ? '#FFFBEB' : '#FEF2F2'
+                const label = r.pct > metaMC ? 'Lucrativo' : r.pct > 0 ? 'MC baixa' : 'Prejuízo'
                 return (
                   <tr key={r.id} onMouseEnter={e=>e.currentTarget.style.background='#F8FAFC'} onMouseLeave={e=>e.currentTarget.style.background=''}>
                     <td style={{ padding:'10px 14px' }}>
