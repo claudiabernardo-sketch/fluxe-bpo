@@ -47,9 +47,8 @@ export default function CofrePage() {
   const { data: acessos = [], isLoading } = useQuery({
     queryKey: ['acessos_cofre', filterCl],
     queryFn: async () => {
-      let q = supabase.from('acessos').select('*, clientes(razao_social, fantasia)').order('sistema')
-      if (filterCl === '__interno__') q = q.is('cliente_id', null)
-      else if (filterCl) q = q.eq('cliente_id', filterCl)
+      let q = supabase.from('acessos').select('*, clientes(razao_social, fantasia)').not('cliente_id', 'is', null).order('sistema')
+      if (filterCl) q = q.eq('cliente_id', filterCl)
       const { data, error } = await q
       if (error) throw error
       return data
@@ -137,7 +136,7 @@ export default function CofrePage() {
     const k = a.cliente_id || '__sem__'
     if (!porCliente[k]) {
       const cl = clients.find(c=>c.id===a.cliente_id)
-      porCliente[k] = { nome: cl ? (cl.fantasia||cl.razao_social) : 'Minha empresa (uso interno)', interno: !cl, items: [] }
+      porCliente[k] = { nome: cl ? (cl.fantasia||cl.razao_social) : 'Sem cliente', items: [] }
     }
     porCliente[k].items.push(a)
   })
@@ -152,6 +151,7 @@ export default function CofrePage() {
 
   async function save() {
     if (!form.sistema?.trim()) return alert('Nome do sistema obrigatório')
+    if (!form.cliente_id) return alert('Selecione um cliente')
 
     const { _temSenha, ...dados } = form
     const payload = { ...dados, empresa_id: profile?.empresa_id || profile?.empresas?.id }
@@ -188,7 +188,7 @@ export default function CofrePage() {
         color="#8B5CF6"
         tips={[
           'Armazene aqui os logins e senhas dos sistemas de cada cliente — bancos, ERPs, portais.',
-          'Deixe o campo Cliente vazio pra guardar acessos internos da sua própria empresa, sistema contábil, email, banco.',
+          'Pra acessos da sua própria empresa (não de cliente), use o Cofre da empresa em Configurações.',
           'As senhas são criptografadas e só acessíveis por usuários da sua empresa.',
           'Quando um analista sai, os dados permanecem seguros e acessíveis.',
           'Use a busca para encontrar rapidamente um sistema ou cliente.',
@@ -202,7 +202,6 @@ export default function CofrePage() {
         </div>
         <select value={filterCl} onChange={e=>setFilterCl(e.target.value)} style={{ ...fi, width:180 }}>
           <option value="">Todos os clientes</option>
-          <option value="__interno__">🔐 Minha empresa (interno)</option>
           {clients.map(c=><option key={c.id} value={c.id}>{c.fantasia||c.razao_social}</option>)}
         </select>
         <select value={filterCat} onChange={e=>setFilterCat(e.target.value)} style={{ ...fi, width:140 }}>
@@ -246,10 +245,10 @@ export default function CofrePage() {
         Object.entries(porCliente).map(([clienteId, grp]) => (
           <div key={clienteId} style={{ marginBottom:16, background:'#fff', borderRadius:12, border:'1px solid #F1F5F9', overflow:'hidden' }}>
             {/* Header do grupo */}
-            <div style={{ padding:'10px 16px', background: grp.interno ? '#F5F3FF' : '#F8FAFC', borderBottom:'1px solid #F1F5F9', display:'flex', alignItems:'center', gap:8 }}>
-              <span style={{ fontSize:14 }}>{grp.interno ? '🔐' : '🏢'}</span>
-              <span style={{ fontSize:12, fontWeight:700, color: grp.interno ? '#6D28D9' : '#334155' }}>{grp.nome}</span>
-              <span style={{ fontSize:10, background: grp.interno ? '#DDD6FE' : '#E2E8F0', color: grp.interno ? '#5B21B6' : '#64748B', padding:'1px 6px', borderRadius:99, fontWeight:600 }}>{grp.items.length}</span>
+            <div style={{ padding:'10px 16px', background:'#F8FAFC', borderBottom:'1px solid #F1F5F9', display:'flex', alignItems:'center', gap:8 }}>
+              <span style={{ fontSize:14 }}>🏢</span>
+              <span style={{ fontSize:12, fontWeight:700, color:'#334155' }}>{grp.nome}</span>
+              <span style={{ fontSize:10, background:'#E2E8F0', color:'#64748B', padding:'1px 6px', borderRadius:99, fontWeight:600 }}>{grp.items.length}</span>
             </div>
 
             {/* Itens */}
@@ -348,9 +347,9 @@ export default function CofrePage() {
                   <input value={form.sistema||''} onChange={e=>setForm(f=>({...f,sistema:e.target.value}))} style={fi} placeholder="Ex: Banco do Brasil, Omie, SEFAZ..." autoFocus />
                 </div>
                 <div>
-                  <label style={{ display:'block', fontSize:10, fontWeight:700, color:'#94A3B8', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Cliente</label>
+                  <label style={{ display:'block', fontSize:10, fontWeight:700, color:'#94A3B8', marginBottom:5, textTransform:'uppercase', letterSpacing:'.07em' }}>Cliente *</label>
                   <select value={form.cliente_id||''} onChange={e=>setForm(f=>({...f,cliente_id:e.target.value||null}))} style={fi}>
-                    <option value="">🔐 Acesso interno (minha empresa)</option>
+                    <option value="">— Selecionar —</option>
                     {clients.map(c=><option key={c.id} value={c.id}>{c.fantasia||c.razao_social}</option>)}
                   </select>
                 </div>
