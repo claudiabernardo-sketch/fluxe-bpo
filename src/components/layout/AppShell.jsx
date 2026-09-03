@@ -80,7 +80,7 @@ const PageLoader = () => (
 
 const NAV = [
   { path:'/',           icon:'fa-solid fa-house',               label:'Início'    },
-  { path:'/agenda-mentoria', icon:'fa-solid fa-calendar-days',  label:'Agenda', mentoradoOnly:true },
+  { path:'/agenda-mentoria', icon:'fa-solid fa-calendar-days',  label:'Agenda Mentoria', mentoradoOnly:true },
   { path:'/tasks',      icon:'fa-solid fa-list-check',          label:'Tarefas'   },
   { path:'/modelos',    icon:'fa-solid fa-rotate',              label:'Modelos'   },
   { path:'/pendencias', icon:'fa-solid fa-circle-exclamation',  label:'Pendências'},
