@@ -1968,6 +1968,43 @@ export function useTurmaAtualPublica() {
   })
 }
 
+// Turma que a mentorada realmente está cursando — diferente de
+// useTurmaAtualPublica (usado na página de vendas, mostra sempre a turma
+// "ativo=true", ou seja, a que está aberta pra matrícula de gente nova).
+// Aqui, sem cadastro de matrícula por empresa ainda, a melhor aproximação é
+// pegar a turma cujo período (data de início até a última aula) já começou
+// e ainda não terminou — a turma "em andamento" de verdade, mesmo que não
+// seja a que está com ativo=true.
+export function useMinhaTurmaMentoria() {
+  return useQuery({
+    queryKey: ['minha_turma_mentoria'],
+    queryFn: async () => {
+      const { data: turmas } = await supabase
+        .from('turma_grupo')
+        .select('*, turma_aulas(data)')
+        .order('data_inicio', { ascending: true })
+      const lista = turmas ?? []
+      const hoje = new Date().toLocaleDateString('en-CA')
+
+      const emAndamento = lista.find(t => {
+        const datas = (t.turma_aulas || []).map(a => a.data).filter(Boolean).sort()
+        const fim = datas.length ? datas[datas.length - 1] : null
+        return t.data_inicio && t.data_inicio <= hoje && (!fim || fim >= hoje)
+      })
+      const turma = emAndamento
+        || lista.find(t => t.data_inicio && t.data_inicio >= hoje)
+        || lista[lista.length - 1]
+        || null
+
+      if (!turma) return { turma: null, aulas: [] }
+      const { data: aulas } = await supabase.from('turma_aulas').select('*').eq('turma_id', turma.id).order('numero')
+      const { turma_aulas, ...turmaSemAulas } = turma
+      return { turma: turmaSemAulas, aulas: aulas ?? [] }
+    },
+    staleTime: 60_000,
+  })
+}
+
 // Leitura pelo Admin (via admin-painel, mesmo dado, mas passando pela
 // checagem de fluxe_staff — usado só na tela de edição).
 export function useAdminTurma() {

@@ -131,7 +131,7 @@ const TITLES = {
   '/ajuda':      'Central de Ajuda',
   '/admin':      'Painel Admin Fluxe',
   '/mentoria':   'Mentoria',
-  '/agenda-mentoria': 'Agenda da Mentoria',
+  '/agenda-mentoria': 'Agenda Mentoria',
   '/materiais-apoio': 'Biblioteca',
   '/plano-negocio': 'Plano de Negócio em 6 Etapas',
 }
