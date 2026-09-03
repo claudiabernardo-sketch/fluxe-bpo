@@ -55,7 +55,9 @@ export function computeMargemPorCliente(clientes, apontamentos, custoHoraMedio =
     const horas = apontamentos
       .filter(a => a.cliente_id === cl.id)
       .reduce((s, a) => s + (a.segundos || 0), 0) / 3600
-    const custo = horas * custoHoraMedio
+    const custoMaoDeObra = horas * custoHoraMedio
+    const custoDireto = cl.custo_direto_mensal || 0
+    const custo = custoMaoDeObra + custoDireto
     const receita = cl.valor_mrr || 0
     const margem = receita - custo
     // Sem receita mas com custo real = prejuízo total, não "0%" (que parecia neutro).
