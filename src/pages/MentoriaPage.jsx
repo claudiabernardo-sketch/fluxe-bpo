@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMentoriaLinks, useCreateMentoriaLink, useDeleteMentoriaLink, useMeusCombinados, useAtualizarMeuCombinado, useMentoriaPosts, useCriarPost, useExcluirPost, useFixarPost, useMentoriaCurtidas, useToggleCurtida, useComentariosDoPost, useCriarComentario } from '../hooks/useData'
+import { useMentoriaLinks, useCreateMentoriaLink, useDeleteMentoriaLink, useMeusCombinados, useAtualizarMeuCombinado, useMentoriaPosts, useCriarPost, useExcluirPost, useFixarPost, useMentoriaCurtidas, useToggleCurtida, useComentariosDoPost, useCriarComentario, useMentoriaComentariosContagem } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import { Card, CardHeader, Btn, Loader } from '../components/ui'
@@ -132,12 +132,12 @@ function ComentariosDoPost({ postId }) {
   )
 }
 
-function PostComunidade({ post, curtido, totalCurtidas }) {
+function PostComunidade({ post, curtido, totalCurtidas, totalComentarios }) {
   const { profile } = useAuthStore()
   const toggleCurtida = useToggleCurtida()
   const excluir = useExcluirPost()
   const fixar = useFixarPost()
-  const [mostrarComentarios, setMostrarComentarios] = useState(false)
+  const [mostrarComentarios, setMostrarComentarios] = useState(totalComentarios > 0)
   const [confirmDel, setConfirmDel] = useState(false)
   const souAutor = post.autor_id === profile?.id
 
@@ -185,7 +185,7 @@ function PostComunidade({ post, curtido, totalCurtidas }) {
           onClick={() => setMostrarComentarios(v => !v)}
           style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--tx3)' }}
         >
-          💬 Comentar
+          💬 Comentar {totalComentarios > 0 ? totalComentarios : ''}
         </button>
       </div>
       {mostrarComentarios && <ComentariosDoPost postId={post.id} />}
@@ -197,6 +197,7 @@ function SecaoComunidade() {
   const { empresa, profile } = useAuthStore()
   const { data: posts = [], isLoading } = useMentoriaPosts()
   const { data: curtidas = [] } = useMentoriaCurtidas()
+  const { data: comentarios = [] } = useMentoriaComentariosContagem()
   const criarPost = useCriarPost()
   const [texto, setTexto] = useState('')
 
@@ -243,7 +244,8 @@ function SecaoComunidade() {
                   {fixados.map(post => {
                     const curtidasDoPost = curtidas.filter(c => c.post_id === post.id)
                     const curtido = curtidasDoPost.some(c => c.empresa_id === empresa.id)
-                    return <PostComunidade key={post.id} post={post} curtido={curtido} totalCurtidas={curtidasDoPost.length} />
+                    const totalComentarios = comentarios.filter(c => c.post_id === post.id).length
+                    return <PostComunidade key={post.id} post={post} curtido={curtido} totalCurtidas={curtidasDoPost.length} totalComentarios={totalComentarios} />
                   })}
                 </div>
               </div>
@@ -252,7 +254,8 @@ function SecaoComunidade() {
               {outros.map(post => {
                 const curtidasDoPost = curtidas.filter(c => c.post_id === post.id)
                 const curtido = curtidasDoPost.some(c => c.empresa_id === empresa.id)
-                return <PostComunidade key={post.id} post={post} curtido={curtido} totalCurtidas={curtidasDoPost.length} />
+                const totalComentarios = comentarios.filter(c => c.post_id === post.id).length
+                return <PostComunidade key={post.id} post={post} curtido={curtido} totalCurtidas={curtidasDoPost.length} totalComentarios={totalComentarios} />
               })}
             </div>
           </>

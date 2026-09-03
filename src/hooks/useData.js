@@ -2427,6 +2427,20 @@ export function useToggleCurtida() {
   })
 }
 
+export function useMentoriaComentariosContagem() {
+  const { empresa, profile } = useAuthStore()
+  return useQuery({
+    queryKey: ['mentoria_post_comentarios_contagem'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('mentoria_post_comentarios').select('post_id')
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 15_000,
+    enabled: !!empresa?.mentorado_bpo_lucrativo || !!profile?.fluxe_staff,
+  })
+}
+
 export function useComentariosDoPost(postId, ativo) {
   return useQuery({
     queryKey: ['mentoria_post_comentarios', postId],
@@ -2455,7 +2469,10 @@ export function useCriarComentario() {
       })
       if (error) throw error
     },
-    onSuccess: (_, { post_id }) => qc.invalidateQueries({ queryKey: ['mentoria_post_comentarios', post_id] }),
+    onSuccess: (_, { post_id }) => {
+      qc.invalidateQueries({ queryKey: ['mentoria_post_comentarios', post_id] })
+      qc.invalidateQueries({ queryKey: ['mentoria_post_comentarios_contagem'] })
+    },
     onError: (err) => console.error('[Fluxe]', err),
   })
 }
