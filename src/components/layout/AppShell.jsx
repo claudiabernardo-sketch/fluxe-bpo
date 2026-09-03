@@ -61,6 +61,7 @@ const AjudaPage          = lazy(() => import('../../pages/AjudaPage'))
 const PrecificacaoPage   = lazy(() => import('../../pages/PrecificacaoPage'))
 const AdminPage          = lazy(() => import('../../pages/AdminPage'))
 const MentoriaPage       = lazy(() => import('../../pages/MentoriaPage'))
+const AgendaMentoriaPage = lazy(() => import('../../pages/AgendaMentoriaPage'))
 const PlanoNegocioPage   = lazy(() => import('../../pages/PlanoNegocioPage'))
 const MateriaisApoioPage = lazy(() => import('../../pages/MateriaisApoioPage'))
 const ApresentacaoVendasPage = lazy(() => import('../../pages/ApresentacaoVendasPage'))
@@ -79,6 +80,7 @@ const PageLoader = () => (
 
 const NAV = [
   { path:'/',           icon:'fa-solid fa-house',               label:'Início'    },
+  { path:'/agenda-mentoria', icon:'fa-solid fa-calendar-days',  label:'Agenda', mentoradoOnly:true },
   { path:'/tasks',      icon:'fa-solid fa-list-check',          label:'Tarefas'   },
   { path:'/modelos',    icon:'fa-solid fa-rotate',              label:'Modelos'   },
   { path:'/pendencias', icon:'fa-solid fa-circle-exclamation',  label:'Pendências'},
@@ -129,6 +131,7 @@ const TITLES = {
   '/ajuda':      'Central de Ajuda',
   '/admin':      'Painel Admin Fluxe',
   '/mentoria':   'Mentoria',
+  '/agenda-mentoria': 'Agenda da Mentoria',
   '/materiais-apoio': 'Biblioteca',
   '/plano-negocio': 'Plano de Negócio em 6 Etapas',
 }
@@ -178,6 +181,7 @@ export default function AppShell() {
       return fatia.some(x => x.path && podeAcessarRota(profile?.perfil, x.path))
     }
     if (item.path === '/admin') return !!profile?.fluxe_staff // rota da equipe Fluxe, independe do perfil dentro da empresa
+    if (item.mentoradoOnly && !empresa?.mentorado_bpo_lucrativo) return false
     return podeAcessarRota(profile?.perfil, item.path)
   })
 
@@ -331,6 +335,7 @@ export default function AppShell() {
                 <Route path="/meu-painel" element={<MeuPainelPage />} />
                 <Route path="/ajuda"      element={<AjudaPage />} />
                 <Route path="/mentoria"   element={<RotaProtegida path="/mentoria" perfil={profile?.perfil}><MentoriaPage /></RotaProtegida>} />
+                <Route path="/agenda-mentoria" element={<RotaProtegida path="/agenda-mentoria" perfil={profile?.perfil}><AgendaMentoriaPage /></RotaProtegida>} />
                 <Route path="/materiais-apoio" element={<MateriaisApoioPage />} />
                 <Route path="/apresentacao-vendas" element={<ApresentacaoVendasPage />} />
                 <Route path="/apresentacao-manual-operacional" element={<ApresentacaoManualOperacionalPage />} />
