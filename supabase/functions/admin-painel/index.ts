@@ -598,6 +598,17 @@ serve(async (req) => {
       return ok({ success: true, combinados: data ?? [] })
     }
 
+    // ── Ação: listar check-ins ("como está indo?") de todas as mentoradas ──
+    if (action === 'listar_checkins') {
+      const { data, error } = await supabase
+        .from('mentoria_checkins')
+        .select('*, empresas(nome)')
+        .not('texto', 'is', null)
+        .order('atualizado_em', { ascending: false })
+      if (error) return ok({ error: error.message })
+      return ok({ success: true, checkins: data ?? [] })
+    }
+
     // ── Ação: marcar combinado como concluído ───────────────────────────────
     if (action === 'concluir_combinado') {
       const { id } = payload
@@ -691,7 +702,7 @@ serve(async (req) => {
       return ok({ success: true })
     }
 
-    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | excluir_empresa | get_turma_atual | salvar_turma | salvar_aula | excluir_aula | estender_trial | atualizar_valor_assinatura | toggle_mentorado | set_mentoria_origem | criar_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria | listar_sessoes_avulsas | listar_combinados_abertos | concluir_combinado | excluir_dados_mentoria | get_materiais_gerais | salvar_material_geral | excluir_material_geral | reordenar_materiais_gerais' })
+    return ok({ error: 'Ação inválida. Use: list_empresas | bloquear | desbloquear | excluir_empresa | get_turma_atual | salvar_turma | salvar_aula | excluir_aula | estender_trial | atualizar_valor_assinatura | toggle_mentorado | set_mentoria_origem | criar_mentorado | list_mentorados | listar_sessoes_mentoria | criar_sessao_mentoria | excluir_sessao_mentoria | listar_sessoes_avulsas | listar_combinados_abertos | concluir_combinado | listar_checkins | excluir_dados_mentoria | get_materiais_gerais | salvar_material_geral | excluir_material_geral | reordenar_materiais_gerais' })
 
   } catch (e) {
     return ok({ error: e.message || 'Erro interno' })
