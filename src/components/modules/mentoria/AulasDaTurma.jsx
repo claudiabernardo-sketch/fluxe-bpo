@@ -86,16 +86,14 @@ function NavMesBtn({ onClick, children }) {
   )
 }
 
-function DiaCalendario({ d, aulasDoDia, isHoje, temSelecionada, concluidas, onSelecionar }) {
+function DiaCalendario({ d, aulasDoDia, isHoje, temSelecionada, concluidas, onSelecionar, ultimaColuna, ultimaLinha }) {
   const [hover, setHover] = useState(false)
   const temAula = aulasDoDia.length > 0
 
   let background = 'transparent'
-  let border = '1.5px solid transparent'
-  if (temSelecionada) { background = GRAD_FLUXE; border = '1.5px solid transparent' }
-  else if (temAula) { background = hover ? '#EEF2FF' : '#FAFAFF'; border = `1.5px solid ${hover ? '#C7D2FE' : '#EDE9FE'}` }
-  else if (isHoje) { border = '1.5px solid #A5B4FC' }
-  else if (hover) { background = 'var(--s2)' }
+  if (temSelecionada) background = GRAD_FLUXE
+  else if (temAula) background = hover ? '#EEF2FF' : '#FAFAFF'
+  else if (hover) background = 'var(--s2)'
 
   return (
     <div
@@ -103,15 +101,20 @@ function DiaCalendario({ d, aulasDoDia, isHoje, temSelecionada, concluidas, onSe
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        minHeight: 52, borderRadius: 10, padding: '5px 5px', cursor: temAula ? 'pointer' : 'default',
-        background, border, transition: 'all .15s',
-        boxShadow: temSelecionada ? '0 4px 14px rgba(99,102,241,.35)' : temAula && hover ? '0 2px 8px rgba(99,102,241,.12)' : 'none',
-        transform: temAula && hover && !temSelecionada ? 'translateY(-1px)' : 'none',
+        minHeight: 56, padding: '6px 6px', cursor: temAula ? 'pointer' : 'default',
+        background, transition: 'background .15s',
+        borderRight: ultimaColuna ? 'none' : '1px solid var(--bo)',
+        borderBottom: ultimaLinha ? 'none' : '1px solid var(--bo)',
+        position: 'relative',
       }}
     >
+      {isHoje && !temSelecionada && (
+        <div style={{ position: 'absolute', top: 4, left: 4, width: 6, height: 6, borderRadius: '50%', background: '#6366F1' }} />
+      )}
       <div style={{
         fontSize: 11, fontWeight: isHoje || temSelecionada ? 800 : 600,
         color: temSelecionada ? '#fff' : isHoje ? '#4F46E5' : 'var(--tx2)',
+        marginLeft: isHoje && !temSelecionada ? 10 : 0,
       }}>
         {d.getDate()}
       </div>
@@ -159,12 +162,14 @@ function CalendarioAulas({ aulas, concluidas, onSelecionar, aulaSelecionadaId })
         </div>
         <NavMesBtn onClick={() => setMesBase(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}>›</NavMesBtn>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4, marginBottom: 6, paddingBottom: 8, borderBottom: '1px solid var(--bo)' }}>
-        {DIAS_SEMANA_MIN.map(d => <div key={d} style={{ textAlign: 'center', fontSize: 9, fontWeight: 800, color: 'var(--tx3)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{d}</div>)}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 0, marginBottom: 8 }}>
+        {DIAS_SEMANA_MIN.map(d => <div key={d} style={{ textAlign: 'center', fontSize: 9, fontWeight: 800, color: 'var(--tx3)', textTransform: 'uppercase', letterSpacing: '.06em', paddingBottom: 8 }}>{d}</div>)}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 0, border: '1px solid var(--bo)', borderRadius: 10, overflow: 'hidden' }}>
         {diasMes.map((d, i) => {
-          if (!d) return <div key={`e${i}`} style={{ minHeight: 52 }} />
+          const ultimaColuna = i % 7 === 6
+          const ultimaLinha = i >= diasMes.length - 7
+          if (!d) return <div key={`e${i}`} style={{ minHeight: 56, borderRight: ultimaColuna ? 'none' : '1px solid var(--bo)', borderBottom: ultimaLinha ? 'none' : '1px solid var(--bo)' }} />
           const key = fmtDataLocal(d)
           const aulasDoDia = porData[key] || []
           return (
@@ -176,6 +181,8 @@ function CalendarioAulas({ aulas, concluidas, onSelecionar, aulaSelecionadaId })
               temSelecionada={aulasDoDia.some(a => a.id === aulaSelecionadaId)}
               concluidas={concluidas}
               onSelecionar={onSelecionar}
+              ultimaColuna={ultimaColuna}
+              ultimaLinha={ultimaLinha}
             />
           )
         })}
