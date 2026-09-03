@@ -1138,20 +1138,46 @@ function SecaoMateriaisApoio() {
   )
 }
 
+const ABAS_ADMIN = [
+  ['mentorados', '🎓 Mentorados'],
+  ['combinados', '📋 Combinados & Sessões'],
+  ['turma', '📅 Turma'],
+  ['biblioteca', '📚 Biblioteca'],
+  ['empresas', '🏢 Empresas'],
+  ['bugs', '🐛 Bugs'],
+]
+
 export default function AdminPage() {
+  const [tab, setTab] = useState(() => new URLSearchParams(window.location.search).get('tab') || 'mentorados')
+
   return (
     <div>
       <div style={{ fontSize: 12, color: 'var(--tx3)', marginBottom: 16 }}>
         Visível só pra você — controle de todas as empresas que usam o Fluxe e registro interno de bugs.
       </div>
-      <SecaoMentorados />
-      <SecaoCheckins />
-      <SecaoCombinadosAbertos />
-      <SecaoSessoesAvulsas />
-      <SecaoTurmaGrupo />
-      <SecaoMateriaisApoio />
-      <SecaoEmpresas />
-      <SecaoBugs />
+
+      <div style={{ display: 'flex', gap: 4, marginBottom: 18, borderBottom: '1px solid var(--bo)', flexWrap: 'wrap' }}>
+        {ABAS_ADMIN.map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            style={{
+              padding: '8px 16px', border: 'none', background: 'transparent', cursor: 'pointer',
+              fontSize: 12, fontWeight: 600, color: tab === id ? '#6366F1' : '#94A3B8',
+              borderBottom: tab === id ? '2px solid #6366F1' : '2px solid transparent', marginBottom: -1,
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'mentorados' && (<><SecaoMentorados /><SecaoCheckins /></>)}
+      {tab === 'combinados' && (<><SecaoCombinadosAbertos /><SecaoSessoesAvulsas /></>)}
+      {tab === 'turma' && <SecaoTurmaGrupo />}
+      {tab === 'biblioteca' && <SecaoMateriaisApoio />}
+      {tab === 'empresas' && <SecaoEmpresas />}
+      {tab === 'bugs' && <SecaoBugs />}
     </div>
   )
 }
