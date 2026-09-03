@@ -2244,7 +2244,7 @@ export function useDeleteMentoriaLink() {
 // Feed comum a todo mentorado (grupo ou individual), RLS libera leitura
 // pra qualquer empresa com mentorado_bpo_lucrativo=true, ver MIGRATION_32.
 export function useMentoriaPosts() {
-  const { empresa } = useAuthStore()
+  const { empresa, profile } = useAuthStore()
   return useQuery({
     queryKey: ['mentoria_posts'],
     queryFn: async () => {
@@ -2257,7 +2257,19 @@ export function useMentoriaPosts() {
       return data ?? []
     },
     staleTime: 15_000,
-    enabled: !!empresa?.mentorado_bpo_lucrativo,
+    enabled: !!empresa?.mentorado_bpo_lucrativo || !!profile?.fluxe_staff,
+  })
+}
+
+export function useFixarPost() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, fixado }) => {
+      const { error } = await supabase.from('mentoria_posts').update({ fixado }).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['mentoria_posts'] }),
+    onError: (err) => console.error('[Fluxe]', err),
   })
 }
 

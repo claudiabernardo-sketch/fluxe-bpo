@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMentoriaLinks, useCreateMentoriaLink, useDeleteMentoriaLink, useMeusCombinados, useAtualizarMeuCombinado, useMentoriaPosts, useCriarPost, useExcluirPost, useMentoriaCurtidas, useToggleCurtida, useComentariosDoPost, useCriarComentario } from '../hooks/useData'
+import { useMentoriaLinks, useCreateMentoriaLink, useDeleteMentoriaLink, useMeusCombinados, useAtualizarMeuCombinado, useMentoriaPosts, useCriarPost, useExcluirPost, useFixarPost, useMentoriaCurtidas, useToggleCurtida, useComentariosDoPost, useCriarComentario } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import { Card, CardHeader, Btn, Loader } from '../components/ui'
@@ -98,12 +98,14 @@ function PostComunidade({ post, curtido, totalCurtidas }) {
   const { profile } = useAuthStore()
   const toggleCurtida = useToggleCurtida()
   const excluir = useExcluirPost()
+  const fixar = useFixarPost()
   const [mostrarComentarios, setMostrarComentarios] = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
   const souAutor = post.autor_id === profile?.id
 
   return (
-    <div style={{ border: '1px solid var(--bo)', borderRadius: 10, padding: '12px 14px' }}>
+    <div style={{ border: post.fixado ? '1.5px solid #F59E0B' : '1px solid var(--bo)', background: post.fixado ? '#FFFBEB' : 'transparent', borderRadius: 10, padding: '12px 14px' }}>
+      {post.fixado && <div style={{ fontSize: 10, fontWeight: 700, color: '#B45309', marginBottom: 6 }}>📌 FIXADO</div>}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <span style={{ fontSize: 13, fontWeight: 700 }}>{post.autor_nome}</span>
@@ -112,16 +114,25 @@ function PostComunidade({ post, curtido, totalCurtidas }) {
             {new Date(post.criado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
           </div>
         </div>
-        {souAutor && (
-          confirmDel ? (
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={() => excluir.mutate(post.id)} style={{ border: 'none', background: 'none', color: '#DC2626', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Excluir</button>
-              <button onClick={() => setConfirmDel(false)} style={{ border: 'none', background: 'none', color: 'var(--tx3)', fontSize: 11, cursor: 'pointer' }}>Cancelar</button>
-            </div>
-          ) : (
-            <button onClick={() => setConfirmDel(true)} style={{ border: 'none', background: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: 12 }}>🗑</button>
-          )
-        )}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {profile?.fluxe_staff && (
+            <button onClick={() => fixar.mutate({ id: post.id, fixado: !post.fixado })} disabled={fixar.isPending}
+              style={{ border: 'none', background: 'none', color: post.fixado ? '#B45309' : '#94A3B8', cursor: 'pointer', fontSize: 12 }}
+              title={post.fixado ? 'Desafixar post' : 'Fixar post'}>
+              📌
+            </button>
+          )}
+          {souAutor && (
+            confirmDel ? (
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={() => excluir.mutate(post.id)} style={{ border: 'none', background: 'none', color: '#DC2626', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Excluir</button>
+                <button onClick={() => setConfirmDel(false)} style={{ border: 'none', background: 'none', color: 'var(--tx3)', fontSize: 11, cursor: 'pointer' }}>Cancelar</button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmDel(true)} style={{ border: 'none', background: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: 12 }}>🗑</button>
+            )
+          )}
+        </div>
       </div>
       <div style={{ fontSize: 13, marginTop: 8, whiteSpace: 'pre-wrap' }}>{post.conteudo}</div>
       <div style={{ display: 'flex', gap: 14, marginTop: 10 }}>
@@ -145,13 +156,16 @@ function PostComunidade({ post, curtido, totalCurtidas }) {
 }
 
 function SecaoComunidade() {
-  const { empresa } = useAuthStore()
+  const { empresa, profile } = useAuthStore()
   const { data: posts = [], isLoading } = useMentoriaPosts()
   const { data: curtidas = [] } = useMentoriaCurtidas()
   const criarPost = useCriarPost()
   const [texto, setTexto] = useState('')
 
-  if (!empresa?.mentorado_bpo_lucrativo) return null
+  if (!empresa?.mentorado_bpo_lucrativo && !profile?.fluxe_staff) return null
+
+  const fixados = posts.filter(p => p.fixado)
+  const outros = posts.filter(p => !p.fixado)
 
   function publicar() {
     if (!texto.trim()) return
@@ -182,13 +196,27 @@ function SecaoComunidade() {
         {isLoading ? <Loader /> : posts.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>Ninguém postou ainda, seja a primeira pessoa a compartilhar algo.</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {posts.map(post => {
-              const curtidasDoPost = curtidas.filter(c => c.post_id === post.id)
-              const curtido = curtidasDoPost.some(c => c.empresa_id === empresa.id)
-              return <PostComunidade key={post.id} post={post} curtido={curtido} totalCurtidas={curtidasDoPost.length} />
-            })}
-          </div>
+          <>
+            {fixados.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#B45309', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8 }}>📌 Posts fixados</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {fixados.map(post => {
+                    const curtidasDoPost = curtidas.filter(c => c.post_id === post.id)
+                    const curtido = curtidasDoPost.some(c => c.empresa_id === empresa.id)
+                    return <PostComunidade key={post.id} post={post} curtido={curtido} totalCurtidas={curtidasDoPost.length} />
+                  })}
+                </div>
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {outros.map(post => {
+                const curtidasDoPost = curtidas.filter(c => c.post_id === post.id)
+                const curtido = curtidasDoPost.some(c => c.empresa_id === empresa.id)
+                return <PostComunidade key={post.id} post={post} curtido={curtido} totalCurtidas={curtidasDoPost.length} />
+              })}
+            </div>
+          </>
         )}
       </div>
     </Card>

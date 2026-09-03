@@ -163,11 +163,29 @@ export default function SecaoAulasDaTurma() {
   if (!turma) return null
 
   const aulaSelecionada = aulas.find(a => a.id === aulaSelecionadaId)
+  const hoje = fmtDataLocal(new Date())
+  const proximaAula = aulas.filter(a => a.data && a.data >= hoje).sort((a, b) => a.data.localeCompare(b.data))[0]
 
   return (
     <Card style={{ marginBottom: 16 }}>
       <CardHeader title={`Aulas da Turma${turma.nome ? ` — ${turma.nome}` : ''}`} icon="fa-solid fa-calendar-days" />
       <div style={{ padding: 16 }}>
+        <div style={{ border: '1px solid #C7D2FE', background: '#EEF2FF', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#4338CA', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Próximo evento</div>
+          {proximaAula ? (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--tx)' }}>Aula {proximaAula.numero}: {proximaAula.titulo}</div>
+                <div style={{ fontSize: 11, color: 'var(--tx2)' }}>
+                  {new Date(proximaAula.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+                </div>
+              </div>
+              <BotaoAgenda titulo={`Aula ${proximaAula.numero}: ${proximaAula.titulo}`} data={proximaAula.data} detalhes={proximaAula.video_url || proximaAula.material_url || ''} />
+            </div>
+          ) : (
+            <div style={{ fontSize: 12, color: 'var(--tx3)' }}>Nenhum evento agendado</div>
+          )}
+        </div>
         {turma.grupo_whatsapp_url && (
           <a href={turma.grupo_whatsapp_url} target="_blank" rel="noopener noreferrer" style={{
             display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: '#fff',
