@@ -3,7 +3,7 @@ import { useMentoriaLinks, useCreateMentoriaLink, useDeleteMentoriaLink, useMeus
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 import { Card, CardHeader, Btn, Loader } from '../components/ui'
-import SecaoAulasDaTurma, { BotaoAgenda } from '../components/modules/mentoria/AulasDaTurma'
+import { BotaoAgenda } from '../components/modules/mentoria/AulasDaTurma'
 
 function urlDoMaterial(l) {
   if (l.arquivo_path) return supabase.storage.from('tarefas').getPublicUrl(l.arquivo_path).data.publicUrl
@@ -275,7 +275,6 @@ export default function MentoriaPage() {
         Vídeos e materiais de mentoria — cole um link (YouTube, Google Drive, Canva, etc.) ou suba um arquivo direto pra sua equipe acessar.
       </div>
 
-      <SecaoAulasDaTurma />
       <SecaoComunidade />
       <SecaoMeusCombinados />
 
