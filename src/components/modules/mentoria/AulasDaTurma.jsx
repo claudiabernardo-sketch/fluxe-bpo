@@ -149,7 +149,7 @@ function CardAula({ a, concluida, destacada }) {
 }
 
 export default function SecaoAulasDaTurma() {
-  const { empresa } = useAuthStore()
+  const { empresa, profile } = useAuthStore()
   const { data, isLoading } = useTurmaAtualPublica()
   const { data: concluidas = new Set() } = useMeuProgressoAulas()
   const [modo, setModo] = useState('calendario') // 'calendario' | 'lista'
@@ -158,7 +158,7 @@ export default function SecaoAulasDaTurma() {
   const aulas = data?.aulas ?? []
   const totalConcluidas = aulas.filter(a => concluidas.has(a.id)).length
 
-  if (!empresa?.mentorado_bpo_lucrativo) return null
+  if (!empresa?.mentorado_bpo_lucrativo && !profile?.fluxe_staff) return null
   if (isLoading) return null
   if (!turma) return null
 
