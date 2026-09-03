@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import LOGO_SRC from '../assets/logo-fluxe-white.png'
+import LOGO_SRC from '../assets/logo-fluxe.png'
 
 const INDIGO = '#4F46E5'
 const AMBER = '#D97706'
@@ -348,7 +348,9 @@ export default function ApresentacaoContaAzulPage() {
         color: '#fff', fontSize: 20, width: 36, height: 36, borderRadius: 8, cursor: 'pointer',
       }} title="Sair (Esc)">×</button>
 
-      <img src={LOGO_SRC} alt="Fluxe" style={{ position: 'absolute', top: 22, left: 32, height: 26, width: 'auto', opacity: .85 }} />
+      <div style={{ position: 'absolute', top: 20, left: 32, background: '#fff', borderRadius: 8, padding: '6px 12px', display: 'flex', alignItems: 'center' }}>
+        <img src={LOGO_SRC} alt="Fluxe" style={{ height: 20, width: 'auto' }} />
+      </div>
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
         <Slide />
