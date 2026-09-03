@@ -14,6 +14,7 @@ const APRESENTACOES = {
   'Apresentação: Comercial e Precificação Consultiva': '/apresentacao-venda-consultiva',
   'Apresentação: Onboarding do Cliente (Encontro 4)': '/apresentacao-onboarding-cliente',
   'Apresentação: Integração Conta Azul + Claude Code': '/apresentacao-conta-azul',
+  'Apresentação: Criando Skills próprias pro seu BPO': '/apresentacao-skills',
 }
 
 function urlDoMaterial(m) {
