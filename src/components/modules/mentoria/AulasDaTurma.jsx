@@ -68,6 +68,67 @@ function fmtHorario(h) {
   return mm === '00' ? `${hh}h` : `${hh}h${mm}`
 }
 
+const GRAD_FLUXE = 'linear-gradient(135deg,#A855F7,#6366F1 55%,#22D3EE)'
+
+function NavMesBtn({ onClick, children }) {
+  const [hover, setHover] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        border: 'none', background: hover ? '#EEF2FF' : 'var(--s2)', color: hover ? '#4F46E5' : 'var(--tx2)',
+        borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', fontWeight: 800, fontSize: 14,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .15s',
+      }}
+    >{children}</button>
+  )
+}
+
+function DiaCalendario({ d, aulasDoDia, isHoje, temSelecionada, concluidas, onSelecionar }) {
+  const [hover, setHover] = useState(false)
+  const temAula = aulasDoDia.length > 0
+
+  let background = 'transparent'
+  let border = '1.5px solid transparent'
+  if (temSelecionada) { background = GRAD_FLUXE; border = '1.5px solid transparent' }
+  else if (temAula) { background = hover ? '#EEF2FF' : '#FAFAFF'; border = `1.5px solid ${hover ? '#C7D2FE' : '#EDE9FE'}` }
+  else if (isHoje) { border = '1.5px solid #A5B4FC' }
+  else if (hover) { background = 'var(--s2)' }
+
+  return (
+    <div
+      onClick={() => temAula && onSelecionar(aulasDoDia[0].id)}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        minHeight: 52, borderRadius: 10, padding: '5px 5px', cursor: temAula ? 'pointer' : 'default',
+        background, border, transition: 'all .15s',
+        boxShadow: temSelecionada ? '0 4px 14px rgba(99,102,241,.35)' : temAula && hover ? '0 2px 8px rgba(99,102,241,.12)' : 'none',
+        transform: temAula && hover && !temSelecionada ? 'translateY(-1px)' : 'none',
+      }}
+    >
+      <div style={{
+        fontSize: 11, fontWeight: isHoje || temSelecionada ? 800 : 600,
+        color: temSelecionada ? '#fff' : isHoje ? '#4F46E5' : 'var(--tx2)',
+      }}>
+        {d.getDate()}
+      </div>
+      {aulasDoDia.map(a => (
+        <div key={a.id} style={{
+          fontSize: 8.5, marginTop: 3, padding: '2px 4px', borderRadius: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3,
+          background: temSelecionada ? 'rgba(255,255,255,.22)' : concluidas.has(a.id) ? '#DCFCE7' : '#EEF2FF',
+          color: temSelecionada ? '#fff' : concluidas.has(a.id) ? '#15803D' : '#4338CA',
+        }}>
+          {concluidas.has(a.id) ? '✓' : `${a.numero}.`} {a.titulo}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function CalendarioAulas({ aulas, concluidas, onSelecionar, aulaSelecionadaId }) {
   const hoje = fmtDataLocal(new Date())
   const porData = {}
@@ -87,46 +148,35 @@ function CalendarioAulas({ aulas, concluidas, onSelecionar, aulaSelecionadaId })
   })()
 
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <button onClick={() => setMesBase(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
-          style={{ border: '1px solid var(--bo)', background: '#fff', borderRadius: 8, width: 28, height: 28, cursor: 'pointer', fontWeight: 700 }}>‹</button>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--tx)', minWidth: 150, textAlign: 'center' }}>
+    <div style={{ background: 'var(--sur, #fff)', border: '1px solid var(--bo)', borderRadius: 16, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,.04)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <NavMesBtn onClick={() => setMesBase(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}>‹</NavMesBtn>
+        <div style={{
+          fontSize: 15, fontWeight: 800, textAlign: 'center',
+          backgroundImage: GRAD_FLUXE, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
+        }}>
           {MESES_NOME[mesBase.getMonth()]} {mesBase.getFullYear()}
         </div>
-        <button onClick={() => setMesBase(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
-          style={{ border: '1px solid var(--bo)', background: '#fff', borderRadius: 8, width: 28, height: 28, cursor: 'pointer', fontWeight: 700 }}>›</button>
+        <NavMesBtn onClick={() => setMesBase(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}>›</NavMesBtn>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4, marginBottom: 4 }}>
-        {DIAS_SEMANA_MIN.map(d => <div key={d} style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: 'var(--tx3)', textTransform: 'uppercase' }}>{d}</div>)}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4, marginBottom: 6, paddingBottom: 8, borderBottom: '1px solid var(--bo)' }}>
+        {DIAS_SEMANA_MIN.map(d => <div key={d} style={{ textAlign: 'center', fontSize: 9, fontWeight: 800, color: 'var(--tx3)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{d}</div>)}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4 }}>
         {diasMes.map((d, i) => {
-          if (!d) return <div key={`e${i}`} style={{ minHeight: 46 }} />
+          if (!d) return <div key={`e${i}`} style={{ minHeight: 52 }} />
           const key = fmtDataLocal(d)
           const aulasDoDia = porData[key] || []
-          const isHoje = key === hoje
-          const temSelecionada = aulasDoDia.some(a => a.id === aulaSelecionadaId)
           return (
-            <div
+            <DiaCalendario
               key={key}
-              onClick={() => aulasDoDia.length && onSelecionar(aulasDoDia[0].id)}
-              style={{
-                minHeight: 46, borderRadius: 8, padding: 4, cursor: aulasDoDia.length ? 'pointer' : 'default',
-                background: temSelecionada ? '#EEF2FF' : aulasDoDia.length ? '#F5F3FF' : isHoje ? '#F8FAFC' : 'transparent',
-                border: `1.5px solid ${temSelecionada ? '#6366F1' : aulasDoDia.length ? '#DDD6FE' : isHoje ? '#CBD5E1' : 'transparent'}`,
-              }}
-            >
-              <div style={{ fontSize: 11, fontWeight: isHoje ? 800 : 600, color: isHoje ? '#4338CA' : 'var(--tx2)' }}>{d.getDate()}</div>
-              {aulasDoDia.map(a => (
-                <div key={a.id} style={{
-                  fontSize: 8.5, marginTop: 2, padding: '1px 3px', borderRadius: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  background: concluidas.has(a.id) ? '#DCFCE7' : '#EEF2FF', color: concluidas.has(a.id) ? '#15803D' : '#4338CA', fontWeight: 700,
-                }}>
-                  {concluidas.has(a.id) ? '✓ ' : ''}{a.numero}. {a.titulo}
-                </div>
-              ))}
-            </div>
+              d={d}
+              aulasDoDia={aulasDoDia}
+              isHoje={key === hoje}
+              temSelecionada={aulasDoDia.some(a => a.id === aulaSelecionadaId)}
+              concluidas={concluidas}
+              onSelecionar={onSelecionar}
+            />
           )
         })}
       </div>
