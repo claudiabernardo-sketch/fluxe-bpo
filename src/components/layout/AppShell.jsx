@@ -181,7 +181,7 @@ export default function AppShell() {
       return fatia.some(x => x.path && podeAcessarRota(profile?.perfil, x.path))
     }
     if (item.path === '/admin') return !!profile?.fluxe_staff // rota da equipe Fluxe, independe do perfil dentro da empresa
-    if (item.mentoradoOnly && !empresa?.mentorado_bpo_lucrativo) return false
+    if (item.mentoradoOnly && !empresa?.mentorado_bpo_lucrativo && !profile?.fluxe_staff) return false
     return podeAcessarRota(profile?.perfil, item.path)
   })
 
