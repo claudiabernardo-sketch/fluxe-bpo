@@ -86,8 +86,8 @@ serve(async (req) => {
   const raw = await icsRes.text()
   const lines = unfoldIcs(raw)
 
-  const encontros: { numero: number; titulo: string; data: string; horario: string | null; link_meet: string | null }[] = []
-  let atual: { summary?: string; dtstart?: string; meet?: string } | null = null
+  const encontros: { numero: number; titulo: string; data: string; horario: string | null; link_meet: string | null; gravacao: string | null }[] = []
+  let atual: { summary?: string; dtstart?: string; meet?: string; gravacao?: string } | null = null
   for (const line of lines) {
     if (line === 'BEGIN:VEVENT') atual = {}
     else if (line === 'END:VEVENT') {
@@ -95,11 +95,19 @@ serve(async (req) => {
         const m = atual.summary.match(/^ENCONTRO\s+(\d+)\s+—\s+(.+)$/i)
         if (m) {
           const { data, horario } = paraDataHoraBrasilia(atual.dtstart)
-          if (data) encontros.push({ numero: Number(m[1]), titulo: tituloCaso(m[2].trim()), data, horario, link_meet: atual.meet ?? null })
+          if (data) encontros.push({ numero: Number(m[1]), titulo: tituloCaso(m[2].trim()), data, horario, link_meet: atual.meet ?? null, gravacao: atual.gravacao ?? null })
         }
       }
       atual = null
     } else if (atual) {
+      // ATTACH (gravação anexada ao evento) tem formato proprio, com a
+      // URL sempre no final da linha — trata separado da regra geral de
+      // "chave:valor", porque o FILENAME pode ter dois-pontos dentro.
+      if (line.startsWith('ATTACH') && /recording/i.test(line)) {
+        const urlMatch = line.match(/(https?:\/\/\S+)\s*$/)
+        if (urlMatch) atual.gravacao = urlMatch[1]
+        continue
+      }
       const m = line.match(/^([A-Z-]+)(;[^:]*)?:(.*)$/)
       if (m) {
         const [, key, , val] = m
@@ -128,12 +136,16 @@ serve(async (req) => {
 
   for (const enc of encontros) {
     const existenteId = porNumero.get(enc.numero)
+    // video_url (gravação) só entra no payload quando a agenda realmente
+    // tem uma gravação anexada — pra não apagar um link colocado manualmente
+    // antes da gravação subir na agenda.
+    const camposGravacao = enc.gravacao ? { video_url: enc.gravacao } : {}
     if (existenteId) {
-      const { error } = await supabase.from('turma_aulas').update({ titulo: enc.titulo, data: enc.data, horario: enc.horario, link_meet: enc.link_meet }).eq('id', existenteId)
+      const { error } = await supabase.from('turma_aulas').update({ titulo: enc.titulo, data: enc.data, horario: enc.horario, link_meet: enc.link_meet, ...camposGravacao }).eq('id', existenteId)
       if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
       atualizados.push(enc.numero)
     } else {
-      const { error } = await supabase.from('turma_aulas').insert({ turma_id: turmaId, numero: enc.numero, titulo: enc.titulo, data: enc.data, horario: enc.horario, link_meet: enc.link_meet })
+      const { error } = await supabase.from('turma_aulas').insert({ turma_id: turmaId, numero: enc.numero, titulo: enc.titulo, data: enc.data, horario: enc.horario, link_meet: enc.link_meet, ...camposGravacao })
       if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
       criados.push(enc.numero)
     }
