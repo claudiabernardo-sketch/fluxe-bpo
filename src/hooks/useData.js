@@ -258,6 +258,7 @@ export function useImportarBibliotecaModelos() {
   const { empresa } = useAuthStore()
   return useMutation({
     mutationFn: async () => {
+      if (!empresa?.id) throw new Error('Empresa ainda não carregada, aguarde a página terminar de carregar e tente de novo.')
       const { data: existentes, error: errExist } = await supabase
         .from('tarefa_modelos').select('titulo').eq('empresa_id', empresa?.id)
       if (errExist) throw errExist
