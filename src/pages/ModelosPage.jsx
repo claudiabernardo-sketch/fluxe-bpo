@@ -6,6 +6,7 @@ import { useTarefaModelos, useCreateModelo, useUpdateModelo, useDeleteModelo, us
 import { Card, Btn, Loader } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 import { supabase } from '../lib/supabase'
+import { useAuthStore } from '../store/authStore'
 
 // Prefixo "Rotina:" pra não confundir com a etapa da esteira, que também
 // tem um valor "Operacional" (coisa completamente diferente).
@@ -92,6 +93,7 @@ function RotinaInfo({ rot }) {
 
 export default function ModelosPage() {
   const { data: modelos = [], isLoading } = useTarefaModelos()
+  const { empresa } = useAuthStore()
   const { data: clients = [] } = useClients()
   const createModelo = useCreateModelo()
   const updateModelo = useUpdateModelo()
@@ -113,6 +115,10 @@ export default function ModelosPage() {
 
   async function handleImportarBiblioteca() {
     setBibliotecaMsg(null)
+    if (!empresa?.id) {
+      setBibliotecaMsg('Erro ao importar: a página ainda está carregando os dados da empresa, aguarde um instante e tente de novo.')
+      return
+    }
     try {
       const r = await importarBiblioteca.mutateAsync()
       setBibliotecaMsg(r.importados > 0
@@ -381,7 +387,7 @@ export default function ModelosPage() {
           Selecione um cliente para cruzar as rotinas com os modelos e gerar tarefas.
         </div>
         <div style={{ display:'flex', gap:8 }}>
-          <button onClick={handleImportarBiblioteca} disabled={importarBiblioteca.isPending}
+          <button onClick={handleImportarBiblioteca} disabled={importarBiblioteca.isPending || !empresa?.id}
             style={{ padding:'8px 14px', borderRadius:8, border:'1px solid #E2E8F0', background:'#fff', color:'#334155', cursor:'pointer', fontSize:13, fontWeight:600 }}>
             {importarBiblioteca.isPending ? 'Importando…' : '📚 Importar biblioteca de modelos'}
           </button>
