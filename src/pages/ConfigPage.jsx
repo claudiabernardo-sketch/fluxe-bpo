@@ -940,7 +940,7 @@ export default function ConfigPage() {
 
       {/* Tabs */}
       <div style={{ display:'flex', gap:4, marginBottom:18, borderBottom:'1px solid #E2E8F0', paddingBottom:0 }}>
-        {[['empresa','🏢 Empresa'],...(podeCofreEmpresa?[['cofre_empresa','🔐 Cofre da Empresa']]:[]),['equipe','👥 Equipe'],['custoHora','💰 Custo/Hora'],['custosOp','📊 Custo da Operação'],['operacional','⚙️ Operacional'],...(profile?.perfil==='admin'?[['integracoes','🔗 Integrações'],['seguranca','🔐 Segurança'],['plano','💳 Meu Plano']]:[]  )].map(([id, label]) => (
+        {[['empresa','🏢 Empresa'],['proposta','📄 Proposta e Contrato'],...(podeCofreEmpresa?[['cofre_empresa','🔐 Cofre da Empresa']]:[]),['equipe','👥 Equipe'],['custoHora','💰 Custo/Hora'],['custosOp','📊 Custo da Operação'],['operacional','⚙️ Operacional'],...(profile?.perfil==='admin'?[['integracoes','🔗 Integrações'],['seguranca','🔐 Segurança'],['plano','💳 Meu Plano']]:[]  )].map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{ padding:'8px 16px', border:'none', background:'transparent', cursor:'pointer', fontSize:12, fontWeight:600, color: tab===id?'#6366F1':'#94A3B8', borderBottom: tab===id?'2px solid #6366F1':'2px solid transparent', marginBottom:-1 }}>
             {label}
           </button>
@@ -1434,7 +1434,7 @@ export default function ConfigPage() {
 
       {tab === 'proposta' && (
         <Card>
-          <CardHeader title="Configurações da proposta comercial" icon="📊" />
+          <CardHeader title="Dados do representante, pra proposta e contrato" icon="📄" />
           <div style={{ padding:16, display:'flex', flexDirection:'column', gap:12 }}>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
               {[

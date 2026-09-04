@@ -1685,7 +1685,7 @@ export default function PrecificacaoPage() {
                       </div>
                       {dadosIncompletos && (
                         <div style={{ marginTop: 6, fontWeight: 600, fontSize: 11 }}>
-                          Dados incompletos — complete em Configurações → abas Empresa e Proposta antes de imprimir.
+                          Dados incompletos — complete em Configurações → abas Empresa e Proposta e Contrato antes de imprimir.
                         </div>
                       )}
                     </div>
@@ -1707,7 +1707,7 @@ export default function PrecificacaoPage() {
                       return
                     }
                     if (dadosIncompletos) {
-                      alert('Complete os dados da sua empresa (CONTRATADA) em Configurações → abas Empresa e Proposta.\nO contrato não pode sair com campos em branco para o cliente assinar.')
+                      alert('Complete os dados da sua empresa (CONTRATADA) em Configurações → abas Empresa e Proposta e Contrato.\nO contrato não pode sair com campos em branco para o cliente assinar.')
                       return
                     }
                     setContratoGerado(true)
