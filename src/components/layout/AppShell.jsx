@@ -70,6 +70,11 @@ const ApresentacaoVendaConsultivaPage = lazy(() => import('../../pages/Apresenta
 const ApresentacaoOnboardingClientePage = lazy(() => import('../../pages/ApresentacaoOnboardingClientePage'))
 const ApresentacaoContaAzulPage = lazy(() => import('../../pages/ApresentacaoContaAzulPage'))
 const ApresentacaoSkillsPage = lazy(() => import('../../pages/ApresentacaoSkillsPage'))
+const ApresentacaoPromptsPage = lazy(() => import('../../pages/ApresentacaoPromptsPage'))
+const ApresentacaoProjectsPage = lazy(() => import('../../pages/ApresentacaoProjectsPage'))
+const ApresentacaoErrosIAPage = lazy(() => import('../../pages/ApresentacaoErrosIAPage'))
+const ApresentacaoClaudeCodeRotinaPage = lazy(() => import('../../pages/ApresentacaoClaudeCodeRotinaPage'))
+const ApresentacaoGoogleDrivePage = lazy(() => import('../../pages/ApresentacaoGoogleDrivePage'))
 
 const PageLoader = () => (
   <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'60vh' }}>
@@ -345,6 +350,11 @@ export default function AppShell() {
                 <Route path="/apresentacao-onboarding-cliente" element={<ApresentacaoOnboardingClientePage />} />
                 <Route path="/apresentacao-conta-azul" element={<ApresentacaoContaAzulPage />} />
                 <Route path="/apresentacao-skills" element={<ApresentacaoSkillsPage />} />
+                <Route path="/apresentacao-prompts" element={<ApresentacaoPromptsPage />} />
+                <Route path="/apresentacao-projects" element={<ApresentacaoProjectsPage />} />
+                <Route path="/apresentacao-erros-ia" element={<ApresentacaoErrosIAPage />} />
+                <Route path="/apresentacao-claude-code-rotina" element={<ApresentacaoClaudeCodeRotinaPage />} />
+                <Route path="/apresentacao-google-drive" element={<ApresentacaoGoogleDrivePage />} />
                 <Route path="/plano-negocio" element={<RotaProtegida path="/plano-negocio" perfil={profile?.perfil}><PlanoNegocioPage /></RotaProtegida>} />
                 <Route path="/admin"      element={profile?.fluxe_staff ? <AdminPage /> : <Navigate to="/" replace />} />
               </Routes>

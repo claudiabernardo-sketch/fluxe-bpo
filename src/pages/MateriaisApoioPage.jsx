@@ -15,6 +15,11 @@ const APRESENTACOES = {
   'Apresentação: Onboarding do Cliente (Encontro 4)': '/apresentacao-onboarding-cliente',
   'Apresentação: Integração Conta Azul + Claude Code': '/apresentacao-conta-azul',
   'Apresentação: Criando Skills próprias pro seu BPO': '/apresentacao-skills',
+  'Apresentação: Prompts prontos pra análise financeira': '/apresentacao-prompts',
+  'Apresentação: Projects e Artifacts na prática': '/apresentacao-projects',
+  'Apresentação: Erros comuns usando IA no financeiro': '/apresentacao-erros-ia',
+  'Apresentação: Claude Code pra automatizar rotina do BPO': '/apresentacao-claude-code-rotina',
+  'Apresentação: Claude e a organização do Google Drive': '/apresentacao-google-drive',
 }
 
 function urlDoMaterial(m) {
