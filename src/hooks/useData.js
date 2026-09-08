@@ -2006,6 +2006,26 @@ export function useMinhaTurmaMentoria() {
   })
 }
 
+// Agenda privada da mentoria individual — só os encontros da própria
+// empresa, sincronizados por e-mail do convidado (ver sync-agenda-mentoria).
+export function useMeusEncontrosIndividuais() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['meus_encontros_individuais', empresa?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('mentoria_encontros_individuais')
+        .select('*')
+        .eq('empresa_id', empresa?.id)
+        .order('data')
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!empresa?.id && empresa?.mentoria_origem === 'individual',
+    staleTime: 60_000,
+  })
+}
+
 // Leitura pelo Admin (via admin-painel, mesmo dado, mas passando pela
 // checagem de fluxe_staff — usado só na tela de edição).
 export function useAdminTurma() {

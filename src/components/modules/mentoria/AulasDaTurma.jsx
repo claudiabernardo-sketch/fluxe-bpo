@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useMinhaTurmaMentoria, useMeuProgressoAulas, useToggleProgressoAula, useMeuCheckin, useSalvarCheckin } from '../../../hooks/useData'
+import { useMinhaTurmaMentoria, useMeuProgressoAulas, useToggleProgressoAula, useMeuCheckin, useSalvarCheckin, useMeusEncontrosIndividuais } from '../../../hooks/useData'
 import { useAuthStore } from '../../../store/authStore'
 import { Card, CardHeader, Btn } from '../../ui'
 
@@ -270,17 +270,106 @@ function CardCheckin() {
   )
 }
 
+// Agenda privada da mentoria individual — cada empresa só vê os próprios
+// encontros (sincronizados por e-mail do convidado), nunca os de outra.
+function CardEncontroIndividual({ enc }) {
+  const hoje = fmtDataLocal(new Date())
+  const jaPassou = enc.data && enc.data < hoje
+  return (
+    <div style={{ border: '1px solid var(--bo)', borderRadius: 10, padding: '12px 14px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 600 }}>{enc.titulo}</div>
+        <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 4 }}>
+          {new Date(enc.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+          {enc.horario && ` às ${fmtHorario(enc.horario)}`}
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap' }}>
+        {!jaPassou && enc.link_meet && (
+          <a href={enc.link_meet} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#fff', textDecoration: 'none', background: '#16A34A', borderRadius: 8, padding: '6px 12px' }}>
+            🎥 Entrar
+          </a>
+        )}
+        {!jaPassou && <BotaoAgenda titulo={enc.titulo} data={enc.data} horario={enc.horario} detalhes={enc.link_meet || enc.video_url || ''} />}
+        {enc.video_url ? (
+          <a href={enc.video_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: '#6366F1', textDecoration: 'none', border: '1px solid #6366F1', borderRadius: 8, padding: '6px 12px' }}>
+            ▶ Assistir
+          </a>
+        ) : (
+          jaPassou && <span style={{ fontSize: 11, color: 'var(--tx3)' }}>Gravação em breve</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SecaoEncontrosIndividuais() {
+  const { data: encontros = [], isLoading } = useMeusEncontrosIndividuais()
+  if (isLoading) return null
+
+  const hoje = fmtDataLocal(new Date())
+  const proximo = encontros.filter(e => e.data && e.data >= hoje).sort((a, b) => a.data.localeCompare(b.data))[0]
+  const ordenados = [...encontros].sort((a, b) => b.data.localeCompare(a.data))
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <CardHeader title="Meus Encontros de Mentoria" icon="fa-solid fa-calendar-days" />
+      <div style={{ padding: 16 }}>
+        <div style={{ border: '1px solid #C7D2FE', background: '#EEF2FF', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#4338CA', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Próximo encontro</div>
+          {proximo ? (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--tx)' }}>{proximo.titulo}</div>
+                <div style={{ fontSize: 11, color: 'var(--tx2)' }}>
+                  {new Date(proximo.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+                  {proximo.horario && ` às ${fmtHorario(proximo.horario)}`}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {proximo.link_meet && (
+                  <a href={proximo.link_meet} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#fff', textDecoration: 'none', background: '#16A34A', borderRadius: 8, padding: '6px 12px', whiteSpace: 'nowrap' }}>
+                    🎥 Entrar
+                  </a>
+                )}
+                <BotaoAgenda titulo={proximo.titulo} data={proximo.data} horario={proximo.horario} detalhes={proximo.link_meet || proximo.video_url || ''} />
+              </div>
+            </div>
+          ) : (
+            <div style={{ fontSize: 12, color: 'var(--tx3)' }}>Nenhum encontro agendado</div>
+          )}
+        </div>
+        <CardCheckin />
+        {ordenados.length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>Seus encontros individuais aparecem aqui assim que forem agendados.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {ordenados.map(e => <CardEncontroIndividual key={e.id} enc={e} />)}
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 export default function SecaoAulasDaTurma() {
   const { empresa, profile } = useAuthStore()
+  const ehIndividual = empresa?.mentoria_origem === 'individual'
+  // useMinhaTurmaMentoria não busca dado de outra empresa (é só turma_grupo,
+  // compartilhada por design), mas na mentoria individual ela não se aplica,
+  // por isso o hook sempre roda, e só o resultado é descartado nesse caso.
   const { data, isLoading } = useMinhaTurmaMentoria()
   const { data: concluidas = new Set() } = useMeuProgressoAulas()
   const [modo, setModo] = useState('calendario') // 'calendario' | 'lista'
   const [aulaSelecionadaId, setAulaSelecionadaId] = useState(null)
+
+  if (!empresa?.mentorado_bpo_lucrativo && !profile?.fluxe_staff) return null
+  if (ehIndividual) return <SecaoEncontrosIndividuais />
+
   const turma = data?.turma
   const aulas = data?.aulas ?? []
   const totalConcluidas = aulas.filter(a => concluidas.has(a.id)).length
 
-  if (!empresa?.mentorado_bpo_lucrativo && !profile?.fluxe_staff) return null
   if (isLoading) return null
   if (!turma) return null
 
