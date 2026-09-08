@@ -63,7 +63,7 @@ serve(async (req) => {
       .eq('id', empresa_id)
       .single()
 
-    if (empresaRow?.plano === 'essencial') {
+    if (empresaRow?.plano === 'starter') {
       const { data: existingUser } = await supabaseAdmin
         .from('usuarios')
         .select('id')

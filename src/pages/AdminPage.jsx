@@ -3,9 +3,11 @@ import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug,
 import { Card, CardHeader, Btn, Badge, Loader } from '../components/ui'
 import { ETAPAS_BPO } from '../data/etapasBpo'
 
-const PLANO_COLOR = { trial:'yellow', trial_expirado:'orange', bloqueado:'red', essencial:'green', pro:'green' }
-const PLANO_LABEL = { trial:'Trial', trial_expirado:'Trial expirado', bloqueado:'Bloqueada', essencial:'Essencial', pro:'Pro' }
-const VALOR_ESPERADO = { essencial: 97, pro: 197 }
+// 'starter' é o valor real do enum plano_id no banco pro plano Essencial —
+// nunca 'essencial', que não existe no enum (ver MIGRATION do enum plano_id).
+const PLANO_COLOR = { trial:'yellow', trial_expirado:'orange', bloqueado:'red', starter:'green', pro:'green' }
+const PLANO_LABEL = { trial:'Trial', trial_expirado:'Trial expirado', bloqueado:'Bloqueada', starter:'Essencial', pro:'Pro' }
+const VALOR_ESPERADO = { starter: 97, pro: 197 }
 
 // Compara o texto digitado com o nome da empresa de forma tolerante —
 // ignora maiúsculas/minúsculas e espaços extras (nomes no banco às vezes
@@ -141,7 +143,7 @@ function LinhaEmpresa({ emp, onAcao, pendente, duplicadas = [] }) {
           <select value={planoRestaurar} onChange={e => setPlanoRestaurar(e.target.value)}
             style={{ fontSize: 11, padding: '4px 6px', borderRadius: 6, border: '1px solid var(--bo)' }}>
             <option value="trial">Trial</option>
-            <option value="essencial">Essencial</option>
+            <option value="starter">Essencial</option>
             <option value="pro">Pro</option>
           </select>
           <Btn small variant="success" disabled={pendente || planoRestaurar === emp.plano} onClick={() => onAcao('desbloquear', emp.id, { plano: planoRestaurar })}>

@@ -18,7 +18,7 @@ export default function TrialGuard() {
     setErroAssinar('')
     try {
       const { data, error } = await supabase.functions.invoke('asaas-create-subscription', {
-        body: { plano: 'essencial', cpfCnpj },
+        body: { plano: 'starter', cpfCnpj },
       })
       if (error) {
         let detail = error.message

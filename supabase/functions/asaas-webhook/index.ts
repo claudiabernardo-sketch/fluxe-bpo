@@ -85,9 +85,13 @@ serve(async (req) => {
     // ── Pagamento confirmado / recebido ──────────────────────────
     case 'PAYMENT_CONFIRMED':
     case 'PAYMENT_RECEIVED': {
-      // Define plano baseado no valor pago
+      // Define plano baseado no valor pago. 'starter' é o valor real do
+      // enum no banco pro plano Essencial (R$97) — nunca 'essencial', que
+      // não existe no enum e fazia esse update falhar silenciosamente pra
+      // todo pagamento do Essencial. Corte em 150 pra não classificar um
+      // pagamento de R$97 (Essencial) como Pro (R$197).
       const valor = payment.value as number || 0
-      const novoPlano = valor >= 90 ? 'pro' : 'essencial'
+      const novoPlano = valor >= 150 ? 'pro' : 'starter'
       updates.plano = novoPlano
       updates.asaas_last_payment_at = new Date().toISOString()
       updates.asaas_payment_url = null // limpa link pendente
