@@ -2,15 +2,21 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // Le a agenda pessoal da Claudia (link secreto iCal, so leitura) e sincroniza
-// os eventos "ENCONTRO N — TITULO" com a grade da turma que esta rodando
-// (MENTORIA_TURMA_ID). So atualiza titulo/data, nunca mexe em video_url,
-// material_url ou exercicio, que sao preenchidos a parte no Fluxe.
+// dois tipos de encontro:
 //
-// Padrao esperado no titulo do evento no Google Calendar:
-//   "ENCONTRO 4 — ONBOARDING: A ENTRADA DO CLIENTE"
-// Eventos que nao seguem esse padrao (reunioes, outros treinamentos etc.)
-// sao ignorados, ja que essa e a agenda pessoal inteira dela, nao uma
-// agenda dedicada so a mentoria.
+// 1. "ENCONTRO N — TITULO" -> grade da turma que esta rodando (MENTORIA_TURMA_ID).
+//    So atualiza titulo/data, nunca mexe em video_url, material_url ou
+//    exercicio, que sao preenchidos a parte no Fluxe.
+//
+// 2. Qualquer outro evento cujo convidado (ATTENDEE) bata com o e-mail de
+//    um usuario de uma empresa de mentoria individual -> agenda privada
+//    dessa empresa (mentoria_encontros_individuais), visivel so pra ela.
+//    O e-mail do convidado e usado so pra achar a empresa certa, nunca e
+//    guardado no banco.
+//
+// Eventos sem nenhum dos dois casamentos (reunioes pessoais, outros
+// compromissos etc.) sao ignorados, ja que essa e a agenda pessoal inteira
+// dela, nao uma agenda dedicada so a mentoria.
 
 function unfoldIcs(raw: string): string[] {
   const lines = raw.split(/\r\n|\n|\r/)
@@ -87,15 +93,19 @@ serve(async (req) => {
   const lines = unfoldIcs(raw)
 
   const encontros: { numero: number; titulo: string; data: string; horario: string | null; link_meet: string | null; gravacao: string | null }[] = []
-  let atual: { summary?: string; dtstart?: string; meet?: string; gravacao?: string } | null = null
+  const individuais: { uid: string; titulo: string; data: string; horario: string | null; link_meet: string | null; gravacao: string | null; emails: string[] }[] = []
+  let atual: { uid?: string; summary?: string; dtstart?: string; meet?: string; gravacao?: string; emails: string[] } | null = null
   for (const line of lines) {
-    if (line === 'BEGIN:VEVENT') atual = {}
+    if (line === 'BEGIN:VEVENT') atual = { emails: [] }
     else if (line === 'END:VEVENT') {
       if (atual?.summary && atual?.dtstart) {
         const m = atual.summary.match(/^ENCONTRO\s+(\d+)\s+—\s+(.+)$/i)
         if (m) {
           const { data, horario } = paraDataHoraBrasilia(atual.dtstart)
           if (data) encontros.push({ numero: Number(m[1]), titulo: tituloCaso(m[2].trim()), data, horario, link_meet: atual.meet ?? null, gravacao: atual.gravacao ?? null })
+        } else if (atual.uid && atual.emails.length) {
+          const { data, horario } = paraDataHoraBrasilia(atual.dtstart)
+          if (data) individuais.push({ uid: atual.uid, titulo: atual.summary.trim(), data, horario, link_meet: atual.meet ?? null, gravacao: atual.gravacao ?? null, emails: atual.emails })
         }
       }
       atual = null
@@ -108,9 +118,17 @@ serve(async (req) => {
         if (urlMatch) atual.gravacao = urlMatch[1]
         continue
       }
+      // ATTENDEE traz o e-mail do convidado depois de "mailto:" — usado só
+      // pra achar a empresa certa na mentoria individual, nunca é salvo.
+      if (line.startsWith('ATTENDEE')) {
+        const emailMatch = line.match(/mailto:([^\s;]+)/i)
+        if (emailMatch) atual.emails.push(emailMatch[1].toLowerCase())
+        continue
+      }
       const m = line.match(/^([A-Z-]+)(;[^:]*)?:(.*)$/)
       if (m) {
         const [, key, , val] = m
+        if (key === 'UID') atual.uid = val.trim()
         if (key === 'SUMMARY') atual.summary = val.replace(/\\,/g, ',').replace(/\\n/gi, ' ')
         if (key === 'DTSTART') atual.dtstart = val
         if (key === 'X-GOOGLE-CONFERENCE') atual.meet = val.trim()
@@ -151,5 +169,32 @@ serve(async (req) => {
     }
   }
 
-  return new Response(JSON.stringify({ ok: true, encontrados: encontros.length, atualizados, criados }), { status: 200 })
+  // ── Mentoria individual: casa o e-mail do convidado com o usuario de uma
+  // empresa de origem 'individual', e grava so na agenda privada dela ──
+  let individuaisSincronizados = 0
+  if (individuais.length) {
+    const { data: empresasIndividuais, error: errEmp } = await supabase
+      .from('empresas').select('id').eq('mentoria_origem', 'individual')
+    if (errEmp) return new Response(JSON.stringify({ error: errEmp.message }), { status: 500 })
+    const idsIndividuais = (empresasIndividuais ?? []).map(e => e.id)
+
+    if (idsIndividuais.length) {
+      const { data: usuariosIndividuais, error: errUsu } = await supabase
+        .from('usuarios').select('email, empresa_id').in('empresa_id', idsIndividuais)
+      if (errUsu) return new Response(JSON.stringify({ error: errUsu.message }), { status: 500 })
+      const empresaPorEmail = new Map((usuariosIndividuais ?? []).map(u => [String(u.email).toLowerCase(), u.empresa_id]))
+
+      for (const ind of individuais) {
+        const empresaId = ind.emails.map(e => empresaPorEmail.get(e)).find(Boolean)
+        if (!empresaId) continue
+        const camposGravacao = ind.gravacao ? { video_url: ind.gravacao } : {}
+        const { error } = await supabase.from('mentoria_encontros_individuais')
+          .upsert({ empresa_id: empresaId, uid_ics: ind.uid, titulo: ind.titulo || 'Mentoria Individual', data: ind.data, horario: ind.horario, link_meet: ind.link_meet, atualizado_em: new Date().toISOString(), ...camposGravacao }, { onConflict: 'uid_ics' })
+        if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+        individuaisSincronizados++
+      }
+    }
+  }
+
+  return new Response(JSON.stringify({ ok: true, encontrados: encontros.length, atualizados, criados, individuaisSincronizados }), { status: 200 })
 })
