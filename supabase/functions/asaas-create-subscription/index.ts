@@ -22,9 +22,12 @@ async function asaas(path: string, method = 'GET', body?: object) {
   return res.json()
 }
 
+// 'starter' é o valor real do enum plano_id no banco pro plano Essencial —
+// nunca 'essencial', que não existe no enum e fazia o update de empresas
+// falhar (erro 22P02) assim que alguém tentava assinar o Essencial.
 const VALOR_PLANO: Record<string, { valor: number; desc: string }> = {
-  pro:       { valor: 197.00, desc: 'Plano Completo' },
-  essencial: { valor: 97.00,  desc: 'Plano Essencial' },
+  pro:     { valor: 197.00, desc: 'Plano Completo' },
+  starter: { valor: 97.00,  desc: 'Plano Essencial' },
 }
 
 serve(async (req) => {
@@ -73,7 +76,7 @@ serve(async (req) => {
       })
     }
 
-    const planoEscolhido = bodyPayload.plano === 'essencial' ? 'essencial' : 'pro'
+    const planoEscolhido = bodyPayload.plano === 'starter' ? 'starter' : 'pro'
 
     const { valor, desc } = VALOR_PLANO[planoEscolhido]
     try {

@@ -588,7 +588,7 @@ export default function ConfigPage() {
   const [novoUser, setNovoUser] = useState({ nome:'', email:'', perfil:'operador', custo_hora:35, mensagem:'' })
   const [showNovoUser, setShowNovoUser] = useState(false)
   const [editUser, setEditUser] = useState(null)
-  const [planSel, setPlanSel] = useState('essencial')
+  const [planSel, setPlanSel] = useState('starter')
   const [assinando, setAssinando] = useState(false)
 
   const handleAssinar = async (planoForcado) => {
@@ -1024,7 +1024,7 @@ export default function ConfigPage() {
 
       {/* ABA EQUIPE */}
       {tab === 'equipe' && (() => {
-        const limiteUsuarios = empresa?.plano === 'essencial' ? 3 : null
+        const limiteUsuarios = empresa?.plano === 'starter' ? 3 : null
         const ativos = usuarios.filter(u => u.ativo).length
         const noLimite = limiteUsuarios != null && ativos >= limiteUsuarios
         return (
@@ -1696,7 +1696,7 @@ export default function ConfigPage() {
         const diasRestantes = expira ? Math.max(0, Math.ceil((expira - new Date()) / (1000*60*60*24))) : 0
         const paymentUrl = empresa?.asaas_payment_url
         const PLANOS = [
-          { id:'essencial', nome:'Essencial', preco:'R$ 97/mês',  desc:'Sistema completo (Radar, CRM, Capacidade, Meta de crescimento) · Usuários ilimitados · Sem WhatsApp integrado' },
+          { id:'starter', nome:'Essencial', preco:'R$ 97/mês',  desc:'Sistema completo (Radar, CRM, Capacidade, Meta de crescimento) · Usuários ilimitados · Sem WhatsApp integrado' },
         ]
         // Mentorado do BPO Lucrativo usando o Pro de cortesia (sem assinatura
         // real) — oferece a conversão pra assinante mensal, preço especial.
@@ -1714,7 +1714,7 @@ export default function ConfigPage() {
                 <div>
                   <div style={{ fontSize:11, fontWeight:700, color:'#64748B', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:4 }}>Plano atual</div>
                   <div style={{ fontSize:16, fontWeight:800, color:'#0F172A', textTransform:'capitalize' }}>
-                    {plano === 'trial' ? 'Trial gratuito' : plano === 'pro' ? 'Completo' : plano === 'essencial' ? 'Essencial' : plano}
+                    {plano === 'trial' ? 'Trial gratuito' : plano === 'pro' ? 'Completo' : plano === 'starter' ? 'Essencial' : plano}
                   </div>
                   {plano === 'trial' && expira && (
                     <div style={{ fontSize:12, color: diasRestantes<=2?'#EF4444':'#0369A1', marginTop:2 }}>
@@ -1741,7 +1741,7 @@ export default function ConfigPage() {
                     R$ 97<span style={{ fontSize:14, fontWeight:400, color:'#94A3B8' }}>/mês</span>
                   </div>
                   <button
-                    onClick={() => handleAssinar('essencial')}
+                    onClick={() => handleAssinar('starter')}
                     disabled={assinando}
                     style={{ display:'block', width:'100%', textAlign:'center', background: assinando ? '#A5B4FC' : 'linear-gradient(135deg,#6366F1,#8B5CF6)', color:'#fff', padding:'13px', borderRadius:10, fontSize:14, fontWeight:700, border:'none', cursor: assinando ? 'not-allowed' : 'pointer' }}>
                     {assinando ? 'Gerando link...' : 'Assinar por R$ 97/mês →'}
