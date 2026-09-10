@@ -1107,7 +1107,7 @@ export function useClienteModelos(clienteId) {
         .from('cliente_modelos')
         .select(`
           *,
-          tarefa_modelos(id, titulo, categoria, recorrencia, prioridade, dia_mes, dias_semana, checklist_items)
+          tarefa_modelos(id, titulo, categoria, recorrencia, prioridade, dia_mes, mes, dias_semana, checklist_items)
         `)
         .eq('cliente_id', clienteId)
         .eq('ativo', true)
@@ -1293,7 +1293,7 @@ export function useUpdateClienteModelo() {
       // Mudou a regra de quando a tarefa nasce? As que já estavam na agenda
       // seguem a regra velha e viram entulho — refaz. Alterações de checklist
       // ou responsável não mexem em data, então passam direto.
-      const mexeuNaData = ['recorrencia', 'dias_semana', 'dia_mes'].some(c => c in updates)
+      const mexeuNaData = ['recorrencia', 'dias_semana', 'dia_mes', 'mes'].some(c => c in updates)
       const ressync = mexeuNaData
         ? await ressincronizarTarefasDoVinculo(data?.[0], clienteId, empresa?.id)
         : null

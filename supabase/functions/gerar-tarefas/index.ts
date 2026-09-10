@@ -66,11 +66,37 @@ function gerarRangeDatas(inicio: string, fim: string): string[] {
   return datas
 }
 
+// ── Dia do mês pedido x dia do mês que existe ────────────────────────────────
+// "Fechamento no dia 31" é o jeito que o BPO fala "último dia do mês", e o
+// formulário aceita até 31. A comparação era dia exato, então em fevereiro,
+// abril, junho, setembro e novembro a rotina simplesmente não nascia — sem
+// erro em lugar nenhum. Agora o dia pedido é limitado ao último dia daquele
+// mês: 31 em fevereiro vira 28 (ou 29 em bissexto), e a tarefa sempre acontece.
+function ultimoDiaDoMes(ano: number, mes0: number): number {
+  return new Date(ano, mes0 + 1, 0).getDate()
+}
+function diaEfetivo(dia: number, ano: number, mes0: number): number {
+  return Math.min(Math.max(dia, 1), ultimoDiaDoMes(ano, mes0))
+}
+
+// ── Mês das recorrências longas ──────────────────────────────────────────────
+// bimestral/trimestral/semestral/anual tinham os meses chumbados aqui (anual
+// só em janeiro, trimestral só jan/abr/jul/out...), porque não existia campo
+// de mês no modelo. Uma rotina anual de abril nunca gerava nada. Agora `mes`
+// (1-12) diz onde a série começa e o passo corre a partir dele; sem `mes`
+// preenchido o padrão continua sendo janeiro, que é o comportamento antigo.
+const PASSO_MESES: Record<string, number> = { bimestral: 2, trimestral: 3, semestral: 6, anual: 12 }
+function mesBateNaSerie(mesData0: number, mesInicio: number | null | undefined, passo: number): boolean {
+  const inicio0 = ((mesInicio ?? 1) - 1 + 12) % 12
+  return (((mesData0 - inicio0) % passo) + passo) % passo === 0
+}
+
 // ── Lógica de recorrência ────────────────────────────────────────────────────
 function deveGerarNaData(
   modelo: {
     recorrencia: string
     dia_mes?: number | null
+    mes?: number | null
     dias_semana?: number[] | null
     dias_mes?: number[] | null
   },
@@ -81,7 +107,9 @@ function deveGerarNaData(
   const dow = d.getDay()    // 0=Dom 1=Seg ... 6=Sab
   const dom = d.getDate()   // dia do mês (1-31)
   const mes = d.getMonth()  // mês (0-11)
+  const ano = d.getFullYear()
   const diaAlvo = modelo.dia_mes ?? 1
+  const diaDoMes = diaEfetivo(diaAlvo, ano, mes)  // 31 em fevereiro vira 28/29
 
   switch (modelo.recorrencia) {
     case 'diaria':
@@ -94,44 +122,49 @@ function deveGerarNaData(
         return { deve: false, motivo: `feriado em ${dateStr}` }
       return { deve: true }
 
-    case 'semanal':
-      return (modelo.dias_semana ?? []).includes(dow)
+    case 'semanal': {
+      // Sem nenhum dia marcado a rotina nunca gera. Antes o motivo gravado era
+      // "dia 3 não está nos dias configurados", que faz parecer erro de data
+      // quando na verdade falta cadastro.
+      const diasSemana = modelo.dias_semana ?? []
+      if (!diasSemana.length)
+        return { deve: false, motivo: 'rotina semanal sem nenhum dia da semana marcado — nunca vai gerar até alguém marcar' }
+      return diasSemana.includes(dow)
         ? { deve: true }
         : { deve: false, motivo: `dia ${dow} não está nos dias configurados` }
+    }
 
     case 'quinzenal': {
-      const ok = dom === diaAlvo || dom === Math.min(diaAlvo + 15, 28)
-      return ok ? { deve: true } : { deve: false, motivo: `dia ${dom} não é quinzenal (${diaAlvo})` }
+      const primeiro = diaDoMes
+      const segundo  = diaEfetivo(diaAlvo + 15, ano, mes)
+      const ok = dom === primeiro || dom === segundo
+      return ok ? { deve: true } : { deve: false, motivo: `dia ${dom} não é quinzenal (${primeiro} e ${segundo})` }
     }
 
     case 'mensal':
-      return dom === diaAlvo
+      return dom === diaDoMes
         ? { deve: true }
-        : { deve: false, motivo: `dia ${dom} ≠ dia_mes ${diaAlvo}` }
+        : { deve: false, motivo: `dia ${dom} ≠ dia ${diaDoMes} do mês` }
 
-    case 'dias_especificos':
-      return (modelo.dias_mes ?? []).includes(dom)
+    case 'dias_especificos': {
+      const diasMes = modelo.dias_mes ?? []
+      if (!diasMes.length)
+        return { deve: false, motivo: 'rotina de dias específicos sem nenhum dia marcado — nunca vai gerar até alguém marcar' }
+      return diasMes.includes(dom)
         ? { deve: true }
         : { deve: false, motivo: `dia ${dom} não está nos dias especificados` }
-
-    case 'bimestral': {
-      const ok = dom === diaAlvo && mes % 2 === 0
-      return ok ? { deve: true } : { deve: false, motivo: `bimestral: dom=${dom} mes=${mes}` }
     }
 
-    case 'trimestral': {
-      const ok = dom === diaAlvo && [0, 3, 6, 9].includes(mes)
-      return ok ? { deve: true } : { deve: false, motivo: `trimestral: dom=${dom} mes=${mes}` }
-    }
-
-    case 'semestral': {
-      const ok = dom === diaAlvo && [0, 6].includes(mes)
-      return ok ? { deve: true } : { deve: false, motivo: `semestral: dom=${dom} mes=${mes}` }
-    }
-
+    case 'bimestral':
+    case 'trimestral':
+    case 'semestral':
     case 'anual': {
-      const ok = dom === diaAlvo && mes === 0
-      return ok ? { deve: true } : { deve: false, motivo: `anual: dom=${dom} mes=${mes}` }
+      const passo = PASSO_MESES[modelo.recorrencia]
+      if (!mesBateNaSerie(mes, modelo.mes, passo))
+        return { deve: false, motivo: `${modelo.recorrencia}: mês ${mes + 1} não está na série que começa no mês ${modelo.mes ?? 1}` }
+      return dom === diaDoMes
+        ? { deve: true }
+        : { deve: false, motivo: `${modelo.recorrencia}: dia ${dom} ≠ dia ${diaDoMes} do mês` }
     }
 
     default:
@@ -208,7 +241,11 @@ serve(async (req) => {
 
   try {
     // ── 1. Empresas com plano ativo ────────────────────────────────────────
-    let queryEmpresas = supabase.from('empresas').select('id, nome').neq('plano', 'bloqueado')
+    // .neq('plano','bloqueado') sozinho descarta também quem está com plano
+    // NULL, porque em SQL `NULL <> 'bloqueado'` não é verdadeiro — a empresa
+    // sumia do gerador inteiro sem estar bloqueada. Só 'bloqueado' bloqueia.
+    let queryEmpresas = supabase.from('empresas').select('id, nome')
+      .or('plano.is.null,plano.neq.bloqueado')
     if (filtroEmpresaId) queryEmpresas = queryEmpresas.eq('id', filtroEmpresaId)
 
     const { data: empresas, error: errEmp } = await queryEmpresas
@@ -254,13 +291,14 @@ serve(async (req) => {
             pausado,
             recorrencia,
             dia_mes,
+            mes,
             dias_semana,
             hora,
             responsavel_id,
             checklist_items_override,
             tarefa_modelos!inner (
               id, titulo, categoria, prioridade, expandir_por_banco,
-              recorrencia, dia_mes, dias_semana, dias_mes,
+              recorrencia, dia_mes, mes, dias_semana, dias_mes,
               checklist_items,
               ativo, deleted_at
             )
@@ -303,13 +341,28 @@ serve(async (req) => {
 
           // Tarefas já existentes nesta data (idempotência)
           const modeloIds = [...new Set((vinculos as any[]).map((v: any) => v.modelo_id))]
-          const { data: existentes } = await supabase
+          const { data: existentes, error: errExist } = await supabase
             .from('tarefas')
             .select('modelo_id, cliente_id, banco')
             .eq('empresa_id', empId)
             .in('modelo_id', modeloIds)
             .eq('data_execucao', dataAlvo)
             .is('deleted_at', null)
+
+          // Essa consulta é a trava anti duplicidade. O erro dela estava sendo
+          // ignorado: se ela falhasse (URL estourada por lista grande de
+          // modelos, timeout), existSet vinha vazio e o dia inteiro era gerado
+          // de novo por cima do que já existia. Melhor pular a data e registrar.
+          if (errExist) {
+            erros.push(`[${empId}] tarefas existentes em ${dataAlvo}: ${errExist.message}`)
+            detalhes.push({
+              empresa_id: empId, cliente_id: null, modelo_id: null,
+              data_alvo: dataAlvo, resultado: 'erro',
+              motivo: `não deu pra checar duplicidade, data pulada: ${errExist.message}`,
+              tarefa_id: null,
+            })
+            continue
+          }
 
           const existSet = new Set(
             (existentes ?? []).map((t: any) => chaveTarefa(t.modelo_id, t.cliente_id, t.banco))
@@ -341,6 +394,7 @@ serve(async (req) => {
             const modeloEfetivo = {
               recorrencia: vinculo.recorrencia ?? modelo.recorrencia,
               dia_mes:     vinculo.dia_mes     ?? modelo.dia_mes,
+              mes:         vinculo.mes         ?? modelo.mes,
               dias_semana: vinculo.dias_semana ?? modelo.dias_semana,
               dias_mes:    modelo.dias_mes,
             }

@@ -21,11 +21,31 @@ const RECORRENCIAS = [
   { v:'quinzenal',       label:'Quinzenal',         desc:'A cada 15 dias' },
   { v:'mensal',          label:'Mensal',            desc:'Um dia fixo do mês' },
   { v:'dias_especificos',label:'Dias específicos',  desc:'Múltiplos dias do mês' },
-  { v:'bimestral',       label:'Bimestral',         desc:'A cada 2 meses' },
-  { v:'trimestral',      label:'Trimestral',        desc:'A cada 3 meses (Jan/Abr/Jul/Out)' },
-  { v:'semestral',       label:'Semestral',         desc:'A cada 6 meses (Jan/Jul)' },
-  { v:'anual',           label:'Anual',             desc:'Uma vez por ano' },
+  { v:'bimestral',       label:'Bimestral',         desc:'A cada 2 meses, a partir do mês escolhido' },
+  { v:'trimestral',      label:'Trimestral',        desc:'A cada 3 meses, a partir do mês escolhido' },
+  { v:'semestral',       label:'Semestral',         desc:'A cada 6 meses, a partir do mês escolhido' },
+  { v:'anual',           label:'Anual',             desc:'Uma vez por ano, no mês escolhido' },
 ]
+// Recorrências que precisam saber em que mês a série começa. Antes o mês era
+// chumbado na Edge Function (anual sempre janeiro, trimestral sempre
+// jan/abr/jul/out), então "IRPF, anual, 30 de abril" nunca gerava tarefa.
+const REC_COM_MES = ['bimestral','trimestral','semestral','anual']
+const REC_COM_DIA = ['mensal','quinzenal', ...REC_COM_MES]
+const MESES = [
+  { v:1, label:'Janeiro' },   { v:2, label:'Fevereiro' }, { v:3, label:'Março' },
+  { v:4, label:'Abril' },     { v:5, label:'Maio' },      { v:6, label:'Junho' },
+  { v:7, label:'Julho' },     { v:8, label:'Agosto' },    { v:9, label:'Setembro' },
+  { v:10, label:'Outubro' },  { v:11, label:'Novembro' }, { v:12, label:'Dezembro' },
+]
+// Texto do "a cada N meses, começando em X" — evita a pessoa ter que adivinhar
+// em que meses a rotina vai cair depois de escolher o mês inicial.
+function mesesDaSerie(recorrencia, mes) {
+  const passo = { bimestral:2, trimestral:3, semestral:6, anual:12 }[recorrencia]
+  if (!passo || !mes) return ''
+  const out = []
+  for (let m = mes; out.length < 12 / passo; m += passo) out.push(MESES[((m - 1) % 12)].label)
+  return out.join(' · ')
+}
 const DIAS_SEMANA = [
   { v:1, label:'Seg' }, { v:2, label:'Ter' }, { v:3, label:'Qua' },
   { v:4, label:'Qui' }, { v:5, label:'Sex' }, { v:6, label:'Sáb' }, { v:0, label:'Dom' },
@@ -41,7 +61,7 @@ const ETAPAS_MODELO = [
   { v:'acompanhamento', label:'Acompanhamento' },
   { v:'encerramento',   label:'Encerramento' },
 ]
-const EMPTY_FORM = { titulo:'', descricao:'', categoria:'', etapa:'', prioridade:'media', recorrencia:'dias_uteis', dias_semana:[], dia_mes:5, dias_mes:[], checklist_items:[], ativo:true, expandir_por_banco:false }
+const EMPTY_FORM = { titulo:'', descricao:'', categoria:'', etapa:'', prioridade:'media', recorrencia:'dias_uteis', dias_semana:[], dia_mes:5, mes:1, dias_mes:[], checklist_items:[], ativo:true, expandir_por_banco:false }
 
 const fi = { width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:13, fontFamily:'inherit', background:'#fff', outline:'none' }
 const recLabel = { unica:'⚡ Pontual', diaria:'Diária', dias_uteis:'Dias úteis', semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal', dias_especificos:'Dias espec.', bimestral:'Bimestral', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual' }
@@ -159,7 +179,7 @@ export default function ModelosPage() {
     setForm({
       titulo: m.titulo, descricao: m.descricao || '', categoria: m.categoria || '',
       etapa: m.etapa || '', prioridade: m.prioridade, recorrencia: m.recorrencia,
-      dias_semana: m.dias_semana || [], dia_mes: m.dia_mes || 5,
+      dias_semana: m.dias_semana || [], dia_mes: m.dia_mes || 5, mes: m.mes || 1,
       dias_mes: m.dias_mes || [], checklist_items: m.checklist_items || [],
       ativo: m.ativo, expandir_por_banco: !!m.expandir_por_banco, _id: m.id,
     })
@@ -187,7 +207,8 @@ export default function ModelosPage() {
       categoria: form.categoria || null, etapa: form.etapa || null,
       prioridade: form.prioridade, recorrencia: form.recorrencia,
       dias_semana: form.recorrencia === 'semanal' ? form.dias_semana : null,
-      dia_mes: ['mensal','quinzenal','bimestral','trimestral','semestral','anual'].includes(form.recorrencia) ? form.dia_mes : null,
+      dia_mes: REC_COM_DIA.includes(form.recorrencia) ? form.dia_mes : null,
+      mes: REC_COM_MES.includes(form.recorrencia) ? form.mes : null,
       dias_mes: form.recorrencia === 'dias_especificos' ? form.dias_mes : null,
       checklist_items: form.checklist_items, ativo: form.ativo,
       expandir_por_banco: form.expandir_por_banco,
@@ -239,6 +260,7 @@ export default function ModelosPage() {
       recorrencia: vinculo.recorrencia || modelo.recorrencia,
       dias_semana: vinculo.dias_semana || modelo.dias_semana || [],
       dia_mes: vinculo.dia_mes || modelo.dia_mes || 5,
+      mes: vinculo.mes || modelo.mes || 1,
       hora: vinculo.hora || '',
     })
     setOverrideId(vinculo.id)
@@ -261,7 +283,8 @@ export default function ModelosPage() {
         id: overrideId, clienteId: fCliente,
         recorrencia: overrideForm.recorrencia,
         dias_semana: overrideForm.recorrencia === 'semanal' ? overrideForm.dias_semana : null,
-        dia_mes: ['mensal','quinzenal','bimestral','trimestral','semestral','anual'].includes(overrideForm.recorrencia) ? overrideForm.dia_mes : null,
+        dia_mes: REC_COM_DIA.includes(overrideForm.recorrencia) ? overrideForm.dia_mes : null,
+        mes: REC_COM_MES.includes(overrideForm.recorrencia) ? overrideForm.mes : null,
         hora: overrideForm.hora || null,
       })
       setOverrideId(null)
@@ -272,7 +295,7 @@ export default function ModelosPage() {
   async function usarPadraoModelo() {
     try {
       setOverrideErr('')
-      const resultado = await updateVinculo.mutateAsync({ id: overrideId, clienteId: fCliente, recorrencia: null, dias_semana: null, dia_mes: null, hora: null })
+      const resultado = await updateVinculo.mutateAsync({ id: overrideId, clienteId: fCliente, recorrencia: null, dias_semana: null, dia_mes: null, mes: null, hora: null })
       setOverrideId(null)
       avisarRessync(resultado)
     } catch (err) { setOverrideErr(err.message || 'Erro ao limpar') }
@@ -661,7 +684,17 @@ export default function ModelosPage() {
                               </div>
                             </div>
                           )}
-                          {['mensal','quinzenal','bimestral','trimestral','semestral','anual'].includes(overrideForm.recorrencia) && (
+                          {REC_COM_MES.includes(overrideForm.recorrencia) && (
+                            <div>
+                              <div style={{ fontSize:10, fontWeight:600, color:'#4338CA', marginBottom:4 }}>MÊS EM QUE COMEÇA</div>
+                              <select value={overrideForm.mes}
+                                onChange={e => setOverrideForm(f => ({ ...f, mes: parseInt(e.target.value, 10) || 1 }))}
+                                style={{ ...fi, width:140, borderColor:'#C7D2FE' }}>
+                                {MESES.map(m => <option key={m.v} value={m.v}>{m.label}</option>)}
+                              </select>
+                            </div>
+                          )}
+                          {REC_COM_DIA.includes(overrideForm.recorrencia) && (
                             <div>
                               <div style={{ fontSize:10, fontWeight:600, color:'#4338CA', marginBottom:4 }}>DIA DO MÊS</div>
                               <input type="number" min={1} max={31} value={overrideForm.dia_mes}
@@ -909,10 +942,28 @@ export default function ModelosPage() {
                 </div>
               </div>
             )}
-            {['mensal','quinzenal','bimestral','trimestral','semestral','anual'].includes(form.recorrencia) && (
+            {REC_COM_MES.includes(form.recorrencia) && (
+              <div style={{ marginBottom:12 }}>
+                <label style={{ fontSize:11, fontWeight:700, color:'#64748B', display:'block', marginBottom:4, textTransform:'uppercase' }}>Mês em que começa</label>
+                <select style={{ ...fi, width:160 }} value={form.mes} onChange={e => set('mes', parseInt(e.target.value) || 1)}>
+                  {MESES.map(m => <option key={m.v} value={m.v}>{m.label}</option>)}
+                </select>
+                {form.recorrencia !== 'anual' && (
+                  <div style={{ fontSize:11, color:'#94A3B8', marginTop:4 }}>
+                    Vai cair em: {mesesDaSerie(form.recorrencia, form.mes)}
+                  </div>
+                )}
+              </div>
+            )}
+            {REC_COM_DIA.includes(form.recorrencia) && (
               <div style={{ marginBottom:12 }}>
                 <label style={{ fontSize:11, fontWeight:700, color:'#64748B', display:'block', marginBottom:4, textTransform:'uppercase' }}>Dia do mês (1–31)</label>
                 <input style={{ ...fi, width:100 }} type="number" min={1} max={31} value={form.dia_mes} onChange={e => set('dia_mes', parseInt(e.target.value) || 1)} />
+                {form.dia_mes > 28 && (
+                  <div style={{ fontSize:11, color:'#94A3B8', marginTop:4 }}>
+                    Nos meses que não têm o dia {form.dia_mes}, a tarefa cai no <strong>último dia do mês</strong>.
+                  </div>
+                )}
               </div>
             )}
             {form.recorrencia === 'dias_especificos' && (

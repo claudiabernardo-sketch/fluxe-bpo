@@ -177,7 +177,11 @@ serve(async (req) => {
   let alertasGerados = 0
 
   try {
-    const { data: empresas, error: eErr } = await supabase.from('empresas').select('id').neq('plano', 'bloqueado')
+    // Mesmo furo que havia no gerar-tarefas: `NULL <> 'bloqueado'` não é
+    // verdadeiro em SQL, então empresa com plano NULL sumia do cálculo sem
+    // estar bloqueada. Só 'bloqueado' bloqueia.
+    const { data: empresas, error: eErr } = await supabase.from('empresas').select('id')
+      .or('plano.is.null,plano.neq.bloqueado')
     if (eErr) throw eErr
 
     const inicioMes = new Date()
