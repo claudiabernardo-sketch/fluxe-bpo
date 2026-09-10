@@ -1,7 +1,13 @@
+// Rode com as credenciais no ambiente, nunca escritas no arquivo:
+//   SUPABASE_SERVICE_ROLE_KEY=... NOVO_USUARIO_SENHA=... node criar_victoria.cjs
 const {createClient}=require('@supabase/supabase-js');
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NOVO_USUARIO_SENHA) {
+  console.error('Defina SUPABASE_SERVICE_ROLE_KEY e NOVO_USUARIO_SENHA no ambiente.');
+  process.exit(1);
+}
 const s=createClient(
   'https://zwvmprcuxhvhbuvdcybs.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp3dm1wcmN1eGh2aGJ1dmRjeWJzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDA1NjE1MSwiZXhwIjoyMDk1NjMyMTUxfQ.HIF8yfsLgiGdAfXOEmr_AR6TgOqKuWZeVzlV4NQ6wjY',
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
   {auth:{autoRefreshToken:false,persistSession:false}}
 );
 
@@ -9,7 +15,7 @@ async function main() {
   // 1. Cria usuário no Auth
   const {data,error} = await s.auth.admin.createUser({
     email:'victoria@empreendabpo.com.br',
-    password:'Fluxe2024',
+    password: process.env.NOVO_USUARIO_SENHA,
     email_confirm:true
   });
   if(error){console.log('ERRO AUTH:',error.message);return;}
