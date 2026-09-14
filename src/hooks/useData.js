@@ -1265,6 +1265,19 @@ export function useVincularModelo() {
         await ativarOperacaoCliente(clienteId, empresa?.id, 'ativação automática ao vincular modelo')
       }
 
+      // Vincular sozinho não criava tarefa nenhuma — dependia de alguém
+      // lembrar de clicar em "Gerar" depois, e sem isso o vínculo ficava
+      // silenciosamente parado pra sempre (achado numa varredura: 14
+      // vínculos em 8 empresas diferentes, nunca geraram 1 tarefa sequer).
+      // Gera a partir de hoje automaticamente, só pra este cliente. Se
+      // falhar, não desfaz o vínculo — o cron diário ainda pega no dia
+      // seguinte, mas erros ficam registrados pra não passar em silêncio.
+      try {
+        await postGerarTarefas({ empresa_id: empresa?.id, cliente_id: clienteId })
+      } catch (genErr) {
+        console.error('[Fluxe] vínculo criado, mas geração automática de tarefas falhou:', genErr)
+      }
+
       return data?.[0]
     },
     onSuccess: (_, vars) => {
