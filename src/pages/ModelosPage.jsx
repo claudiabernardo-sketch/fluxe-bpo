@@ -385,6 +385,22 @@ export default function ModelosPage() {
     .filter(m => !modelosNaRotina.has(m.id) && !linkedModelIds.has(m.id))
     .filter(m => !fEtapa || m.etapa === fEtapa)
 
+  // Vínculos "órfãos" — modelo já vinculado ao cliente, mas sem rotina
+  // correspondente pra casar na seção acima. Sem isso, o vínculo existe
+  // (a tarefa é gerada certinho), mas fica invisível na tela: não some em
+  // "Outros modelos" (já tá vinculado) nem aparece no cruzamento (nenhuma
+  // rotina bate o título), então não tem como ver nem desvincular pela UI.
+  // Usa o modelo completo (de "modelos") em vez do join parcial de
+  // clienteModelos.tarefa_modelos, que não traz descricao/etapa/ativo — o
+  // botão Editar aqui embaixo precisa do registro inteiro pra não apagar
+  // esses campos do modelo ao salvar.
+  const vinculosOrfaos = isSpecificClient
+    ? clienteModelos
+        .filter(cm => !modelosNaRotina.has(cm.modelo_id))
+        .map(cm => ({ vinculo: cm, modelo: modelos.find(m => m.id === cm.modelo_id) }))
+        .filter(v => v.modelo)
+    : []
+
   const modelosFiltrados = modelos
     .filter(m => !fCliente || fCliente === '__geral' ? !m.cliente_id : true)
     .filter(m => !fEtapa || m.etapa === fEtapa)
@@ -782,6 +798,53 @@ export default function ModelosPage() {
               </div>
             )}
           </div>
+
+          {/* MODELOS VINCULADOS SEM ROTINA CORRESPONDENTE */}
+          {vinculosOrfaos.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:'#0F172A', marginBottom:10 }}>
+                ✓ Modelos vinculados a <span style={{ color:'#6366F1' }}>{clienteNome}</span>
+                <span style={{ fontSize:11, fontWeight:400, color:'#94A3B8', marginLeft:8 }}>
+                  — sem rotina cadastrada com o mesmo título
+                </span>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {vinculosOrfaos.map(({ vinculo, modelo }) => (
+                  <div key={vinculo.id} style={{ background:'#fff', border:'1px solid #BBF7D0',
+                    borderRadius:10, padding:'12px 16px', display:'flex', flexWrap:'wrap', alignItems:'center', gap:12 }}>
+                    <div style={{ width:8, height:8, borderRadius:'50%', background:'#16A34A', flexShrink:0 }} />
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:600, color:'#0F172A' }}>{modelo.titulo}</div>
+                      <div style={{ fontSize:11, color:'#15803D', marginTop:2 }}>
+                        ✓ Vinculado
+                        <span style={{ marginLeft:6, padding:'2px 8px', borderRadius:99, background:'#DCFCE7', color:'#15803D', fontSize:10, fontWeight:600 }}>
+                          {recLabel[vinculo.recorrencia || modelo.recorrencia] || vinculo.recorrencia || modelo.recorrencia}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                      <button onClick={() => abrirOverride(vinculo, modelo)}
+                        style={{ padding:'5px 10px', borderRadius:6, border:'1px solid #E2E8F0', background:'#fff', color:'#475569', cursor:'pointer', fontSize:11, fontWeight:600, whiteSpace:'nowrap' }} title="Ajustar recorrência só para este cliente">
+                        🔁 Recorrência
+                      </button>
+                      <button onClick={() => abrirChecklistOverride(vinculo, modelo)}
+                        style={{ padding:'5px 10px', borderRadius:6, border:'1px solid #E2E8F0', background:'#fff', color:'#475569', cursor:'pointer', fontSize:11, fontWeight:600, whiteSpace:'nowrap' }} title="Ajustar checklist só para este cliente">
+                        📋 Checklist
+                      </button>
+                      <button onClick={() => abrirEditar(modelo)}
+                        style={{ padding:'5px 10px', borderRadius:6, border:'1px solid #E2E8F0', background:'#fff', color:'#475569', cursor:'pointer', fontSize:11, fontWeight:600, whiteSpace:'nowrap' }} title="Editar modelo (afeta todos os clientes)">
+                        ✏️ Editar
+                      </button>
+                      <button onClick={() => handleDesvincular(vinculo)} disabled={desvincularModelo.isPending}
+                        style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #FECDD3', background:'#FEF2F2', color:'#991B1B', cursor:'pointer', fontSize:11, fontWeight:600 }}>
+                        Desvincular
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* OUTROS MODELOS (não na rotina, não vinculados) */}
           {outrosModelos.length > 0 && (
