@@ -11,6 +11,7 @@ export const BIBLIOTECA_BPO = [
     "etapa": "comercial",
     "prioridade": "media",
     "recorrencia": "semanal",
+    "dias_semana": [1],
     "checklist_items": [
       "Definir lista de empresas-alvo da semana",
       "Pesquisar sócio responsável pelo financeiro",
@@ -43,6 +44,7 @@ export const BIBLIOTECA_BPO = [
     "etapa": "comercial",
     "prioridade": "alta",
     "recorrencia": "semanal",
+    "dias_semana": [3],
     "checklist_items": [
       "Confirmar data, horário e canal da reunião",
       "Preparar pauta com perguntas de diagnóstico",
@@ -380,6 +382,7 @@ export const BIBLIOTECA_BPO = [
     "etapa": "operacional",
     "prioridade": "media",
     "recorrencia": "semanal",
+    "dias_semana": [1],
     "checklist_items": [
       "Baixar relatório de vendas da maquininha",
       "Baixar relatório de boletos emitidos e pagos",
@@ -398,6 +401,7 @@ export const BIBLIOTECA_BPO = [
     "etapa": "operacional",
     "prioridade": "media",
     "recorrencia": "semanal",
+    "dias_semana": [1],
     "checklist_items": [
       "Listar CP a vencer nos próximos 7 dias",
       "Separar por banco",
@@ -416,6 +420,7 @@ export const BIBLIOTECA_BPO = [
     "etapa": "operacional",
     "prioridade": "media",
     "recorrencia": "semanal",
+    "dias_semana": [4],
     "checklist_items": [
       "Listar pagamentos no status aguardando aprovação",
       "Verificar há quantos dias estão aguardando",
@@ -433,6 +438,7 @@ export const BIBLIOTECA_BPO = [
     "etapa": "operacional",
     "prioridade": "media",
     "recorrencia": "semanal",
+    "dias_semana": [5],
     "checklist_items": [
       "Verificar lista de contratos com NF semanal",
       "Confirmar valores e dados do tomador",
@@ -449,6 +455,7 @@ export const BIBLIOTECA_BPO = [
     "etapa": "operacional",
     "prioridade": "media",
     "recorrencia": "semanal",
+    "dias_semana": [2],
     "checklist_items": [
       "Listar títulos vencidos até hoje",
       "Classificar por faixa: 1-7d, 8-30d, 31-60d, +60d",
@@ -464,8 +471,9 @@ export const BIBLIOTECA_BPO = [
     "descricao": "No início do fechamento, solicitar ao cliente todos os extratos bancários, faturas de cartão, comprovantes de despesas físicas e NFs de compras que não foram enviadas ao longo do mês.",
     "categoria": "Conciliação Bancária",
     "etapa": "operacional",
-    "prioridade": "mensal",
-    "recorrencia": null,
+    "prioridade": "alta",
+    "recorrencia": "mensal",
+    "dia_mes": 1,
     "checklist_items": [
       "Enviar solicitação por WhatsApp com checklist",
       "Extrato de todas as contas bancárias",

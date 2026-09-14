@@ -5,6 +5,7 @@ import { useTarefaModelos, useCreateModelo, useUpdateModelo, useDeleteModelo, us
          useRotinas, useUpdateClienteModelo, useAtivarOperacaoManual, useImportarBibliotecaModelos } from '../hooks/useData'
 import { Card, Btn, Loader } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
+import { BIBLIOTECA_BPO } from '../data/bibliotecaBpo'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../store/authStore'
 
@@ -141,9 +142,10 @@ export default function ModelosPage() {
     }
     try {
       const r = await importarBiblioteca.mutateAsync()
+      const pulados = r.invalidos?.length ? ` ${r.invalidos.length} modelo(s) da biblioteca foram pulados por cadastro inválido — avise o suporte do Fluxe.` : ''
       setBibliotecaMsg(r.importados > 0
-        ? `✓ ${r.importados} modelo(s) novo(s) importado(s)${r.jaExistiam ? ` — ${r.jaExistiam} já existiam e foram ignorados` : ''}.`
-        : 'Todos os 50 modelos da biblioteca já estavam importados.')
+        ? `✓ ${r.importados} modelo(s) novo(s) importado(s)${r.jaExistiam ? ` — ${r.jaExistiam} já existiam e foram ignorados` : ''}.${pulados}`
+        : `Todos os ${BIBLIOTECA_BPO.length} modelos da biblioteca já estavam importados.${pulados}`)
     } catch (err) { setBibliotecaMsg('Erro ao importar: ' + err.message) }
   }
 

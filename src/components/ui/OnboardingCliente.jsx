@@ -120,6 +120,7 @@ export default function OnboardingCliente({ clienteId }) {
   const [saveOk, setSaveOk] = useState(false)
   const [criandoTarefas, setCriandoTarefas] = useState(false)
   const [tarefasCriadas, setTarefasCriadas] = useState(false)
+  const [criarErro, setCriarErro] = useState('')
 
   if (!isLoading && form === null) {
     setForm({
@@ -148,13 +149,37 @@ export default function OnboardingCliente({ clienteId }) {
     setTimeout(() => setSaveOk(false), 2000)
   }
 
+  // As 5 etapas nasciam sem data_execucao. A tarefa entrava no banco e era
+  // contada no total da tela de Tarefas, mas o "Meu Dia" (a visão padrão)
+  // monta as listas por data — então ela não aparecia em lugar nenhum e
+  // parecia que o botão não tinha funcionado. O onboarding é uma linha do
+  // tempo de 5 semanas, então cada etapa cai a uma semana da anterior,
+  // começando hoje.
   async function criarTarefasDeOnboarding() {
     setCriandoTarefas(true)
-    for (const etapa of ETAPAS_PADRAO) {
-      await criarTarefa.mutateAsync({ titulo: etapa.titulo, obs: etapa.obs, categoria: 'Onboarding', status: 'aberta', cliente_id: clienteId })
+    setCriarErro('')
+    try {
+      for (let i = 0; i < ETAPAS_PADRAO.length; i++) {
+        const etapa = ETAPAS_PADRAO[i]
+        const d = new Date()
+        d.setDate(d.getDate() + i * 7)
+        await criarTarefa.mutateAsync({
+          titulo: etapa.titulo, obs: etapa.obs, categoria: 'Onboarding',
+          status: 'aberta', cliente_id: clienteId,
+          // toLocaleDateString('en-CA') = YYYY-MM-DD no fuso local. Com
+          // toISOString(), depois das 21h em Brasília a data já virou o dia
+          // seguinte em UTC e a tarefa nasce um dia adiantada.
+          data_execucao: d.toLocaleDateString('en-CA'),
+        })
+      }
+      setTarefasCriadas(true)
+    } catch (err) {
+      // Antes o erro subia como promise rejeitada e o botão só voltava ao
+      // normal, sem dizer nada.
+      setCriarErro(err.message || 'Não foi possível criar as tarefas.')
+    } finally {
+      setCriandoTarefas(false)
     }
-    setCriandoTarefas(false)
-    setTarefasCriadas(true)
   }
 
   return (
@@ -180,14 +205,19 @@ export default function OnboardingCliente({ clienteId }) {
           💡 Quer o passo a passo pronto de cada uma dessas 5 etapas — com roteiro de kick-off, diagnóstico do regime tributário, mapeamento de contas e mais — em vez de montar do zero? Em <strong>Modelos</strong>, clique em <strong>"📚 Importar biblioteca de modelos"</strong> (uma vez só) e depois vincule os modelos de Pré-Onboarding/Onboarding/Implantação a este cliente.
         </div>
         {tarefasCriadas ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 12, color: 'var(--grt)', fontWeight: 600 }}>✓ 5 tarefas criadas na categoria Onboarding</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12, color: 'var(--grt)', fontWeight: 600 }}>
+              ✓ {ETAPAS_PADRAO.length} tarefas criadas na categoria Onboarding — uma por semana, a partir de hoje
+            </span>
             <button className="btn bp bsm" onClick={() => navigate('/tasks')}>Ver em Tarefas</button>
           </div>
         ) : (
-          <button className="btn bp bsm" disabled={criandoTarefas} onClick={criarTarefasDeOnboarding}>
-            {criandoTarefas ? 'Criando…' : '+ Criar as 5 tarefas de onboarding'}
-          </button>
+          <>
+            <button className="btn bp bsm" disabled={criandoTarefas} onClick={criarTarefasDeOnboarding}>
+              {criandoTarefas ? 'Criando…' : `+ Criar as ${ETAPAS_PADRAO.length} tarefas de onboarding`}
+            </button>
+            {criarErro && <div style={{ fontSize: 11, color: 'var(--rdt)', marginTop: 6 }}>{criarErro}</div>}
+          </>
         )}
       </div>
 
