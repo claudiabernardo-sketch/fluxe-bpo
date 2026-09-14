@@ -213,7 +213,10 @@ export default function TasksPage() {
 
   const selectedTask = tasks.find(t => t.id === selTask)
 
-  function openNew() { setForm({ status:'aberta', prioridade:'media' }); setModal({ mode:'new', modeloId:'' }) }
+  // Sem data_execucao a tarefa nova não aparecia no "Meu Dia", que é a visão
+  // padrão — a pessoa criava a tarefa, via o contador subir e achava que tinha
+  // sumido. Nasce pra hoje; quem quiser outro dia troca no próprio formulário.
+  function openNew() { setForm({ status:'aberta', prioridade:'media', data_execucao: today }); setModal({ mode:'new', modeloId:'' }) }
   function openEdit(t) { setForm({...t}); setModal({ mode:'edit', id:t.id }) }
   function closeModal() { setModal(null); setForm({}) }
 
@@ -402,6 +405,12 @@ export default function TasksPage() {
             const pendentes = tasks.filter(t => t.data_execucao && t.data_execucao < today && t.status !== 'concluida' && (!fClient || t.cliente_id === fClient) && (!search || t.titulo?.toLowerCase().includes(search.toLowerCase())))
             const deHoje    = tasks.filter(t => t.data_execucao === today && t.status !== 'concluida' && (!fClient || t.cliente_id === fClient) && (!search || t.titulo?.toLowerCase().includes(search.toLowerCase())))
             const conclHoje = tasks.filter(t => t.status === 'concluida' && (t.data_execucao === today || t.prazo === today) && (!fClient || t.cliente_id === fClient) && (!search || t.titulo?.toLowerCase().includes(search.toLowerCase())))
+            // Tarefa sem data nenhuma entrava na contagem do topo ("11 tarefas")
+            // mas não caía em nenhuma das três listas acima, que são todas por
+            // data — existia no banco e não aparecia em lugar nenhum. Acontece
+            // com qualquer tarefa criada sem preencher a data. Em vez de sumir,
+            // ela fica aqui, pedindo pra ser agendada.
+            const semData    = tasks.filter(t => !t.data_execucao && !t.prazo && t.status !== 'concluida' && (!fClient || t.cliente_id === fClient) && (!search || t.titulo?.toLowerCase().includes(search.toLowerCase())))
             return (
               <div style={{ maxWidth: selectedTask ? '100%' : 680 }}>
                 {/* Cabeçalho do dia */}
@@ -409,6 +418,7 @@ export default function TasksPage() {
                   <div style={{ fontSize:22, fontWeight:700, color:'#0F172A', textTransform:'capitalize' }}>{hojeStr}</div>
                   <div style={{ fontSize:12, color:'#94A3B8', marginTop:2 }}>
                     {deHoje.length} para fazer · {pendentes.length} pendentes · {conclHoje.length} concluídas
+                    {semData.length > 0 && ` · ${semData.length} sem data`}
                   </div>
                 </div>
 
@@ -429,6 +439,22 @@ export default function TasksPage() {
                   </div>
                 )}
 
+                {/* Sem data — não cabem em nenhuma lista por data, mas existem */}
+                {semData.length > 0 && (
+                  <div style={{ marginBottom:20 }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:'#92400E', marginBottom:8, display:'flex', alignItems:'center', gap:6 }}>
+                      <span style={{ width:8, height:8, borderRadius:'50%', background:'#F59E0B', display:'inline-block' }} />
+                      SEM DATA ({semData.length})
+                      <span style={{ marginLeft:8, fontWeight:400, color:'#B45309' }}>
+                        — abra a tarefa e defina a data de execução pra ela entrar no seu dia
+                      </span>
+                    </div>
+                    <Card style={{ overflow:'hidden' }}>
+                      {semData.map(t => <TaskRow key={t.id} t={t} selTask={selTask} setSelTask={setSelTask} openEdit={openEdit} deleteTask={deleteTask} quickStatus={quickStatus} selectedTask={selectedTask} today={today} onSaveMotivo={saveMotivo} />)}
+                    </Card>
+                  </div>
+                )}
+
                 {/* Tarefas de hoje */}
                 <div style={{ marginBottom:20 }}>
                   <div style={{ fontSize:11, fontWeight:700, color:'#1D4ED8', marginBottom:8, display:'flex', alignItems:'center', gap:6 }}>
@@ -438,7 +464,7 @@ export default function TasksPage() {
                   <Card style={{ overflow:'hidden' }}>
                     {deHoje.length === 0
                       ? <div style={{ padding:'20px', textAlign:'center', color:'#94A3B8', fontSize:12 }}>
-                          {pendentes.length === 0 ? '🎉 Tudo em dia!' : 'Nenhuma tarefa para hoje além das pendências.'}
+                          {pendentes.length === 0 && semData.length === 0 ? '🎉 Tudo em dia!' : 'Nenhuma tarefa para hoje além das pendências.'}
                         </div>
                       : deHoje.map(t => <TaskRow key={t.id} t={t} selTask={selTask} setSelTask={setSelTask} openEdit={openEdit} deleteTask={deleteTask} quickStatus={quickStatus} selectedTask={selectedTask} today={today} onSaveMotivo={saveMotivo} />)
                     }

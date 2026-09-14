@@ -27,7 +27,7 @@ CREATE EXTENSION IF NOT EXISTS pg_net;
 
 -- ── 3. pg_cron: executa todo dia às 03:00 UTC = 00:00 BRT ───────────────────
 --
--- ⚠️  Antes de rodar: substitua eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp3dm1wcmN1eGh2aGJ1dmRjeWJzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDA1NjE1MSwiZXhwIjoyMDk1NjMyMTUxfQ.HIF8yfsLgiGdAfXOEmr_AR6TgOqKuWZeVzlV4NQ6wjY pelo valor real:
+-- ⚠️  Antes de rodar: substitua <SEU_SERVICE_ROLE_KEY> pelo valor real:
 --     Supabase → Project Settings → API → service_role (secret)
 --
 SELECT cron.schedule(

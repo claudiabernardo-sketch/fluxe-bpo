@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../store/authStore'
 import { BIBLIOTECA_BPO } from '../data/bibliotecaBpo'
+import { validarModeloBiblioteca } from '../data/validarModelo'
 
 // ── AUDIT LOG ────────────────────────────────────────
 async function logAudit(acao, tabela, registroId, detalhes = {}) {
@@ -253,6 +254,12 @@ export function useDeleteModelo() {
 // Importa a Biblioteca BPO (50 modelos prontos, comercial → encerramento) pra
 // empresa logada — só insere os que ainda não existem (por título), pra
 // permitir rodar de novo sem duplicar depois que a biblioteca for ampliada.
+// Confere cada modelo da biblioteca ANTES de mandar pro banco (regras em
+// ../data/validarModelo). Um registro com recorrencia null — que é NOT NULL na
+// tabela — derrubava o insert dos 50 de uma vez, e o usuário só via o erro cru
+// do Postgres: nenhuma empresa nova conseguia importar a biblioteca. Agora o
+// registro ruim é separado, os bons entram, e o resto vira mensagem em
+// português.
 export function useImportarBibliotecaModelos() {
   const qc = useQueryClient()
   const { empresa } = useAuthStore()
@@ -263,12 +270,38 @@ export function useImportarBibliotecaModelos() {
         .from('tarefa_modelos').select('titulo').eq('empresa_id', empresa?.id)
       if (errExist) throw errExist
       const titulosExistentes = new Set((existentes || []).map(m => m.titulo))
-      const novos = BIBLIOTECA_BPO.filter(m => !titulosExistentes.has(m.titulo))
-      if (novos.length === 0) return { importados: 0, jaExistiam: BIBLIOTECA_BPO.length }
-      const { error } = await supabase.from('tarefa_modelos')
-        .insert(novos.map(m => ({ ...m, empresa_id: empresa?.id })))
-      if (error) throw error
-      return { importados: novos.length, jaExistiam: BIBLIOTECA_BPO.length - novos.length }
+
+      const candidatos = BIBLIOTECA_BPO.filter(m => !titulosExistentes.has(m.titulo))
+      const invalidos = candidatos.filter(m => validarModeloBiblioteca(m))
+      const novos     = candidatos.filter(m => !validarModeloBiblioteca(m))
+
+      if (novos.length === 0) {
+        if (invalidos.length) {
+          throw new Error(`Nenhum modelo pôde ser importado: ${invalidos.length} da biblioteca estão com cadastro inválido. Avise o suporte do Fluxe.`)
+        }
+        return { importados: 0, jaExistiam: BIBLIOTECA_BPO.length, invalidos: [] }
+      }
+
+      // Em lotes: um erro inesperado num lote não leva junto os modelos que já
+      // teriam entrado, e o usuário fica com a biblioteca parcial em vez de
+      // vazia. O que falhar vira mensagem, não exceção crua.
+      let importados = 0
+      const falhas = []
+      for (let i = 0; i < novos.length; i += 25) {
+        const lote = novos.slice(i, i + 25)
+        const { error } = await supabase.from('tarefa_modelos')
+          .insert(lote.map(m => ({ ...m, empresa_id: empresa?.id })))
+        if (error) falhas.push(error.message)
+        else importados += lote.length
+      }
+
+      if (importados === 0) throw new Error(falhas[0] || 'Não foi possível importar a biblioteca.')
+      return {
+        importados,
+        jaExistiam: BIBLIOTECA_BPO.length - candidatos.length,
+        invalidos: invalidos.map(m => `${m.titulo} (${validarModeloBiblioteca(m)})`),
+        falhas,
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tarefa_modelos'] }),
     onError: (err) => console.error('[Fluxe]', err),
@@ -1107,7 +1140,7 @@ export function useClienteModelos(clienteId) {
         .from('cliente_modelos')
         .select(`
           *,
-          tarefa_modelos(id, titulo, categoria, recorrencia, prioridade, dia_mes, dias_semana, checklist_items)
+          tarefa_modelos(id, titulo, categoria, recorrencia, prioridade, dia_mes, mes, dias_semana, checklist_items)
         `)
         .eq('cliente_id', clienteId)
         .eq('ativo', true)
@@ -1293,7 +1326,7 @@ export function useUpdateClienteModelo() {
       // Mudou a regra de quando a tarefa nasce? As que já estavam na agenda
       // seguem a regra velha e viram entulho — refaz. Alterações de checklist
       // ou responsável não mexem em data, então passam direto.
-      const mexeuNaData = ['recorrencia', 'dias_semana', 'dia_mes'].some(c => c in updates)
+      const mexeuNaData = ['recorrencia', 'dias_semana', 'dia_mes', 'mes'].some(c => c in updates)
       const ressync = mexeuNaData
         ? await ressincronizarTarefasDoVinculo(data?.[0], clienteId, empresa?.id)
         : null
