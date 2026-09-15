@@ -114,6 +114,19 @@ export function useTasks(filters = {}) {
       if (filters.status)   q = q.eq('status', filters.status)
       if (filters.resp)     q = q.eq('responsavel_id', filters.resp)
 
+      // O limite de 500, ordenado da data mais antiga pra mais nova, some
+      // com "Meu Dia" pra empresa com muito histórico: tarefa concluída de
+      // meses atrás ocupa vaga no limite e empurra a tarefa de hoje pra
+      // fora da resposta inteira, tela mostra "nenhuma tarefa hoje" mesmo
+      // com a tarefa existindo (foi assim que sumiu pra Monarca, com 679
+      // tarefas acumuladas). Sem filtro de status explícito, já concluída
+      // e antiga não compete pela vaga, só entra se for recente (pros
+      // últimos dias, cobre a seção "Concluídas hoje").
+      if (!filters.status) {
+        const cutoff = new Date(Date.now() - 5 * 86400000).toLocaleDateString('en-CA')
+        q = q.or(`status.neq.concluida,data_execucao.gte.${cutoff}`)
+      }
+
       const { data, error } = await q
       if (error) throw error
       return data ?? []
