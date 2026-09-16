@@ -13,6 +13,7 @@ const APRESENTACOES = {
   'Apresentação: Manual Operacional do BPO': '/apresentacao-manual-operacional',
   'Apresentação: Comercial e Precificação Consultiva': '/apresentacao-venda-consultiva',
   'Apresentação: Onboarding do Cliente (Encontro 4)': '/apresentacao-onboarding-cliente',
+  'Apresentação: Ativação do Cliente (Encontro 5)': '/apresentacao-ativacao-cliente',
   'Apresentação: Integração Conta Azul + Claude Code': '/apresentacao-conta-azul',
   'Apresentação: Criando Skills próprias pro seu BPO': '/apresentacao-skills',
   'Apresentação: Prompts prontos pra análise financeira': '/apresentacao-prompts',

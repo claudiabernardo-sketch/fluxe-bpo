@@ -68,6 +68,7 @@ const ApresentacaoVendasPage = lazy(() => import('../../pages/ApresentacaoVendas
 const ApresentacaoManualOperacionalPage = lazy(() => import('../../pages/ApresentacaoManualOperacionalPage'))
 const ApresentacaoVendaConsultivaPage = lazy(() => import('../../pages/ApresentacaoVendaConsultivaPage'))
 const ApresentacaoOnboardingClientePage = lazy(() => import('../../pages/ApresentacaoOnboardingClientePage'))
+const ApresentacaoAtivacaoClientePage = lazy(() => import('../../pages/ApresentacaoAtivacaoClientePage'))
 const ApresentacaoContaAzulPage = lazy(() => import('../../pages/ApresentacaoContaAzulPage'))
 const ApresentacaoSkillsPage = lazy(() => import('../../pages/ApresentacaoSkillsPage'))
 const ApresentacaoPromptsPage = lazy(() => import('../../pages/ApresentacaoPromptsPage'))
@@ -348,6 +349,7 @@ export default function AppShell() {
                 <Route path="/apresentacao-manual-operacional" element={<ApresentacaoManualOperacionalPage />} />
                 <Route path="/apresentacao-venda-consultiva" element={<ApresentacaoVendaConsultivaPage />} />
                 <Route path="/apresentacao-onboarding-cliente" element={<ApresentacaoOnboardingClientePage />} />
+                <Route path="/apresentacao-ativacao-cliente" element={<ApresentacaoAtivacaoClientePage />} />
                 <Route path="/apresentacao-conta-azul" element={<ApresentacaoContaAzulPage />} />
                 <Route path="/apresentacao-skills" element={<ApresentacaoSkillsPage />} />
                 <Route path="/apresentacao-prompts" element={<ApresentacaoPromptsPage />} />
