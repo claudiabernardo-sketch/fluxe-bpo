@@ -541,6 +541,7 @@ export default function CRMPage() {
   const [perdaForm, setPerdaForm]     = useState({ motivo:'', obs:'' })
   const [view, setView]               = useState('kanban')
   const [busca, setBusca]             = useState('')
+  const [soVencidos, setSoVencidos]   = useState(false)
   const [templateModal, setTemplateModal] = useState(null) // { lead, template }
   const [templateCopiado, setTemplateCopiado] = useState(false)
 
@@ -587,12 +588,19 @@ export default function CRMPage() {
   // usada nas visões Kanban e Lista. Métricas do topo continuam olhando pra
   // todos os leads, não só pro resultado filtrado.
   const leadsFiltrados = useMemo(() => {
+    let base = leads
+    if (soVencidos) {
+      base = base.filter(l => {
+        const d = diasAte(l.proximo_contato)
+        return d !== null && d <= 0 && l.etapa !== 'perdido' && l.etapa !== 'convertido'
+      })
+    }
     const termo = busca.trim().toLowerCase()
-    if (!termo) return leads
-    return leads.filter(l =>
+    if (!termo) return base
+    return base.filter(l =>
       [l.nome, l.fantasia, l.contato, l.email, l.whatsapp].some(campo => campo?.toLowerCase().includes(termo))
     )
-  }, [leads, busca])
+  }, [leads, busca, soVencidos])
 
   const ativos     = useMemo(() => leads.filter(l => l.etapa !== 'perdido' && l.etapa !== 'convertido'), [leads])
   const fechados   = useMemo(() => leads.filter(l => l.etapa === 'fechado'  || l.etapa === 'convertido'), [leads])
@@ -766,9 +774,12 @@ export default function CRMPage() {
           { label:'Pipeline ativo', value: fmtR(totalAtivo), sub:`${ativos.length} leads`, color:'#6366F1' },
           { label:'Receita mensal fechada', value: fmtR(totalFech), sub:`${fechados.length} clientes`, color:'#22C55E' },
           { label:'Taxa de conversão', value:`${txConv}%`, sub:`${perdidos.length} perdidos`, color:'#F59E0B' },
-          { label:'Follow-ups hoje', value: followUpsHoje.length, sub: followUpsHoje.length > 0 ? '⚠ ligar agora' : 'em dia', color: followUpsHoje.length > 0 ? '#EF4444' : '#22C55E' },
+          { label:'Follow-ups hoje', value: followUpsHoje.length, sub: followUpsHoje.length > 0 ? '⚠ clique pra ver e agir' : 'em dia', color: followUpsHoje.length > 0 ? '#EF4444' : '#22C55E', clicavel: followUpsHoje.length > 0 },
         ].map(m => (
-          <div key={m.label} style={{ background:'#fff', border:'1px solid #E2E8F0', borderRadius:10, padding:'10px 14px' }}>
+          <div key={m.label}
+            onClick={m.clicavel ? () => { setSoVencidos(true); setBusca(''); setView('lista') } : undefined}
+            style={{ background: soVencidos && m.clicavel ? '#FEF2F2' : '#fff', border: soVencidos && m.clicavel ? '1px solid #FECACA' : '1px solid #E2E8F0',
+              borderRadius:10, padding:'10px 14px', cursor: m.clicavel ? 'pointer' : 'default' }}>
             <div style={{ fontSize:10, color:'#94A3B8', fontWeight:700, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:4 }}>{m.label}</div>
             <div style={{ fontSize:20, fontWeight:700, color:m.color }}>{m.value}</div>
             <div style={{ fontSize:10, color:'#94A3B8', marginTop:2 }}>{m.sub}</div>
@@ -778,9 +789,20 @@ export default function CRMPage() {
 
       {/* ── Follow-ups vencidos ── */}
       {followUpsHoje.length > 0 && (
-        <div style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:10, padding:'10px 14px', marginBottom:12, fontSize:12, color:'#DC2626' }}>
+        <div onClick={() => { setSoVencidos(true); setBusca(''); setView('lista') }}
+          title="Clique pra ver só os follow-ups vencidos e agir"
+          style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:10, padding:'10px 14px', marginBottom:12, fontSize:12, color:'#DC2626', cursor:'pointer' }}>
           ⚠ <strong>{followUpsHoje.length} follow-up{followUpsHoje.length > 1 ? 's' : ''} vencido{followUpsHoje.length > 1 ? 's' : ''}:</strong>{' '}
-          {followUpsHoje.map(l => l.nome).join(', ')}
+          {followUpsHoje.map(l => l.nome).join(', ')} <span style={{ textDecoration:'underline', fontWeight:600 }}>— clique pra agir →</span>
+        </div>
+      )}
+
+      {soVencidos && (
+        <div style={{ display:'flex', alignItems:'center', gap:8, background:'#EEF2FF', border:'1px solid #C7D2FE', borderRadius:8, padding:'6px 12px', marginBottom:12, fontSize:11, color:'#4338CA', fontWeight:600 }}>
+          🔴 Mostrando só follow-ups vencidos
+          <button onClick={() => setSoVencidos(false)} style={{ marginLeft:'auto', border:'none', background:'none', cursor:'pointer', color:'#4338CA', fontSize:11, fontWeight:700, textDecoration:'underline' }}>
+            ✕ Limpar filtro
+          </button>
         </div>
       )}
 
