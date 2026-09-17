@@ -669,6 +669,23 @@ export default function ConfigPage() {
       const { data, error } = await supabase.from('usuarios').update({ nome: u.nome, perfil: u.perfil, custo_hora: u.custo_hora, ativo: u.ativo, acesso_cofre_empresa: !!u.acesso_cofre_empresa }).eq('id', u.id).select()
       if (error) throw error
       if (!data || data.length === 0) throw new Error('Não foi possível editar — sem permissão ou usuário não encontrado.')
+
+      // E-mail é login no Auth, não uma coluna comum — só troca se mudou,
+      // e passa por edge function com service role (ver update-user-email).
+      if (u.email && u.email !== u._emailOriginal) {
+        const { data: { session } } = await supabase.auth.getSession()
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ user_id: u.id, novo_email: u.email }),
+        })
+        const emailData = await res.json()
+        if (emailData?.error) throw new Error(emailData.error)
+      }
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['usuarios'] }); setEditUser(null) },
     onError: (err) => alert('Erro ao editar usuário: ' + err.message),
@@ -1148,8 +1165,8 @@ export default function ConfigPage() {
                           </button>
                         )
                       })()}
-                      <button onClick={()=>setEditUser({...u})} style={{ padding:'5px 8px', borderRadius:6, border:'1px solid #E2E8F0', background:'#fff', color:'#475569', cursor:'pointer', fontSize:11 }}>✏</button>
-                      <button onClick={()=>setDeleteUser(u)} style={{ padding:'5px 8px', borderRadius:6, border:'1px solid #FECDD3', background:'#FEF2F2', color:'#991B1B', cursor:'pointer', fontSize:11 }}>🗑</button>
+                      <button onClick={()=>setEditUser({...u, _emailOriginal: u.email})} title="Editar usuário" style={{ padding:'5px 8px', borderRadius:6, border:'1px solid #E2E8F0', background:'#fff', color:'#475569', cursor:'pointer', fontSize:11 }}>✏</button>
+                      <button onClick={()=>setDeleteUser(u)} title="Excluir usuário" style={{ padding:'5px 8px', borderRadius:6, border:'1px solid #FECDD3', background:'#FEF2F2', color:'#991B1B', cursor:'pointer', fontSize:11 }}>🗑</button>
                     </div>
                   </div>
                 ))}
@@ -1804,6 +1821,13 @@ export default function ConfigPage() {
               <div>
                 <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Nome</label>
                 <input style={fi} value={editUser.nome||''} onChange={e=>setEditUser(f=>({...f,nome:e.target.value}))} />
+              </div>
+              <div>
+                <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>E-mail (login)</label>
+                <input type="email" style={fi} value={editUser.email||''} onChange={e=>setEditUser(f=>({...f,email:e.target.value}))} />
+                {editUser.email !== editUser._emailOriginal && (
+                  <div style={{ fontSize:10.5, color:'#B45309', marginTop:4 }}>⚠ Isso muda o e-mail de login dessa pessoa no Fluxe.</div>
+                )}
               </div>
               <div>
                 <label style={{ fontSize:10, fontWeight:700, color:'#94A3B8', display:'block', marginBottom:4, textTransform:'uppercase', letterSpacing:'.07em' }}>Perfil</label>
