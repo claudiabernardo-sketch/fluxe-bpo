@@ -318,6 +318,18 @@ serve(async (req) => {
       return ok({ success: true })
     }
 
+    // ── Ação: mover um mentorado da Mentoria em Grupo pra outra turma —
+    // cada empresa só vê a própria turma (aulas, calendário, grupo de
+    // WhatsApp) via empresas.turma_id, então corrigir alguém que entrou na
+    // turma errada é só isso, sem mexer em mais nada ──────────────────────
+    if (action === 'set_turma_grupo') {
+      const { empresa_id, turma_id } = payload
+      if (!empresa_id) return ok({ error: 'empresa_id é obrigatório' })
+      const { error } = await supabase.from('empresas').update({ turma_id: turma_id || null }).eq('id', empresa_id)
+      if (error) return ok({ error: error.message })
+      return ok({ success: true })
+    }
+
     // ── Ação: definir senha temporária pra um usuário (fallback quando o
     // link de acesso expira/é consumido por pré-visualização do WhatsApp
     // ou de algum filtro de segurança de e-mail corporativo) ───────────────

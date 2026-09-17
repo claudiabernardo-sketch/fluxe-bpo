@@ -2031,17 +2031,18 @@ export function useTurmaAtualPublica() {
 // Turma que a mentorada realmente está cursando — diferente de
 // useTurmaAtualPublica (usado na página de vendas, mostra sempre a turma
 // "ativo=true", ou seja, a que está aberta pra matrícula de gente nova).
-// Aqui, sem cadastro de matrícula por empresa ainda, a melhor aproximação é
-// A turma "ativo=true" é o sinal explícito de quem administra (mesmo campo
-// que o admin-painel já usa pra agregar progresso). Prioriza ela sempre que
-// existir — datas de aula sozinhas não bastam, porque duas turmas podem se
-// sobrepor no calendário (ex: a turma antiga só termina em novembro, mas a
-// nova já começou a vender e a matricular gente em outubro). Sem nenhuma
-// marcada como ativa (esquecimento), cai pro heurístico por data como rede
-// de segurança, pra nunca deixar a tela vazia.
+// empresas.turma_id é quem manda: cada empresa fica vinculada à turma em que
+// de fato se matriculou (setado pelo kiwify-webhook na compra, ou à mão no
+// admin), então turma 1 continua vendo turma 1 mesmo depois da turma 2 virar
+// "ativo=true" — as duas podem rodar ao mesmo tempo (turma antiga só termina
+// em novembro, turma nova já começou a vender em outubro), então "qual turma
+// está ativa agora" nunca poderia responder por todo mundo ao mesmo tempo.
+// Empresa antiga sem turma_id (matriculada antes dessa coluna existir) cai no
+// heurístico por ativo=true / data como rede de segurança.
 export function useMinhaTurmaMentoria() {
+  const { empresa } = useAuthStore()
   return useQuery({
-    queryKey: ['minha_turma_mentoria'],
+    queryKey: ['minha_turma_mentoria', empresa?.turma_id],
     queryFn: async () => {
       const { data: turmas } = await supabase
         .from('turma_grupo')
@@ -2050,10 +2051,10 @@ export function useMinhaTurmaMentoria() {
       const lista = turmas ?? []
       const hoje = new Date().toLocaleDateString('en-CA')
 
-      const ativas = lista.filter(t => t.ativo)
-      const turma = ativas.length === 1
-        ? ativas[0]
-        : (() => {
+      const turma = (empresa?.turma_id && lista.find(t => t.id === empresa.turma_id))
+        || (() => {
+            const ativas = lista.filter(t => t.ativo)
+            if (ativas.length === 1) return ativas[0]
             const emAndamento = lista.find(t => {
               const datas = (t.turma_aulas || []).map(a => a.data).filter(Boolean).sort()
               const fim = datas.length ? datas[datas.length - 1] : null
@@ -2071,6 +2072,7 @@ export function useMinhaTurmaMentoria() {
       return { turma: turmaSemAulas, aulas: aulas ?? [] }
     },
     staleTime: 60_000,
+    enabled: !!empresa,
   })
 }
 

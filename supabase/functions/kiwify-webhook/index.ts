@@ -101,16 +101,31 @@ serve(async (req) => {
     // Mentoria em Grupo dá 1 ano de acesso ao Fluxe, contado da compra.
     const mentoradoExpiraEm = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
 
+    // Turma em que essa compra matricula a pessoa: sempre a que está marcada
+    // ativo=true no momento da venda (é a que está aberta pra gente nova).
+    // Fica gravado na empresa (empresas.turma_id), então mesmo que outra
+    // turma vire "ativo=true" depois, essa empresa continua vendo a turma
+    // certa — turmas podem rodar em paralelo (ex: turma antiga só termina
+    // em novembro, turma nova já vende em outubro).
+    const { data: turmaAtivaVenda } = await supabase
+      .from('turma_grupo')
+      .select('id')
+      .eq('ativo', true)
+      .order('criado_em', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    const turmaIdVenda = turmaAtivaVenda?.id ?? null
+
     let empresaId: string
     if (usuarioExistente?.empresa_id) {
       empresaId = usuarioExistente.empresa_id
       await supabase.from('empresas')
-        .update({ mentorado_bpo_lucrativo: true, mentorado_expira_em: mentoradoExpiraEm, mentoria_origem: 'grupo' })
+        .update({ mentorado_bpo_lucrativo: true, mentorado_expira_em: mentoradoExpiraEm, mentoria_origem: 'grupo', turma_id: turmaIdVenda })
         .eq('id', empresaId)
     } else {
       const { data: empresaRow, error: empresaErr } = await supabase
         .from('empresas')
-        .insert({ nome, email, plano: 'pro', mentorado_bpo_lucrativo: true, mentorado_expira_em: mentoradoExpiraEm, mentoria_origem: 'grupo' })
+        .insert({ nome, email, plano: 'pro', mentorado_bpo_lucrativo: true, mentorado_expira_em: mentoradoExpiraEm, mentoria_origem: 'grupo', turma_id: turmaIdVenda })
         .select('id')
         .single()
       if (empresaErr) return ok({ error: empresaErr.message })
