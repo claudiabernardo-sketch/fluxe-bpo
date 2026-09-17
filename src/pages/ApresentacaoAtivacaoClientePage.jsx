@@ -128,7 +128,7 @@ function SlideDiferenca() {
 
 // ── 04 · As etapas da ativação ────────────────────────────────────────────
 function SlideEtapas() {
-  const etapas = ['Configuração das ferramentas', 'Cadastros', 'Bancos e contas', 'Plano de contas', 'Categorias', 'Centros de custo', 'Regras e particularidades', 'Validação']
+  const etapas = ['Configuração das ferramentas', 'Notas fiscais', 'Cadastros', 'Bancos e contas', 'Plano de contas', 'Categorias', 'Centros de custo', 'Regras e particularidades', 'Validação']
   return (
     <div style={{ width: '100%', maxWidth: 980 }}>
       <Titulo sub="A espinha dorsal da aula. Cada etapa é ensinada em detalhe a seguir.">O caminho da ativação</Titulo>
@@ -158,6 +158,34 @@ function SlideConfiguracao() {
         'As integrações necessárias (banco, emissor de nota, conciliador) estão ativas?',
       ]} cor="#A5B4FC" />
       <Destaque>Sem isso resolvido primeiro, tudo o que vem depois vira gambiarra.</Destaque>
+    </div>
+  )
+}
+
+// ── 05b · Configuração de notas fiscais ──────────────────────────────────
+function SlideNotasFiscais() {
+  return (
+    <div style={{ width: '100%', maxWidth: 880 }}>
+      <Titulo sub="Também faz parte da ativação: sem nota configurada certo, a operação trava no primeiro mês.">Configuração de notas fiscais</Titulo>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
+        <div style={{ background: 'rgba(99,102,241,.12)', border: '1px solid rgba(99,102,241,.35)', borderRadius: 12, padding: '16px 20px' }}>
+          <div style={{ color: '#A5B4FC', fontWeight: 800, fontSize: 13, marginBottom: 10 }}>SERVIÇO</div>
+          <div style={{ color: '#E2E8F0', fontSize: 13.5 }}>Nota Fiscal de Serviço (NFS-e), emitida no sistema da prefeitura do município do cliente, ou por um ERP integrado a ela.</div>
+        </div>
+        <div style={{ background: 'rgba(217,119,6,.12)', border: '1px solid rgba(217,119,6,.35)', borderRadius: 12, padding: '16px 20px' }}>
+          <div style={{ color: '#FCD34D', fontWeight: 800, fontSize: 13, marginBottom: 10 }}>PRODUTO</div>
+          <div style={{ color: '#E2E8F0', fontSize: 13.5 }}>Nota Fiscal Eletrônica (NF-e), emitida via SEFAZ do estado, normalmente pelo ERP do cliente.</div>
+        </div>
+      </div>
+      <Check itens={[
+        'Qual tipo de nota o cliente emite: serviço, produto, ou os dois?',
+        'Onde é emitida hoje: direto na prefeitura, pelo ERP, ou outro sistema?',
+        'Existe certificado digital válido, e quem tem acesso a ele?',
+        'Qual o regime tributário e a alíquota aplicada em cada nota?',
+        'Numeração e série configuradas certo, sem risco de duplicar ou pular número?',
+        'Quem é o responsável por emitir: o cliente ou o BPO?',
+      ]} cor="#A5B4FC" />
+      <Destaque cor="#FCA5A5">Nota fiscal errada não é só risco fiscal, é dor de cabeça recorrente pro cliente e pro BPO.</Destaque>
     </div>
   )
 }
@@ -384,7 +412,7 @@ function SlideEncerramento() {
 
 const SLIDES = [
   { render: SlideCapa }, { render: SlideAbertura }, { render: SlideDiferenca }, { render: SlideEtapas },
-  { render: SlideConfiguracao }, { render: SlideCadastros }, { render: SlideBancos }, { render: SlidePlanoContas },
+  { render: SlideConfiguracao }, { render: SlideNotasFiscais }, { render: SlideCadastros }, { render: SlideBancos }, { render: SlidePlanoContas },
   { render: SlideCategorias }, { render: SlideCentrosCusto }, { render: SlideRegras }, { render: SlideValidacao },
   { render: SlideErros }, { render: SlideFluxe }, { render: SlideAtividade }, { render: SlideEncerramento },
 ]
