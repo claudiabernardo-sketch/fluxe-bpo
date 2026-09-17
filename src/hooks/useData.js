@@ -2032,9 +2032,13 @@ export function useTurmaAtualPublica() {
 // useTurmaAtualPublica (usado na página de vendas, mostra sempre a turma
 // "ativo=true", ou seja, a que está aberta pra matrícula de gente nova).
 // Aqui, sem cadastro de matrícula por empresa ainda, a melhor aproximação é
-// pegar a turma cujo período (data de início até a última aula) já começou
-// e ainda não terminou — a turma "em andamento" de verdade, mesmo que não
-// seja a que está com ativo=true.
+// A turma "ativo=true" é o sinal explícito de quem administra (mesmo campo
+// que o admin-painel já usa pra agregar progresso). Prioriza ela sempre que
+// existir — datas de aula sozinhas não bastam, porque duas turmas podem se
+// sobrepor no calendário (ex: a turma antiga só termina em novembro, mas a
+// nova já começou a vender e a matricular gente em outubro). Sem nenhuma
+// marcada como ativa (esquecimento), cai pro heurístico por data como rede
+// de segurança, pra nunca deixar a tela vazia.
 export function useMinhaTurmaMentoria() {
   return useQuery({
     queryKey: ['minha_turma_mentoria'],
@@ -2046,15 +2050,20 @@ export function useMinhaTurmaMentoria() {
       const lista = turmas ?? []
       const hoje = new Date().toLocaleDateString('en-CA')
 
-      const emAndamento = lista.find(t => {
-        const datas = (t.turma_aulas || []).map(a => a.data).filter(Boolean).sort()
-        const fim = datas.length ? datas[datas.length - 1] : null
-        return t.data_inicio && t.data_inicio <= hoje && (!fim || fim >= hoje)
-      })
-      const turma = emAndamento
-        || lista.find(t => t.data_inicio && t.data_inicio >= hoje)
-        || lista[lista.length - 1]
-        || null
+      const ativas = lista.filter(t => t.ativo)
+      const turma = ativas.length === 1
+        ? ativas[0]
+        : (() => {
+            const emAndamento = lista.find(t => {
+              const datas = (t.turma_aulas || []).map(a => a.data).filter(Boolean).sort()
+              const fim = datas.length ? datas[datas.length - 1] : null
+              return t.data_inicio && t.data_inicio <= hoje && (!fim || fim >= hoje)
+            })
+            return emAndamento
+              || lista.find(t => t.data_inicio && t.data_inicio >= hoje)
+              || lista[lista.length - 1]
+              || null
+          })()
 
       if (!turma) return { turma: null, aulas: [] }
       const { data: aulas } = await supabase.from('turma_aulas').select('*').eq('turma_id', turma.id).order('numero')
