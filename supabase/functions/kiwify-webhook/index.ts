@@ -144,11 +144,22 @@ serve(async (req) => {
       .upsert({ id: userId, empresa_id: empresaId, nome, email, perfil: 'admin', ativo: true })
     if (profileError) return ok({ error: profileError.message })
 
+    // Link do grupo de WhatsApp da turma ativa no momento da compra — não
+    // depende da pessoa entrar no Fluxe primeiro pra achar o grupo certo
+    // (ver bug real: aluna via a turma antiga só pela tela do Fluxe).
+    const { data: turmaAtiva } = await supabase
+      .from('turma_grupo')
+      .select('grupo_whatsapp_url')
+      .eq('ativo', true)
+      .order('criado_em', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
     const resendKey = Deno.env.get('RESEND_API_KEY')
     const resendFrom = Deno.env.get('RESEND_FROM') || 'Fluxe <noreply@fluxebpo.com.br>'
     let emailSent = false
     if (resendKey) {
-      const html = buildWelcomeEmail({ nome, email, senha: senhaTemporaria })
+      const html = buildWelcomeEmail({ nome, email, senha: senhaTemporaria, grupoWhatsappUrl: turmaAtiva?.grupo_whatsapp_url || null })
       try {
         const resendRes = await fetch('https://api.resend.com/emails', {
           method: 'POST',
@@ -171,7 +182,7 @@ serve(async (req) => {
 })
 
 // ── Template do email de boas-vindas (mesmo padrão do criar_mentorado) ─────
-function buildWelcomeEmail({ nome, email, senha }: { nome: string; email: string; senha: string }) {
+function buildWelcomeEmail({ nome, email, senha, grupoWhatsappUrl }: { nome: string; email: string; senha: string; grupoWhatsappUrl: string | null }) {
   const year = new Date().getFullYear()
   const loginUrl = 'https://fluxebpo.com.br/login'
   return `<!DOCTYPE html>
@@ -230,6 +241,23 @@ function buildWelcomeEmail({ nome, email, senha }: { nome: string; email: string
             </td>
           </tr>
         </table>
+
+        ${grupoWhatsappUrl ? `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#052e1a;border-radius:8px;margin-bottom:24px">
+          <tr>
+            <td style="padding:16px 20px;border-left:3px solid #25D366">
+              <p style="margin:0 0 8px;font-size:11px;color:#86EFAC;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px">Grupo da turma no WhatsApp</p>
+              <p style="margin:0 0 12px;font-size:13px;color:#CBD5E1;line-height:1.6">É lá que avisamos sobre os encontros ao vivo e tiramos dúvidas entre as aulas.</p>
+              <a href="${grupoWhatsappUrl}"
+                 style="display:inline-block;padding:10px 20px;font-size:13px;font-weight:bold;
+                        color:#ffffff;text-decoration:none;border-radius:8px;background-color:#25D366;
+                        mso-padding-alt:10px 20px;font-family:Arial,Helvetica,sans-serif">
+                Entrar no grupo &#x2192;
+              </a>
+            </td>
+          </tr>
+        </table>
+        ` : ''}
 
         <p style="margin:0;font-size:12px;color:#64748B;line-height:1.6">
           Recomendamos trocar sua senha assim que entrar, nas configurações da sua conta.
