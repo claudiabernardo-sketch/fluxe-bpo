@@ -79,8 +79,26 @@ function tituloCaso(raw: string): string {
 }
 
 serve(async (req) => {
-  const icalUrl = Deno.env.get('MENTORIA_ICAL_URL')
-  const turmaId = Deno.env.get('MENTORIA_TURMA_ID')
+  // Por padrão sincroniza a turma configurada nas variáveis de ambiente
+  // (a turma "principal" de sempre). Pra sincronizar outra turma rodando em
+  // paralelo (calendário do Google separado, ex: quando duas turmas se
+  // sobrepõem), passa ical_url e turma_id na query string ou no corpo —
+  // nenhuma chamada existente (sem esses parâmetros) muda de comportamento.
+  const url = new URL(req.url)
+  let overrideIcalUrl: string | null = url.searchParams.get('ical_url')
+  let overrideTurmaId: string | null = url.searchParams.get('turma_id')
+  if (!overrideIcalUrl && !overrideTurmaId && req.method === 'POST') {
+    try {
+      const body = await req.json()
+      overrideIcalUrl = body?.ical_url ?? null
+      overrideTurmaId = body?.turma_id ?? null
+    } catch {
+      // corpo vazio/não-JSON — segue com os defaults do ambiente
+    }
+  }
+
+  const icalUrl = overrideIcalUrl || Deno.env.get('MENTORIA_ICAL_URL')
+  const turmaId = overrideTurmaId || Deno.env.get('MENTORIA_TURMA_ID')
   if (!icalUrl || !turmaId) {
     return new Response(JSON.stringify({ error: 'MENTORIA_ICAL_URL ou MENTORIA_TURMA_ID nao configurado' }), { status: 500 })
   }
