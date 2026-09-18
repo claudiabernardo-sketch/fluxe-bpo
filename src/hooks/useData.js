@@ -136,6 +136,35 @@ export function useTasks(filters = {}) {
   })
 }
 
+// Tarefas Avulsas vivem numa tabela própria (tarefas_avulsas), separada de
+// "tarefas" — por isso nunca apareciam no Meu Dia, mesmo com prazo pra hoje
+// ou atrasado (relato real: Vanessa, RealGold BPO, cadastrou com data e não
+// via em lugar nenhum). Não faz sentido misturar linha a linha com TaskRow
+// (schema diferente: prazo em vez de data_execucao, sem checklist/categoria),
+// então isso alimenta uma seção própria dentro do Meu Dia, só de leitura +
+// link pra abrir a avulsa de verdade na tela de Avulsas.
+export function useAvulsasPendentes() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['avulsas_pendentes', empresa?.id],
+    queryFn: async () => {
+      const hoje = new Date().toLocaleDateString('en-CA')
+      const { data, error } = await supabase
+        .from('tarefas_avulsas')
+        .select('id, titulo, prazo, prioridade, cliente_id, clientes(razao_social, fantasia)')
+        .eq('empresa_id', empresa?.id)
+        .neq('status', 'concluida')
+        .lte('prazo', hoje)
+        .order('prazo', { ascending: true })
+        .limit(100)
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 15_000,
+    enabled: !!empresa?.id,
+  })
+}
+
 export function useCreateTask() {
   const qc = useQueryClient()
   const { empresa } = useAuthStore()
