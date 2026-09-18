@@ -1,4 +1,4 @@
-import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, useConvertLeadToClient, useLeadInteracoes, useCreateLeadInteracao, useDeleteLeadInteracao, usePropostas, usePropostasByLead, useUpdateProposta, useCrmTemplates, useCreateCrmTemplate, useUpdateCrmTemplate, useDeleteCrmTemplate } from '../hooks/useData'
+import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, useConvertLeadToClient, useLeadInteracoes, useCreateLeadInteracao, useDeleteLeadInteracao, usePropostas, usePropostasByLead, useUpdateProposta, useCrmTemplates, useCreateCrmTemplate, useUpdateCrmTemplate, useDeleteCrmTemplate, useUsuarios } from '../hooks/useData'
 import { Card, Loader, EmptyState, Btn, fmtR } from '../components/ui'
 import { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -416,6 +416,7 @@ function LinhaDoTempo({ lead }) {
 
 export default function CRMPage() {
   const { data: leads = [], isLoading } = useLeads()
+  const { data: usuarios = [] } = useUsuarios()
   const create  = useCreateLead()
   const update  = useUpdateLead()
   const del     = useDeleteLead()
@@ -632,6 +633,7 @@ export default function CRMPage() {
       segmento: lead.segmento || '', valor_estimado: formatBRL(lead.valor_estimado),
       etapa: lead.etapa || 'novo', obs: lead.obs || '',
       proximo_contato: lead.proximo_contato || '',
+      responsavel_id: lead.responsavel_id || '',
     })
     setErro(''); setCnpjErro(''); setModalAba('dados'); setModal('edit')
   }
@@ -678,6 +680,7 @@ export default function CRMPage() {
       valor_estimado: parseBRL(form.valor_estimado) || 0,
       obs:            form.obs            || null,
       proximo_contato: form.proximo_contato || null,
+      responsavel_id: form.responsavel_id || null,
     }
     try {
       if (modal === 'edit') {
@@ -887,9 +890,17 @@ export default function CRMPage() {
                           )}
                         </div>
                         {l.segmento && <div style={{ color:'#94A3B8', fontSize:10, marginBottom:2 }}>{l.segmento}</div>}
-                        {l.valor_estimado > 0 && (
-                          <div style={{ color:'#15803D', fontWeight:600, fontSize:10, marginTop:2 }}>{fmtR(l.valor_estimado)}/mês</div>
-                        )}
+                        <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+                          {l.valor_estimado > 0 && (
+                            <div style={{ color:'#15803D', fontWeight:600, fontSize:10 }}>{fmtR(l.valor_estimado)}/mês</div>
+                          )}
+                          {l.responsavel_id && (
+                            <div title={usuarios.find(u => u.id === l.responsavel_id)?.nome || ''}
+                              style={{ fontSize:9, fontWeight:700, color:'#4F46E5', background:'#EEF2FF', borderRadius:99, padding:'1px 6px' }}>
+                              👤 {(usuarios.find(u => u.id === l.responsavel_id)?.nome || '?').split(' ')[0]}
+                            </div>
+                          )}
+                        </div>
                         {l.proximo_contato && (
                           <div style={{ fontSize:9, marginTop:4, fontWeight:600,
                             color: fuVencido ? '#EF4444' : fuHoje ? '#F59E0B' : '#64748B' }}>
@@ -1155,6 +1166,14 @@ export default function CRMPage() {
                       <label style={labelStyle}>📅 Próximo follow-up</label>
                       <input type="date" value={form.proximo_contato || ''} onChange={e => setF('proximo_contato', e.target.value)} style={inputStyle} />
                     </div>
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>👤 Responsável</label>
+                    <select value={form.responsavel_id || ''} onChange={e => setF('responsavel_id', e.target.value || null)} style={inputStyle}>
+                      <option value="">Sem responsável</option>
+                      {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                    </select>
                   </div>
 
                   <div>

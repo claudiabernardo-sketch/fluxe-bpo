@@ -1,5 +1,6 @@
 import { useState, useRef, lazy, Suspense } from 'react'
-import { useTasks, useCreateTask, useUpdateTask, useDeleteTask, useClients, useUsuarios, useTarefaModelos } from '../hooks/useData'
+import { Link } from 'react-router-dom'
+import { useTasks, useCreateTask, useUpdateTask, useDeleteTask, useClients, useUsuarios, useTarefaModelos, useAvulsasPendentes } from '../hooks/useData'
 import { Card, Btn, Loader, EmptyState, PrioBadge, StatusBadge, fmt, isVencida } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 const ImportModal = lazy(() => import('../components/ui/ImportModal'))
@@ -36,6 +37,7 @@ function parseAnexo(acao) {
 
 export default function TasksPage() {
   const { data: tasks = [], isLoading } = useTasks()
+  const { data: avulsasPendentes = [] } = useAvulsasPendentes()
   const { data: clients = [] } = useClients()
   const { data: usuarios = [] } = useUsuarios()
   const { profile } = useAuthStore()
@@ -451,6 +453,31 @@ export default function TasksPage() {
                     </div>
                     <Card style={{ overflow:'hidden' }}>
                       {semData.map(t => <TaskRow key={t.id} t={t} selTask={selTask} setSelTask={setSelTask} openEdit={openEdit} deleteTask={deleteTask} quickStatus={quickStatus} selectedTask={selectedTask} today={today} onSaveMotivo={saveMotivo} />)}
+                    </Card>
+                  </div>
+                )}
+
+                {/* Tarefas Avulsas com prazo pra hoje ou atrasado — tabela própria
+                    (tarefas_avulsas), por isso fica numa seção separada, com
+                    link pra abrir de verdade na tela de Avulsas */}
+                {avulsasPendentes.length > 0 && (
+                  <div style={{ marginBottom:20 }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:'#92400E', marginBottom:8, display:'flex', alignItems:'center', gap:6 }}>
+                      <span style={{ width:8, height:8, borderRadius:'50%', background:'#F59E0B', display:'inline-block' }} />
+                      TAREFAS AVULSAS PENDENTES ({avulsasPendentes.length})
+                    </div>
+                    <Card style={{ overflow:'hidden' }}>
+                      {avulsasPendentes.map(a => (
+                        <Link key={a.id} to="/avulsas" style={{ textDecoration:'none', color:'inherit' }}>
+                          <div style={{ padding:'10px 14px', borderBottom:'1px solid #F8FAFC', display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <div style={{ fontSize:13, fontWeight:600, color:'#0F172A' }}>{a.titulo}</div>
+                              <div style={{ fontSize:11, color:'#94A3B8' }}>{a.clientes?.fantasia || a.clientes?.razao_social || ''}</div>
+                            </div>
+                            <div style={{ fontSize:11, fontWeight:600, color: a.prazo < today ? '#DC2626' : '#92400E' }}>{fmt(a.prazo)}</div>
+                          </div>
+                        </Link>
+                      ))}
                     </Card>
                   </div>
                 )}
