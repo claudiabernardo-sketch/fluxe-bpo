@@ -336,6 +336,31 @@ serve(async (req) => {
           if (Array.isArray(items) && items.length) checklistPorClienteModelo[`${v.cliente_id}::${v.modelo_id}`] = items
         }
 
+        // Rotinas "única" (pontuais, tipo lembrete de cobrança D+1/D+5) não têm
+        // padrão de calendário — "recorrência desconhecida" no switch de
+        // deveGerarNaData sempre recusava, então nunca geravam nem 1 tarefa,
+        // mesmo vinculadas (achado real: sequência de cobrança inteira da
+        // Porsani, 6 modelos, 0 tarefas desde julho). Geram no máximo 1 vez,
+        // checado contra QUALQUER data já existente — não só a data do lote —
+        // senão reprocessar um range de dias criaria uma cópia por dia.
+        const modelosUnicaIds = [...new Set(
+          (vinculos as any[])
+            .filter(v => (v.recorrencia ?? v.tarefa_modelos.recorrencia) === 'unica')
+            .map(v => v.modelo_id)
+        )]
+        let existSetUnicaGlobal = new Set<string>()
+        if (modelosUnicaIds.length) {
+          const { data: existentesUnica } = await supabase
+            .from('tarefas')
+            .select('modelo_id, cliente_id, banco')
+            .eq('empresa_id', empId)
+            .in('modelo_id', modelosUnicaIds)
+            .is('deleted_at', null)
+          existSetUnicaGlobal = new Set(
+            (existentesUnica ?? []).map((t: any) => chaveTarefa(t.modelo_id, t.cliente_id, t.banco))
+          )
+        }
+
         // ── 5. Processar cada data ─────────────────────────────────────────
         for (const dataAlvo of datasAlvo) {
 
@@ -399,8 +424,16 @@ serve(async (req) => {
               dias_mes:    modelo.dias_mes,
             }
 
-            // Verificar recorrência
-            const { deve, motivo: motivoData } = deveGerarNaData(modeloEfetivo, dataAlvo, feriadosSet)
+            // Verificar recorrência — "única" foge do padrão de calendário:
+            // só é avaliada na primeira data do lote sendo processado, e a
+            // duplicidade é checada contra qualquer data já existente (ver
+            // existSetUnicaGlobal acima), não contra o dia exato.
+            const isUnica = modeloEfetivo.recorrencia === 'unica'
+            const { deve, motivo: motivoData } = isUnica
+              ? (dataAlvo === datasAlvo[0]
+                  ? { deve: true, motivo: undefined }
+                  : { deve: false, motivo: 'rotina pontual, já avaliada na primeira data do lote' })
+              : deveGerarNaData(modeloEfetivo, dataAlvo, feriadosSet)
             if (!deve) {
               // Sempre registra (não só em dry_run) — o frontend usa essa
               // contagem pra explicar por que "0 tarefas" não é bug, é a
@@ -425,16 +458,17 @@ serve(async (req) => {
               ? bancosCliente.map((b: string) => ({ titulo: `${modelo.titulo} — ${b}`, banco: b }))
               : [{ titulo: modelo.titulo, banco: null }]
 
+            const setParaChecar = isUnica ? existSetUnicaGlobal : existSet
             for (const { titulo: tituloFinal, banco } of variacoes) {
               const key = chaveTarefa(vinculo.modelo_id, clienteId, banco)
-              if (existSet.has(key)) {
+              if (setParaChecar.has(key)) {
                 detalhes.push({
                   empresa_id: empId, cliente_id: clienteId, modelo_id: vinculo.modelo_id,
                   data_alvo: dataAlvo, resultado: 'duplicidade_evitada', motivo: null, tarefa_id: null,
                 })
                 continue
               }
-              existSet.add(key) // evitar duplicidade no mesmo lote
+              setParaChecar.add(key) // evitar duplicidade no mesmo lote
 
               // Agendar inserção
               toInsert.push({
@@ -537,6 +571,60 @@ serve(async (req) => {
           const { error: errDet } = await supabase.from('task_generation_details').insert(lote)
           if (errDet) erros.push(`details lote ${i}: ${errDet.message}`)
         }
+      }
+    }
+
+    // ── 9. Alerta de vínculos travados — só na execução do cron diário ─────
+    // Detecta o mesmo tipo de problema que já aconteceu de verdade (58
+    // vínculos modelo→cliente que nunca geraram 1 tarefa, em 8 empresas,
+    // só descoberto porque uma aluna reclamou no grupo). Corta em 3 dias
+    // pra não alarmar vínculo recém-criado que ainda nem teve chance de
+    // cair no range de geração. Roda todo dia; se aparecer alguém preso,
+    // avisa por e-mail em vez de esperar reclamação chegar por fora do
+    // sistema — importante com a mentora viajando e sem monitorar à mão.
+    if (!dryRun && origem === 'cron') {
+      try {
+        const cortesia = new Date(Date.now() - 3 * 86400000).toISOString()
+        const { data: vinculos } = await supabase
+          .from('cliente_modelos')
+          .select('empresa_id, cliente_id, modelo_id, criado_em, empresas(nome), clientes(razao_social, status_operacional), tarefa_modelos(titulo)')
+          .eq('ativo', true)
+          .lt('criado_em', cortesia)
+
+        const travados: string[] = []
+        for (const v of (vinculos ?? []) as any[]) {
+          if (v.clientes?.status_operacional !== 'operacional') continue
+          const { count } = await supabase
+            .from('tarefas')
+            .select('id', { count: 'exact', head: true })
+            .eq('modelo_id', v.modelo_id)
+            .eq('cliente_id', v.cliente_id)
+            .is('deleted_at', null)
+          if (!count) {
+            travados.push(`${v.empresas?.nome ?? '?'} / ${v.clientes?.razao_social ?? '?'} / ${v.tarefa_modelos?.titulo ?? '?'}`)
+          }
+        }
+
+        if (travados.length) {
+          const resendKey = Deno.env.get('RESEND_API_KEY')
+          if (resendKey) {
+            const html = `<p>${travados.length} vínculo(s) de modelo→cliente sem gerar nenhuma tarefa há mais de 3 dias:</p><ul>${travados.map(t => `<li>${t}</li>`).join('')}</ul><p>Verifique a recorrência do modelo ou rode gerar-tarefas manualmente pra esse cliente.</p>`
+            await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                from: Deno.env.get('RESEND_FROM') || 'Fluxe <noreply@fluxebpo.com.br>',
+                to: ['empreendabpo@gmail.com'],
+                subject: `⚠ Fluxe: ${travados.length} vínculo(s) de tarefa recorrente travado(s)`,
+                html,
+              }),
+            }).catch(() => {})
+          }
+        }
+      } catch (alertErr) {
+        // Alerta é best-effort — nunca deve derrubar a geração do dia por
+        // causa de uma falha só no aviso.
+        console.error('[gerar-tarefas] alerta de vínculos travados falhou:', alertErr)
       }
     }
 
