@@ -70,6 +70,13 @@ const ApresentacaoVendaConsultivaPage = lazy(() => import('../../pages/Apresenta
 const ApresentacaoOnboardingClientePage = lazy(() => import('../../pages/ApresentacaoOnboardingClientePage'))
 const ApresentacaoAtivacaoClientePage = lazy(() => import('../../pages/ApresentacaoAtivacaoClientePage'))
 const ApresentacaoImplementacaoOperacaoPage = lazy(() => import('../../pages/ApresentacaoImplementacaoOperacaoPage'))
+const ApresentacaoRotinaOperacionalPage = lazy(() => import('../../pages/ApresentacaoRotinaOperacionalPage'))
+const ApresentacaoQualidadeEquipePage = lazy(() => import('../../pages/ApresentacaoQualidadeEquipePage'))
+const ApresentacaoInteligenciaPage = lazy(() => import('../../pages/ApresentacaoInteligenciaPage'))
+const ApresentacaoReuniaoClientePage = lazy(() => import('../../pages/ApresentacaoReuniaoClientePage'))
+const ApresentacaoFollowUpPage = lazy(() => import('../../pages/ApresentacaoFollowUpPage'))
+const ApresentacaoLucratividadeEscalaPage = lazy(() => import('../../pages/ApresentacaoLucratividadeEscalaPage'))
+const ApresentacaoDistratoPage = lazy(() => import('../../pages/ApresentacaoDistratoPage'))
 const ApresentacaoContaAzulPage = lazy(() => import('../../pages/ApresentacaoContaAzulPage'))
 const ApresentacaoSkillsPage = lazy(() => import('../../pages/ApresentacaoSkillsPage'))
 const ApresentacaoPromptsPage = lazy(() => import('../../pages/ApresentacaoPromptsPage'))
@@ -352,6 +359,13 @@ export default function AppShell() {
                 <Route path="/apresentacao-onboarding-cliente" element={<ApresentacaoOnboardingClientePage />} />
                 <Route path="/apresentacao-ativacao-cliente" element={<ApresentacaoAtivacaoClientePage />} />
                 <Route path="/apresentacao-implementacao-operacao" element={<ApresentacaoImplementacaoOperacaoPage />} />
+                <Route path="/apresentacao-rotina-operacional" element={<ApresentacaoRotinaOperacionalPage />} />
+                <Route path="/apresentacao-qualidade-equipe" element={<ApresentacaoQualidadeEquipePage />} />
+                <Route path="/apresentacao-inteligencia-estrategica" element={<ApresentacaoInteligenciaPage />} />
+                <Route path="/apresentacao-reuniao-cliente" element={<ApresentacaoReuniaoClientePage />} />
+                <Route path="/apresentacao-follow-up" element={<ApresentacaoFollowUpPage />} />
+                <Route path="/apresentacao-lucratividade-escala" element={<ApresentacaoLucratividadeEscalaPage />} />
+                <Route path="/apresentacao-distrato" element={<ApresentacaoDistratoPage />} />
                 <Route path="/apresentacao-conta-azul" element={<ApresentacaoContaAzulPage />} />
                 <Route path="/apresentacao-skills" element={<ApresentacaoSkillsPage />} />
                 <Route path="/apresentacao-prompts" element={<ApresentacaoPromptsPage />} />
