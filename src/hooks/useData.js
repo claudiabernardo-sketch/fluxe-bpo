@@ -1311,11 +1311,18 @@ export function useVincularModelo() {
       // lembrar de clicar em "Gerar" depois, e sem isso o vínculo ficava
       // silenciosamente parado pra sempre (achado numa varredura: 14
       // vínculos em 8 empresas diferentes, nunca geraram 1 tarefa sequer).
-      // Gera a partir de hoje automaticamente, só pra este cliente. Se
-      // falhar, não desfaz o vínculo — o cron diário ainda pega no dia
-      // seguinte, mas erros ficam registrados pra não passar em silêncio.
+      // Só pedir a data de hoje não bastava: se o modelo é semanal numa
+      // quarta e a pessoa vincula numa segunda, "hoje" não bate com a
+      // recorrência, gera 0 tarefas, e parece que não funcionou (relato
+      // real de mentoradas no grupo perguntando se estavam conseguindo
+      // gerar tarefa recorrente pelo Modelo). Gera um range de 60 dias a
+      // partir de hoje, pra já nascer visível a próxima ocorrência de
+      // verdade, não só o dia exato do clique. Se falhar, não desfaz o
+      // vínculo — o cron diário ainda pega, mas erros ficam registrados
+      // pra não passar em silêncio.
       try {
-        await postGerarTarefas({ empresa_id: empresa?.id, cliente_id: clienteId })
+        const dataFim = new Date(Date.now() + 60 * 86400000).toLocaleDateString('en-CA')
+        await postGerarTarefas({ empresa_id: empresa?.id, cliente_id: clienteId, data_inicio: hojeLocal(), data_fim: dataFim })
       } catch (genErr) {
         console.error('[Fluxe] vínculo criado, mas geração automática de tarefas falhou:', genErr)
       }
