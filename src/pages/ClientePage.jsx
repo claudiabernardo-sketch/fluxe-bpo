@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   useClients, useUpdateClient,
   useRotinas, useCreateRotina, useUpdateRotina, useDeleteRotina,
-  useTarefaModelos, useVincularModelo,
+  useTarefaModelos, useVincularModelo, useCreateModelo,
   useUpdateClienteStatus,
   useAcessos, useSaveAcesso, useDeleteAcesso, useUsuarios,
 } from '../hooks/useData'
@@ -130,11 +130,12 @@ export default function ClientePage() {
   const deleteRotina = useDeleteRotina()
   const { data: modelosDisponiveis = [] } = useTarefaModelos()
   const vincularModelo = useVincularModelo()
+  const createModelo = useCreateModelo()
   const [rotinaVinculoOk, setRotinaVinculoOk] = useState(false)
   const [editandoRotina, setEditandoRotina] = useState(null)
   const [rotinaEditForm, setRotinaEditForm] = useState({})
   const [rotinaEditErr, setRotinaEditErr] = useState('')
-  const [rotinaForm, setRotinaForm] = useState({ titulo:'', tipo:'diaria', hora:'', observacao:'', dia_mes:1, mes:1, dias_semana:[], modeloId:'' })
+  const [rotinaForm, setRotinaForm] = useState({ titulo:'', tipo:'diaria', hora:'', observacao:'', dia_mes:1, mes:1, dias_semana:[], modeloId:'', apenasLembrete:false })
   const [rotinaErr, setRotinaErr] = useState('')
 
   // Status operacional — "Iniciar Operação" não existe mais como passo manual:
@@ -230,13 +231,34 @@ export default function ClientePage() {
       mes: rotinaForm.tipo === 'anual' ? rotinaForm.mes : null,
       cliente_id: clienteId, empresa_id: empresa?.id,
     })
-    // Escolheu um modelo direto no form → já vincula, sem precisar ir em Modelos separado.
     if (rotinaForm.modeloId) {
+      // Escolheu um modelo já existente direto no form → só vincula.
       await vincularModelo.mutateAsync({ clienteId, modeloId: rotinaForm.modeloId })
       setRotinaVinculoOk(true)
       setTimeout(() => setRotinaVinculoOk(false), 3000)
+    } else if (!rotinaForm.apenasLembrete) {
+      // Ninguém escolheu um modelo e não marcou "só lembrete" — cria o modelo
+      // sozinho com a mesma recorrência da rotina e já vincula. Antes, uma
+      // rotina "personalizada" sem modelo nunca virava tarefa de verdade em
+      // lugar nenhum (Central/Kanban/Calendário) — relato real: Vanessa,
+      // RealGold BPO, cadastrou rotina achando que geraria tarefa, e nada
+      // aparecia. Agora isso só acontece se a pessoa pedir explicitamente.
+      const tituloNorm = rotinaForm.titulo.trim().toLowerCase()
+      const jaExiste = modelosDisponiveis.find(m => m.titulo?.trim().toLowerCase() === tituloNorm)
+      const modeloId = jaExiste
+        ? jaExiste.id
+        : (await createModelo.mutateAsync({
+            titulo: rotinaForm.titulo.trim(), recorrencia: rotinaForm.tipo,
+            dias_semana: rotinaForm.tipo === 'semanal' ? rotinaForm.dias_semana : null,
+            dia_mes: (rotinaForm.tipo === 'mensal' || rotinaForm.tipo === 'anual') ? rotinaForm.dia_mes : null,
+            mes: rotinaForm.tipo === 'anual' ? rotinaForm.mes : null,
+            descricao: rotinaForm.observacao || null, checklist_items: [], ativo: true, expandir_por_banco: false,
+          })).id
+      await vincularModelo.mutateAsync({ clienteId, modeloId })
+      setRotinaVinculoOk(true)
+      setTimeout(() => setRotinaVinculoOk(false), 3000)
     }
-    setRotinaForm({ titulo:'', tipo:'diaria', hora:'', observacao:'', dia_mes:1, mes:1, dias_semana:[], modeloId:'' })
+    setRotinaForm({ titulo:'', tipo:'diaria', hora:'', observacao:'', dia_mes:1, mes:1, dias_semana:[], modeloId:'', apenasLembrete:false })
   }
 
   function iniciarEdicaoRotina(r) {
@@ -839,15 +861,23 @@ export default function ClientePage() {
                       const modelo = modelosDisponiveis.find(m => m.id === modeloId)
                       setRotinaForm(f => ({ ...f, modeloId, titulo: modelo ? modelo.titulo : f.titulo }))
                     }} className="fi">
-                      <option value="">— Personalizado, sem modelo —</option>
+                      <option value="">— Nenhum, criar um modelo novo automaticamente —</option>
                       {modelosDisponiveis.map(m => <option key={m.id} value={m.id}>{m.titulo}</option>)}
                     </select>
                     <div style={{ fontSize:10, color:'var(--tx3)', marginTop:4 }}>
                       {rotinaForm.modeloId
                         ? 'Ao salvar, essa rotina já fica vinculada a esse modelo e a tarefa recorrente é ativada automaticamente.'
-                        : 'Escolha um modelo pra ativar a tarefa recorrente automaticamente, ou deixe personalizado pra só um lembrete na Central Operacional.'}
+                        : rotinaForm.apenasLembrete
+                          ? 'Vira só um lembrete na Central Operacional — não gera tarefa nenhuma.'
+                          : 'Ao salvar, um modelo novo é criado com essa mesma recorrência e já ativa a tarefa automaticamente.'}
                     </div>
                   </div>
+                  <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:11, color:'var(--tx2)', cursor:'pointer' }}>
+                    <input type="checkbox" checked={rotinaForm.apenasLembrete}
+                      onChange={e => setRotinaForm(f => ({ ...f, apenasLembrete: e.target.checked }))}
+                      disabled={!!rotinaForm.modeloId} />
+                    Só um lembrete, sem gerar tarefa nenhuma
+                  </label>
                   <div>
                     <label className="lbl">Título *</label>
                     <input value={rotinaForm.titulo} onChange={e=>setRotinaForm(f=>({...f,titulo:e.target.value}))}
@@ -906,8 +936,8 @@ export default function ClientePage() {
                   </div>
                   {rotinaErr && <div style={{ fontSize:11, color:'var(--rdt)' }}>{rotinaErr}</div>}
                   <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                    <button className="btn bp bsm" onClick={salvarRotina} disabled={createRotina.isPending || vincularModelo.isPending} style={{ alignSelf:'flex-start' }}>
-                      {(createRotina.isPending || vincularModelo.isPending) ? 'Salvando…' : '+ Adicionar rotina'}
+                    <button className="btn bp bsm" onClick={salvarRotina} disabled={createRotina.isPending || vincularModelo.isPending || createModelo.isPending} style={{ alignSelf:'flex-start' }}>
+                      {(createRotina.isPending || vincularModelo.isPending || createModelo.isPending) ? 'Salvando…' : '+ Adicionar rotina'}
                     </button>
                     {rotinaVinculoOk && <span style={{ fontSize:11, color:'var(--grt)', fontWeight:600 }}>✓ Vinculado e ativado!</span>}
                   </div>
