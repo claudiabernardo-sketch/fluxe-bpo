@@ -2,7 +2,7 @@
 // AgendaPage.jsx — Central Operacional BPO Financeiro
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useMemo, useRef } from 'react'
-import { useTasks, useClients, useApontamentos, usePendencias, useRotinas, useProjecaoTarefas } from '../hooks/useData'
+import { useTasks, useClients, useApontamentos, usePendencias, useRotinas, useProjecaoTarefas, useAvulsas } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
 import { Loader } from '../components/ui'
 import { useNavigate } from 'react-router-dom'
@@ -48,6 +48,7 @@ export default function AgendaPage() {
   const { data: aponts = [] }  = useApontamentos()
   const { data: pends = [] }   = usePendencias({ status: 'aberta' })
   const { data: todasRotinas = [] } = useRotinas()
+  const { data: avulsasRaw = [] } = useAvulsas()
   const nav = useNavigate()
   const qc  = useQueryClient()
 
@@ -92,7 +93,19 @@ export default function AgendaPage() {
   // ─────────────────────────────────────────────────────────────────────────
   // DATA COMPUTED
   // ─────────────────────────────────────────────────────────────────────────
-  const tarefasAtivas = useMemo(() => tasks.filter(t => t.status !== 'cancelada'), [tasks])
+  // Normaliza avulsas pro mesmo formato das tarefas recorrentes, pra entrarem
+  // nas mesmas listas/kanban/calendário sem duplicar toda a lógica de baixo —
+  // "_avulsa" marca a origem, pra saber em qual tabela salvar ao mover status
+  // e pra onde navegar ao clicar (tela própria de Avulsas, não Tarefas).
+  const avulsasNormalizadas = useMemo(() => avulsasRaw.map(a => ({
+    id: a.id, titulo: a.titulo, status: a.status, data_execucao: null, prazo: a.prazo,
+    cliente_id: a.cliente_id, categoria: null, responsavel_id: a.responsavel_id,
+    prioridade: a.prioridade, modelo_id: null, _avulsa: true,
+  })), [avulsasRaw])
+
+  const tasksAll = useMemo(() => [...tasks, ...avulsasNormalizadas], [tasks, avulsasNormalizadas])
+
+  const tarefasAtivas = useMemo(() => tasksAll.filter(t => t.status !== 'cancelada'), [tasksAll])
 
   const atrasadas = useMemo(() =>
     tarefasAtivas.filter(t => {
@@ -105,8 +118,8 @@ export default function AgendaPage() {
   , [tarefasAtivas, today])
 
   const conclHoje = useMemo(() =>
-    tasks.filter(t => (t.data_execucao || t.prazo) === today && t.status === 'concluida')
-  , [tasks, today])
+    tasksAll.filter(t => (t.data_execucao || t.prazo) === today && t.status === 'concluida')
+  , [tasksAll, today])
 
   const aguardando = useMemo(() => tarefasAtivas.filter(t => t.status === 'aguardando'), [tarefasAtivas])
   const impedimentos = useMemo(() => tarefasAtivas.filter(t => t.status === 'impedimento'), [tarefasAtivas])
@@ -198,7 +211,7 @@ export default function AgendaPage() {
   // Calendário porDia — aplica filtros de cliente e categoria
   const porDia = useMemo(() => {
     const map = {}
-    tasks
+    tasksAll
       .filter(t => !fCliente  || t.cliente_id === fCliente)
       .filter(t => !fCategoria || t.categoria === fCategoria)
       .forEach(t => {
@@ -206,7 +219,7 @@ export default function AgendaPage() {
         if (d) { if (!map[d]) map[d]=[]; map[d].push(t) }
       })
     return map
-  }, [tasks, fCliente, fCategoria])
+  }, [tasksAll, fCliente, fCategoria])
 
   // Calendário: rotinas por dia (recorrências visuais)
   const rotinasPorDia = useMemo(() => {
@@ -247,10 +260,11 @@ export default function AgendaPage() {
   async function handleDrop(e, newStatus) {
     e.preventDefault(); setDragOver(null)
     if (!draggedId.current) return
-    const id = draggedId.current; draggedId.current = null
-    const { error } = await supabase.from('tarefas').update({ status: newStatus }).eq('id', id).eq('empresa_id', empresa?.id)
+    const { id, avulsa } = draggedId.current; draggedId.current = null
+    const tabela = avulsa ? 'tarefas_avulsas' : 'tarefas'
+    const { error } = await supabase.from(tabela).update({ status: newStatus }).eq('id', id).eq('empresa_id', empresa?.id)
     if (error) { console.error('[Fluxe] mover tarefa', error); alert('Não foi possível mover a tarefa: ' + error.message) }
-    qc.invalidateQueries({ queryKey: ['tasks'] })
+    qc.invalidateQueries({ queryKey: avulsa ? ['avulsas'] : ['tasks'] })
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -455,7 +469,7 @@ export default function AgendaPage() {
                       const atras = d && d < today && t.status !== 'concluida'
                       return (
                         <tr key={t.id} style={{ borderBottom:'1px solid #F8FAFC', cursor:'pointer', background:atras?'#FFF8F8':'transparent' }}
-                          onClick={()=>nav('/tasks')}
+                          onClick={()=>nav(t._avulsa ? '/avulsas' : '/tasks')}
                           onMouseEnter={e=>e.currentTarget.style.background='#F8FAFC'}
                           onMouseLeave={e=>e.currentTarget.style.background=atras?'#FFF8F8':'transparent'}>
                           <td style={{ padding:'8px 12px', color:'#334155', whiteSpace:'nowrap', maxWidth:140, overflow:'hidden', textOverflow:'ellipsis' }}>
@@ -463,6 +477,7 @@ export default function AgendaPage() {
                           </td>
                           <td style={{ padding:'8px 12px', fontWeight:600, color:'#0F172A', maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                             {t.modelo_id && <span style={{ color:'#6366F1', marginRight:4, fontSize:10 }}>↻</span>}
+                            {t._avulsa && <span title="Tarefa avulsa" style={{ color:'#D97706', marginRight:4, fontSize:10 }}>📌</span>}
                             {t.titulo}
                           </td>
                           <td style={{ padding:'8px 12px' }}>
@@ -624,8 +639,9 @@ export default function AgendaPage() {
                       return (
                         <div key={t.id}
                           draggable
-                          onDragStart={()=>{ draggedId.current = t.id }}
+                          onDragStart={()=>{ draggedId.current = { id: t.id, avulsa: !!t._avulsa } }}
                           onDragEnd={()=>setDragOver(null)}
+                          onClick={()=>nav(t._avulsa ? '/avulsas' : '/tasks')}
                           style={{
                             background:'#fff', borderRadius:8, padding:'10px 12px', cursor:'grab',
                             border:`1px solid ${atras?'#FECDD3':'#E2E8F0'}`,
@@ -641,6 +657,7 @@ export default function AgendaPage() {
                           {/* Título */}
                           <div style={{ fontSize:12, fontWeight:600, color:'#0F172A', marginBottom:6, lineHeight:1.3 }}>
                             {t.modelo_id && <span style={{ color:'#6366F1', fontSize:10, marginRight:3 }}>↻</span>}
+                            {t._avulsa && <span title="Tarefa avulsa" style={{ color:'#D97706', fontSize:10, marginRight:3 }}>📌</span>}
                             {t.titulo}
                           </div>
                           {/* Footer */}
@@ -729,7 +746,7 @@ export default function AgendaPage() {
                         {dt.slice(0,2).map(t=>(
                           <div key={t.id} style={{ fontSize:8, padding:'1px 4px', borderRadius:3, marginBottom:1,
                             background:STATUS_COLOR[t.status]+'18', borderLeft:`2px solid ${STATUS_COLOR[t.status]||'#CBD5E1'}`,
-                            color:'#334155', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.titulo}</div>
+                            color:'#334155', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t._avulsa && '📌 '}{t.titulo}</div>
                         ))}
                         {dt.length>2 && <div style={{ fontSize:8, color:'#6366F1', fontWeight:700 }}>+{dt.length-2}</div>}
                         {(rotinasPorDia[key]||[]).slice(0,2).map(r=>(
@@ -751,7 +768,7 @@ export default function AgendaPage() {
                     </div>
                   ))}
                   <span style={{ marginLeft:'auto' }}>
-                    {tasks.filter(t=>(t.data_execucao||t.prazo||'').startsWith(`${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}`)).length} tarefas no mês
+                    {tasksAll.filter(t=>(t.data_execucao||t.prazo||'').startsWith(`${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}`)).length} tarefas no mês
                   </span>
                 </div>
               </div>
@@ -796,12 +813,12 @@ export default function AgendaPage() {
                           const dd = t.data_execucao||t.prazo
                           const atras = dd && dd<today && t.status!=='concluida'
                           return (
-                            <div key={t.id} onClick={()=>nav('/tasks')} style={{
+                            <div key={t.id} onClick={()=>nav(t._avulsa ? '/avulsas' : '/tasks')} style={{
                               background:atras?'#FEF2F2':STATUS_BG[t.status]||'#fff',
                               border:`1px solid ${atras?'#FECDD3':'#E2E8F0'}`,
                               borderLeft:`3px solid ${atras?'#EF4444':STATUS_COLOR[t.status]||'#CBD5E1'}`,
                               borderRadius:6, padding:'8px 10px', marginBottom:6, cursor:'pointer' }}>
-                              <div style={{ fontSize:11, fontWeight:600, color:'#0F172A' }}>{t.titulo}</div>
+                              <div style={{ fontSize:11, fontWeight:600, color:'#0F172A' }}>{t._avulsa && '📌 '}{t.titulo}</div>
                               {cl && <div style={{ fontSize:9, color:'#64748B', marginTop:2 }}>🏢 {cl.fantasia||cl.razao_social}</div>}
                               <span style={{ fontSize:8, padding:'1px 5px', borderRadius:3, background:STATUS_COLOR[t.status]+'22', color:STATUS_COLOR[t.status], fontWeight:700, marginTop:4, display:'inline-block' }}>{STATUS_LABEL[t.status]||t.status}</span>
                             </div>
@@ -832,7 +849,7 @@ export default function AgendaPage() {
                       {dt.slice(0,4).map(t=>(
                         <div key={t.id} style={{ fontSize:8, padding:'2px 5px', borderRadius:4, marginBottom:2,
                           background:STATUS_COLOR[t.status]+'18', borderLeft:`2px solid ${STATUS_COLOR[t.status]||'#CBD5E1'}`,
-                          color:'#334155', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.titulo}</div>
+                          color:'#334155', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t._avulsa && '📌 '}{t.titulo}</div>
                       ))}
                       {dt.length>4 && <div style={{ fontSize:8, color:'#6366F1', fontWeight:700 }}>+{dt.length-4}</div>}
                       {dt.length===0 && <div style={{ fontSize:9, color:'#CBD5E1', marginTop:8 }}>livre</div>}
@@ -873,11 +890,11 @@ export default function AgendaPage() {
                           {dt.map(t => {
                             const cl = clients.find(c=>c.id===t.cliente_id)
                             return (
-                              <div key={t.id} onClick={()=>nav('/tasks')} style={{
+                              <div key={t.id} onClick={()=>nav(t._avulsa ? '/avulsas' : '/tasks')} style={{
                                 background:'#fff', border:'1px solid #E2E8F0',
                                 borderLeft:`3px solid ${STATUS_COLOR[t.status]||'#CBD5E1'}`,
                                 borderRadius:8, padding:'10px 12px', cursor:'pointer' }}>
-                                <div style={{ fontSize:12, fontWeight:600, color:'#0F172A', marginBottom:4 }}>{t.titulo}</div>
+                                <div style={{ fontSize:12, fontWeight:600, color:'#0F172A', marginBottom:4 }}>{t._avulsa && '📌 '}{t.titulo}</div>
                                 {cl && <div style={{ fontSize:10, color:'#64748B' }}>🏢 {cl.fantasia||cl.razao_social}</div>}
                                 <span style={{ fontSize:9, background:STATUS_COLOR[t.status]+'22', color:STATUS_COLOR[t.status], padding:'2px 6px', borderRadius:4, fontWeight:700, marginTop:6, display:'inline-block' }}>
                                   {STATUS_LABEL[t.status]||t.status}

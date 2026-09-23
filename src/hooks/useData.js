@@ -165,6 +165,27 @@ export function useAvulsasPendentes() {
   })
 }
 
+// Lista completa de avulsas (não só as pendentes) — usada pra fazer elas
+// aparecerem também na Central Operacional, no Kanban (Fila de Trabalho) e
+// no Calendário, junto com as tarefas recorrentes (relato: Vanessa, RealGold
+// BPO — avulsas e tarefas lançadas na Rotina do cliente não apareciam ali).
+export function useAvulsas() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['avulsas', empresa?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tarefas_avulsas')
+        .select('id, titulo, prazo, prioridade, status, cliente_id, responsavel_id')
+        .eq('empresa_id', empresa?.id)
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 15_000,
+    enabled: !!empresa?.id,
+  })
+}
+
 export function useCreateTask() {
   const qc = useQueryClient()
   const { empresa } = useAuthStore()
