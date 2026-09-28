@@ -23,6 +23,7 @@ const APRESENTACOES = {
   'Apresentação: Gestão do BPO, Lucratividade e Escala (Encontro 13)': '/apresentacao-lucratividade-escala',
   'Apresentação: Distrato, Como Encerrar um Cliente Profissionalmente (Encontro 14)': '/apresentacao-distrato',
   'Apresentação: Como Auditar o seu BPO Financeiro': '/apresentacao-auditoria-bpo',
+  'Apresentação: Auditoria do BPO, Como Identificar os Gaps e Resolver o Problema': '/apresentacao-auditoria-gaps',
   'Apresentação: Integração Conta Azul + Claude Code': '/apresentacao-conta-azul',
   'Apresentação: Criando Skills próprias pro seu BPO': '/apresentacao-skills',
   'Apresentação: Prompts prontos pra análise financeira': '/apresentacao-prompts',
