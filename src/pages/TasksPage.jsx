@@ -238,7 +238,7 @@ export default function TasksPage() {
 
   async function save() {
     if (!form.titulo?.trim()) return alert('Título obrigatório')
-    const payload = { titulo:form.titulo, categoria:form.categoria||null, prioridade:form.prioridade||'media', status:form.status||'aberta', prazo:form.prazo||null, obs:form.obs||null, motivo_pendencia:form.motivo_pendencia||null, cliente_id:form.cliente_id||null, responsavel_id:form.responsavel_id||null, banco:form.banco||null }
+    const payload = { titulo:form.titulo, categoria:form.categoria||null, prioridade:form.prioridade||'media', status:form.status||'aberta', data_execucao:form.data_execucao||null, prazo:form.prazo||null, obs:form.obs||null, motivo_pendencia:form.motivo_pendencia||null, cliente_id:form.cliente_id||null, responsavel_id:form.responsavel_id||null, banco:form.banco||null }
     if (modal.mode === 'new') {
       const t = await createTask.mutateAsync({ ...payload, modelo_id: modal.modeloId || null })
       await logHistorico(t.id, 'Tarefa criada')
@@ -547,7 +547,7 @@ export default function TasksPage() {
                           <div style={{ fontSize:11,fontWeight:600,color:'#0F172A',marginBottom:4 }}>{t.titulo}</div>
                           <div style={{ display:'flex',gap:4,alignItems:'center' }}>
                             <PrioBadge v={t.prioridade} />
-                            {t.prazo && <span style={{ fontSize:9,color:isVencida(t.prazo,t.status)?'#991B1B':'#94A3B8',marginLeft:'auto' }}>{fmt(t.prazo)}</span>}
+                            {(t.data_execucao||t.prazo) && <span style={{ fontSize:9,color:isVencida(t.data_execucao||t.prazo,t.status)?'#991B1B':'#94A3B8',marginLeft:'auto' }}>{fmt(t.data_execucao||t.prazo)}</span>}
                           </div>
                         </div>
                       ))}
@@ -583,7 +583,7 @@ export default function TasksPage() {
             {selectedTask.clientes && <span>🏢 {selectedTask.clientes.fantasia||selectedTask.clientes.razao_social}</span>}
             {selectedTask.categoria && <span>📂 {selectedTask.categoria}</span>}
             {selectedTask.banco && <span style={{ color:'#1D4ED8',fontWeight:600 }}>🏦 {selectedTask.banco}</span>}
-            {selectedTask.prazo && <span style={{ color:isVencida(selectedTask.prazo,selectedTask.status)?'#991B1B':'' }}>📅 {fmt(selectedTask.prazo)}</span>}
+            {(selectedTask.data_execucao||selectedTask.prazo) && <span style={{ color:isVencida(selectedTask.data_execucao||selectedTask.prazo,selectedTask.status)?'#991B1B':'' }}>📅 {fmt(selectedTask.data_execucao||selectedTask.prazo)}</span>}
             {selectedTask.responsavel_id && <span>👤 {usuarios.find(u=>u.id===selectedTask.responsavel_id)?.nome||'—'}</span>}
           </div>
 
@@ -814,8 +814,15 @@ export default function TasksPage() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize:10,fontWeight:700,color:'#94A3B8',display:'block',marginBottom:4,textTransform:'uppercase',letterSpacing:'.07em' }}>Prazo</label>
-                  <input type="date" value={form.prazo||''} onChange={e=>setForm(f=>({...f,prazo:e.target.value||null}))} style={fi} />
+                  <label style={{ fontSize:10,fontWeight:700,color:'#94A3B8',display:'block',marginBottom:4,textTransform:'uppercase',letterSpacing:'.07em' }}>Data</label>
+                  {/* Grava em data_execucao E prazo juntos -- é data_execucao quem manda no
+                      agrupamento por dia (Central, Meu Dia, Calendário), então gravar só em
+                      prazo (como era antes) deixava a mudança sem nenhum efeito visível pra
+                      tarefas geradas por recorrência, que sempre chegam com data_execucao
+                      preenchido (relato real: Paula, Be Solution, mudou a data pelo lápis e
+                      a tarefa continuou aparecendo em "hoje"). */}
+                  <input type="date" value={form.data_execucao||form.prazo||''}
+                    onChange={e=>{ const v = e.target.value||null; setForm(f=>({...f,data_execucao:v,prazo:v})) }} style={fi} />
                 </div>
                 <div>
                   <label style={{ fontSize:10,fontWeight:700,color:'#94A3B8',display:'block',marginBottom:4,textTransform:'uppercase',letterSpacing:'.07em' }}>Prioridade</label>
