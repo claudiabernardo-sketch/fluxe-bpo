@@ -78,6 +78,7 @@ const ApresentacaoFollowUpPage = lazy(() => import('../../pages/ApresentacaoFoll
 const ApresentacaoLucratividadeEscalaPage = lazy(() => import('../../pages/ApresentacaoLucratividadeEscalaPage'))
 const ApresentacaoDistratoPage = lazy(() => import('../../pages/ApresentacaoDistratoPage'))
 const ApresentacaoAuditoriaBPOPage = lazy(() => import('../../pages/ApresentacaoAuditoriaBPOPage'))
+const ApresentacaoAuditoriaGapsPage = lazy(() => import('../../pages/ApresentacaoAuditoriaGapsPage'))
 const ApresentacaoContaAzulPage = lazy(() => import('../../pages/ApresentacaoContaAzulPage'))
 const ApresentacaoSkillsPage = lazy(() => import('../../pages/ApresentacaoSkillsPage'))
 const ApresentacaoPromptsPage = lazy(() => import('../../pages/ApresentacaoPromptsPage'))
@@ -368,6 +369,7 @@ export default function AppShell() {
                 <Route path="/apresentacao-lucratividade-escala" element={<ApresentacaoLucratividadeEscalaPage />} />
                 <Route path="/apresentacao-distrato" element={<ApresentacaoDistratoPage />} />
                 <Route path="/apresentacao-auditoria-bpo" element={<ApresentacaoAuditoriaBPOPage />} />
+                <Route path="/apresentacao-auditoria-gaps" element={<ApresentacaoAuditoriaGapsPage />} />
                 <Route path="/apresentacao-conta-azul" element={<ApresentacaoContaAzulPage />} />
                 <Route path="/apresentacao-skills" element={<ApresentacaoSkillsPage />} />
                 <Route path="/apresentacao-prompts" element={<ApresentacaoPromptsPage />} />
