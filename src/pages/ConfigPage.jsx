@@ -14,6 +14,12 @@ function CalculadoraCustoHora({ usuarios = [], editarUser }) {
   const [regime, setRegime] = useState('clt')
   const [salario, setSalario] = useState('3.000,00')
   const [horasMes, setHorasMes] = useState(160)
+  // Salário mínimo vigente — referência pra avisar quando um custo/hora
+  // configurado implicaria um salário abaixo do mínimo legal, o que é sinal
+  // de erro de digitação (achado real: um custo/hora de R$12,45/h aqui
+  // equivale a ~R$1.250/mês, puxando pra baixo qualquer preço de BPO que
+  // usasse esse valor). Confira o valor vigente, ele muda todo ano.
+  const [salarioMinimo, setSalarioMinimo] = useState('1.518,00')
   const [vr, setVr] = useState('600,00')
   const [vt, setVt] = useState('200,00')
   const [saude, setSaude] = useState('0,00')
@@ -105,11 +111,24 @@ function CalculadoraCustoHora({ usuarios = [], editarUser }) {
                   <span style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', fontSize:12, color:'#94A3B8', fontWeight:600 }}>R$</span>
                   <input type="text" inputMode="decimal" value={salario} onChange={e => setSalario(e.target.value)} style={{ ...fi, paddingLeft:30 }} placeholder="3.000,00" />
                 </div>
+                {parseBRL(salario) > 0 && parseBRL(salario) < parseBRL(salarioMinimo) && (
+                  <div style={{ fontSize:10, color:'#DC2626', marginTop:4, fontWeight:600 }}>
+                    ⚠ Abaixo do salário mínimo vigente ({fmt(parseBRL(salarioMinimo))}). Confira se não é erro de digitação.
+                  </div>
+                )}
               </div>
               <div style={{ marginBottom:12 }}>
                 <label style={labelStyle}>Horas trabalhadas por mês</label>
                 <input type="number" value={horasMes} onChange={e => setHorasMes(Number(e.target.value))} style={fi} min={1} max={240} />
                 <div style={{ fontSize:10, color:'#94A3B8', marginTop:3 }}>Padrão CLT = 220h · Meio período = 110h · Remoto custom = 160h</div>
+              </div>
+              <div style={{ marginBottom:12 }}>
+                <label style={labelStyle}>Salário mínimo vigente</label>
+                <div style={{ position:'relative' }}>
+                  <span style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', fontSize:12, color:'#94A3B8', fontWeight:600 }}>R$</span>
+                  <input type="text" inputMode="decimal" value={salarioMinimo} onChange={e => setSalarioMinimo(e.target.value)} style={{ ...fi, paddingLeft:30 }} placeholder="1.518,00" />
+                </div>
+                <div style={{ fontSize:10, color:'#94A3B8', marginTop:3 }}>Muda todo ano — confira o valor atualizado antes de calcular.</div>
               </div>
               <div style={{ fontWeight:700, fontSize:12, color:'#0F172A', margin:'16px 0 12px', paddingBottom:8, borderBottom:'1px solid #F1F5F9' }}>🎁 Benefícios mensais</div>
               {[
@@ -215,11 +234,18 @@ function CalculadoraCustoHora({ usuarios = [], editarUser }) {
                   const ch = u.custo_hora || 0
                   const mensal = ch * 160
                   const venda = ch * (1 + margem / 100)
+                  const abaixoMinimo = ch > 0 && mensal < parseBRL(salarioMinimo)
                   return (
                     <tr key={u.id} style={{ borderBottom:'1px solid #F8FAFC' }}>
-                      <td style={{ padding:'10px 14px', fontWeight:600 }}>{u.nome}</td>
+                      <td style={{ padding:'10px 14px', fontWeight:600 }}>
+                        {u.nome}
+                        {abaixoMinimo && (
+                          <span title={`Custo/hora implica ${fmt(mensal)}/mês (160h), abaixo do salário mínimo vigente. Confira se está certo, esse valor afeta a média usada nas precificações.`}
+                            style={{ marginLeft:6, fontSize:10, color:'#DC2626', fontWeight:700, cursor:'help' }}>⚠</span>
+                        )}
+                      </td>
                       <td style={{ padding:'10px 14px', color:'#64748B', textTransform:'capitalize' }}>{u.perfil}</td>
-                      <td style={{ padding:'10px 14px', fontWeight:700, color:'#6366F1' }}>{fmt(ch)}</td>
+                      <td style={{ padding:'10px 14px', fontWeight:700, color: abaixoMinimo ? '#DC2626' : '#6366F1' }}>{fmt(ch)}</td>
                       <td style={{ padding:'10px 14px', color:'#334155' }}>{fmt(mensal)}</td>
                       <td style={{ padding:'10px 14px', fontWeight:600, color:'#15803D' }}>{fmt(venda)}</td>
                     </tr>
