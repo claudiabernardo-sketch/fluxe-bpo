@@ -50,6 +50,34 @@ function Check({ itens, cor = '#86EFAC' }) {
 function Destaque({ children, cor = '#FCD34D' }) {
   return <div style={{ textAlign: 'center', color: cor, fontSize: 15, fontWeight: 700, marginTop: 18 }}>{children}</div>
 }
+function Formula({ children }) {
+  return (
+    <div style={{ background: 'rgba(99,102,241,.15)', border: '1px solid rgba(99,102,241,.4)', borderRadius: 14, padding: '18px 26px', textAlign: 'center', margin: '18px 0' }}>
+      <div style={{ color: '#fff', fontSize: 17, fontWeight: 700, fontFamily: 'monospace' }}>{children}</div>
+    </div>
+  )
+}
+// Exemplo numérico passo a passo — usado nas aulas de custo/margem, pra
+// não ficar só na fórmula abstrata. "linhas" é [rótulo, valor, cor?].
+function Exemplo({ titulo, linhas, resultado, resultadoCor = '#86EFAC' }) {
+  return (
+    <div style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 12, padding: '16px 20px', margin: '14px 0' }}>
+      {titulo && <div style={{ color: '#A5B4FC', fontWeight: 800, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>{titulo}</div>}
+      {linhas.map(([label, valor, cor]) => (
+        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 13.5, color: '#CBD5E1', padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,.08)' }}>
+          <span>{label}</span>
+          <span style={{ fontWeight: 700, color: cor || '#fff', fontFamily: 'monospace' }}>{valor}</span>
+        </div>
+      ))}
+      {resultado && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 15, marginTop: 10, paddingTop: 10 }}>
+          <span style={{ fontWeight: 700, color: '#fff' }}>{resultado[0]}</span>
+          <span style={{ fontWeight: 800, color: resultadoCor, fontFamily: 'monospace' }}>{resultado[1]}</span>
+        </div>
+      )}
+    </div>
+  )
+}
 // Slide de área da auditoria: pergunta central + sinais de gap, no formato
 // usado ao vivo na aula (pergunta que a pessoa responde pra si mesma).
 function SlideArea({ numero, icone, area, pergunta, sinais, fluxeDica }) {
@@ -232,6 +260,142 @@ const AREAS = [
   },
 ]
 
+// ── Aula aprofundada: custo por cliente e margem (área 9) ──────────────
+// A área "Rentabilidade" é onde mais gente trava, então em vez de só listar
+// sinais de gap, ensina o passo a passo completo de como chegar no custo
+// real de cada cliente e no que é margem de verdade, com exemplo numérico
+// em cada passo.
+function SlideCustoIntro() {
+  return (
+    <div style={{ textAlign: 'center', maxWidth: 780 }}>
+      <Eyebrow>APROFUNDANDO A ÁREA 9</Eyebrow>
+      <div style={{ fontSize: 28, fontWeight: 800, color: '#fff', lineHeight: 1.4, marginBottom: 22 }}>
+        "Nunca calculei o custo real de um cliente" é o gap mais comum de todos.
+      </div>
+      <div style={{ fontSize: 16, color: '#CBD5E1', lineHeight: 1.7 }}>
+        Então antes de seguir pro raio-X, vamos fazer essa conta juntos, passo a passo, com números
+        reais. Não é fórmula pra decorar, é o cálculo que separa cliente bom de cliente que dá prejuízo.
+      </div>
+    </div>
+  )
+}
+function SlideCustoPasso1() {
+  return (
+    <div style={{ width: '100%', maxWidth: 860 }}>
+      <Eyebrow>PASSO 1 DE 4</Eyebrow>
+      <Titulo sub="Não é o que o contrato prevê, é o que a equipe realmente gasta.">Meça as horas reais dedicadas a cada cliente</Titulo>
+      <Check itens={[
+        'Registre o tempo de cada tarefa, por cliente, durante pelo menos 30 dias antes de confiar no número',
+        'Inclua TUDO: execução, e-mail, WhatsApp do cliente, reunião, retrabalho por erro',
+        'Cliente "tranquilo" no papel pode consumir o dobro de horas na prática, isso só aparece medindo',
+        'Sem medir, você está precificando e decidindo com base em achismo, não em dado',
+      ]} cor="#A5B4FC" />
+      <Destaque>No Fluxe: o apontamento de horas em cada tarefa já soma automaticamente por cliente.</Destaque>
+    </div>
+  )
+}
+function SlideCustoPasso2() {
+  return (
+    <div style={{ width: '100%', maxWidth: 860 }}>
+      <Eyebrow>PASSO 2 DE 4</Eyebrow>
+      <Titulo sub="O quanto custa 1 hora de trabalho da sua operação, de verdade, com tudo incluso.">Calcule o custo-hora real da sua equipe</Titulo>
+      <Formula>Custo-hora = (Salário + Encargos + Benefícios) ÷ Horas produtivas do mês</Formula>
+      <Exemplo
+        titulo="Exemplo: um analista com salário de R$ 3.000"
+        linhas={[
+          ['Salário bruto', 'R$ 3.000'],
+          ['Encargos (≈ 59% no CLT)', '+ R$ 1.770'],
+          ['Benefícios (VR + VT)', '+ R$ 800'],
+          ['Horas produtivas no mês', '160h'],
+        ]}
+        resultado={['Custo-hora', 'R$ 34,80/h']}
+      />
+      <Destaque cor="#FCA5A5">Erro clássico: tirar a média entre o seu custo (dono) e o da equipe operacional. Dona a R$300/h + analista a R$35/h vira uma média de R$167/h que não representa ninguém, e infla o preço de todo cliente pequeno.</Destaque>
+    </div>
+  )
+}
+function SlideCustoPasso3() {
+  return (
+    <div style={{ width: '100%', maxWidth: 860 }}>
+      <Eyebrow>PASSO 3 DE 4</Eyebrow>
+      <Titulo sub="Agora é só multiplicar o passo 1 pelo passo 2.">O custo do cliente</Titulo>
+      <Formula>Custo do cliente = Horas dedicadas × Custo-hora da equipe</Formula>
+      <Exemplo
+        titulo="Exemplo: cliente que consome 12h por mês"
+        linhas={[
+          ['Horas medidas no mês', '12h'],
+          ['Custo-hora da equipe', '× R$ 34,80'],
+        ]}
+        resultado={['Custo do cliente', 'R$ 417,60/mês']}
+      />
+      <Destaque>Não esqueça o overhead rateado (ferramentas, internet, parte da estrutura) somado a esse valor.</Destaque>
+    </div>
+  )
+}
+function SlideMargemExplicada() {
+  return (
+    <div style={{ width: '100%', maxWidth: 880 }}>
+      <Eyebrow>PASSO 4 DE 4</Eyebrow>
+      <Titulo sub="Margem de contribuição é receita menos o custo direto de atender aquele cliente específico.">O que é margem, na prática</Titulo>
+      <Formula>Margem = Valor cobrado do cliente − Custo do cliente</Formula>
+      <Exemplo
+        titulo="Voltando ao exemplo: esse mesmo cliente paga R$ 800/mês"
+        linhas={[
+          ['Valor cobrado', 'R$ 800,00'],
+          ['Custo do cliente (passo 3)', '− R$ 417,60'],
+        ]}
+        resultado={['Margem de contribuição', 'R$ 382,40 (48%)']}
+        resultadoCor="#86EFAC"
+      />
+      <Destaque cor="#FCA5A5">
+        Margem não é markup. Markup é o % que você soma em cima do custo; margem é o % que sobra em cima do preço, são contas diferentes.
+        Aplicar 50% de markup em R$ 417,60 dá R$ 626,40, mas a margem real desse preço é só 33%, bem abaixo do que parecia.
+      </Destaque>
+    </div>
+  )
+}
+function SlideCustoErros() {
+  const erros = [
+    'Usar a média entre o custo do dono e o da equipe operacional',
+    'Estimar as horas "de cabeça" em vez de medir de verdade',
+    'Esquecer o overhead (ferramentas, estrutura) no custo do cliente',
+    'Confundir markup com margem, e cobrar menos do que precisa',
+    'Calcular uma vez e nunca mais revisar, mesmo o cliente crescendo',
+    'Olhar só o faturamento total, sem saber qual cliente puxa a média pra baixo',
+  ]
+  return (
+    <div style={{ width: '100%', maxWidth: 900 }}>
+      <Titulo>Erros comuns nesse cálculo</Titulo>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+        {erros.map((e, i) => (
+          <div key={e} style={{ display: 'flex', gap: 10, background: 'rgba(220,38,38,.1)', border: '1px solid rgba(220,38,38,.25)', borderRadius: 8, padding: '9px 12px' }}>
+            <span style={{ color: '#FCA5A5', fontWeight: 800, fontSize: 12.5, flexShrink: 0 }}>{i + 1}.</span>
+            <span style={{ color: '#E2E8F0', fontSize: 12.5 }}>{e}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+function SlideCustoFluxe() {
+  const navigate = useNavigate()
+  return (
+    <div style={{ width: '100%', maxWidth: 900 }}>
+      <Titulo sub="Cada passo dessa conta já tem uma tela correspondente, pra você não fazer isso na planilha.">Na prática, dentro do Fluxe</Titulo>
+      <Cascata passos={[
+        ['Apontamentos', 'Horas reais por tarefa, somadas automaticamente por cliente.', '#4F46E5'],
+        ['Equipe (Cap)', 'Calculadora de custo-hora real, com encargos e benefícios inclusos.', '#D97706'],
+        ['Rentabilidade', 'Margem de contribuição já calculada, cliente por cliente.', '#16A34A'],
+      ]} />
+      <div style={{ textAlign: 'center', marginTop: 18 }}>
+        <button onClick={() => navigate('/materiais-apoio')} style={{
+          background: '#4F46E5', border: 'none', color: '#fff', fontSize: 13.5, fontWeight: 700, padding: '10px 20px', borderRadius: 10, cursor: 'pointer',
+        }}>Ver "Como Auditar o seu BPO Financeiro" na Biblioteca →</button>
+      </div>
+    </div>
+  )
+}
+
 function SlideRaioX() {
   return (
     <div style={{ width: '100%', maxWidth: 860 }}>
@@ -287,6 +451,8 @@ function SlideEncerramento() {
 const SLIDES = [
   { render: SlideCapa }, { render: SlideAbertura }, { render: SlideObjetivo }, { render: SlideEtapas },
   ...AREAS.map((a, i) => ({ render: () => <SlideArea numero={i + 1} {...a} /> })),
+  { render: SlideCustoIntro }, { render: SlideCustoPasso1 }, { render: SlideCustoPasso2 },
+  { render: SlideCustoPasso3 }, { render: SlideMargemExplicada }, { render: SlideCustoErros }, { render: SlideCustoFluxe },
   { render: SlideRaioX }, { render: SlideAtividade }, { render: SlideEncerramento },
 ]
 
