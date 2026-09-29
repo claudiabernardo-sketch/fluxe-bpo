@@ -47,6 +47,19 @@ function chaveTarefa(modeloId: string, clienteId: string | null, banco: string |
   return `${modeloId}::${clienteId ?? 'null'}::${banco ?? ''}`
 }
 
+// Insere um lote e reconhece especificamente a violação da constraint única
+// (empresa+modelo+cliente+banco+data, ver migration da tabela tarefas) — o
+// código 23505 do Postgres — pra distinguir "já existe, ignora" de erro de
+// verdade. Não usa upsert porque a constraint é sobre expressões (coalesce),
+// que o onConflict do PostgREST não referencia diretamente.
+async function inserirLote(supabase: any, lote: any[]): Promise<{ rows: any[]; errors: string[]; duplicidade: boolean }> {
+  const inserts = lote.map(({ _key, _vinculo_id, ...t }: any) => t)
+  const { data, error } = await supabase.from('tarefas').insert(inserts).select('id, modelo_id, cliente_id')
+  if (!error) return { rows: data ?? [], errors: [], duplicidade: false }
+  if (error.code === '23505') return { rows: [], errors: [], duplicidade: true }
+  return { rows: [], errors: [error.message], duplicidade: false }
+}
+
 // ── Timezone: Brasil (BRT = UTC-3) ──────────────────────────────────────────
 function getHojeBRT(): string {
   const now = new Date()
@@ -502,24 +515,50 @@ serve(async (req) => {
           } else {
             for (let i = 0; i < toInsert.length; i += 50) {
               const lote = toInsert.slice(i, i + 50)
-              const inserts = lote.map(({ _key, _vinculo_id, ...t }) => t)
-              const { data: inseridas, error: errIns } = await supabase
-                .from('tarefas')
-                .insert(inserts)
-                .select('id, modelo_id, cliente_id')
+              let inseridas = await inserirLote(supabase, lote)
 
-              if (errIns) {
-                erros.push(`[${empId}] insert lote ${i}: ${errIns.message}`)
+              // A trava anti-duplicidade acima (existSet) só enxerga o que já
+              // existia ANTES desta execução começar — se duas chamadas de
+              // gerar-tarefas rodarem ao mesmo tempo (cron + clique manual,
+              // ou dois cliques seguidos), as duas podem passar pelo mesmo
+              // "não existe ainda" e tentar inserir a mesma tarefa. Por isso
+              // existe agora uma constraint única no banco (empresa+modelo+
+              // cliente+banco+data) como última trava real. Se o lote inteiro
+              // falhar por causa dela (23505), refaz um a um: só descarta a
+              // linha que realmente colidiu, sem perder as outras 49 do lote
+              // (achado real: 84 tarefas duplicadas em produção, geradas por
+              // execuções sobrepostas — Eva, Monarca BPO, entre outras).
+              if (inseridas.duplicidade && lote.length > 1) {
+                inseridas = { rows: [], errors: [] }
+                for (const t of lote) {
+                  const r = await inserirLote(supabase, [t])
+                  if (r.duplicidade) {
+                    detalhes.push({
+                      empresa_id: empId, cliente_id: t.cliente_id, modelo_id: t.modelo_id,
+                      data_alvo: dataAlvo, resultado: 'duplicidade_evitada',
+                      motivo: 'constraint única no banco (corrida entre execuções)', tarefa_id: null,
+                    })
+                  } else if (r.errors.length) {
+                    inseridas.errors.push(...r.errors)
+                  } else {
+                    inseridas.rows.push(...r.rows)
+                  }
+                }
+              }
+
+              if (inseridas.errors.length) {
+                for (const errMsg of inseridas.errors) erros.push(`[${empId}] insert lote ${i}: ${errMsg}`)
                 for (const t of lote) {
                   detalhes.push({
                     empresa_id: empId, cliente_id: t.cliente_id, modelo_id: t.modelo_id,
-                    data_alvo: dataAlvo, resultado: 'erro', motivo: errIns.message, tarefa_id: null,
+                    data_alvo: dataAlvo, resultado: 'erro', motivo: inseridas.errors[0], tarefa_id: null,
                   })
                 }
-              } else {
-                tarefasGeradas += lote.length
+              }
+              if (inseridas.rows.length) {
+                tarefasGeradas += inseridas.rows.length
                 const checklistRows: any[] = []
-                for (const ins of (inseridas ?? []) as any[]) {
+                for (const ins of inseridas.rows as any[]) {
                   detalhes.push({
                     empresa_id: empId, cliente_id: ins.cliente_id, modelo_id: ins.modelo_id,
                     data_alvo: dataAlvo, resultado: 'gerada', motivo: null, tarefa_id: ins.id,
