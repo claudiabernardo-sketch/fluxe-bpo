@@ -285,7 +285,7 @@ function calcularMetodologia(d) {
     `${d.plat} plataforma${d.plat > 1 ? 's' : ''} (PagSeguro, Mercado Pago…)`)
 
 
-  if (d.contab) add('Envio de documentos à contabilidade', 0.5, 'baixo', 'Organização e envio mensal')
+  if (d.contab) add('Gestão de documentos à contabilidade', 0.5, 'baixo', 'Organização, arquivamento e envio mensal')
 
   if (d.relat > 0) add('Relatórios gerenciais', d.relat === 1 ? 1.5 : 3.0, d.relat === 2 ? 'alto' : 'médio',
     d.relat === 1 ? 'DRE + fluxo de caixa' : 'DRE + fluxo + indicadores + análises')
@@ -302,12 +302,6 @@ function calcularMetodologia(d) {
   // sem nenhuma hora de BPO) — verifica antes da linha condicional abaixo,
   // que senão mascara esse caso e deixa parecer que o cálculo é válido.
   const semAtividadeReal = items.length === 0
-
-  // Antes entrava sempre, sem condição nenhuma — mesmo respondendo "Não" em
-  // "Envia documentos para contabilidade?", o item continuava aparecendo no
-  // escopo. Agora usa o mesmo campo (são a mesma responsabilidade: organizar
-  // e enviar documentos), então a resposta realmente controla o escopo.
-  if (d.contab) add('Gestão de documentos', 0.5, 'baixo', 'Organização e arquivamento')
 
   if (d.cnpjs > 1) {
     const hBase = items.reduce((s, i) => s + i.horas, 0)
@@ -555,7 +549,15 @@ export default function PrecificacaoPage() {
     } catch {}
   }, [])
 
-  // Carrega custo-hora automaticamente da calculadora (Config)
+  // Carrega custo-hora automaticamente da calculadora (Config). Usa o MENOR
+  // custo/hora ativo da equipe, não a média -- numa equipe pequena é comum
+  // misturar o custo/hora da dona (pró-labore alto, ex: R$300/h) com o de
+  // quem executa a rotina (ex: R$12/h). A média dos dois (R$156/h) não
+  // representa o custo real de quem faz conciliação/contas a pagar, e
+  // inflava a precificação inteira pra um valor que ninguém pagaria (achado
+  // real: teste da Claudia com a "Pizza Prime", custo-hora saiu R$156
+  // porque a única outra pessoa da equipe é ela mesma a R$300/h). O menor
+  // valor continua editável, é só o ponto de partida.
   useEffect(() => {
     if (!profile?.empresa_id) return
     supabase
@@ -566,9 +568,9 @@ export default function PrecificacaoPage() {
       .not('custo_hora', 'is', null)
       .then(({ data }) => {
         if (!data || data.length === 0) return
-        const media = Math.round(data.reduce((s, u) => s + (u.custo_hora || 0), 0) / data.length)
-        if (media > 0) {
-          setD(prev => ({ ...prev, custoHora: String(media) }))
+        const menor = Math.round(Math.min(...data.map(u => u.custo_hora || 0)))
+        if (menor > 0) {
+          setD(prev => ({ ...prev, custoHora: String(menor) }))
           setCustoHoraFonte(data.length === 1 ? 'propria' : 'equipe')
         }
       })
@@ -661,7 +663,7 @@ export default function PrecificacaoPage() {
       'Conciliação sistema de cobrança': d.sistcob > 0 ? 'Asaas / Iugu ou similar' : null,
       'Conciliação de cartões de crédito': d.cartao > 0 ? `${d.cartao} cartão${d.cartao>1?'ões':''} de crédito` : null,
       'Conciliação outras plataformas': d.plat > 0 ? `${d.plat} plataforma${d.plat>1?'s':''}` : null,
-      'Envio de documentos à contabilidade': 'organização e envio mensal',
+      'Gestão de documentos à contabilidade': 'organização, arquivamento e envio mensal',
       'Relatórios gerenciais':         d.relat == 2 ? 'DRE + Fluxo de Caixa + Indicadores' : 'DRE + Fluxo de Caixa',
       'Reunião estratégica mensal':    d.reuniao >= 1.5 ? '1h presencial/mês' : '1h online/mês',
       'Consultoria e planejamento':    d.consult == 2 ? 'planejamento completo mensal' : 'análises estratégicas mensais',
@@ -1124,7 +1126,7 @@ export default function PrecificacaoPage() {
                 <Campo label="Seu custo-hora (R$/h)" hint="Quanto custa 1 hora do seu trabalho, considerando salário, encargos e overhead. Configure em Config → Custo/Hora para calcular automaticamente.">
                   {custoHoraFonte && (
                     <div style={{ fontSize:10, color:'#6366F1', fontWeight:700, marginBottom:5, display:'flex', alignItems:'center', gap:4 }}>
-                      ✓ {custoHoraFonte === 'equipe' ? 'Média da equipe (Config)' : 'Sua hora calculada (Config)'}
+                      ✓ {custoHoraFonte === 'equipe' ? 'Menor custo/hora da equipe (Config)' : 'Sua hora calculada (Config)'}
                       <span style={{ fontWeight:400, color:'#94A3B8' }}>— você pode ajustar</span>
                     </div>
                   )}
