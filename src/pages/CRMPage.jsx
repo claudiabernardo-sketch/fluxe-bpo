@@ -1,4 +1,4 @@
-import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, useConvertLeadToClient, useLeadInteracoes, useCreateLeadInteracao, useDeleteLeadInteracao, usePropostas, usePropostasByLead, useUpdateProposta, useCrmTemplates, useCreateCrmTemplate, useUpdateCrmTemplate, useDeleteCrmTemplate, useUsuarios } from '../hooks/useData'
+import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, useConvertLeadToClient, useClients, useLeadInteracoes, useCreateLeadInteracao, useDeleteLeadInteracao, usePropostas, usePropostasByLead, useUpdateProposta, useCrmTemplates, useCreateCrmTemplate, useUpdateCrmTemplate, useDeleteCrmTemplate, useUsuarios } from '../hooks/useData'
 import { Card, Loader, EmptyState, Btn, fmtR } from '../components/ui'
 import { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -417,6 +417,23 @@ function LinhaDoTempo({ lead }) {
 export default function CRMPage() {
   const { data: leads = [], isLoading } = useLeads()
   const { data: usuarios = [] } = useUsuarios()
+  const { data: clientesAtivos, isSuccess: clientesCarregados } = useClients()
+
+  // Lead "convertido" só vale enquanto o cliente existe de verdade. Se alguém
+  // excluir o cliente depois (relato real: Vanessa, RealGold, lead TUDONAS),
+  // o lead ficava preso como convertido pra sempre, com um selo que não é
+  // botão e sem como converter de novo. Casa por CNPJ ou nome, já que a
+  // conversão não guarda o id do cliente no lead.
+  const normaliza = t => (t || '').toString().trim().toLowerCase().replace(/\s+/g, ' ')
+  const soDigitos = t => (t || '').toString().replace(/\D/g, '')
+  const clienteDoLeadExiste = lead => {
+    if (!clientesCarregados) return true // enquanto carrega, não reabre nada
+    const cnpj = soDigitos(lead.cnpj)
+    const nome = normaliza(lead.nome)
+    return (clientesAtivos || []).some(c =>
+      (cnpj.length === 14 && soDigitos(c.cnpj) === cnpj) ||
+      normaliza(c.razao_social) === nome || normaliza(c.fantasia) === nome)
+  }
   const create  = useCreateLead()
   const update  = useUpdateLead()
   const del     = useDeleteLead()
@@ -874,7 +891,7 @@ export default function CRMPage() {
                 </div>
                 <div style={{ padding:6, display:'flex', flexDirection:'column', gap:6, minHeight:80 }}>
                   {etLeads.map(l => {
-                    const isConvertido = l.etapa === 'convertido'
+                    const isConvertido = l.etapa === 'convertido' && clienteDoLeadExiste(l)
                     const diasFU = diasAte(l.proximo_contato)
                     const fuVencido = diasFU !== null && diasFU <= 0
                     const fuHoje    = diasFU === 0
