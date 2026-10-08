@@ -1882,7 +1882,7 @@ export function useMentorados() {
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      return { mentorados: data.mentorados ?? [], turma_aulas: data.turma_aulas ?? [] }
+      return { mentorados: data.mentorados ?? [], turma_aulas: data.turma_aulas ?? [], turmas: data.turmas ?? [], aulas_por_turma: data.aulas_por_turma ?? {} }
     },
     staleTime: 30_000,
   })
@@ -2062,6 +2062,7 @@ export function useAdminAcaoEmpresa() {
       qc.invalidateQueries({ queryKey: ['admin_empresas'] })
       qc.invalidateQueries({ queryKey: ['admin_mentorados'] })
       qc.invalidateQueries({ queryKey: ['admin_turma'] })
+      qc.invalidateQueries({ queryKey: ['todas_turmas_mentoria'] })
       qc.invalidateQueries({ queryKey: ['turma_atual_publica'] })
     },
     onError: (err) => console.error('[Fluxe]', err),
