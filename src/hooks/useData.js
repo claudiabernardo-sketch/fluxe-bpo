@@ -2133,6 +2133,21 @@ export function useMinhaTurmaMentoria() {
   })
 }
 
+// Equipe Fluxe (a mentora) precisa ver a agenda de TODAS as turmas, não só da
+// turma da própria empresa — cada mentorada continua vendo só a dela.
+export function useTodasTurmasMentoria(habilitado) {
+  return useQuery({
+    queryKey: ['todas_turmas_mentoria'],
+    queryFn: async () => {
+      const { data: turmas } = await supabase.from('turma_grupo').select('*').order('data_inicio', { ascending: true })
+      const { data: aulas } = await supabase.from('turma_aulas').select('*').order('numero')
+      return (turmas ?? []).map(t => ({ turma: t, aulas: (aulas ?? []).filter(a => a.turma_id === t.id) }))
+    },
+    staleTime: 60_000,
+    enabled: !!habilitado,
+  })
+}
+
 // Agenda privada da mentoria individual — só os encontros da própria
 // empresa, sincronizados por e-mail do convidado (ver sync-agenda-mentoria).
 export function useMeusEncontrosIndividuais() {
