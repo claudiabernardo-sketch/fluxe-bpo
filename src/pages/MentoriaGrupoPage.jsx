@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTurmaAtualPublica } from '../hooks/useData'
+import { supabase } from '../lib/supabase'
 import LOGO_SRC from '../assets/logo-fluxe-white.png'
 import CLAUDIA_ECOSSISTEMA_SRC from '../assets/claudia-mentoria-grupo.jpg'
 import CLAUDIA_SOBRE_MIM_SRC from '../assets/claudia-sobre-mim.jpg'
@@ -84,7 +85,17 @@ export default function MentoriaGrupoPage() {
   const dataInicioLabel = turma?.data_inicio
     ? new Date(turma.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })
     : 'em breve'
-  const heroChecklist = [`Início: ${dataInicioLabel}`, ...HERO_CHECKLIST_BASE]
+  // Turma que já começou (ou nenhuma aberta) não vende mais vaga: a página
+  // vira lista de espera da próxima turma. Quando a Cláudia abrir uma turma
+  // nova no admin (data de início no futuro), volta sozinha pro modo venda.
+  const hojeISO = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+  const listaEspera = !isLoading && (!turma || (!!turma.data_inicio && turma.data_inicio <= hojeISO))
+  const heroChecklist = [listaEspera ? 'Próxima turma: aviso em primeira mão' : `Início: ${dataInicioLabel}`, ...HERO_CHECKLIST_BASE]
+  const ctaLabel = listaEspera ? 'Entrar na lista de espera →' : 'Quero construir meu BPO →'
+  const ctaLabelCurto = listaEspera ? 'Lista de espera →' : 'Quero construir →'
+  const [esp, setEsp] = useState({ nome: '', contato: '', cidade: '' })
+  const [espEstado, setEspEstado] = useState('idle') // idle | enviando | ok | erro
+  const [espErro, setEspErro] = useState('')
 
   useEffect(() => {
     const prev = {
@@ -129,8 +140,28 @@ export default function MentoriaGrupoPage() {
   }
 
   function abrirCheckout() {
+    if (listaEspera) { scrollTo('lista-espera'); return }
     window.fbq && window.fbq('track', 'InitiateCheckout')
     window.open(checkoutUrl, '_blank', 'noopener')
+  }
+
+  async function entrarNaListaEspera(e) {
+    e.preventDefault()
+    if (espEstado === 'enviando') return
+    setEspErro('')
+    if (!esp.nome.trim() || !esp.contato.trim()) { setEspErro('Preencha seu nome e seu WhatsApp ou e-mail.'); return }
+    setEspEstado('enviando')
+    try {
+      const { data, error } = await supabase.functions.invoke('evento-lead-capture', {
+        body: { evento: 'lista_espera_mentoria_grupo', nome: esp.nome, contato: esp.contato, cidade: esp.cidade },
+      })
+      if (error || data?.error) throw new Error(data?.error || 'falha')
+      window.fbq && window.fbq('track', 'Lead')
+      setEspEstado('ok')
+    } catch (err) {
+      setEspErro(err?.message && err.message !== 'falha' ? err.message : 'Não consegui salvar agora. Tenta de novo em instantes ou chama a gente no WhatsApp.')
+      setEspEstado('erro')
+    }
   }
 
   const eyebrow = { fontSize: 11, fontWeight: 700, color: '#6366F1', letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 14 }
@@ -150,7 +181,7 @@ export default function MentoriaGrupoPage() {
         <Logo />
         <button onClick={abrirCheckout}
           style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', border: 'none', color: '#fff', padding: '8px 18px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700, boxShadow: '0 4px 14px rgba(99,102,241,.35)' }}>
-          {isMobile ? 'Quero construir →' : 'Quero construir meu BPO →'}
+          {isMobile ? ctaLabelCurto : ctaLabel}
         </button>
       </nav>
 
@@ -195,7 +226,7 @@ export default function MentoriaGrupoPage() {
                   style={{ padding: '16px 34px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 30px rgba(99,102,241,.45)', transition: 'all .2s' }}
                   onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 12px 38px rgba(99,102,241,.6)' }}
                   onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(99,102,241,.45)' }}>
-                  Quero construir meu BPO →
+                  {ctaLabel}
                 </button>
               </div>
             </div>
@@ -325,6 +356,55 @@ export default function MentoriaGrupoPage() {
         </div>
       </section>
 
+      {listaEspera ? (
+        <>
+      {/* ── LISTA DE ESPERA ─────────────────────────────────────── */}
+      <section id="lista-espera" style={{ padding: isMobile ? '56px 20px 72px' : '48px 48px 120px', background: '#05070E' }}>
+        <div style={{ maxWidth: 620, margin: '0 auto' }}>
+          <Reveal>
+            <div style={{ textAlign: 'center', marginBottom: 28 }}>
+              <div style={eyebrow}>PRÓXIMA TURMA</div>
+              <h2 style={{ ...h2, fontSize: isMobile ? 24 : 32 }}>A turma atual já começou. Entre na lista de espera.</h2>
+              <p style={{ fontSize: 14.5, color: '#94A3B8', marginTop: 14, lineHeight: 1.7 }}>
+                As vagas são limitadas para garantir acompanhamento em cada encontro. Quem entra na lista recebe o aviso da próxima turma antes da abertura ao público, com data de início e condições.
+              </p>
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div style={{ background: 'linear-gradient(135deg,rgba(99,102,241,.16),rgba(59,130,246,.1))', border: '1px solid rgba(99,102,241,.3)', borderRadius: 20, padding: isMobile ? '28px 20px' : '36px 36px' }}>
+              {espEstado === 'ok' ? (
+                <div style={{ textAlign: 'center', padding: '12px 0' }}>
+                  <div style={{ fontSize: 34, marginBottom: 10 }}>✅</div>
+                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 800, color: '#F8FAFC', marginBottom: 8 }}>Você está na lista!</div>
+                  <p style={{ fontSize: 14, color: '#CBD5E1', lineHeight: 1.7, margin: 0 }}>Assim que a próxima turma for aberta, a gente chama você primeiro.</p>
+                </div>
+              ) : (
+                <form onSubmit={entrarNaListaEspera} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {[
+                    ['nome', 'Seu nome', 'text', 'name'],
+                    ['contato', 'Seu WhatsApp ou e-mail', 'text', 'tel'],
+                    ['cidade', 'Cidade (opcional)', 'text', 'address-level2'],
+                  ].map(([campo, rotulo, tipo, auto]) => (
+                    <input key={campo} type={tipo} autoComplete={auto} placeholder={rotulo} aria-label={rotulo} maxLength={200}
+                      value={esp[campo]} onChange={e => setEsp(v => ({ ...v, [campo]: e.target.value }))}
+                      style={{ padding: '14px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,.14)', background: 'rgba(5,7,14,.6)', color: '#F1F5F9', fontSize: 15, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', width: '100%' }} />
+                  ))}
+                  {espErro && <div style={{ fontSize: 13, color: '#FCA5A5' }}>{espErro}</div>}
+                  <button type="submit" disabled={espEstado === 'enviando'}
+                    style={{ padding: '16px 24px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: espEstado === 'enviando' ? 'default' : 'pointer', opacity: espEstado === 'enviando' ? 0.7 : 1, boxShadow: '0 10px 36px rgba(99,102,241,.45)' }}>
+                    {espEstado === 'enviando' ? 'Enviando...' : 'Quero entrar na lista de espera'}
+                  </button>
+                  <div style={{ fontSize: 11.5, color: '#64748B', textAlign: 'center' }}>Sem compromisso. Usamos seu contato só para avisar sobre a próxima turma.</div>
+                </form>
+              )}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+        </>
+      ) : (
+        <>
       {/* ── CRONOGRAMA ──────────────────────────────────────────── */}
       <section id="cronograma" style={{ padding: isMobile ? '56px 20px 72px' : '48px 48px 120px', background: '#05070E' }}>
         <div style={{ maxWidth: 760, margin: '0 auto' }}>
@@ -366,6 +446,9 @@ export default function MentoriaGrupoPage() {
           )}
         </div>
       </section>
+
+        </>
+      )}
 
       {/* ── O QUE VOCÊ VAI CONSTRUIR ─────────────────────────────── */}
       <section style={{ padding: isMobile ? '64px 20px' : '120px 48px', background: '#080B14' }}>
@@ -537,6 +620,7 @@ export default function MentoriaGrupoPage() {
               <p style={{ fontSize: 14, color: '#CBD5E1', margin: '0 0 20px' }}>E o investimento já inclui 1 ano de acesso ao Fluxe, que sozinho custaria R$ 1.164 no período.</p>
               <div style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 44 : 56, fontWeight: 900, color: '#F8FAFC', letterSpacing: '-.02em', marginBottom: 4 }}>R$ 997</div>
               <div style={{ fontSize: 14, color: '#94A3B8', marginBottom: 8 }}>ou em até 12x no cartão (com juros)</div>
+              {listaEspera && <div style={{ fontSize: 12.5, color: '#CBD5E1', marginBottom: 12 }}>Valor da turma atual. Quem está na lista recebe as condições da próxima turma antes da abertura.</div>}
               <div style={{ display: 'inline-block', fontSize: 12, color: '#A855F7', fontWeight: 700, background: 'rgba(168,85,247,.1)', border: '1px solid rgba(168,85,247,.25)', borderRadius: 99, padding: '6px 16px', marginBottom: 24 }}>
                 Menos do que o Fluxe custaria sozinho no ano, e você ainda leva a mentoria
               </div>
@@ -556,7 +640,7 @@ export default function MentoriaGrupoPage() {
               <div>
                 <button onClick={abrirCheckout}
                   style={{ padding: '16px 40px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 10px 36px rgba(99,102,241,.5)' }}>
-                  Quero construir meu BPO →
+                  {ctaLabel}
                 </button>
               </div>
             </div>
@@ -587,10 +671,10 @@ export default function MentoriaGrupoPage() {
                 <p style={{ fontSize: 14, color: '#94A3B8', margin: '0 0 8px' }}>Daqui a alguns meses você continuará exatamente onde está...</p>
                 <p style={{ fontSize: 14, color: '#94A3B8', margin: '0 0 28px' }}>...ou poderá olhar para trás e perceber que foi nesta turma que seu BPO deixou de ser um trabalho e começou a se tornar uma empresa.</p>
                 <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 22 : 30, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>A decisão é sua.</h2>
-                <p style={{ fontSize: 13, color: '#CBD5E1', margin: '0 0 32px' }}>As vagas são limitadas para garantir acompanhamento durante os encontros.<br />Início: {dataInicioLabel}.</p>
+                <p style={{ fontSize: 13, color: '#CBD5E1', margin: '0 0 32px' }}>As vagas são limitadas para garantir acompanhamento durante os encontros.<br />{listaEspera ? 'Entre na lista e receba o aviso da próxima turma antes de todo mundo.' : `Início: ${dataInicioLabel}.`}</p>
                 <button onClick={abrirCheckout}
                   style={{ padding: '16px 36px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 10px 36px rgba(99,102,241,.5)' }}>
-                  Quero construir meu BPO →
+                  {ctaLabel}
                 </button>
               </div>
             </div>
