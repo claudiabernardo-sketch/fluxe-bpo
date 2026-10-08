@@ -36,11 +36,31 @@ const LABORATORIO_ITEMS = [
 const CICLO = ['Aprendemos', 'Você recebe um exercício', 'Constrói dentro do Fluxe', 'Recebe feedback', 'Próximo encontro']
 
 const MODULOS = [
-  { titulo: 'Módulo 1', nome: 'Estrutura', itens: ['Diagnóstico do seu negócio', 'Posicionamento', 'Cliente ideal', 'Diferencial competitivo'] },
-  { titulo: 'Módulo 2', nome: 'Comercial', itens: ['Oferta', 'Precificação', 'Proposta Comercial', 'Fechamento'] },
-  { titulo: 'Módulo 3', nome: 'Operação', itens: ['Onboarding', 'Fluxo operacional', 'Processos', 'Padronização'] },
-  { titulo: 'Módulo 4', nome: 'Gestão', itens: ['Indicadores', 'Planejamento', 'Organização', 'Crescimento'] },
-  { titulo: 'Módulo 5', nome: 'Escala', itens: ['Estratégia', 'Próximos passos', 'Plano de expansão'] },
+  { titulo: 'Módulo 1', nome: 'Jornada e Comercial', resultado: 'Você enxerga o ciclo completo do BPO e aprende a vender e precificar com margem de verdade.', encontros: [
+    [1, 'A jornada do cliente no BPO', 'Os 8 passos de uma operação, do comercial ao distrato, e onde você está perdendo dinheiro hoje.'],
+    [2, 'Como vender BPO', 'Abordagem consultiva, as perguntas certas e como mostrar valor antes de falar de preço.'],
+    [3, 'Diagnóstico, proposta e precificação', 'Calcular o custo real, montar a proposta e fechar sem dar desconto no escuro.'],
+  ] },
+  { titulo: 'Módulo 2', nome: 'Entrada do cliente', resultado: 'Cliente novo entra organizado, com tudo configurado e a operação rodando desde o primeiro mês.', encontros: [
+    [4, 'Onboarding: a entrada do cliente', 'Reunião inicial, acessos e expectativas combinadas por escrito, sem ruído depois.'],
+    [5, 'Ativação: preparando o cliente', 'ERP, notas fiscais, contas e integrações configurados antes da primeira tarefa.'],
+    [6, 'Implementação: construindo a operação', 'Rotinas, modelos de tarefa e responsáveis desenhados pra cada cliente.'],
+  ] },
+  { titulo: 'Módulo 3', nome: 'Operação', resultado: 'Uma operação que roda por processo, não por memória, e mantém a qualidade quando cresce.', encontros: [
+    [7, 'Padronização e processos', 'POPs, checklists, matriz de responsabilidades e de exceções, pra não depender de uma pessoa só.'],
+    [8, 'A rotina do BPO', 'Rotinas diárias, semanais e mensais, conciliações, fechamento e controle de pendências e SLA.'],
+    [9, 'Qualidade e gestão da equipe', 'Distribuição de tarefas, capacidade, controle de erros e retrabalho.'],
+  ] },
+  { titulo: 'Módulo 4', nome: 'Estratégico', resultado: 'Seu cliente passa a te ver como parceiro de decisão, e não como quem só lança dados.', encontros: [
+    [10, 'O BPO que entrega inteligência', 'DRE gerencial, fluxo de caixa, margem, EBITDA e ponto de equilíbrio explicados pro dono.'],
+    [11, 'A reunião com o cliente', 'Como preparar, apresentar resultados e transformar análise em oportunidade.'],
+    [12, 'Follow-up: o cliente não pode sumir', 'Sinais de churn, ação preventiva e como vender mais para quem já é cliente.'],
+  ] },
+  { titulo: 'Módulo 5', nome: 'Gestão e Escala', resultado: 'Você sabe quanto cada cliente rende, cresce com lucro e encerra contrato sem dor de cabeça.', encontros: [
+    [13, 'Lucratividade e escala', 'Custo por cliente, margem, precificação e o momento certo de contratar.'],
+    [14, 'Distrato profissional', 'Checklist de saída, proteção do BPO e como transformar o fim de contrato em aprendizado.'],
+    [15, 'O BPO redondo', 'A visão completa da operação reunida, com o seu plano de ação pronto pra executar.'],
+  ] },
 ]
 
 const PARA_QUEM = [
@@ -353,25 +373,37 @@ export default function MentoriaGrupoPage() {
           <Reveal>
             <div style={{ textAlign: 'center', marginBottom: 44 }}>
               <div style={eyebrow}>O QUE VOCÊ VAI CONSTRUIR</div>
-              <h2 style={{ ...h2, fontSize: isMobile ? 24 : 34 }}>Cinco módulos, um BPO estruturado</h2>
+              <h2 style={{ ...h2, fontSize: isMobile ? 24 : 34 }}>15 encontros, cinco módulos, um BPO estruturado</h2>
             </div>
           </Reveal>
           <Reveal delay={0.1}>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {MODULOS.map(m => (
-                <div key={m.titulo} style={{ padding: '24px 20px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 14 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#8B5CF6', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 4 }}>{m.titulo}</div>
-                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: 19, fontWeight: 700, color: '#F1F5F9', marginBottom: 14 }}>{m.nome}</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {m.itens.map(item => (
-                      <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, color: '#94A3B8' }}>
-                        <span style={{ color: '#4ADE80', flexShrink: 0 }}>✔</span> {item}
+                <div key={m.titulo} style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '300px 1fr', gap: isMobile ? 18 : 32, padding: isMobile ? '22px 20px' : '28px 30px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 16 }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#8B5CF6', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 4 }}>{m.titulo} · Encontros {m.encontros[0][0]} a {m.encontros[m.encontros.length - 1][0]}</div>
+                    <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 700, color: '#F1F5F9', marginBottom: 10 }}>{m.nome}</div>
+                    <div style={{ fontSize: 13.5, color: '#CBD5E1', lineHeight: 1.6 }}>{m.resultado}</div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {m.encontros.map(([n, nome, desc]) => (
+                      <div key={n} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                        <div style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 8, background: 'rgba(139,92,246,.15)', color: '#C4B5FD', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{n}</div>
+                        <div>
+                          <div style={{ fontSize: 14.5, fontWeight: 700, color: '#F1F5F9', marginBottom: 2 }}>{nome}</div>
+                          <div style={{ fontSize: 13, color: '#94A3B8', lineHeight: 1.55 }}>{desc}</div>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
               ))}
             </div>
+          </Reveal>
+          <Reveal delay={0.15}>
+            <p style={{ maxWidth: 680, margin: '32px auto 0', textAlign: 'center', fontSize: 14, color: '#94A3B8', lineHeight: 1.7 }}>
+              Todo encontro termina com um exercício prático, que você constrói dentro do Fluxe e recebe feedback antes do próximo. Você não sai com anotações, sai com o seu BPO funcionando.
+            </p>
           </Reveal>
         </div>
       </section>
