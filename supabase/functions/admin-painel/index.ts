@@ -438,21 +438,28 @@ serve(async (req) => {
     if (action === 'list_mentorados') {
       const { data: empresas, error } = await supabase
         .from('empresas')
-        .select('id, nome, email, criado_em, mentoria_origem')
+        .select('id, nome, email, criado_em, mentoria_origem, turma_id')
         .eq('mentorado_bpo_lucrativo', true)
         .order('nome')
       if (error) return ok({ error: error.message })
 
       const ids = (empresas ?? []).map(e => e.id)
-      if (ids.length === 0) return ok({ success: true, mentorados: [], turma_aulas: [] })
+      if (ids.length === 0) return ok({ success: true, mentorados: [], turma_aulas: [], turmas: [], aulas_por_turma: {} })
 
-      const { data: turmaAtiva } = await supabase.from('turma_grupo').select('id').eq('ativo', true).order('criado_em', { ascending: false }).limit(1).maybeSingle()
-      let turmaAulas: { id: string; numero: number; titulo: string }[] = []
-      if (turmaAtiva) {
-        const { data: aulasRows } = await supabase.from('turma_aulas').select('id, numero, titulo').eq('turma_id', turmaAtiva.id).order('numero')
-        turmaAulas = aulasRows ?? []
+      // Todas as turmas, cada mentorada é comparada com as aulas da PRÓPRIA
+      // turma (empresas.turma_id). Antes só a turma ativa entrava, então quem
+      // era de outra turma aparecia com progresso errado.
+      const { data: turmasRows } = await supabase.from('turma_grupo').select('id, nome, ativo, data_inicio').order('data_inicio', { ascending: true })
+      const turmas = turmasRows ?? []
+      const { data: todasAulasRows } = await supabase.from('turma_aulas').select('id, turma_id, numero, titulo').order('numero')
+      const aulasPorTurma: Record<string, { id: string; numero: number; titulo: string }[]> = {}
+      for (const a of todasAulasRows ?? []) {
+        if (!aulasPorTurma[a.turma_id]) aulasPorTurma[a.turma_id] = []
+        aulasPorTurma[a.turma_id].push({ id: a.id, numero: a.numero, titulo: a.titulo })
       }
-      const aulaIds = turmaAulas.map(a => a.id)
+      const turmaAtiva = [...turmas].reverse().find(t => t.ativo)
+      const turmaAulas = turmaAtiva ? (aulasPorTurma[turmaAtiva.id] ?? []) : []
+      const aulaIds = (todasAulasRows ?? []).map(a => a.id)
       const { data: progressoRows } = aulaIds.length
         ? await supabase.from('turma_aulas_progresso').select('empresa_id, aula_id').in('empresa_id', ids).in('aula_id', aulaIds)
         : { data: [] as { empresa_id: string; aula_id: string }[] }
@@ -525,7 +532,7 @@ serve(async (req) => {
         }
       })
 
-      return ok({ success: true, mentorados: resultado, turma_aulas: turmaAulas })
+      return ok({ success: true, mentorados: resultado, turma_aulas: turmaAulas, turmas, aulas_por_turma: aulasPorTurma })
     }
 
     // ── Ação: listar sessões de mentoria de um mentorado ───────────────────

@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados, useSessoesMentoria, useCriarSessaoMentoria, useExcluirSessaoMentoria, useSessoesAvulsas, useCombinadosAbertos, useConcluirCombinado, useExcluirDadosMentoria, useAdminTurma, useAdminMateriaisApoio, useSalvarMaterialApoio, useExcluirMaterialApoio, useReordenarMateriaisApoio, useCheckinsMentoradas } from '../hooks/useData'
+import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados, useSessoesMentoria, useCriarSessaoMentoria, useExcluirSessaoMentoria, useSessoesAvulsas, useCombinadosAbertos, useConcluirCombinado, useExcluirDadosMentoria, useTodasTurmasMentoria, useAdminMateriaisApoio, useSalvarMaterialApoio, useExcluirMaterialApoio, useReordenarMateriaisApoio, useCheckinsMentoradas } from '../hooks/useData'
 import { Card, CardHeader, Btn, Badge, Loader } from '../components/ui'
 import { ETAPAS_BPO } from '../data/etapasBpo'
 import ListaEsperaMentoria from '../components/modules/mentoria/ListaEsperaMentoria'
@@ -594,7 +594,22 @@ function SeletorOrigem({ m }) {
   )
 }
 
-function CardMentorado({ m, turmaAulas }) {
+// Quantas das 6 etapas do Plano de Negócio a mentorada preencheu.
+function statusPlano(plano) {
+  const total = Object.keys(ETAPA_LABEL).length
+  const feitas = plano ? Object.keys(ETAPA_LABEL).filter(k => plano[k]?.trim?.()).length : 0
+  const estado = feitas === total ? 'completo' : feitas > 0 ? 'andamento' : 'nao'
+  return { feitas, total, estado }
+}
+
+function BadgePlano({ plano }) {
+  const { feitas, total, estado } = statusPlano(plano)
+  if (estado === 'completo') return <Badge label={`🎯 Plano completo (${feitas}/${total})`} color="green" />
+  if (estado === 'andamento') return <Badge label={`✏️ Plano em andamento (${feitas}/${total})`} color="yellow" />
+  return <Badge label="⚪ Plano não preenchido" color="gray" />
+}
+
+function CardMentorado({ m, turmaAulas, nomeTurma }) {
   const [expandido, setExpandido] = useState(false)
   const [progressoAberto, setProgressoAberto] = useState(false)
   const [zonaPerigo, setZonaPerigo] = useState(false)
@@ -603,7 +618,7 @@ function CardMentorado({ m, turmaAulas }) {
     ? Object.keys(ETAPA_LABEL).filter(k => m.plano_negocio[`${k}_dificuldade`])
     : []
   const diasSemSessao = diasDesde(m.sessoes?.ultima_data)
-  const mostraTurma = m.mentoria_origem === 'grupo' && turmaAulas.length > 0
+  const mostraTurma = !!m.turma_id && turmaAulas.length > 0
 
   return (
     <div style={{ border: '1px solid var(--bo)', borderRadius: 10, padding: '14px 16px' }}>
@@ -611,9 +626,10 @@ function CardMentorado({ m, turmaAulas }) {
         <div>
           <div style={{ fontWeight: 700, fontSize: 14 }}>{m.nome || '—'}</div>
           <div style={{ fontSize: 11, color: 'var(--tx3)' }}>{m.email || ''}</div>
-          <div style={{ display: 'flex', gap: 6, marginTop: 6, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 6, marginTop: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            {nomeTurma && <Badge label={`🎓 ${nomeTurma}`} color="blue" />}
+            <BadgePlano plano={m.plano_negocio} />
             <SeletorOrigem m={m} />
-            {planoCompleto(m.plano_negocio) && <span title="Plano de Negócio completo" style={{ fontSize: 15 }}>🎯</span>}
             {m.radar?.total_clientes > 0 && <span title="Primeiro cliente operacional" style={{ fontSize: 15 }}>🤝</span>}
             {m.proposta_aprovada && <span title="Primeira proposta aprovada" style={{ fontSize: 15 }}>📄</span>}
           </div>
@@ -709,53 +725,76 @@ function ResumoMentoria({ mentorados, combinadosAbertos }) {
 function SecaoMentorados() {
   const { data, isLoading } = useMentorados()
   const mentorados = data?.mentorados ?? []
-  const turmaAulas = data?.turma_aulas ?? []
+  const turmas = data?.turmas ?? []
+  const aulasPorTurma = data?.aulas_por_turma ?? {}
+  const nomeDaTurma = Object.fromEntries(turmas.map(t => [t.id, t.nome]))
   const { data: combinadosAbertos = [] } = useCombinadosAbertos()
-  const [filtro, setFiltro] = useState('todos') // todos | grupo | individual | null
+  const [filtro, setFiltro] = useState('todos') // todos | turma:<id> | individual | semturma
+  const [filtroPlano, setFiltroPlano] = useState('todos') // todos | completo | andamento | nao
 
-  const contagem = {
-    todos: mentorados.length,
-    grupo: mentorados.filter(m => m.mentoria_origem === 'grupo').length,
-    individual: mentorados.filter(m => m.mentoria_origem === 'individual').length,
-    null: mentorados.filter(m => !m.mentoria_origem).length,
-  }
-  const filtrados = filtro === 'todos' ? mentorados
-    : filtro === 'null' ? mentorados.filter(m => !m.mentoria_origem)
-    : mentorados.filter(m => m.mentoria_origem === filtro)
+  // A turma de cada mentorada é empresas.turma_id (é o que decide o que ela
+  // vê no Fluxe), não mentoria_origem, que muita gente antiga nem tem marcado.
+  const doGrupo = m => (m.turma_id ? `turma:${m.turma_id}` : m.mentoria_origem === 'individual' ? 'individual' : 'semturma')
+  const contagem = { todos: mentorados.length, individual: 0, semturma: 0 }
+  for (const m of mentorados) contagem[doGrupo(m)] = (contagem[doGrupo(m)] || 0) + 1
+  const doFiltro = filtro === 'todos' ? mentorados : mentorados.filter(m => doGrupo(m) === filtro)
+  const planoCont = { completo: 0, andamento: 0, nao: 0 }
+  for (const m of doFiltro) planoCont[statusPlano(m.plano_negocio).estado] += 1
+  const filtrados = filtroPlano === 'todos' ? doFiltro : doFiltro.filter(m => statusPlano(m.plano_negocio).estado === filtroPlano)
   const ordenados = [...filtrados].sort((a, b) => urgencia(b) - urgencia(a))
+  const semPlano = doFiltro.filter(m => statusPlano(m.plano_negocio).estado !== 'completo')
 
   const abas = [
     { id: 'todos', label: `Todos (${contagem.todos})` },
-    { id: 'grupo', label: `🎓 Turma (${contagem.grupo})` },
+    ...turmas.filter(t => contagem[`turma:${t.id}`]).map(t => ({ id: `turma:${t.id}`, label: `🎓 ${t.nome} (${contagem[`turma:${t.id}`]})` })),
     { id: 'individual', label: `👤 Individual (${contagem.individual})` },
-    ...(contagem.null > 0 ? [{ id: 'null', label: `❓ Não classificado (${contagem.null})` }] : []),
+    ...(contagem.semturma > 0 ? [{ id: 'semturma', label: `❓ Sem turma definida (${contagem.semturma})` }] : []),
   ]
+  const abasPlano = [
+    { id: 'todos', label: `Todos (${doFiltro.length})` },
+    { id: 'completo', label: `🎯 Preencheram (${planoCont.completo})` },
+    { id: 'andamento', label: `✏️ Em andamento (${planoCont.andamento})` },
+    { id: 'nao', label: `⚪ Não preencheram (${planoCont.nao})` },
+  ]
+  const estiloChip = ativo => ({
+    fontSize: 12, fontWeight: 600, padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
+    border: ativo ? '2px solid #6366F1' : '1px solid var(--bo)',
+    background: ativo ? 'rgba(99,102,241,.08)' : 'transparent',
+    color: ativo ? '#6366F1' : 'var(--tx2)',
+  })
 
   return (
     <Card style={{ marginBottom: 16 }}>
       <CardHeader title={`Painel do Mentor — BPO Lucrativo (${mentorados.length})`} icon="fa-solid fa-graduation-cap" />
       <div style={{ padding: 16 }}>
         <div style={{ fontSize: 12, color: 'var(--tx3)', marginBottom: 14 }}>
-          Empresas marcadas com 🎓 na lista abaixo, ordenadas por quem precisa de mais atenção primeiro. Selos: 🎯 Plano de Negócio completo · 🤝 primeiro cliente operacional · 📄 primeira proposta aprovada.
+          Ordenadas por quem precisa de mais atenção primeiro. Escolha a turma e depois veja quem preencheu o Plano de Negócio. Selos: 🤝 primeiro cliente operacional · 📄 primeira proposta aprovada.
         </div>
         <ResumoMentoria mentorados={mentorados} combinadosAbertos={combinadosAbertos} />
         {mentorados.length > 0 && (
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-            {abas.map(a => (
-              <button
-                key={a.id}
-                onClick={() => setFiltro(a.id)}
-                style={{
-                  fontSize: 12, fontWeight: 600, padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
-                  border: filtro === a.id ? '2px solid #6366F1' : '1px solid var(--bo)',
-                  background: filtro === a.id ? 'rgba(99,102,241,.08)' : 'transparent',
-                  color: filtro === a.id ? '#6366F1' : 'var(--tx2)',
-                }}
-              >
-                {a.label}
-              </button>
-            ))}
-          </div>
+          <>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--tx3)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 }}>Turma</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+              {abas.map(a => (
+                <button key={a.id} onClick={() => setFiltro(a.id)} style={estiloChip(filtro === a.id)}>{a.label}</button>
+              ))}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--tx3)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 }}>Plano de Negócio</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+              {abasPlano.map(a => (
+                <button key={a.id} onClick={() => setFiltroPlano(a.id)} style={estiloChip(filtroPlano === a.id)}>{a.label}</button>
+              ))}
+            </div>
+            {semPlano.length > 0 && (
+              <div style={{ fontSize: 12, color: 'var(--tx2)', background: 'var(--bg2)', borderRadius: 8, padding: '10px 12px', marginBottom: 14, lineHeight: 1.6 }}>
+                <b>Ainda sem Plano de Negócio completo ({semPlano.length}):</b>{' '}
+                {semPlano.map(m => {
+                  const s = statusPlano(m.plano_negocio)
+                  return `${m.nome || '—'}${s.estado === 'andamento' ? ` (${s.feitas}/${s.total})` : ''}`
+                }).join(', ')}
+              </div>
+            )}
+          </>
         )}
         {isLoading ? <Loader /> : mentorados.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>
@@ -765,7 +804,7 @@ function SecaoMentorados() {
           <div style={{ textAlign: 'center', color: 'var(--tx3)', fontSize: 12, padding: 20 }}>Ninguém nesse filtro.</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {ordenados.map(m => <CardMentorado key={m.id} m={m} turmaAulas={turmaAulas} />)}
+            {ordenados.map(m => <CardMentorado key={m.id} m={m} turmaAulas={aulasPorTurma[m.turma_id] ?? []} nomeTurma={nomeDaTurma[m.turma_id]} />)}
           </div>
         )}
       </div>
@@ -1001,21 +1040,53 @@ function NovaAulaForm({ turmaId, acao, proximoNumero }) {
 }
 
 function SecaoTurmaGrupo() {
-  const { data, isLoading } = useAdminTurma()
+  const { data: todas = [], isLoading } = useTodasTurmasMentoria(true)
+  const { data: dadosMentorados } = useMentorados()
   const acao = useAdminAcaoEmpresa()
-  const turma = data?.turma
-  const aulas = data?.aulas ?? []
+  const [escolhidaId, setEscolhidaId] = useState(null) // id da turma | 'nova'
+  const escolhida = escolhidaId === 'nova' ? null
+    : todas.find(t => t.turma.id === escolhidaId) || [...todas].reverse().find(t => t.turma.ativo) || todas[todas.length - 1] || null
+  const turma = escolhida?.turma
+  const aulas = escolhida?.aulas ?? []
+  const alunas = turma ? (dadosMentorados?.mentorados ?? []).filter(m => m.turma_id === turma.id) : []
 
   return (
     <Card style={{ marginBottom: 16 }}>
-      <CardHeader title="Turma da Mentoria em Grupo" icon="fa-solid fa-chalkboard-user" />
+      <CardHeader title="Turmas da Mentoria em Grupo" icon="fa-solid fa-chalkboard-user" />
       <div style={{ padding: 16 }}>
         <div style={{ fontSize: 12, color: 'var(--tx3)', marginBottom: 12 }}>
-          Só uma turma ativa por vez aparece na página pública (fluxebpo.com.br/mentoriaBPOlucrativo) e dentro do Fluxe pros alunos marcados como 🎓.
+          Cada turma tem as suas aulas e as suas alunas. Cada aluna só vê a agenda da própria turma. A turma marcada como "Ativa" é a que a página de vendas (fluxebpo.com.br/mentoriaBPOlucrativo) usa; quando ela já começou, a página vira lista de espera.
         </div>
         {isLoading ? <Loader /> : (
           <>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+              {todas.map(({ turma: t }) => {
+                const ativo = turma?.id === t.id
+                return (
+                  <button key={t.id} onClick={() => setEscolhidaId(t.id)} style={{
+                    fontSize: 12, fontWeight: 600, padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
+                    border: ativo ? '2px solid #6366F1' : '1px solid var(--bo)',
+                    background: ativo ? 'rgba(99,102,241,.08)' : 'transparent', color: ativo ? '#6366F1' : 'var(--tx2)',
+                  }}>
+                    {t.nome}{t.ativo ? ' (ativa)' : ''}
+                  </button>
+                )
+              })}
+              <button onClick={() => setEscolhidaId('nova')} style={{
+                fontSize: 12, fontWeight: 600, padding: '6px 12px', borderRadius: 99, cursor: 'pointer',
+                border: escolhidaId === 'nova' ? '2px solid #16A34A' : '1px dashed var(--bo)',
+                background: 'transparent', color: escolhidaId === 'nova' ? '#16A34A' : 'var(--tx3)',
+              }}>
+                + Nova turma
+              </button>
+            </div>
             <FormTurma key={turma?.id || 'nova'} turma={turma} acao={acao} />
+            {turma && alunas.length > 0 && (
+              <div style={{ fontSize: 12, color: 'var(--tx2)', background: 'var(--bg2)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, lineHeight: 1.6 }}>
+                <b>Alunas desta turma ({alunas.length}):</b>{' '}
+                {alunas.map(m => `${m.nome || '—'} (plano ${statusPlano(m.plano_negocio).feitas}/${statusPlano(m.plano_negocio).total})`).join(', ')}
+              </div>
+            )}
             {turma && (
               <>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--tx2)', margin: '16px 0 8px' }}>Aulas ({aulas.length})</div>
