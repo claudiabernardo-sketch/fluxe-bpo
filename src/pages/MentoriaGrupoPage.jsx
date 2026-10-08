@@ -38,29 +38,29 @@ const CICLO = ['Aprendemos', 'Você recebe um exercício', 'Constrói dentro do 
 
 const MODULOS = [
   { titulo: 'Módulo 1', nome: 'Jornada e Comercial', resultado: 'Você enxerga o ciclo completo do BPO e aprende a vender e precificar com margem de verdade.', encontros: [
-    [1, 'A jornada do cliente no BPO', 'Os 8 passos de uma operação, do comercial ao distrato, e onde você está perdendo dinheiro hoje.'],
-    [2, 'Como vender BPO', 'Abordagem consultiva, as perguntas certas e como mostrar valor antes de falar de preço.'],
-    [3, 'Diagnóstico, proposta e precificação', 'Calcular o custo real, montar a proposta e fechar sem dar desconto no escuro.'],
+    [1, 'A jornada do cliente no BPO', 'O ciclo completo do cliente, as 8 etapas do BPO, onde os BPOs normalmente perdem dinheiro e o que estruturar antes de escalar.'],
+    [2, 'Como vender BPO', 'Posicionamento, prospecção, diagnóstico comercial e construção da proposta, vendendo valor e não horas trabalhadas.'],
+    [3, 'Diagnóstico, proposta e precificação', 'Diagnóstico financeiro, escopo, formação de preço, margem e capacidade operacional, até a proposta, o contrato e o fechamento.'],
   ] },
   { titulo: 'Módulo 2', nome: 'Entrada do cliente', resultado: 'Cliente novo entra organizado, com tudo configurado e a operação rodando desde o primeiro mês.', encontros: [
-    [4, 'Onboarding: a entrada do cliente', 'Reunião inicial, acessos e expectativas combinadas por escrito, sem ruído depois.'],
-    [5, 'Ativação: preparando o cliente', 'ERP, notas fiscais, contas e integrações configurados antes da primeira tarefa.'],
-    [6, 'Implementação: construindo a operação', 'Rotinas, modelos de tarefa e responsáveis desenhados pra cada cliente.'],
+    [4, 'Onboarding: a entrada do cliente', 'Checklist de onboarding, coleta de acessos e documentos, responsabilidades, cronograma de entrada e como evitar começar um cliente no caos.'],
+    [5, 'Ativação: preparando o cliente', 'Configuração das ferramentas, cadastros, bancos e contas, plano de contas, categorias, centros de custo e validação das informações.'],
+    [6, 'Implementação: construindo a operação', 'Mapeamento financeiro, processos, fluxos de aprovação, contas a pagar e a receber, conciliação bancária e organização da rotina.'],
   ] },
   { titulo: 'Módulo 3', nome: 'Operação', resultado: 'Uma operação que roda por processo, não por memória, e mantém a qualidade quando cresce.', encontros: [
-    [7, 'Padronização e processos', 'POPs, checklists, matriz de responsabilidades e de exceções, pra não depender de uma pessoa só.'],
-    [8, 'A rotina do BPO', 'Rotinas diárias, semanais e mensais, conciliações, fechamento e controle de pendências e SLA.'],
-    [9, 'Qualidade e gestão da equipe', 'Distribuição de tarefas, capacidade, controle de erros e retrabalho.'],
+    [7, 'Padronização e processos', 'POPs, checklists, templates, padrões de execução, responsáveis e prazos, para reduzir a dependência da pessoa-chave.'],
+    [8, 'A rotina do BPO', 'Rotinas diárias, semanais e mensais, conciliações, fechamento financeiro, controle de pendências e de SLA.'],
+    [9, 'Qualidade e gestão da equipe', 'Distribuição de tarefas, capacidade da equipe, controle de erros e retrabalho, auditoria, indicadores operacionais e gargalos.'],
   ] },
   { titulo: 'Módulo 4', nome: 'Estratégico', resultado: 'Seu cliente passa a te ver como parceiro de decisão, e não como quem só lança dados.', encontros: [
-    [10, 'O BPO que entrega inteligência', 'DRE gerencial, fluxo de caixa, margem, EBITDA e ponto de equilíbrio explicados pro dono.'],
-    [11, 'A reunião com o cliente', 'Como preparar, apresentar resultados e transformar análise em oportunidade.'],
-    [12, 'Follow-up: o cliente não pode sumir', 'Sinais de churn, ação preventiva e como vender mais para quem já é cliente.'],
+    [10, 'O BPO que entrega inteligência', 'DRE gerencial, fluxo de caixa, margem, EBITDA e ponto de equilíbrio, com indicadores que o empresário realmente entende.'],
+    [11, 'A reunião com o cliente', 'Como preparar a reunião, apresentar resultados, explicar indicadores, identificar problemas e transformar análise em oportunidade.'],
+    [12, 'Follow-up: o cliente não pode sumir', 'Rotina de acompanhamento, pesquisa de satisfação, risco de churn, ações preventivas e expansão de serviços.'],
   ] },
   { titulo: 'Módulo 5', nome: 'Gestão e Escala', resultado: 'Você sabe quanto cada cliente rende, cresce com lucro e encerra contrato sem dor de cabeça.', encontros: [
-    [13, 'Lucratividade e escala', 'Custo por cliente, margem, precificação e o momento certo de contratar.'],
-    [14, 'Distrato profissional', 'Checklist de saída, proteção do BPO e como transformar o fim de contrato em aprendizado.'],
-    [15, 'O BPO redondo', 'A visão completa da operação reunida, com o seu plano de ação pronto pra executar.'],
+    [13, 'Lucratividade e escala', 'Receita, custo e margem por cliente, rentabilidade da carteira, precificação e reajustes, e como escalar sem destruir a margem.'],
+    [14, 'Distrato profissional', 'Motivos de saída, comunicação do encerramento, checklist de saída, proteção do BPO e como transformar um distrato em aprendizado.'],
+    [15, 'O BPO redondo', 'Revisão das 8 etapas, diagnóstico da sua própria operação, gargalos, o que corrigir primeiro e o plano de ação.'],
   ] },
 ]
 
