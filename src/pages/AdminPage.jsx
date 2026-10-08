@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { useAdminEmpresas, useAdminAcaoEmpresa, useFluxeBugs, useCreateFluxeBug, useUpdateFluxeBug, useMentorados, useSessoesMentoria, useCriarSessaoMentoria, useExcluirSessaoMentoria, useSessoesAvulsas, useCombinadosAbertos, useConcluirCombinado, useExcluirDadosMentoria, useAdminTurma, useAdminMateriaisApoio, useSalvarMaterialApoio, useExcluirMaterialApoio, useReordenarMateriaisApoio, useCheckinsMentoradas } from '../hooks/useData'
 import { Card, CardHeader, Btn, Badge, Loader } from '../components/ui'
 import { ETAPAS_BPO } from '../data/etapasBpo'
+import ListaEsperaMentoria from '../components/modules/mentoria/ListaEsperaMentoria'
 
 // 'starter' é o valor real do enum plano_id no banco pro plano Essencial —
 // nunca 'essencial', que não existe no enum (ver MIGRATION do enum plano_id).
@@ -1144,6 +1145,7 @@ const ABAS_ADMIN = [
   ['mentorados', '🎓 Mentorados'],
   ['combinados', '📋 Combinados & Sessões'],
   ['turma', '📅 Turma'],
+  ['espera', '⏳ Lista de espera'],
   ['biblioteca', '📚 Biblioteca'],
   ['empresas', '🏢 Empresas'],
   ['bugs', '🐛 Bugs'],
@@ -1177,6 +1179,7 @@ export default function AdminPage() {
       {tab === 'mentorados' && (<><SecaoMentorados /><SecaoCheckins /></>)}
       {tab === 'combinados' && (<><SecaoCombinadosAbertos /><SecaoSessoesAvulsas /></>)}
       {tab === 'turma' && <SecaoTurmaGrupo />}
+      {tab === 'espera' && <ListaEsperaMentoria />}
       {tab === 'biblioteca' && <SecaoMateriaisApoio />}
       {tab === 'empresas' && <SecaoEmpresas />}
       {tab === 'bugs' && <SecaoBugs />}
