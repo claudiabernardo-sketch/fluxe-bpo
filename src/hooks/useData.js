@@ -2085,6 +2085,22 @@ export function useTurmaAtualPublica() {
   })
 }
 
+// Lista de espera da próxima turma (cadastros da página /mentoriaBPOlucrativo,
+// gravados pela Edge Function evento-lead-capture). Só a equipe Fluxe lê
+// (política evento_leads_staff_select, MIGRATION 46).
+export function useListaEsperaMentoria(habilitado) {
+  return useQuery({
+    queryKey: ['lista_espera_mentoria'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('evento_leads').select('*').eq('evento', 'lista_espera_mentoria_grupo').order('criado_em', { ascending: false })
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!habilitado,
+    staleTime: 30_000,
+  })
+}
+
 // Turma que a mentorada realmente está cursando — diferente de
 // useTurmaAtualPublica (usado na página de vendas, mostra sempre a turma
 // "ativo=true", ou seja, a que está aberta pra matrícula de gente nova).
