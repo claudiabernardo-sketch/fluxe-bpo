@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useMinhaTurmaMentoria, useMeuProgressoAulas, useToggleProgressoAula, useMeuCheckin, useSalvarCheckin, useMeusEncontrosIndividuais } from '../../../hooks/useData'
+import { useMinhaTurmaMentoria, useTodasTurmasMentoria, useMeuProgressoAulas, useToggleProgressoAula, useMeuCheckin, useSalvarCheckin, useMeusEncontrosIndividuais } from '../../../hooks/useData'
 import { useAuthStore } from '../../../store/authStore'
 import { Card, CardHeader, Btn } from '../../ui'
 
@@ -315,6 +315,17 @@ function SecaoEncontrosIndividuais() {
     <Card style={{ marginBottom: 16 }}>
       <CardHeader title="Meus Encontros de Mentoria" icon="fa-solid fa-calendar-days" />
       <div style={{ padding: 16 }}>
+        {escolhidaStaff && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+            {todasTurmas.map(({ turma: t }) => (
+              <button key={t.id} onClick={() => { setTurmaStaffId(t.id); setAulaSelecionadaId(null) }} style={{
+                padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                border: t.id === turma.id ? '2px solid #4338CA' : '1px solid var(--bo)',
+                background: t.id === turma.id ? 'rgba(99,102,241,.12)' : 'transparent', color: t.id === turma.id ? '#4338CA' : 'var(--tx2)',
+              }}>{t.nome}{t.ativo ? ' (aberta)' : ''}</button>
+            ))}
+          </div>
+        )}
         <div style={{ border: '1px solid #C7D2FE', background: '#EEF2FF', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#4338CA', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Próximo encontro</div>
           {proximo ? (
@@ -362,12 +373,19 @@ export default function SecaoAulasDaTurma() {
   const { data: concluidas = new Set() } = useMeuProgressoAulas()
   const [modo, setModo] = useState('calendario') // 'calendario' | 'lista'
   const [aulaSelecionadaId, setAulaSelecionadaId] = useState(null)
+  const ehStaff = !!profile?.fluxe_staff
+  const { data: todasTurmas = [] } = useTodasTurmasMentoria(ehStaff && !ehIndividual)
+  const [turmaStaffId, setTurmaStaffId] = useState(null)
 
   if (!empresa?.mentorado_bpo_lucrativo && !profile?.fluxe_staff) return null
   if (ehIndividual) return <SecaoEncontrosIndividuais />
 
-  const turma = data?.turma
-  const aulas = data?.aulas ?? []
+  // Equipe Fluxe escolhe a turma pela aba; mentorada vê só a dela.
+  const escolhidaStaff = ehStaff && todasTurmas.length > 1
+    ? (todasTurmas.find(t => t.turma.id === turmaStaffId) || todasTurmas.find(t => t.turma.id === data?.turma?.id) || todasTurmas[0])
+    : null
+  const turma = escolhidaStaff ? escolhidaStaff.turma : data?.turma
+  const aulas = (escolhidaStaff ? escolhidaStaff.aulas : data?.aulas) ?? []
   const totalConcluidas = aulas.filter(a => concluidas.has(a.id)).length
 
   if (isLoading) return null
