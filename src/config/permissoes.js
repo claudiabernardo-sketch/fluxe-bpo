@@ -60,10 +60,15 @@ export function podeAcessarRota(perfil, path) {
 }
 
 // Abas de ClientePage.jsx com dado financeiro/sensível — só quem já tem
-// acesso a Precificação/Executivo/Cofre no menu principal (admin/gestor)
-// vê essas abas dentro do cliente também.
-const ABAS_CLIENTE_RESTRITAS = new Set(['financeiro', 'radar', 'relatorio360', 'cofre'])
+// acesso a Precificação/Executivo no menu principal (admin/gestor) vê essas
+// abas dentro do cliente também.
+const ABAS_CLIENTE_RESTRITAS = new Set(['financeiro', 'radar', 'relatorio360'])
+// A aba Cofre do cliente (logins dos sistemas dele) também fica liberada pra
+// supervisor e operador: quem executa a operação precisa dos acessos pra
+// trabalhar. A página Cofre geral (/cofre) continua só admin/gestor.
+const PERFIS_COM_COFRE_DO_CLIENTE = new Set(['admin', 'gestor', 'supervisor', 'operador'])
 export function podeVerAbaCliente(perfil, abaId) {
+  if (abaId === 'cofre') return PERFIS_COM_COFRE_DO_CLIENTE.has(perfil)
   if (!ABAS_CLIENTE_RESTRITAS.has(abaId)) return true
   return perfil === 'admin' || perfil === 'gestor'
 }
