@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useClients } from '../hooks/useData'
+import { useClients, useUsuarios } from '../hooks/useData'
 import { useAuthStore } from '../store/authStore'
 import { Card, Btn, Badge, Loader, EmptyState, fmt } from '../components/ui'
 import { useTimerStore } from '../components/layout/TimerBar'
@@ -33,6 +33,8 @@ function addPeriodo(dateStr, n, frequencia, intervalo) {
 
 export default function AvulsasPage() {
   const { data: clients = [] } = useClients()
+  const { data: usuarios = [] } = useUsuarios()
+  const [filtroResp, setFiltroResp] = useState('todos') // todos | semresp | <id do usuário>
   const { empresa } = useAuthStore()
   const qc = useQueryClient()
   const startTimer = useTimerStore(s => s.start)
@@ -238,6 +240,11 @@ export default function AvulsasPage() {
                     <option value="alta">🔴 Alta</option><option value="media">🟡 Média</option><option value="baixa">🟢 Baixa</option>
                   </select></div>
               </div>
+              <div><label style={lbl}>Responsável</label>
+                <select style={fi} value={form.responsavel_id||''} onChange={e=>setForm(f=>({...f,responsavel_id:e.target.value||null}))}>
+                  <option value="">— Sem responsável —</option>
+                  {usuarios.map(u=><option key={u.id} value={u.id}>{u.nome}</option>)}
+                </select></div>
               <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, fontWeight:600, color:'#334155' }}>
                 <input type="checkbox" checked={isAgend} onChange={e=>setIsAgend(e.target.checked)} style={{ width:14, height:14, accentColor:'#6366F1' }} />
                 Este é um pagamento avulso para agendamento bancário
@@ -305,16 +312,28 @@ export default function AvulsasPage() {
     )
   }
 
+  const nomeResp = id => usuarios.find(u => u.id === id)?.nome
+  const visiveis = filtroResp === 'todos' ? avulsas
+    : filtroResp === 'semresp' ? avulsas.filter(a => !a.responsavel_id)
+    : avulsas.filter(a => a.responsavel_id === filtroResp)
+
   return (
     <div>
-      <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:16 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:10, flexWrap:'wrap', marginBottom:16 }}>
+        <select style={{ ...fi, width:'auto', minWidth:200 }} value={filtroResp} onChange={e=>setFiltroResp(e.target.value)} title="Filtrar por responsável">
+          <option value="todos">👤 Todos os responsáveis</option>
+          <option value="semresp">Sem responsável</option>
+          {usuarios.map(u=><option key={u.id} value={u.id}>{u.nome}</option>)}
+        </select>
         <Btn variant="primary" onClick={() => setModal(true)}>+ Nova tarefa livre</Btn>
       </div>
 
       <Card>
         {avulsas.length === 0
           ? <EmptyState icon="⚡" title="Nenhuma tarefa livre" sub="Demandas avulsas e pontuais aparecem aqui" action={<Btn variant="primary" onClick={() => setModal(true)}>+ Nova tarefa livre</Btn>} />
-          : avulsas.map(av => (
+          : visiveis.length === 0
+          ? <div style={{ textAlign:'center', color:'#94A3B8', fontSize:12, padding:24 }}>Nenhuma tarefa livre para esse responsável.</div>
+          : visiveis.map(av => (
             <div key={av.id} onClick={() => abrirPainel(av)}
               style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 16px', borderBottom:'1px solid #F8FAFC', cursor:'pointer' }}
               onMouseEnter={e=>e.currentTarget.style.background='#FAFAFA'} onMouseLeave={e=>e.currentTarget.style.background=''}>
@@ -326,6 +345,7 @@ export default function AvulsasPage() {
                 <div style={{ fontSize:12, fontWeight:600, color: av.status==='concluida'?'#94A3B8':'#0F172A', textDecoration: av.status==='concluida'?'line-through':'none' }}>{av.titulo}</div>
                 <div style={{ fontSize:10, color:'#94A3B8', marginTop:2, display:'flex', gap:8, flexWrap:'wrap' }}>
                   {av.clientes && <span>🏢 {av.clientes.fantasia||av.clientes.razao_social}</span>}
+                  {av.responsavel_id && <span>👤 {nomeResp(av.responsavel_id) || '—'}</span>}
                   {av.prazo && <span>📅 {fmt(av.prazo)}</span>}
                   {av.is_agendamento && <span style={{ color:'#0E7490', fontWeight:600 }}>🏦 {av.agend_forma?.toUpperCase()} {av.agend_valor?`R$ ${Number(av.agend_valor).toLocaleString('pt-BR')}`:''}</span>}
                   {av.lote_total && <span style={{ color:'#7C3AED', fontWeight:600 }}>📦 {av.lote_atual}/{av.lote_total}</span>}
@@ -385,6 +405,11 @@ export default function AvulsasPage() {
                         <option value="alta">🔴 Alta</option><option value="media">🟡 Média</option><option value="baixa">🟢 Baixa</option>
                       </select></div>
                   </div>
+                  <div><label style={lbl}>Responsável</label>
+                    <select style={fi} value={edit.responsavel_id||''} onChange={e=>setEdit(f=>({...f,responsavel_id:e.target.value||null}))}>
+                      <option value="">— Sem responsável —</option>
+                      {usuarios.map(u=><option key={u.id} value={u.id}>{u.nome}</option>)}
+                    </select></div>
                   <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, fontWeight:600, color:'#334155' }}>
                     <input type="checkbox" checked={!!edit.is_agendamento} onChange={e=>setEdit(f=>({...f,is_agendamento:e.target.checked}))} style={{ width:14, height:14, accentColor:'#6366F1' }} />
                     Pagamento avulso para agendamento bancário
