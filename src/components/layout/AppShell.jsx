@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore'
 import LOGO_SRC from '../../assets/logo-fluxe.png'
 import TimerBar from './TimerBar'
 import TrialGuard from '../ui/TrialGuard'
+import AvisoNovaVersao from '../ui/AvisoNovaVersao'
 import RadarPanelOverlay from '../ui/RadarPanelOverlay'
 import { podeAcessarRota } from '../../config/permissoes'
 
@@ -445,6 +446,7 @@ export default function AppShell() {
 
     <RadarPanelOverlay />
     <TrialGuard />
+    <AvisoNovaVersao />
     </>
   )
 }
