@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  // Carimbo da versão: aparece no menu do usuário, pra saber na hora qual
+  // versão do Fluxe uma tela está rodando (suporte "não aparece pra mim").
+  define: { __BUILD_TIME__: JSON.stringify(new Date().toISOString()) },
   build: {
     rollupOptions: {
       output: {

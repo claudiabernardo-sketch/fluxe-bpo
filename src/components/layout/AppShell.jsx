@@ -268,6 +268,11 @@ export default function AppShell() {
               <div className="user-menu-hd">
                 <div className="user-menu-name">{profile?.nome || 'Usuário'}</div>
                 <div className="user-menu-role">{profile?.perfil}</div>
+                {typeof __BUILD_TIME__ !== 'undefined' && (
+                  <div style={{ fontSize:10, color:'var(--tx3)', marginTop:2 }}>
+                    Versão de {new Date(__BUILD_TIME__).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
+                  </div>
+                )}
               </div>
               <button className="user-menu-item" onClick={() => goTo('/meu-painel')}>
                 <i className="fa-solid fa-circle-user"></i> Meu Painel
