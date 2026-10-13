@@ -339,7 +339,11 @@ export default function ClientePage() {
     }
     setRevealedAcesso(r => ({ ...r, [ac.id]:'loading' }))
     const { data, error } = await supabase.rpc('cofre_decrypt', { acesso_id: ac.id })
-    setRevealedAcesso(r => ({ ...r, [ac.id]: error ? '(erro)' : data }))
+    if (error) console.error('Erro ao descriptografar:', error)
+    // Mostra o motivo real (sessão vencida, sem permissão...), não só "erro",
+    // pra dar pra resolver sem adivinhar.
+    const motivo = error ? String(error.message || error.details || 'falha').slice(0, 70) : null
+    setRevealedAcesso(r => ({ ...r, [ac.id]: error ? `(erro: ${motivo})` : (data ?? '(sem senha salva)') }))
   }
 
   // ── Loading / Not found ───────────────────────────────────────────────────────
