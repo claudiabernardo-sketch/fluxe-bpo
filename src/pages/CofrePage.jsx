@@ -72,7 +72,7 @@ export default function CofrePage() {
     } catch (err) {
       console.error('Erro ao descriptografar:', err)
       setRevealed(p => { const n = {...p}; delete n[id]; return n })
-      alert('Não foi possível revelar a senha agora. Tente novamente em instantes.')
+      alert('Não foi possível revelar a senha agora. Tente novamente em instantes.' + (err?.message ? `\n\nMotivo: ${err.message}` : ''))
     }
   }
 
