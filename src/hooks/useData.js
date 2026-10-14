@@ -301,15 +301,34 @@ export function useDeleteModelo() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (id) => {
-      // Soft delete — desativa o modelo sem apagar histórico de tarefas geradas
+      // Soft delete — desativa o modelo sem apagar o histórico (tarefas já
+      // concluídas ou de dias passados ficam). Mas as tarefas abertas FUTURAS
+      // saem: o vincular gera 60 dias à frente, e um modelo excluído que deixa
+      // essas tarefas pra trás vira tarefa duplicada assim que alguém recria
+      // um modelo com o mesmo título (caso real: Monarca BPO, out/2026).
+      const agora = new Date().toISOString()
+      const hoje = new Date().toLocaleDateString('en-CA')
       const { error } = await supabase
         .from('tarefa_modelos')
-        .update({ ativo: false, atualizado_em: new Date().toISOString() })
+        .update({ ativo: false, atualizado_em: agora })
         .eq('id', id)
       if (error) throw error
+      const { error: errTarefas } = await supabase
+        .from('tarefas')
+        .update({ deleted_at: agora })
+        .eq('modelo_id', id).eq('status', 'aberta').gte('data_execucao', hoje).is('deleted_at', null)
+      if (errTarefas) throw errTarefas
+      const { error: errVinculos } = await supabase
+        .from('cliente_modelos')
+        .update({ ativo: false })
+        .eq('modelo_id', id)
+      if (errVinculos) throw errVinculos
       await logAudit('DELETE', 'tarefa_modelos', id)
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tarefa_modelos'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tarefa_modelos'] })
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+    },
     onError: (err) => console.error('[Fluxe]', err),
   })
 }
