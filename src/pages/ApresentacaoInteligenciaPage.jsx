@@ -44,7 +44,7 @@ function Cascata({ passos, max }) {
   })
   const H = 230
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14, height: H + 70, padding: '0 10px' }}>
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14, height: H + 110, padding: '0 10px' }}>
       {barras.map(b => (
         <div key={b.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
           <div style={{ position: 'relative', width: '100%', height: H }}>
@@ -53,7 +53,8 @@ function Cascata({ passos, max }) {
               {b.tipo === 'total' ? '' : '− '}{brl(b.valor)}
             </div>
           </div>
-          <div style={{ marginTop: 10, color: b.tipo === 'total' ? '#fff' : '#CBD5E1', fontWeight: b.tipo === 'total' ? 800 : 600, fontSize: 13, textAlign: 'center', lineHeight: 1.25, minHeight: 34 }}>{b.label}</div>
+          <div style={{ marginTop: 10, color: b.tipo === 'total' ? '#fff' : '#CBD5E1', fontWeight: b.tipo === 'total' ? 800 : 600, fontSize: 13, textAlign: 'center', lineHeight: 1.25 }}>{b.label}</div>
+          {b.pergunta && <div style={{ marginTop: 6, color: '#FCD34D', fontSize: 12, fontStyle: 'italic', textAlign: 'center', lineHeight: 1.3, minHeight: 32 }}>{b.pergunta}</div>}
         </div>
       ))}
     </div>
@@ -116,15 +117,15 @@ function SlideAbertura() {
 function SlideDRE() {
   return (
     <div style={{ width: '100%', maxWidth: 980 }}>
-      <Titulo sub="Exemplo: loja de calçados. Cada degrau é uma pergunta que o dono deveria entender.">A DRE em cascata</Titulo>
+      <Titulo sub="Exemplo: loja de calçados. Em amarelo, a pergunta que cada linha responde pro dono.">A DRE em cascata</Titulo>
       <Cascata max={120000} passos={[
-        { label: 'Receita bruta', valor: 120000, tipo: 'total', cor: INDIGO },
-        { label: 'Impostos e devoluções', valor: 10000, cor: '#94A3B8' },
-        { label: 'Receita líquida', valor: 110000, tipo: 'total', cor: SKY },
-        { label: 'Custo direto (CMV)', valor: 65000, cor: RED },
-        { label: 'Lucro bruto', valor: 45000, tipo: 'total', cor: AMBER },
-        { label: 'Despesas fixas', valor: 30000, cor: PINK },
-        { label: 'EBITDA', valor: 15000, tipo: 'total', cor: GREEN },
+        { label: 'Receita bruta', pergunta: 'Quanto eu vendi?', valor: 120000, tipo: 'total', cor: INDIGO },
+        { label: 'Impostos e devoluções', pergunta: 'Quanto da venda não é meu?', valor: 10000, cor: '#94A3B8' },
+        { label: 'Receita líquida', pergunta: 'Quanto entrou de verdade?', valor: 110000, tipo: 'total', cor: SKY },
+        { label: 'Custo direto (CMV)', pergunta: 'Quanto custou o que eu vendi?', valor: 65000, cor: RED },
+        { label: 'Lucro bruto', pergunta: 'Quanto sobra de cada venda?', valor: 45000, tipo: 'total', cor: AMBER },
+        { label: 'Despesas fixas', pergunta: 'Quanto custa manter a porta aberta?', valor: 30000, cor: PINK },
+        { label: 'EBITDA', pergunta: 'A operação dá dinheiro?', valor: 15000, tipo: 'total', cor: GREEN },
       ]} />
       <Destaque>Vendeu R$ 120 mil e sobraram R$ 15 mil: de cada R$ 100, ficam R$ 12,50.</Destaque>
     </div>
@@ -133,10 +134,10 @@ function SlideDRE() {
 
 function SlideCustoDireto() {
   const tipos = [
-    ['🛍️', 'Comércio', 'CMV', 'Custo da Mercadoria Vendida', 'Compra pronto e revende', INDIGO],
-    ['🏭', 'Indústria', 'CPV', 'Custo do Produto Vendido', 'Matéria-prima + produção', AMBER],
-    ['💼', 'Serviços', 'CSP', 'Custo do Serviço Prestado', 'Tempo da equipe que entrega', GREEN],
-    ['🚚', 'Transportadora', 'CSP', 'Não tem CMV!', 'Combustível, motorista, pedágio', RED],
+    ['🛍️', 'Comércio', 'CMV', 'Custo da Mercadoria Vendida', 'Responde: quanto custou a mercadoria que saiu vendida?', INDIGO],
+    ['🏭', 'Indústria', 'CPV', 'Custo do Produto Vendido', 'Responde: quanto custou produzir o que foi vendido?', AMBER],
+    ['💼', 'Serviços', 'CSP', 'Custo do Serviço Prestado', 'Responde: quanto custou entregar o serviço (tempo da equipe)?', GREEN],
+    ['🚚', 'Transportadora', 'CSP', 'Não tem CMV!', 'Responde: quanto custou fazer o caminhão rodar?', RED],
   ]
   return (
     <div style={{ width: '100%', maxWidth: 1000 }}>
@@ -216,9 +217,9 @@ function SlideTransportadora() {
 
 function SlideIndicadores() {
   const itens = [
-    ['📈', 'MARGEM', 'Quanto sobra de cada venda depois do custo direto', '"De cada R$ 100, sobram R$ 41"', INDIGO],
-    ['💰', 'EBITDA', 'Quanto a operação gera de caixa, antes de juros e impostos', '"A operação gerou R$ 15 mil"', AMBER],
-    ['⚖️', 'PONTO DE EQUILÍBRIO', 'Quanto precisa vender só pra empatar', '"Abaixo de R$ 80 mil, dá prejuízo"', GREEN],
+    ['📈', 'MARGEM', 'Responde: meu preço está bom? Quanto sobra de cada venda depois do custo direto', '"De cada R$ 100, sobram R$ 41"', INDIGO],
+    ['💰', 'EBITDA', 'Responde: a operação se paga? Quanto ela gera de caixa, antes de juros e impostos', '"A operação gerou R$ 15 mil"', AMBER],
+    ['⚖️', 'PONTO DE EQUILÍBRIO', 'Responde: quanto preciso vender pra não perder dinheiro?', '"Abaixo de R$ 80 mil, dá prejuízo"', GREEN],
   ]
   return (
     <div style={{ width: '100%', maxWidth: 1000 }}>
