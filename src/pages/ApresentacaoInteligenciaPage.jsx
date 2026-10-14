@@ -125,6 +125,145 @@ function SlideIndicadores() {
     </div>
   )
 }
+function Conta({ linhas }) {
+  // linhas: [rótulo, valor, tipo] — tipo 'sub' (subtotal), 'res' (resultado) ou vazio
+  return (
+    <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 12, padding: '12px 18px' }}>
+      {linhas.map(([rot, val, tipo]) => (
+        <div key={rot} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '5px 0', borderTop: tipo ? '1px solid rgba(255,255,255,.15)' : 'none', fontSize: 13.5, fontWeight: tipo ? 800 : 500, color: tipo === 'res' ? '#86EFAC' : tipo === 'sub' ? '#fff' : '#CBD5E1' }}>
+          <span>{rot}</span><span style={{ whiteSpace: 'nowrap' }}>{val}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+function SlideCustoDireto() {
+  const tipos = [
+    ['COMÉRCIO', 'CMV', 'Custo da Mercadoria Vendida', 'Compra pronto e revende. O custo é o que a mercadoria vendida custou.', '#A5B4FC'],
+    ['INDÚSTRIA', 'CPV', 'Custo do Produto Vendido', 'Transforma. Matéria-prima + mão de obra da produção + custos da fábrica.', '#FCD34D'],
+    ['SERVIÇOS', 'CSP', 'Custo do Serviço Prestado', 'Vende tempo e conhecimento. Equipe que executa, terceiros, insumos do serviço.', '#86EFAC'],
+    ['TRANSPORTADORA', 'CSP', 'Não tem CMV!', 'Não vende mercadoria, vende o frete. Combustível, pedágio, motorista, manutenção.', '#FCA5A5'],
+  ]
+  return (
+    <div style={{ width: '100%', maxWidth: 940 }}>
+      <Titulo sub="Na DRE, logo abaixo da receita, vem o custo direto. Mas ele muda de nome e de conteúdo conforme o negócio.">Cada negócio tem um custo direto diferente</Titulo>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        {tipos.map(([seg, sigla, nome, txt, cor]) => (
+          <div key={seg} style={{ background: 'rgba(255,255,255,.07)', borderTop: `3px solid ${cor}`, borderRadius: 10, padding: '14px 14px' }}>
+            <div style={{ color: '#94A3B8', fontWeight: 800, fontSize: 11, letterSpacing: 1 }}>{seg}</div>
+            <div style={{ color: cor, fontWeight: 800, fontSize: 26, marginTop: 4 }}>{sigla}</div>
+            <div style={{ color: '#fff', fontWeight: 700, fontSize: 12.5, marginBottom: 8 }}>{nome}</div>
+            <div style={{ color: '#CBD5E1', fontSize: 12.5, lineHeight: 1.5 }}>{txt}</div>
+          </div>
+        ))}
+      </div>
+      <Destaque>Receita − custo direto = lucro bruto. Errou o custo direto, errou a margem inteira.</Destaque>
+    </div>
+  )
+}
+function SlideCMV() {
+  return (
+    <div style={{ width: '100%', maxWidth: 900 }}>
+      <Titulo sub="Exemplo: loja de calçados. Compra não é custo, compra vira estoque. Custo é o que saiu vendido.">CMV na prática</Titulo>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
+        <div>
+          <div style={{ color: '#A5B4FC', fontWeight: 800, fontSize: 12, marginBottom: 8 }}>A CONTA DO CMV</div>
+          <Conta linhas={[
+            ['Estoque no início do mês', 'R$ 40.000'],
+            ['(+) Compras do mês', 'R$ 60.000'],
+            ['(−) Estoque no fim do mês', 'R$ 35.000'],
+            ['(=) CMV', 'R$ 65.000', 'sub'],
+          ]} />
+        </div>
+        <div>
+          <div style={{ color: '#A5B4FC', fontWeight: 800, fontSize: 12, marginBottom: 8 }}>NA DRE</div>
+          <Conta linhas={[
+            ['Receita líquida', 'R$ 110.000'],
+            ['(−) CMV', 'R$ 65.000'],
+            ['(=) Lucro bruto', 'R$ 45.000', 'res'],
+            ['Margem bruta', '41%', 'sub'],
+          ]} />
+        </div>
+      </div>
+      <div style={{ marginTop: 14, background: 'rgba(220,38,38,.12)', border: '1px solid rgba(220,38,38,.3)', borderRadius: 10, padding: '10px 14px', color: '#FECACA', fontSize: 13 }}>
+        <strong>Erro clássico:</strong> lançar as compras (R$ 60.000) como custo. A DRE mostraria lucro bruto de R$ 50.000 e esconderia que o estoque caiu R$ 5.000. Sem contagem de estoque, não existe CMV confiável.
+      </div>
+    </div>
+  )
+}
+function SlideTransportadora() {
+  return (
+    <div style={{ width: '100%', maxWidth: 900 }}>
+      <Titulo sub="Ela não compra pra revender, então não existe mercadoria vendida. O custo direto é o custo de rodar.">Transportadora: por que não tem CMV</Titulo>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
+        <Conta linhas={[
+          ['Receita de fretes', 'R$ 150.000'],
+          ['(−) Combustível', 'R$ 45.000'],
+          ['(−) Pedágios', 'R$ 9.000'],
+          ['(−) Motoristas e ajudantes', 'R$ 30.000'],
+          ['(−) Manutenção e pneus', 'R$ 12.000'],
+          ['(=) CSP', 'R$ 96.000', 'sub'],
+          ['(=) Lucro bruto', 'R$ 54.000 (36%)', 'res'],
+        ]} />
+        <div>
+          <div style={{ color: '#FCD34D', fontWeight: 800, fontSize: 12, marginBottom: 8 }}>O NÚMERO QUE MANDA: CUSTO POR KM</div>
+          <Conta linhas={[
+            ['Km rodados no mês', '60.000 km'],
+            ['Custo direto por km', 'R$ 1,60'],
+            ['Receita por km', 'R$ 2,50', 'sub'],
+          ]} />
+          <div style={{ color: '#CBD5E1', fontSize: 12.5, marginTop: 10, lineHeight: 1.6 }}>
+            Depreciação dos caminhões não entra no CSP do EBITDA: fica abaixo dele. Mas entra na conversa sobre renovar a frota.
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+function SlidePorSetor() {
+  const itens = [
+    ['Comércio', 'Margem bruta e giro de estoque', '"Seu estoque leva 90 dias pra virar dinheiro."'],
+    ['Indústria', 'Custo unitário e % de matéria-prima', '"Cada pote custa R$ 3,30 pra produzir. Se a farinha subir 10%, sobe pra R$ 3,49."'],
+    ['Serviços', 'Margem por cliente e horas faturáveis', '"O cliente X consome 30% das horas e paga 12% da receita."'],
+    ['Transportadora', 'Custo por km e ocupação da frota', '"Caminhão que volta vazio gasta quase o mesmo diesel e não traz receita nenhuma."'],
+  ]
+  return (
+    <div style={{ width: '100%', maxWidth: 940 }}>
+      <Titulo sub="Um indicador-chave por setor, e a frase que você leva pra reunião.">O número que cada dono precisa ver</Titulo>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {itens.map(([seg, ind, frase]) => (
+          <div key={seg} style={{ display: 'grid', gridTemplateColumns: '150px 240px 1fr', gap: 14, alignItems: 'center', background: 'rgba(255,255,255,.06)', borderRadius: 10, padding: '11px 16px' }}>
+            <div style={{ color: '#fff', fontWeight: 800, fontSize: 14 }}>{seg}</div>
+            <div style={{ color: '#A5B4FC', fontWeight: 700, fontSize: 13 }}>{ind}</div>
+            <div style={{ color: '#E2E8F0', fontSize: 13, fontStyle: 'italic' }}>{frase}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+function SlideExercicios() {
+  const casos = [
+    ['1. Comércio', 'Loja de roupas', 'Calcule o CMV, o lucro bruto, a margem bruta e o EBITDA. Depois responda: se as compras fossem lançadas como custo, quanto o lucro bruto ficaria errado?', '#A5B4FC'],
+    ['2. Indústria', 'Fábrica de doces', 'Calcule o custo de produção, o custo por unidade, o CPV do que foi vendido e quanto ficou parado em estoque.', '#FCD34D'],
+    ['3. Serviços', 'Agência de marketing', 'Monte a DRE até o EBITDA e calcule o custo e a receita por hora faturável.', '#86EFAC'],
+    ['4. Transportadora', 'Frota de 8 caminhões', 'Monte a DRE sem CMV, calcule o custo por km e o frete mínimo por km pra não ter prejuízo.', '#FCA5A5'],
+  ]
+  return (
+    <div style={{ width: '100%', maxWidth: 940 }}>
+      <Titulo sub="Os números estão no material de apoio. Em duplas, 10 minutos por caso.">Exercícios práticos</Titulo>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        {casos.map(([n, emp, txt, cor]) => (
+          <div key={n} style={{ background: 'rgba(255,255,255,.07)', borderLeft: `3px solid ${cor}`, borderRadius: 10, padding: '12px 16px' }}>
+            <div style={{ color: cor, fontWeight: 800, fontSize: 13 }}>{n} · <span style={{ color: '#fff' }}>{emp}</span></div>
+            <div style={{ color: '#E2E8F0', fontSize: 13, marginTop: 6, lineHeight: 1.55 }}>{txt}</div>
+          </div>
+        ))}
+      </div>
+      <Destaque>Em cada caso, feche com uma frase pro dono: o que o número significa e o que ele deveria fazer.</Destaque>
+    </div>
+  )
+}
 function SlideApresentar() {
   return (
     <div style={{ width: '100%', maxWidth: 860 }}>
@@ -180,7 +319,7 @@ function SlideFluxe() {
 function SlideAtividade() {
   return (
     <div style={{ width: '100%', maxWidth: 900 }}>
-      <Titulo sub="A pergunta que essa aula existe pra responder.">Atividade prática: o Relatório 360</Titulo>
+      <Titulo sub="A pergunta que essa aula existe pra responder.">Pra próxima aula: o Relatório 360</Titulo>
       <div style={{ background: 'rgba(255,255,255,.08)', borderRadius: 12, padding: '16px 20px', marginBottom: 16 }}>
         <div style={{ color: '#A5B4FC', fontWeight: 800, fontSize: 12, marginBottom: 8 }}>O EXERCÍCIO</div>
         <div style={{ color: '#E2E8F0', fontSize: 13, lineHeight: 1.8 }}>
@@ -216,8 +355,9 @@ function SlideEncerramento() {
 
 const SLIDES = [
   { render: SlideCapa }, { render: SlideAbertura }, { render: SlideDiferenca },
-  { render: SlideDRE }, { render: SlideIndicadores }, { render: SlideApresentar },
-  { render: SlideErros }, { render: SlideFluxe }, { render: SlideAtividade }, { render: SlideEncerramento },
+  { render: SlideDRE }, { render: SlideCustoDireto }, { render: SlideCMV }, { render: SlideTransportadora },
+  { render: SlideIndicadores }, { render: SlidePorSetor }, { render: SlideApresentar },
+  { render: SlideErros }, { render: SlideFluxe }, { render: SlideExercicios }, { render: SlideAtividade }, { render: SlideEncerramento },
 ]
 
 export default function ApresentacaoInteligenciaPage() {
