@@ -618,7 +618,7 @@ export default function MentoriaGrupoPage() {
             <div style={{ background: 'linear-gradient(135deg,rgba(99,102,241,.16),rgba(59,130,246,.1))', border: '1px solid rgba(99,102,241,.3)', borderRadius: 24, padding: isMobile ? '36px 24px' : '48px 44px' }}>
               <p style={{ fontSize: 13, color: '#94A3B8', margin: '0 0 4px' }}>Essa transformação poderia custar milhares de reais.</p>
               <p style={{ fontSize: 14, color: '#CBD5E1', margin: '0 0 20px' }}>E o investimento já inclui 1 ano de acesso ao Fluxe, que sozinho custaria R$ 1.164 no período.</p>
-              <div style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 44 : 56, fontWeight: 900, color: '#F8FAFC', letterSpacing: '-.02em', marginBottom: 4 }}>R$ 997</div>
+              <div style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 44 : 56, fontWeight: 900, color: '#F8FAFC', letterSpacing: '-.02em', marginBottom: 4 }}>R$ 1.097</div>
               <div style={{ fontSize: 14, color: '#94A3B8', marginBottom: 8 }}>ou em até 12x no cartão (com juros)</div>
               {listaEspera && <div style={{ fontSize: 12.5, color: '#CBD5E1', marginBottom: 12 }}>Valor da turma atual. Quem está na lista recebe as condições da próxima turma antes da abertura.</div>}
               <div style={{ display: 'inline-block', fontSize: 12, color: '#A855F7', fontWeight: 700, background: 'rgba(168,85,247,.1)', border: '1px solid rgba(168,85,247,.25)', borderRadius: 99, padding: '6px 16px', marginBottom: 24 }}>
@@ -626,8 +626,8 @@ export default function MentoriaGrupoPage() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 10, marginBottom: 28, textAlign: 'left' }}>
                 {[
-                  ['📅', 'Por dia de acesso', 'R$ 2,73/dia ao longo do ano de acesso ao Fluxe incluso no programa.'],
-                  ['🎓', 'Por encontro', 'R$ 66,47 por aula ao vivo, com 2 encontros por semana durante os 2 meses.'],
+                  ['📅', 'Por dia de acesso', 'R$ 3,01/dia ao longo do ano de acesso ao Fluxe incluso no programa.'],
+                  ['🎓', 'Por encontro', 'R$ 73,13 por aula ao vivo, com 2 encontros por semana durante os 2 meses.'],
                   ['💸', 'Custo de continuar como está', 'Um único cliente mal precificado pode custar, sozinho, muito mais que isso ao longo de um ano.'],
                 ].map(([icon, titulo, desc]) => (
                   <div key={titulo} style={{ padding: '16px 14px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 12 }}>
