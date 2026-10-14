@@ -941,9 +941,9 @@ export default function CRMPage() {
                             ) : null
                           })()}
                           {et.id !== 'fechado' && et.id !== 'perdido' && (
-                            <button onClick={() => tentarAvancar(l, 'perdido')}
-                              style={{ fontSize:9, padding:'2px 6px', border:'1px solid #FECACA', borderRadius:5, cursor:'pointer', background:'#FEF2F2', color:'#DC2626' }}>
-                              Perdido
+                            <button onClick={() => tentarAvancar(l, 'perdido')} title="Marcar este lead como perdido"
+                              style={{ fontSize:9, padding:'2px 6px', border:'1px solid #E2E8F0', borderRadius:5, cursor:'pointer', background:'#fff', color:'#94A3B8' }}>
+                              Marcar perdido
                             </button>
                           )}
                           {et.id !== 'perdido' && (
