@@ -90,7 +90,21 @@ export default function MentoriaGrupoPage() {
   // nova no admin (data de início no futuro), volta sozinha pro modo venda.
   const hojeISO = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10)
   const listaEspera = !isLoading && (!turma || (!!turma.data_inicio && turma.data_inicio <= hojeISO))
-  const heroChecklist = [listaEspera ? 'Próxima turma: aviso em primeira mão' : `Início: ${dataInicioLabel}`, ...HERO_CHECKLIST_BASE]
+  // "terças e quintas às 16h", montado a partir das aulas da turma
+  const diasTurma = (() => {
+    const nomes = ['domingos', 'segundas', 'terças', 'quartas', 'quintas', 'sextas', 'sábados']
+    const dias = [...new Set(aulas.filter(a => a.data).map(a => new Date(a.data + 'T12:00:00').getDay()))].sort()
+    if (!dias.length) return null
+    const lista = dias.map(d => nomes[d])
+    const txt = lista.length > 1 ? lista.slice(0, -1).join(', ') + ' e ' + lista[lista.length - 1] : lista[0]
+    const hr = aulas.find(a => a.horario)?.horario
+    if (!hr) return txt
+    const [hh, mm] = hr.split(':')
+    return `${txt} às ${Number(hh)}h${mm !== '00' ? mm : ''}`
+  })()
+  const heroChecklist = listaEspera
+    ? ['Próxima turma: aviso em primeira mão', ...HERO_CHECKLIST_BASE]
+    : [`Início: ${dataInicioLabel}`, diasTurma ? `15 encontros ao vivo, ${diasTurma}` : HERO_CHECKLIST_BASE[0], ...HERO_CHECKLIST_BASE.slice(1)]
   const ctaLabel = listaEspera ? 'Entrar na lista de espera →' : 'Quero construir meu BPO →'
   const ctaLabelCurto = listaEspera ? 'Lista de espera →' : 'Quero construir →'
   const [esp, setEsp] = useState({ nome: '', contato: '', cidade: '' })
@@ -412,7 +426,7 @@ export default function MentoriaGrupoPage() {
             <div style={{ textAlign: 'center', marginBottom: 36 }}>
               <div style={eyebrow}>CRONOGRAMA</div>
               <h2 style={{ ...h2, fontSize: isMobile ? 24 : 32 }}>{turma?.nome || 'Próxima turma'}</h2>
-              <p style={{ fontSize: 14, color: '#94A3B8', marginTop: 12 }}>Início em {dataInicioLabel} · vagas limitadas por turma</p>
+              <p style={{ fontSize: 14, color: '#94A3B8', marginTop: 12 }}>Início em {dataInicioLabel}{diasTurma ? `, ${diasTurma}` : ''} · vagas limitadas por turma</p>
             </div>
           </Reveal>
 
@@ -672,7 +686,7 @@ export default function MentoriaGrupoPage() {
                 <p style={{ fontSize: 14, color: '#94A3B8', margin: '0 0 8px' }}>Daqui a alguns meses você continuará exatamente onde está...</p>
                 <p style={{ fontSize: 14, color: '#94A3B8', margin: '0 0 28px' }}>...ou poderá olhar para trás e perceber que foi nesta turma que seu BPO deixou de ser um trabalho e começou a se tornar uma empresa.</p>
                 <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 22 : 30, fontWeight: 800, color: '#F8FAFC', margin: '0 0 12px', letterSpacing: '-.02em' }}>A decisão é sua.</h2>
-                <p style={{ fontSize: 13, color: '#CBD5E1', margin: '0 0 32px' }}>As vagas são limitadas para garantir acompanhamento durante os encontros.<br />{listaEspera ? 'Entre na lista e receba o aviso da próxima turma antes de todo mundo.' : `Início: ${dataInicioLabel}.`}</p>
+                <p style={{ fontSize: 13, color: '#CBD5E1', margin: '0 0 32px' }}>As vagas são limitadas para garantir acompanhamento durante os encontros.<br />{listaEspera ? 'Entre na lista e receba o aviso da próxima turma antes de todo mundo.' : `Início: ${dataInicioLabel}${diasTurma ? `, ${diasTurma}` : ''}.`}</p>
                 <button onClick={abrirCheckout}
                   style={{ padding: '16px 36px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 10px 36px rgba(99,102,241,.5)' }}>
                   {ctaLabel}
