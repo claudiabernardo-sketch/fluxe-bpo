@@ -1093,7 +1093,7 @@ export default function ModelosPage() {
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
           <div style={{ background:'#fff', borderRadius:12, padding:24, maxWidth:360, width:'100%', textAlign:'center' }}>
             <div style={{ fontSize:15, fontWeight:700, marginBottom:8 }}>Excluir modelo?</div>
-            <div style={{ fontSize:13, color:'#64748B', marginBottom:20 }}>As tarefas já geradas <strong>não serão excluídas</strong>. Apenas novos dias não serão gerados.</div>
+            <div style={{ fontSize:13, color:'#64748B', marginBottom:20 }}>As tarefas concluídas e de dias passados <strong>continuam no histórico</strong>. As tarefas abertas de hoje em diante deste modelo serão removidas.</div>
             <div style={{ display:'flex', gap:8, justifyContent:'center' }}>
               <Btn variant="ghost" onClick={() => setConfirmDel(null)}>Cancelar</Btn>
               <Btn variant="danger" onClick={confirmarDelete} disabled={deleteModelo.isPending}>Excluir</Btn>

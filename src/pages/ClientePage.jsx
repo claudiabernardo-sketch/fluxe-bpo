@@ -244,7 +244,19 @@ export default function ClientePage() {
       // RealGold BPO, cadastrou rotina achando que geraria tarefa, e nada
       // aparecia. Agora isso só acontece se a pessoa pedir explicitamente.
       const tituloNorm = rotinaForm.titulo.trim().toLowerCase()
-      const jaExiste = modelosDisponiveis.find(m => m.titulo?.trim().toLowerCase() === tituloNorm)
+      // Procura também entre os modelos desativados: recriar um modelo com o
+      // mesmo título de um excluído gerava tarefa em dobro (o antigo ainda
+      // tinha tarefas futuras). Se achar um desativado, reativa em vez de
+      // criar um gêmeo.
+      let jaExiste = modelosDisponiveis.find(m => m.titulo?.trim().toLowerCase() === tituloNorm)
+      if (!jaExiste) {
+        const { data: mesmoTitulo } = await supabase.from('tarefa_modelos')
+          .select('id, titulo, ativo').eq('empresa_id', empresa?.id).eq('ativo', false)
+        jaExiste = (mesmoTitulo || []).find(m => m.titulo?.trim().toLowerCase() === tituloNorm)
+        if (jaExiste) {
+          await supabase.from('tarefa_modelos').update({ ativo: true, atualizado_em: new Date().toISOString() }).eq('id', jaExiste.id)
+        }
+      }
       const modeloId = jaExiste
         ? jaExiste.id
         : (await createModelo.mutateAsync({
