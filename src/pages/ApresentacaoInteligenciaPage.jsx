@@ -278,10 +278,10 @@ function SlideMapa() {
   return (
     <div style={{ width: '100%', maxWidth: 1000 }}>
       <Titulo sub="Pergunte nesta ordem. O primeiro SIM diz onde o lançamento vai.">🗺️ Mapa de categorização</Titulo>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {passos.map(([e, perg, dest, cor, dre], i) => (
-          <div key={perg} style={{ display: 'grid', gridTemplateColumns: '44px 1fr 40px 220px 110px', alignItems: 'center', gap: 12, background: 'rgba(255,255,255,.05)', borderRadius: 14, padding: '8px 14px' }}>
-            <div style={{ fontSize: 28 }}>{e}</div>
+          <div key={perg} style={{ display: 'grid', gridTemplateColumns: '44px 1fr 40px 220px 110px', alignItems: 'center', gap: 12, background: 'rgba(255,255,255,.05)', borderRadius: 14, padding: '6px 14px' }}>
+            <div style={{ fontSize: 24 }}>{e}</div>
             <div style={{ color: '#fff', fontSize: 15.5, fontWeight: 600 }}><span style={{ color: '#64748B', fontWeight: 800, marginRight: 8 }}>{i + 1}</span>{perg}</div>
             <div style={{ color: GREEN, fontWeight: 900, fontSize: 13 }}>SIM →</div>
             <div style={{ background: cor, color: INK, fontWeight: 900, fontSize: 14, borderRadius: 999, padding: '8px 12px', textAlign: 'center' }}>{dest}</div>
@@ -487,10 +487,10 @@ export default function ApresentacaoInteligenciaPage() {
 
   const Slide = SLIDES[i].render
   return (
-    <div style={{ position: 'fixed', inset: 0, background: `radial-gradient(1000px 600px at 85% 0%, rgba(244,114,182,.12), transparent 60%), radial-gradient(900px 600px at 0% 100%, rgba(99,102,241,.18), transparent 60%), linear-gradient(135deg, ${INK}, #1E1B4B)`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '56px 70px', zIndex: 1000, overflow: 'auto' }}>
+    <div style={{ position: 'fixed', inset: 0, background: `radial-gradient(1000px 600px at 85% 0%, rgba(244,114,182,.12), transparent 60%), radial-gradient(900px 600px at 0% 100%, rgba(99,102,241,.18), transparent 60%), linear-gradient(135deg, ${INK}, #1E1B4B)`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'safe center', padding: '48px 70px 24px', zIndex: 1000, overflow: 'auto' }}>
       <button onClick={() => navigate('/materiais-apoio')} style={{ position: 'absolute', top: 20, right: 24, background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', fontSize: 20, width: 36, height: 36, borderRadius: 8, cursor: 'pointer' }} title="Sair (Esc)">×</button>
       <div style={{ position: 'absolute', top: 24, left: 32, fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.4)', letterSpacing: 2 }}>FLUXE BPO</div>
-      <div key={i} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', animation: 'entraSlide .45s ease' }}><Slide /></div>
+      <div key={i} style={{ flex: 1, display: 'flex', alignItems: 'safe center', justifyContent: 'center', width: '100%', animation: 'entraSlide .45s ease' }}><Slide /></div>
       <style>{'@keyframes entraSlide{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}'}</style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 20 }}>
         <button onClick={anterior} disabled={i === 0} style={{ background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', width: 40, height: 40, borderRadius: '50%', cursor: i === 0 ? 'default' : 'pointer', opacity: i === 0 ? 0.3 : 1, fontSize: 18 }}>←</button>
