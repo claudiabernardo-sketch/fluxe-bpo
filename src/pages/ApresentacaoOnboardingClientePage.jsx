@@ -108,13 +108,13 @@ function SlideAbertura() {
 
 // ── 03 · O que é onboarding ──────────────────────────────────────────────
 function SlideOQueE() {
-  const naoSabe = ['Quais bancos ela usa', 'Quem aprova pagamentos', 'Onde chegam as contas', 'Quem emite as notas',
-    'Como recebe dos clientes', 'Quais cartões existem', 'Qual sistema utiliza', 'Quais pagamentos estão pendentes',
-    'Quem é o contador', 'Como será a comunicação']
+  const naoSabe = ['Quem aprova cada pagamento', 'Até que horas aceita pagar no mesmo dia', 'Onde as contas chegam na prática', 'Quem pede a emissão das notas',
+    'Quem cobra o cliente atrasado', 'Como e quando chegam os documentos', 'Quais pagamentos estão atrasados', 'Quais acessos serão liberados',
+    'Quem é o contato do dia a dia', 'Como será a comunicação']
   return (
     <div style={{ width: '100%', maxWidth: 900 }}>
       <Titulo sub="Ele começa quando o cliente fecha o contrato e termina quando o BPO tem condições de executar a rotina financeira com segurança.">O que é onboarding?</Titulo>
-      <div style={{ color: '#94A3B8', fontSize: 13, textAlign: 'center', marginBottom: 14 }}>Imagine que hoje uma empresa contratou seu BPO. Você ainda não sabe:</div>
+      <div style={{ color: '#94A3B8', fontSize: 13, textAlign: 'center', marginBottom: 14 }}>O diagnóstico já te disse o que a empresa é: bancos, sistema, volumes. Mas você ainda não sabe como ela opera:</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 20 }}>
         {naoSabe.map(i => (
           <div key={i} style={{ background: 'rgba(255,255,255,.07)', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, color: '#E2E8F0' }}>{i}</div>
@@ -152,7 +152,7 @@ function SlideHandoff() {
       <Titulo sub="Handoff = passagem do cliente de quem vendeu para quem vai operar.">Handoff: o comercial precisa entregar o cliente</Titulo>
       <div style={{ color: '#94A3B8', fontSize: 13, textAlign: 'center', marginBottom: 14 }}>Antes de falar com o cliente, descubra:</div>
       <Check itens={['O que foi contratado?', 'O que NÃO foi contratado?', 'Quanto foi vendido?', 'Qual volume foi considerado?',
-        'Quando foi prometido o início?', 'Quais dores o cliente relatou?', 'Houve alguma condição especial?']} cor="#A5B4FC" />
+        'Quando foi prometido o início?', 'Quais dores o cliente relatou?', 'Houve alguma condição especial?', 'Onde estão o diagnóstico e o Mapeamento Financeiro preenchidos?']} cor="#A5B4FC" />
       <Destaque>O cliente não deve precisar comprar com uma pessoa e depois explicar tudo de novo para outra.</Destaque>
     </div>
   )
@@ -172,47 +172,51 @@ function SlideComunicacao() {
   )
 }
 
-// ── 07 · Reunião de onboarding, parte 1 ────────────────────────────────────
+// ── 07 · Reunião de onboarding, parte 1: o que já sabemos ──────────────────
 function SlideReuniao1() {
-  const grupos = [
-    ['Empresa', ['CNPJ?', 'Outras empresas?', 'Sócios?', 'Contato principal?', 'Quem é o contador?']],
-    ['Contas a pagar', ['Como as contas chegam hoje?', 'Quem aprova?', 'Quem autoriza pagamento?', 'Pagamentos recorrentes?', 'Horário limite de envio?']],
-    ['Contas a receber', ['Como a empresa cobra?', 'Quem emite cobrança?', 'Existe inadimplência?', 'Quem realiza cobrança?']],
-  ]
+  const jaSabemos = ['CNPJ e unidades', 'Regime tributário', 'Sócios e equipe', 'Contador e contabilidade',
+    'Bancos, contas e cartões', 'Sistema e ERP', 'Volumes: notas, boletos, pagamentos e recebimentos', 'Forma de cobrança e inadimplência']
   return (
     <div style={{ width: '100%', maxWidth: 980 }}>
-      <Titulo sub="Separe por assunto. Essa parte precisa ser muito completa.">Reunião de onboarding: o que perguntar (1/2)</Titulo>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-        {grupos.map(([t, itens]) => (
-          <div key={t} style={{ background: 'rgba(255,255,255,.07)', borderRadius: 10, padding: '14px 14px' }}>
-            <div style={{ color: '#A5B4FC', fontWeight: 800, fontSize: 12.5, marginBottom: 10, textTransform: 'uppercase' }}>{t}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {itens.map(i => <div key={i} style={{ color: '#E2E8F0', fontSize: 12 }}>{i}</div>)}
-            </div>
+      <Titulo sub="Leve o diagnóstico e o Mapeamento Financeiro preenchidos. Confirme em poucos minutos, não pergunte de novo.">Reunião de onboarding: o que já sabemos (1/2)</Titulo>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div style={{ background: 'rgba(255,255,255,.07)', borderRadius: 12, padding: '16px 18px' }}>
+          <div style={{ color: '#A5B4FC', fontWeight: 800, fontSize: 12.5, marginBottom: 10, textTransform: 'uppercase' }}>Já respondido no diagnóstico</div>
+          <Check itens={jaSabemos} cor="#A5B4FC" />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <ScriptQuote label="COMO CONFIRMAR">
+            Na nossa conversa você me contou que a empresa tem [2 bancos, 4 cartões e usa o Conta Azul]. Mudou alguma coisa de lá pra cá?
+          </ScriptQuote>
+          <div style={{ background: 'rgba(255,255,255,.07)', borderRadius: 12, padding: '14px 18px' }}>
+            <Check itens={['Abra o diagnóstico na reunião', 'Leia o resumo em voz alta e peça correções', 'Atualize o cadastro do cliente no Fluxe']} cor="#86EFAC" />
           </div>
-        ))}
+        </div>
       </div>
+      <Destaque>Perguntar de novo o que o cliente já respondeu mostra que ninguém passou o caso adiante.</Destaque>
     </div>
   )
 }
 
-// ── 08 · Reunião de onboarding, parte 2 ────────────────────────────────────
+// ── 08 · Reunião de onboarding, parte 2: o que só o onboarding descobre ────
 function SlideReuniao2() {
   const grupos = [
-    ['Faturamento', ['Quem solicita a nota?', 'Onde estão os dados?', 'Procedimento específico?']],
-    ['Bancos e cartões', ['Quais bancos? Quantas contas?', 'Quem tem acesso e quem aprova?', 'Quantos cartões, quem usa?']],
-    ['Sistemas', ['Qual sistema financeiro?', 'Existe ERP?', 'Outras plataformas com movimentação?']],
-    ['Contabilidade e relatórios', ['Quem é o contador e como troca documento?', 'O cliente já recebe algum relatório?', 'Quando é o fechamento financeiro?']],
+    ['Pessoas e comunicação', ['Quem é o contato do dia a dia?', 'Qual canal e qual horário combinamos?', 'Quem decide quando o contato principal não responde?']],
+    ['Aprovação e alçadas', ['Quem aprova cada tipo de pagamento?', 'Existe valor que exige segunda aprovação?', 'Quem pode autorizar no banco?']],
+    ['Rotina de contas a pagar', ['Em que dia e horário chega o que será pago?', 'Qual o horário limite para pagar no mesmo dia?', 'Quais pagamentos são recorrentes e quando vencem?']],
+    ['Notas e cobrança', ['Quem pede a emissão de nota e por qual canal?', 'Existe procedimento diferente por cliente ou produto?', 'Quem cobra o cliente atrasado e como?']],
+    ['Documentos e acessos', ['Como e quando chegam extratos, comprovantes e faturas?', 'Quais acessos a empresa libera e quais ficam com o sócio?', 'Em que formato prefere receber os relatórios?']],
+    ['Passado e pendências', ['Quais contas estão vencidas ou sem baixa?', 'Há quantos meses não concilia?', 'Há algo combinado com fornecedores que o BPO precisa saber?']],
   ]
   return (
-    <div style={{ width: '100%', maxWidth: 980 }}>
-      <Titulo sub="Continuação. Quanto mais completo aqui, menos surpresa depois.">Reunião de onboarding: o que perguntar (2/2)</Titulo>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+    <div style={{ width: '100%', maxWidth: 1000 }}>
+      <Titulo sub="Aqui é o COMO a empresa opera no dia a dia, que o diagnóstico não mostra. É o que esta reunião precisa fechar.">Reunião de onboarding: o que só o onboarding descobre (2/2)</Titulo>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
         {grupos.map(([t, itens]) => (
-          <div key={t} style={{ background: 'rgba(255,255,255,.07)', borderRadius: 10, padding: '14px 16px' }}>
+          <div key={t} style={{ background: 'rgba(255,255,255,.07)', borderRadius: 10, padding: '14px 14px' }}>
             <div style={{ color: '#A5B4FC', fontWeight: 800, fontSize: 12.5, marginBottom: 10, textTransform: 'uppercase' }}>{t}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {itens.map(i => <div key={i} style={{ color: '#E2E8F0', fontSize: 12.5 }}>{i}</div>)}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {itens.map(i => <div key={i} style={{ color: '#E2E8F0', fontSize: 12 }}>{i}</div>)}
             </div>
           </div>
         ))}
@@ -286,12 +290,12 @@ function SlideResponsabilidades() {
 // ── 12 · Cronograma ──────────────────────────────────────────────────────
 function SlideCronograma() {
   const dias = [
-    ['02/09', 'Contrato assinado'], ['03/09', 'Boas-vindas + checklist'], ['04/09', 'Reunião de onboarding'],
-    ['04 a 08/09', 'Coleta'], ['09 a 11/09', 'Configuração'], ['12/09', 'Validação'], ['14/09', 'Início da operação'],
+    ['Dia 0', 'Contrato assinado'], ['Dia 1', 'Boas-vindas + checklist'], ['Dia 2', 'Reunião de onboarding'],
+    ['Dias 2 a 6', 'Coleta'], ['Dias 7 a 9', 'Configuração'], ['Dia 10', 'Validação'], ['Dia 12', 'Início da operação (go-live)'],
   ]
   return (
     <div style={{ width: '100%', maxWidth: 900 }}>
-      <Titulo sub="Data da venda ≠ data de início da operação.">Cronograma: quando começamos?</Titulo>
+      <Titulo sub="Data da venda ≠ data de início da operação. Exemplo em dias corridos: ajuste ao seu prazo.">Cronograma: quando começamos?</Titulo>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18 }}>
         {dias.map(([d, t]) => (
           <div key={d} style={{ display: 'flex', gap: 14, alignItems: 'center', background: 'rgba(255,255,255,.06)', borderRadius: 8, padding: '8px 14px' }}>
@@ -369,7 +373,7 @@ function SlideChecklistMaster() {
   const fases = [
     ['1. Venda', ['Contrato', 'Escopo', 'Valores', 'Volumes', 'Data prevista']],
     ['2. Boas-vindas', ['Responsável apresentado', 'Cronograma enviado', 'Checklist enviado', 'Reunião agendada']],
-    ['3. Diagnóstico', ['Contas a pagar/receber', 'Bancos e cartões', 'Sistemas', 'Pendências anteriores']],
+    ['3. Confirmar diagnóstico', ['Dados revisados', 'O que mudou desde a venda', 'Como opera hoje', 'Pendências anteriores']],
     ['4. Coleta', ['Acessos', 'Documentos', 'Cadastros', 'Aprovadores']],
     ['5. Configuração', ['ERP', 'Pastas', 'Cadastros', 'Rotinas no Fluxe']],
     ['6. Validação', ['Responsabilidades', 'Prazos', 'Equipe orientada']],
@@ -460,7 +464,7 @@ function SlideAtividade() {
         </div>
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
-        {['O que perguntar', 'O que solicitar', 'Quais acessos pedir', 'Quais documentos pedir', 'O que organizar',
+        {['O que confirmar do diagnóstico', 'O que perguntar de novo', 'O que solicitar', 'Quais acessos pedir', 'Quais documentos pedir', 'O que organizar',
           'Quais responsabilidades definir', 'O que é rotina', 'O que é saneamento', 'Qual cronograma propor', 'Quando liberar o go-live']
           .map(p => (
             <div key={p} style={{ background: 'rgba(99,102,241,.15)', borderRadius: 20, padding: '7px 14px', color: '#C7D2FE', fontSize: 12.5, fontWeight: 600 }}>{p}</div>
