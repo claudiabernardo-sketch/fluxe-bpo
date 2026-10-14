@@ -26,7 +26,7 @@ function Topo({ escuro, rotulo }) {
   )
 }
 
-function TituloDuplo({ normal, italico, escuro, tamanho = 40 }) {
+function TituloDuplo({ normal, italico, escuro, tamanho = 50 }) {
   return (
     <div style={{ textAlign: 'center', marginBottom: 28 }}>
       {normal && <div style={{ fontFamily: SANS, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', fontSize: tamanho * 0.48, color: escuro ? '#fff' : TINTA }}>{normal}</div>}
@@ -72,18 +72,18 @@ function Lista({ s }) {
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${s.itens.length}, 1fr)`, gap: 18, maxWidth: 1100, margin: '0 auto', width: '100%' }}>
         {s.itens.map((t, i) => (
           <div key={t} style={{ background: '#fff', borderRadius: 18, padding: '22px 20px', boxShadow: '0 14px 34px -22px rgba(11,42,91,.5)', borderTop: `4px solid ${AZUL}` }}>
-            <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 38, fontWeight: 700, color: AZUL, lineHeight: 1 }}>{String(i + 1).padStart(2, '0')}</div>
-            <div style={{ fontFamily: SANS, fontSize: 15.5, color: TINTA, marginTop: 10, lineHeight: 1.5 }}>{t}</div>
+            <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 48, fontWeight: 700, color: AZUL, lineHeight: 1 }}>{String(i + 1).padStart(2, '0')}</div>
+            <div style={{ fontFamily: SANS, fontSize: 20, color: TINTA, marginTop: 12, lineHeight: 1.5 }}>{t}</div>
           </div>
         ))}
       </div>
       {s.virada && (
         <div style={{ maxWidth: 1100, margin: '24px auto 0', width: '100%', background: NAVY, color: '#fff', borderRadius: 18, padding: '18px 24px', display: 'flex', gap: 16, alignItems: 'center' }}>
           <div style={{ fontFamily: SANS, fontSize: 11, fontWeight: 800, letterSpacing: 2, color: AZUL, whiteSpace: 'nowrap' }}>A VIRADA DE CHAVE</div>
-          <div style={{ fontFamily: SERIF, fontSize: 24, fontStyle: 'italic' }}>{s.virada}</div>
+          <div style={{ fontFamily: SERIF, fontSize: 30, fontStyle: 'italic' }}>{s.virada}</div>
         </div>
       )}
-      {s.rodape && <div style={{ textAlign: 'center', fontFamily: SANS, fontSize: 15, color: '#475569', marginTop: 20, maxWidth: 900, alignSelf: 'center' }}>{s.rodape}</div>}
+      {s.rodape && <div style={{ textAlign: 'center', fontFamily: SANS, fontSize: 18, color: '#475569', marginTop: 24, maxWidth: 1000, alignSelf: 'center' }}>{s.rodape}</div>}
     </div>
   )
 }
@@ -92,13 +92,13 @@ function Perguntas({ s }) {
   return (
     <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${NAVY}, ${NAVY2})`, padding: '90px 90px 40px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
       <Topo escuro rotulo={s.rotulo} />
-      <div style={{ textAlign: 'center', fontFamily: SANS, color: '#CBD5E1', fontSize: 17, marginBottom: 8 }}>{s.antes}</div>
+      <div style={{ textAlign: 'center', fontFamily: SANS, color: '#CBD5E1', fontSize: 20, marginBottom: 8 }}>{s.antes}</div>
       <TituloDuplo normal={s.titulo} italico={s.italico} escuro />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 1000, margin: '0 auto', width: '100%' }}>
         {s.perguntas.map((p, i) => (
           <div key={p} style={{ display: 'flex', gap: 16, alignItems: 'center', background: 'rgba(255,255,255,.07)', border: '1px solid rgba(191,221,247,.25)', borderRadius: 18, padding: '20px 22px' }}>
             <div style={{ flex: 'none', width: 44, height: 44, borderRadius: '50%', background: AZUL, color: '#fff', display: 'grid', placeItems: 'center', fontFamily: SERIF, fontWeight: 700, fontSize: 24, fontStyle: 'italic' }}>{i + 1}</div>
-            <div style={{ fontFamily: SERIF, fontSize: 25, color: '#fff', lineHeight: 1.25 }}>{p}</div>
+            <div style={{ fontFamily: SERIF, fontSize: 30, color: '#fff', lineHeight: 1.25 }}>{p}</div>
           </div>
         ))}
       </div>
@@ -110,17 +110,17 @@ function Tabela({ s }) {
   return (
     <div style={{ position: 'absolute', inset: 0, background: PAPEL, padding: '84px 80px 30px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
       <Topo rotulo={s.rotulo} />
-      <TituloDuplo normal={s.titulo} italico={s.italico} tamanho={36} />
+      <TituloDuplo normal={s.titulo} italico={s.italico} tamanho={44} />
       <div style={{ maxWidth: 1120, margin: '0 auto', width: '100%' }}>
         <div style={{ display: 'grid', gridTemplateColumns: s.larguras || '1fr 1.4fr 1.4fr', gap: 0, fontFamily: SANS }}>
           {s.colunas.map(c => (
-            <div key={c} style={{ fontSize: 11, fontWeight: 800, letterSpacing: 2, color: TINTA, textAlign: 'center', padding: '0 0 8px', textTransform: 'uppercase' }}>{c}</div>
+            <div key={c} style={{ fontSize: 13, fontWeight: 800, letterSpacing: 2, color: TINTA, textAlign: 'center', padding: '0 0 10px', textTransform: 'uppercase' }}>{c}</div>
           ))}
           {s.linhas.map((l, li) => l.map((cel, ci) => {
             const ultima = ci === l.length - 1
             return (
               <div key={li + '-' + ci} style={{
-                padding: '11px 14px', fontSize: 14, lineHeight: 1.35, display: 'flex', alignItems: 'center',
+                padding: '14px 18px', fontSize: 18, lineHeight: 1.35, display: 'flex', alignItems: 'center',
                 background: ultima ? AZUL : ci === 0 ? '#fff' : '#DCEBFA',
                 color: ultima ? '#fff' : TINTA, fontWeight: ci === 0 || ultima ? 700 : 500,
                 borderBottom: '2px solid ' + PAPEL, borderRight: ci < l.length - 1 ? '2px solid ' + PAPEL : 'none',
@@ -159,16 +159,16 @@ function Dois({ s }) {
           <div key={l.titulo} style={{ background: i === 0 ? '#fff' : NAVY, color: i === 0 ? TINTA : '#fff', borderRadius: 22, padding: '28px 30px', boxShadow: '0 18px 40px -26px rgba(11,42,91,.6)' }}>
             <div style={{ fontSize: 44, lineHeight: 1 }}>{l.icone}</div>
             <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontWeight: 700, fontSize: 34, marginTop: 12, color: i === 0 ? AZUL : AZUL_CLARO }}>{l.titulo}</div>
-            <div style={{ fontFamily: SANS, fontSize: 16.5, marginTop: 8, lineHeight: 1.5 }}>{l.texto}</div>
+            <div style={{ fontFamily: SANS, fontSize: 19, marginTop: 8, lineHeight: 1.5 }}>{l.texto}</div>
             {l.exemplos && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
-                {l.exemplos.map(e => <span key={e} style={{ fontFamily: SANS, fontSize: 12.5, fontWeight: 600, borderRadius: 999, padding: '6px 12px', background: i === 0 ? '#DCEBFA' : 'rgba(255,255,255,.12)', color: i === 0 ? TINTA : '#fff' }}>{e}</span>)}
+                {l.exemplos.map(e => <span key={e} style={{ fontFamily: SANS, fontSize: 15, fontWeight: 600, borderRadius: 999, padding: '7px 14px', background: i === 0 ? '#DCEBFA' : 'rgba(255,255,255,.12)', color: i === 0 ? TINTA : '#fff' }}>{e}</span>)}
               </div>
             )}
           </div>
         ))}
       </div>
-      {s.rodape && <div style={{ textAlign: 'center', fontFamily: SANS, fontSize: 15.5, color: '#334155', marginTop: 22, maxWidth: 900, alignSelf: 'center' }}>{s.rodape}</div>}
+      {s.rodape && <div style={{ textAlign: 'center', fontFamily: SANS, fontSize: 18, color: '#334155', marginTop: 24, maxWidth: 1000, alignSelf: 'center' }}>{s.rodape}</div>}
     </div>
   )
 }
