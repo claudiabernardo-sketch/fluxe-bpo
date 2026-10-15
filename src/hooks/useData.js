@@ -429,7 +429,12 @@ export function useCreateLead() {
 export function useUpdateLead() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, ...updates }) => {
+    mutationFn: async ({ id, ...dados }) => {
+      // Lead que fecha, converte ou é perdido não tem mais follow-up: limpa a
+      // data junto, senão fica "follow-up vencido" pra sempre no CRM. Só não
+      // limpa se quem chamou mandou a data de propósito.
+      const encerra = ['fechado', 'convertido', 'perdido'].includes(dados.etapa)
+      const updates = encerra && !('proximo_contato' in dados) ? { ...dados, proximo_contato: null } : dados
       const { error } = await supabase
         .from('leads').update(updates).eq('id', id)
       if (error) throw error

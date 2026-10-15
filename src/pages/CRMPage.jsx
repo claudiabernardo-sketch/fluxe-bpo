@@ -291,6 +291,9 @@ function displayCNPJ(raw = '') {
   return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
 }
 
+// Lead fechado, convertido ou perdido não tem mais follow-up a cobrar.
+const etapaEncerrada = l => l.etapa === 'fechado' || l.etapa === 'convertido' || l.etapa === 'perdido'
+
 function diasAte(dateStr) {
   if (!dateStr) return null
   const hoje = new Date(); hoje.setHours(0,0,0,0)
@@ -610,7 +613,7 @@ export default function CRMPage() {
     if (soVencidos) {
       base = base.filter(l => {
         const d = diasAte(l.proximo_contato)
-        return d !== null && d <= 0 && l.etapa !== 'perdido' && l.etapa !== 'convertido'
+        return d !== null && d <= 0 && !etapaEncerrada(l)
       })
     }
     const termo = busca.trim().toLowerCase()
@@ -626,7 +629,7 @@ export default function CRMPage() {
   const totalAtivo = useMemo(() => ativos.reduce((a, l) => a + (l.valor_estimado || 0), 0), [ativos])
   const totalFech  = useMemo(() => fechados.reduce((a, l) => a + (l.valor_estimado || 0), 0), [fechados])
   const txConv     = leads.length > 0 ? Math.round((fechados.length / leads.length) * 100) : 0
-  const followUpsHoje = useMemo(() => ativos.filter(l => { const d = diasAte(l.proximo_contato); return d !== null && d <= 0 }), [ativos])
+  const followUpsHoje = useMemo(() => ativos.filter(l => { const d = diasAte(l.proximo_contato); return d !== null && d <= 0 && !etapaEncerrada(l) }), [ativos])
   const motivosAgrup  = useMemo(() => {
     const map = {}
     perdidos.forEach(l => { const m = l.motivo_perda || 'outro'; map[m] = (map[m] || 0) + 1 })
@@ -892,9 +895,10 @@ export default function CRMPage() {
                 <div style={{ padding:6, display:'flex', flexDirection:'column', gap:6, minHeight:80 }}>
                   {etLeads.map(l => {
                     const isConvertido = l.etapa === 'convertido' && clienteDoLeadExiste(l)
+                    const encerrado = etapaEncerrada(l)
                     const diasFU = diasAte(l.proximo_contato)
-                    const fuVencido = diasFU !== null && diasFU <= 0
-                    const fuHoje    = diasFU === 0
+                    const fuVencido = !encerrado && diasFU !== null && diasFU <= 0
+                    const fuHoje    = !encerrado && diasFU === 0
                     return (
                       <div key={l.id} style={{ background:'#fff', borderRadius:8, padding:'8px 10px',
                         border: isConvertido ? '1px solid #BBF7D0' : fuVencido ? '1px solid #FECACA' : '1px solid #E2E8F0',
@@ -918,7 +922,7 @@ export default function CRMPage() {
                             </div>
                           )}
                         </div>
-                        {l.proximo_contato && (
+                        {l.proximo_contato && !encerrado && (
                           <div style={{ fontSize:9, marginTop:4, fontWeight:600,
                             color: fuVencido ? '#EF4444' : fuHoje ? '#F59E0B' : '#64748B' }}>
                             {fuVencido ? '🔴 Follow-up vencido' : fuHoje ? '🟡 Ligar hoje' : `📅 ${new Date(l.proximo_contato+'T12:00:00').toLocaleDateString('pt-BR')}`}
@@ -1007,8 +1011,9 @@ export default function CRMPage() {
         <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
           {leadsFiltrados.filter(l => l.etapa !== 'perdido').map(l => {
             const et = ETAPAS.find(e => e.id === l.etapa) || ETAPAS[0]
+            const encerrado = etapaEncerrada(l)
             const diasFU = diasAte(l.proximo_contato)
-            const fuVencido = diasFU !== null && diasFU <= 0
+            const fuVencido = !encerrado && diasFU !== null && diasFU <= 0
             return (
               <div key={l.id} style={{ display:'flex', flexDirection:'column', padding:'10px 14px',
                 background:'#fff', border:`1px solid ${fuVencido ? '#FECACA' : '#E2E8F0'}`, borderRadius:10 }}>
@@ -1020,7 +1025,7 @@ export default function CRMPage() {
                   </div>
                   <div style={{ fontSize:11, color:'#15803D', fontWeight:600, flexShrink:0 }}>{l.valor_estimado > 0 ? fmtR(l.valor_estimado)+'/mês' : '—'}</div>
                   <div style={{ fontSize:10, padding:'2px 8px', borderRadius:99, fontWeight:700, background:et.color+'22', color:et.color, flexShrink:0 }}>{et.label}</div>
-                  {l.proximo_contato && (
+                  {l.proximo_contato && !encerrado && (
                     <div style={{ fontSize:10, color: fuVencido ? '#EF4444' : '#64748B', flexShrink:0 }}>
                       {fuVencido ? '🔴' : '📅'} {new Date(l.proximo_contato+'T12:00:00').toLocaleDateString('pt-BR')}
                     </div>
@@ -1182,6 +1187,12 @@ export default function CRMPage() {
                     <div>
                       <label style={labelStyle}>📅 Próximo follow-up</label>
                       <input type="date" value={form.proximo_contato || ''} onChange={e => setF('proximo_contato', e.target.value)} style={inputStyle} />
+                      {form.proximo_contato && (
+                        <button type="button" onClick={() => setF('proximo_contato', '')}
+                          style={{ marginTop:4, border:'none', background:'none', color:'#6366F1', fontSize:11, fontWeight:600, cursor:'pointer', padding:0 }}>
+                          ✕ Remover data do follow-up
+                        </button>
+                      )}
                     </div>
                   </div>
 
