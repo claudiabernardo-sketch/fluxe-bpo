@@ -20,6 +20,7 @@ const APRESENTACOES = {
   'Apresentação: Estratégico, o BPO que Entrega Inteligência (Encontro 10)': '/apresentacao-inteligencia-estrategica',
   'Apresentação: DRE, Construindo Relatórios que Geram Decisão': '/apresentacao-dre',
   'Apresentação: Fluxo de Caixa, Enxergando o Dinheiro Antes que Ele Falte': '/apresentacao-fluxo-de-caixa',
+  'Apresentação: Conversa Estratégica, Como Transformar Números em Decisão': '/apresentacao-conversa-estrategica',
   'Apresentação: A Reunião com o Cliente (Encontro 11)': '/apresentacao-reuniao-cliente',
   'Apresentação: Follow-up, o Cliente Não Pode Sumir (Encontro 12)': '/apresentacao-follow-up',
   'Apresentação: Gestão do BPO, Lucratividade e Escala (Encontro 13)': '/apresentacao-lucratividade-escala',
