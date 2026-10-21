@@ -77,6 +77,7 @@ const ApresentacaoInteligenciaPage = lazy(() => import('../../pages/Apresentacao
 const ApresentacaoDREPage = lazy(() => import('../../pages/ApresentacaoDREPage'))
 const ApresentacaoFluxoCaixaPage = lazy(() => import('../../pages/ApresentacaoFluxoCaixaPage'))
 const ApresentacaoConversaEstrategicaPage = lazy(() => import('../../pages/ApresentacaoConversaEstrategicaPage'))
+const KitReuniaoEstrategicaPage = lazy(() => import('../../pages/KitReuniaoEstrategicaPage'))
 const ApresentacaoReuniaoClientePage = lazy(() => import('../../pages/ApresentacaoReuniaoClientePage'))
 const ApresentacaoFollowUpPage = lazy(() => import('../../pages/ApresentacaoFollowUpPage'))
 const ApresentacaoLucratividadeEscalaPage = lazy(() => import('../../pages/ApresentacaoLucratividadeEscalaPage'))
@@ -376,6 +377,7 @@ export default function AppShell() {
                 <Route path="/apresentacao-dre" element={<ApresentacaoDREPage />} />
                 <Route path="/apresentacao-fluxo-de-caixa" element={<ApresentacaoFluxoCaixaPage />} />
                 <Route path="/apresentacao-conversa-estrategica" element={<ApresentacaoConversaEstrategicaPage />} />
+                <Route path="/kit-reuniao-estrategica" element={<KitReuniaoEstrategicaPage />} />
                 <Route path="/apresentacao-reuniao-cliente" element={<ApresentacaoReuniaoClientePage />} />
                 <Route path="/apresentacao-follow-up" element={<ApresentacaoFollowUpPage />} />
                 <Route path="/apresentacao-lucratividade-escala" element={<ApresentacaoLucratividadeEscalaPage />} />
