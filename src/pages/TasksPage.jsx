@@ -1,6 +1,7 @@
 import { useState, useRef, lazy, Suspense } from 'react'
 import { Link } from 'react-router-dom'
-import { useTasks, useCreateTask, useUpdateTask, useDeleteTask, useClients, useUsuarios, useTarefaModelos, useAvulsasPendentes } from '../hooks/useData'
+import { useTasks, useCreateTask, useUpdateTask, useDeleteTask, useClients, useUsuarios, useTarefaModelos, useAvulsasPendentes, usePops } from '../hooks/useData'
+import PopViewer from '../components/ui/PopViewer'
 import { Card, Btn, Loader, EmptyState, PrioBadge, StatusBadge, fmt, isVencida } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 const ImportModal = lazy(() => import('../components/ui/ImportModal'))
@@ -48,6 +49,8 @@ export default function TasksPage() {
   const qc = useQueryClient()
   const fileInputRef = useRef(null)
   const { data: modelos = [] } = useTarefaModelos()
+  const { data: pops = [] } = usePops()
+  const [popAberto, setPopAberto] = useState(null)
   const { empresa } = useAuthStore()
 
   // ── Geração de tarefas: migrada para Edge Function server-side ─────────────
@@ -587,15 +590,32 @@ export default function TasksPage() {
             {selectedTask.responsavel_id && <span>👤 {usuarios.find(u=>u.id===selectedTask.responsavel_id)?.nome||'—'}</span>}
           </div>
 
-          {/* Como fazer — descrição operacional do modelo que gerou esta tarefa */}
-          {selectedTask.modelo_id && modelos.find(m=>m.id===selectedTask.modelo_id)?.descricao && (
-            <div style={{ padding:'10px 16px', borderBottom:'1px solid #F1F5F9', background:'#FFFBEB' }}>
-              <div style={{ fontWeight:700, fontSize:11, color:'#92400E', marginBottom:4 }}>📋 Como fazer</div>
-              <div style={{ fontSize:12, color:'#78350F', whiteSpace:'pre-wrap', lineHeight:1.5 }}>
-                {modelos.find(m=>m.id===selectedTask.modelo_id)?.descricao}
+          {/* Como fazer — descrição operacional do modelo que gerou esta tarefa,
+              e o POP vinculado ao modelo (se houver) */}
+          {(() => {
+            const modelo = selectedTask.modelo_id && modelos.find(m=>m.id===selectedTask.modelo_id)
+            const pop = modelo?.pop_id && pops.find(p=>p.id===modelo.pop_id)
+            if (!modelo?.descricao && !pop) return null
+            return (
+              <div style={{ padding:'10px 16px', borderBottom:'1px solid #F1F5F9', background:'#FFFBEB' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom: modelo.descricao ? 4 : 0 }}>
+                  <div style={{ fontWeight:700, fontSize:11, color:'#92400E', flex:1 }}>📋 Como fazer</div>
+                  {pop && (
+                    <button onClick={()=>setPopAberto(pop)} title={pop.titulo}
+                      style={{ fontSize:10, padding:'3px 10px', borderRadius:6, border:'1px solid #6366F1', background:'#EEF2FF', color:'#4338CA', cursor:'pointer', fontWeight:700, whiteSpace:'nowrap' }}>
+                      📘 Ver POP
+                    </button>
+                  )}
+                </div>
+                {modelo.descricao && (
+                  <div style={{ fontSize:12, color:'#78350F', whiteSpace:'pre-wrap', lineHeight:1.5 }}>
+                    {modelo.descricao}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            )
+          })()}
+          {popAberto && <PopViewer pop={popAberto} onClose={()=>setPopAberto(null)} />}
 
           {/* Timer */}
           <div style={{ padding:'8px 16px', borderBottom:'1px solid #F1F5F9' }}>

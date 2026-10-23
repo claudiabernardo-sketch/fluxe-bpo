@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTarefaModelos, useCreateModelo, useUpdateModelo, useDeleteModelo, useClients,
          useClienteModelos, useVincularModelo, useDesvincularModelo, useGerarTarefas,
-         useRotinas, useUpdateClienteModelo, useAtivarOperacaoManual, useImportarBibliotecaModelos } from '../hooks/useData'
+         useRotinas, useUpdateClienteModelo, useAtivarOperacaoManual, useImportarBibliotecaModelos, usePops } from '../hooks/useData'
 import { Card, Btn, Loader } from '../components/ui'
 import ContextTooltip from '../components/ui/ContextTooltip'
 import { BIBLIOTECA_BPO } from '../data/bibliotecaBpo'
@@ -62,7 +62,7 @@ const ETAPAS_MODELO = [
   { v:'acompanhamento', label:'Acompanhamento' },
   { v:'encerramento',   label:'Encerramento' },
 ]
-const EMPTY_FORM = { titulo:'', descricao:'', categoria:'', etapa:'', prioridade:'media', recorrencia:'dias_uteis', dias_semana:[], dia_mes:5, mes:1, dias_mes:[], checklist_items:[], ativo:true, expandir_por_banco:false }
+const EMPTY_FORM = { titulo:'', descricao:'', categoria:'', etapa:'', prioridade:'media', recorrencia:'dias_uteis', dias_semana:[], dia_mes:5, mes:1, dias_mes:[], checklist_items:[], ativo:true, expandir_por_banco:false, pop_id:'' }
 
 const fi = { width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:13, fontFamily:'inherit', background:'#fff', outline:'none' }
 const recLabel = { unica:'⚡ Pontual', diaria:'Diária', dias_uteis:'Dias úteis', semanal:'Semanal', quinzenal:'Quinzenal', mensal:'Mensal', dias_especificos:'Dias espec.', bimestral:'Bimestral', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual' }
@@ -114,6 +114,7 @@ function RotinaInfo({ rot }) {
 
 export default function ModelosPage() {
   const { data: modelos = [], isLoading } = useTarefaModelos()
+  const { data: pops = [] } = usePops()
   const { empresa } = useAuthStore()
   const { data: clients = [] } = useClients()
   const createModelo = useCreateModelo()
@@ -183,7 +184,7 @@ export default function ModelosPage() {
       etapa: m.etapa || '', prioridade: m.prioridade, recorrencia: m.recorrencia,
       dias_semana: m.dias_semana || [], dia_mes: m.dia_mes || 5, mes: m.mes || 1,
       dias_mes: m.dias_mes || [], checklist_items: m.checklist_items || [],
-      ativo: m.ativo, expandir_por_banco: !!m.expandir_por_banco, _id: m.id,
+      ativo: m.ativo, expandir_por_banco: !!m.expandir_por_banco, pop_id: m.pop_id || '', _id: m.id,
     })
     setNewCk(''); setModal('edit')
   }
@@ -215,6 +216,9 @@ export default function ModelosPage() {
       checklist_items: form.checklist_items, ativo: form.ativo,
       expandir_por_banco: form.expandir_por_banco,
     }
+    // Só manda pop_id se a coluna já existe (MIGRATION_48 rodada), senão o
+    // salvar do modelo quebraria inteiro num banco ainda sem a migration.
+    if (form.pop_id || modelos.some(m => 'pop_id' in m)) payload.pop_id = form.pop_id || null
     try {
       if (modal === 'edit') { await updateModelo.mutateAsync({ id: form._id, ...payload }) }
       else                  { await createModelo.mutateAsync(payload) }
@@ -913,6 +917,7 @@ export default function ModelosPage() {
                         {cliente && <span>🏢 {cliente.fantasia || cliente.razao_social}</span>}
                         {!m.cliente_id && <span>🌐 Geral</span>}
                         {m.checklist_items?.length > 0 && <span>✓ {m.checklist_items.length} itens</span>}
+                        {m.pop_id && pops.some(p => p.id === m.pop_id) && <span>📘 POP</span>}
                       </div>
                     </div>
                     <span style={{ fontSize:11, padding:'3px 10px', borderRadius:99, background:'#EFF6FF', color:'#1D4ED8', fontWeight:600, whiteSpace:'nowrap' }}>
@@ -946,6 +951,18 @@ export default function ModelosPage() {
             <div style={{ marginBottom:12 }}>
               <label style={{ fontSize:11, fontWeight:700, color:'#64748B', display:'block', marginBottom:4, textTransform:'uppercase' }}>Descrição operacional</label>
               <textarea style={{ ...fi, minHeight:70, resize:'vertical' }} value={form.descricao || ''} onChange={e => set('descricao', e.target.value)} placeholder="Descreva o que deve ser feito, ferramentas, cuidados..." />
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <label style={{ fontSize:11, fontWeight:700, color:'#64748B', display:'block', marginBottom:4, textTransform:'uppercase' }}>POP vinculado</label>
+              <select style={fi} value={form.pop_id || ''} onChange={e => set('pop_id', e.target.value)}>
+                <option value="">Nenhum</option>
+                {pops.map(p => <option key={p.id} value={p.id}>{p.categoria ? `${p.categoria} · ` : ''}{p.titulo}</option>)}
+              </select>
+              <div style={{ fontSize:11, color:'#94A3B8', marginTop:4 }}>
+                {pops.length === 0
+                  ? <>Nenhum POP cadastrado ainda. Cadastre em <Link to="/pops" style={{ color:'#6366F1' }}>POPs</Link>.</>
+                  : 'A tarefa gerada por este modelo mostra o botão "Ver POP".'}
+              </div>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10, marginBottom:12 }}>
               <div>

@@ -56,6 +56,7 @@ const RelatoriosPage  = lazy(() => import('../../pages/RelatoriosPage'))
 const ConfigPage      = lazy(() => import('../../pages/ConfigPage'))
 const MensagensPage   = lazy(() => import('../../pages/MensagensPage'))
 const ModelosPage     = lazy(() => import('../../pages/ModelosPage'))
+const PopsPage        = lazy(() => import('../../pages/PopsPage'))
 const ClientePage     = lazy(() => import('../../pages/ClientePage'))
 const MeuPainelPage      = lazy(() => import('../../pages/MeuPainelPage'))
 const AjudaPage          = lazy(() => import('../../pages/AjudaPage'))
@@ -105,6 +106,7 @@ const NAV = [
   { path:'/mentoria',   icon:'fa-solid fa-graduation-cap',      label:'Mentoria'  },
   { path:'/tasks',      icon:'fa-solid fa-list-check',          label:'Tarefas'   },
   { path:'/modelos',    icon:'fa-solid fa-rotate',              label:'Modelos'   },
+  { path:'/pops',       icon:'fa-solid fa-book',                label:'POPs'      },
   { path:'/pendencias', icon:'fa-solid fa-circle-exclamation',  label:'Pendências'},
   { path:'/avulsas',    icon:'fa-solid fa-file-pen',            label:'Avulsas'   },
   { grp:'COMERCIAL' },
@@ -148,6 +150,7 @@ const TITLES = {
   '/config':     'Configurações',
   '/mensagens':  'Mensagens WhatsApp',
   '/modelos':    'Modelos',
+  '/pops':       'POPs, Procedimentos do Escritório',
   '/meu-painel': 'Meu Painel',
   '/ajuda':      'Central de Ajuda',
   '/admin':      'Painel Admin Fluxe',
@@ -345,6 +348,7 @@ export default function AppShell() {
                 <Route path="/tasks"      element={<RotaProtegida path="/tasks" perfil={profile?.perfil}><TasksPage /></RotaProtegida>} />
                 <Route path="/avulsas"    element={<RotaProtegida path="/avulsas" perfil={profile?.perfil}><AvulsasPage /></RotaProtegida>} />
                 <Route path="/modelos"    element={<RotaProtegida path="/modelos" perfil={profile?.perfil}><ModelosPage /></RotaProtegida>} />
+                <Route path="/pops"       element={<RotaProtegida path="/pops" perfil={profile?.perfil}><PopsPage /></RotaProtegida>} />
                 <Route path="/esteiras"   element={<RotaProtegida path="/esteiras" perfil={profile?.perfil}><EsteirasPage /></RotaProtegida>} />
                 <Route path="/clientes"   element={<RotaProtegida path="/clientes" perfil={profile?.perfil}><ClientsPage /></RotaProtegida>} />
                 <Route path="/clientes/:id" element={<RotaProtegida path="/clientes" perfil={profile?.perfil}><ClientePage /></RotaProtegida>} />

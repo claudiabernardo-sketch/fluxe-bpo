@@ -2724,3 +2724,52 @@ export function useSalvarPlanoNegocio() {
     onError: (err) => console.error('[Fluxe]', err),
   })
 }
+
+// ── POPs (procedimentos do escritório) ──────────────────────────────────────
+export function usePops() {
+  const { empresa } = useAuthStore()
+  return useQuery({
+    queryKey: ['pops', empresa?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pops').select('*')
+        .eq('empresa_id', empresa?.id)
+        .is('deleted_at', null)
+        .order('categoria', { nullsFirst: false }).order('titulo')
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 30_000,
+    enabled: !!empresa?.id,
+  })
+}
+
+// Cria (sem id) ou atualiza (com id) um POP.
+export function useSalvarPop() {
+  const qc = useQueryClient()
+  const { empresa, user } = useAuthStore()
+  return useMutation({
+    mutationFn: async ({ id, ...pop }) => {
+      const q = id
+        ? supabase.from('pops').update(pop).eq('id', id)
+        : supabase.from('pops').insert({ ...pop, empresa_id: empresa?.id, criado_por: user?.id })
+      const { data, error } = await q.select()
+      if (error) throw error
+      return data?.[0]
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['pops'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
+
+export function useExcluirPop() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('pops').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['pops'] }),
+    onError: (err) => console.error('[Fluxe]', err),
+  })
+}
