@@ -171,8 +171,11 @@ serve(async (req) => {
         .eq('id', empresa_id)
         .single()
 
-      const phoneNumberId = empresa?.wa_phone_number_id || Deno.env.get('WA_PHONE_NUMBER_ID') || ''
-      const token = empresa?.wa_access_token || Deno.env.get('WA_ACCESS_TOKEN') || ''
+      // Só o número da própria empresa. Nunca cair no número geral do Fluxe
+      // (WA_PHONE_NUMBER_ID/WA_ACCESS_TOKEN): mensagem de um escritório
+      // sairia pelo número da Cláudia.
+      const phoneNumberId = empresa?.wa_phone_number_id || ''
+      const token = empresa?.wa_access_token || ''
 
       if (!phoneNumberId || !token) return ok({ error: 'WhatsApp não configurado para esta empresa' })
 
@@ -243,8 +246,9 @@ serve(async (req) => {
         if (ag.empresas?.wa_provider === 'zapi') continue
 
         const phone = ag.whatsapp_contatos?.phone
-        const phoneNumberId = ag.empresas?.wa_phone_number_id || Deno.env.get('WA_PHONE_NUMBER_ID') || ''
-        const token = ag.empresas?.wa_access_token || Deno.env.get('WA_ACCESS_TOKEN') || ''
+        // Mesmo cuidado do envio imediato: sem fallback pro número geral do Fluxe
+        const phoneNumberId = ag.empresas?.wa_phone_number_id || ''
+        const token = ag.empresas?.wa_access_token || ''
 
         if (!phone || !phoneNumberId || !token) {
           await supabase.from('whatsapp_agendados')
