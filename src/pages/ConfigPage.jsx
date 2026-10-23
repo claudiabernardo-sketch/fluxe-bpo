@@ -514,6 +514,12 @@ function CofreEmpresaCard() {
 }
 
 // Fontes disponíveis no Brand Kit — carregadas dinamicamente para o preview funcionar
+// O botão "Conectar WhatsApp" (cadastro incorporado da Meta) só funciona com
+// o app da Meta do Fluxe aprovado e essas duas variáveis no Vercel. Sem elas
+// o botão fica escondido, em vez de mostrar erro técnico pra quem clica.
+const META_BOTAO_ATIVO = !!(import.meta.env.VITE_META_APP_ID && import.meta.env.VITE_META_WA_CONFIG_ID)
+const ZAPI_WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/zapi-webhook`
+
 const BRAND_FONTS = ['Inter','Poppins','Montserrat','Lato','Open Sans','Raleway','Playfair Display','DM Sans']
 function ensureBrandFontsLoaded() {
   if (document.getElementById('brand-fonts-preview')) return
@@ -542,6 +548,8 @@ export default function ConfigPage() {
   const [zapiTesting, setZapiTesting] = useState(false)
   const [zapiStatus, setZapiStatus] = useState(null)
   const [zapiRiscoConfirmado, setZapiRiscoConfirmado] = useState(false)
+  const [zapiWebhookOk, setZapiWebhookOk] = useState(null) // null = ainda não testou
+  const [urlCopiada, setUrlCopiada] = useState(false)
   const [opForm, setOpForm] = useState({ custoHora:35, fechamentoDia:5, nfDia:1, reuniaoDia:10, margemContribuicaoBenchmark:50 })
   const [custosOp, setCustosOp] = useState({ itens: [], clientesAtivos: '' })
   const { data: feriados = [] } = useFeriados()
@@ -768,7 +776,10 @@ export default function ConfigPage() {
   useEffect(() => {
     if (empresa) {
       setEmpForm({ nome: empresa.nome||'', email: empresa.email||'', telefone: empresa.telefone||'', cnpj: empresa.cnpj||'', site: empresa.site||'', slogan: empresa.slogan||'', cor_primaria: empresa.cor_primaria||'#6366F1', cor_secundaria: empresa.cor_secundaria||'#8B5CF6', fonte: empresa.fonte||'Inter', logo_url: empresa.logo_url||'', autentique_token: empresa.autentique_token||'', wa_phone_number_id: empresa.wa_phone_number_id||'', wa_access_token: empresa.wa_access_token||'', zapi_instance_id: empresa.zapi_instance_id||'', zapi_instance_token: empresa.zapi_instance_token||'', zapi_client_token: empresa.zapi_client_token||'' })
-      setWaProviderTab(empresa.wa_provider === 'zapi' ? 'zapi' : 'meta')
+      // Sem o botão oficial ativo, quem ainda não configurou nada cai direto
+      // na conexão rápida, que é o único caminho sem parte técnica hoje.
+      setWaProviderTab(empresa.wa_provider === 'zapi' || (!empresa.wa_provider && !META_BOTAO_ATIVO) ? 'zapi' : 'meta')
+      if (empresa.zapi_instance_id) setZapiRiscoConfirmado(true)
       if (empresa.config) {
         try { setOpForm(o => ({ ...o, ...empresa.config })) } catch{}
         try { if (empresa.config.proposta) setPropForm(o => ({ ...o, ...empresa.config.proposta })) } catch{}
@@ -914,7 +925,10 @@ export default function ConfigPage() {
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      setZapiStatus({ ok: true, msg: '✅ Conectado! O WhatsApp já está ativo nessa instância.' })
+      setZapiWebhookOk(!!data.webhook_ok)
+      setZapiStatus({ ok: true, msg: data.webhook_ok
+        ? '✅ Conectado! Já dá pra enviar e receber mensagens pelo menu Mensagens.'
+        : '✅ Conectado! Falta só o passo 5 abaixo pra receber as respostas dos clientes no Fluxe.' })
     } catch (e) {
       setZapiStatus({ ok: false, msg: '❌ ' + (e.message || 'Erro ao testar conexão') })
     } finally {
@@ -1573,126 +1587,141 @@ export default function ConfigPage() {
             </div>
 
             <div style={{ display:'flex', gap:6, marginBottom:16, background:'#F1F5F9', padding:4, borderRadius:10 }}>
-              <button onClick={() => setWaProviderTab('meta')}
-                style={{ flex:1, padding:'8px 10px', borderRadius:8, border:'none', cursor:'pointer', fontSize:12, fontWeight:700,
-                  background: waProviderTab==='meta' ? '#fff' : 'transparent', color: waProviderTab==='meta' ? '#0F172A' : '#64748B',
-                  boxShadow: waProviderTab==='meta' ? '0 1px 3px rgba(0,0,0,.1)' : 'none' }}>
-                ✅ API oficial (Meta)
-              </button>
               <button onClick={() => setWaProviderTab('zapi')}
-                style={{ flex:1, padding:'8px 10px', borderRadius:8, border:'none', cursor:'pointer', fontSize:12, fontWeight:700,
+                style={{ flex:1, padding:'8px 10px', borderRadius:8, border:'none', cursor:'pointer', fontSize:12, fontWeight:700, fontFamily:'inherit',
                   background: waProviderTab==='zapi' ? '#fff' : 'transparent', color: waProviderTab==='zapi' ? '#0F172A' : '#64748B',
                   boxShadow: waProviderTab==='zapi' ? '0 1px 3px rgba(0,0,0,.1)' : 'none' }}>
-                ⚡ Conexão rápida (Z-API)
+                ⚡ Conexão rápida (QR Code)
+              </button>
+              <button onClick={() => setWaProviderTab('meta')}
+                style={{ flex:1, padding:'8px 10px', borderRadius:8, border:'none', cursor:'pointer', fontSize:12, fontWeight:700, fontFamily:'inherit',
+                  background: waProviderTab==='meta' ? '#fff' : 'transparent', color: waProviderTab==='meta' ? '#0F172A' : '#64748B',
+                  boxShadow: waProviderTab==='meta' ? '0 1px 3px rgba(0,0,0,.1)' : 'none' }}>
+                ✅ API oficial (Meta){!META_BOTAO_ATIVO && <span style={{ fontWeight:500, color:'#94A3B8' }}> · em breve</span>}
               </button>
             </div>
 
             {waProviderTab === 'meta' ? (
               <>
-                <Btn variant="primary" onClick={conectarWhatsApp} disabled={waConectando}>
-                  {waConectando ? 'Conectando...' : '📱 Conectar WhatsApp'}
-                </Btn>
-                <div style={{ fontSize:10, color:'#94A3B8', marginTop:6, marginBottom:16 }}>
-                  Abre o login do Facebook — escolha ou crie o número de WhatsApp da sua empresa, sem precisar copiar/colar nada técnico. Sem risco de bloqueio.
-                </div>
+                {META_BOTAO_ATIVO ? (
+                  <>
+                    <Btn variant="primary" onClick={conectarWhatsApp} disabled={waConectando}>
+                      {waConectando ? 'Conectando...' : '📱 Conectar WhatsApp'}
+                    </Btn>
+                    <div style={{ fontSize:10, color:'#94A3B8', marginTop:6, marginBottom:16 }}>
+                      Abre o login do Facebook. Escolha ou crie o número de WhatsApp da sua empresa, sem precisar copiar nada técnico. Sem risco de bloqueio.
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ background:'#EFF6FF', border:'1px solid #BFDBFE', borderRadius:10, padding:'12px 14px', marginBottom:14, fontSize:12, color:'#1E3A8A', lineHeight:1.6 }}>
+                    <strong>A conexão oficial em 1 clique está chegando.</strong> Por enquanto, use a aba <button onClick={() => setWaProviderTab('zapi')} style={{ border:'none', background:'none', padding:0, color:'#4338CA', fontWeight:700, cursor:'pointer', textDecoration:'underline', fontSize:12, fontFamily:'inherit' }}>Conexão rápida</button>, que leva uns 10 minutos.
+                  </div>
+                )}
 
-                <div style={{ fontSize:11, fontWeight:700, color:'#64748B', marginBottom:8 }}>Ou configure manualmente (avançado)</div>
-                <div style={{ fontSize:11, color:'#64748B', marginBottom:12, lineHeight:1.6, background:'#F8FAFC', borderRadius:8, padding:'10px 12px' }}>
-                  <strong>Como configurar:</strong><br/>
-                  1. No <a href="https://business.facebook.com" target="_blank" rel="noopener noreferrer" style={{ color:'#6366F1' }}>Meta Business Manager</a>, crie/abra um App com o produto <strong>WhatsApp</strong> adicionado<br/>
-                  2. Em <strong>WhatsApp → Configuração da API</strong>, copie o <strong>Phone Number ID</strong> e gere um <strong>Token de acesso permanente</strong> (Token temporário expira em 24h)<br/>
-                  3. Cole os dois campos abaixo e clique em <strong>Testar e salvar</strong><br/>
-                  4. Em <strong>WhatsApp → Configuração → Webhooks</strong>, registre a URL <code style={{ fontSize:10 }}>{import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook</code> com o token de verificação combinado com o time técnico
-                </div>
-                <label style={{ fontSize:11, fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>Phone Number ID</label>
-                <input
-                  type="text"
-                  value={empForm.wa_phone_number_id||''}
-                  onChange={e => setEmpForm(f => ({ ...f, wa_phone_number_id: e.target.value }))}
-                  placeholder="Ex: 123456789012345"
-                  style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box', marginBottom:10 }}
-                />
-                <label style={{ fontSize:11, fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>Access Token</label>
-                <input
-                  type="password"
-                  value={empForm.wa_access_token||''}
-                  onChange={e => setEmpForm(f => ({ ...f, wa_access_token: e.target.value }))}
-                  placeholder="Cole aqui o token de acesso da Meta..."
-                  style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box' }}
-                />
+                <details>
+                  <summary style={{ fontSize:11, fontWeight:700, color:'#64748B', cursor:'pointer', marginBottom:8 }}>Configuração manual (só para quem tem suporte técnico)</summary>
+                  <div style={{ fontSize:11, color:'#64748B', margin:'8px 0 12px', lineHeight:1.6, background:'#F8FAFC', borderRadius:8, padding:'10px 12px' }}>
+                    1. No <a href="https://business.facebook.com" target="_blank" rel="noopener noreferrer" style={{ color:'#6366F1' }}>Meta Business Manager</a>, crie/abra um App com o produto <strong>WhatsApp</strong> adicionado<br/>
+                    2. Em <strong>WhatsApp → Configuração da API</strong>, copie o <strong>Phone Number ID</strong> e gere um <strong>Token de acesso permanente</strong> (o token temporário expira em 24h)<br/>
+                    3. Cole os dois campos abaixo e clique em <strong>Testar e salvar</strong><br/>
+                    4. Em <strong>WhatsApp → Configuração → Webhooks</strong>, registre a URL <code style={{ fontSize:10 }}>{import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook</code> com o token de verificação combinado com o time técnico
+                  </div>
+                  <label style={{ fontSize:11, fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>Phone Number ID</label>
+                  <input
+                    type="text"
+                    value={empForm.wa_phone_number_id||''}
+                    onChange={e => setEmpForm(f => ({ ...f, wa_phone_number_id: e.target.value }))}
+                    placeholder="Ex: 123456789012345"
+                    style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box', marginBottom:10 }}
+                  />
+                  <label style={{ fontSize:11, fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>Access Token</label>
+                  <input
+                    type="password"
+                    value={empForm.wa_access_token||''}
+                    onChange={e => setEmpForm(f => ({ ...f, wa_access_token: e.target.value }))}
+                    placeholder="Cole aqui o token de acesso da Meta..."
+                    style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box' }}
+                  />
+                  <div style={{ marginTop:10 }}>
+                    <Btn variant="primary" onClick={testarWhatsapp} disabled={waTesting}>
+                      {waTesting ? 'Testando...' : 'Testar e salvar'}
+                    </Btn>
+                  </div>
+                </details>
                 {waStatus && (
                   <div style={{ fontSize:11, padding:'8px 10px', borderRadius:8, marginTop:10, background: waStatus.ok?'#F0FDF4':'#FEF2F2', color: waStatus.ok?'#15803D':'#991B1B', border:`1px solid ${waStatus.ok?'#BBF7D0':'#FECDD3'}` }}>
                     {waStatus.msg}
                   </div>
                 )}
-                <div style={{ marginTop:10 }}>
-                  <Btn variant="primary" onClick={testarWhatsapp} disabled={waTesting}>
-                    {waTesting ? 'Testando...' : 'Testar e salvar'}
-                  </Btn>
-                </div>
               </>
             ) : (
               <>
-                <div style={{ background:'#FEF2F2', border:'1px solid #FECDD3', borderRadius:10, padding:'12px 14px', marginBottom:14 }}>
-                  <div style={{ fontSize:12, fontWeight:700, color:'#991B1B', marginBottom:4 }}>⚠️ Conexão não-oficial — leia antes de usar</div>
-                  <div style={{ fontSize:11, color:'#7F1D1D', lineHeight:1.6 }}>
-                    Esse caminho conecta o número escaneando um QR Code (como o WhatsApp Web), sem passar pela aprovação da Meta.
-                    É mais rápido de configurar, mas <strong>a Meta pode bloquear esse número a qualquer momento, sem aviso prévio</strong> —
-                    incluindo perda de acesso ao histórico de conversas. Use só se você entende e aceita esse risco pro seu número.
+                <div style={{ background:'#FFFBEB', border:'1px solid #FDE68A', borderRadius:10, padding:'12px 14px', marginBottom:14 }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:'#92400E', marginBottom:4 }}>⚠️ Antes de começar</div>
+                  <div style={{ fontSize:11, color:'#78350F', lineHeight:1.6 }}>
+                    Essa conexão funciona como o WhatsApp Web, lendo um QR Code. Ela é feita pela Z-API, um serviço pago à parte (tem teste grátis).
+                    Por não ser o caminho oficial, <strong>a Meta pode bloquear o número</strong>. Prefira usar um número só da empresa, e não o seu número pessoal.
                   </div>
+                  {!zapiRiscoConfirmado && (
+                    <button onClick={() => setZapiRiscoConfirmado(true)}
+                      style={{ marginTop:10, padding:'8px 16px', borderRadius:8, border:'1px solid #FDE68A', background:'#fff', color:'#92400E', cursor:'pointer', fontSize:12, fontWeight:700, fontFamily:'inherit' }}>
+                      Entendi, quero conectar
+                    </button>
+                  )}
                 </div>
 
-                {!zapiRiscoConfirmado ? (
-                  <button onClick={() => setZapiRiscoConfirmado(true)}
-                    style={{ padding:'8px 16px', borderRadius:8, border:'1px solid #FECDD3', background:'#fff', color:'#991B1B', cursor:'pointer', fontSize:12, fontWeight:600 }}>
-                    Entendi o risco, quero configurar mesmo assim
-                  </button>
-                ) : (
-                  <>
-                    <div style={{ fontSize:11, color:'#64748B', marginBottom:12, lineHeight:1.6, background:'#F8FAFC', borderRadius:8, padding:'10px 12px' }}>
-                      <strong>Como configurar:</strong><br/>
-                      1. Crie uma conta em <a href="https://z-api.io" target="_blank" rel="noopener noreferrer" style={{ color:'#6366F1' }}>z-api.io</a> e crie uma instância<br/>
-                      2. No painel da instância, escaneie o QR Code com o WhatsApp do número que vai usar<br/>
-                      3. Copie o <strong>Instance ID</strong> e o <strong>Instance Token</strong> (e o Client-Token, se tiver ativado em Segurança) e cole abaixo<br/>
-                      4. Clique em <strong>Testar e salvar</strong><br/>
-                      5. No painel da instância, em <strong>Webhooks → Ao receber</strong>, cole a URL <code style={{ fontSize:10 }}>{import.meta.env.VITE_SUPABASE_URL}/functions/v1/zapi-webhook</code>
-                    </div>
-                    <label style={{ fontSize:11, fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>Instance ID</label>
-                    <input
-                      type="text"
-                      value={empForm.zapi_instance_id||''}
-                      onChange={e => setEmpForm(f => ({ ...f, zapi_instance_id: e.target.value }))}
-                      placeholder="Ex: 3A1B2C3D4E5F..."
-                      style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box', marginBottom:10 }}
-                    />
-                    <label style={{ fontSize:11, fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>Instance Token</label>
-                    <input
-                      type="password"
-                      value={empForm.zapi_instance_token||''}
-                      onChange={e => setEmpForm(f => ({ ...f, zapi_instance_token: e.target.value }))}
-                      placeholder="Cole aqui o token da instância..."
-                      style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box', marginBottom:10 }}
-                    />
-                    <label style={{ fontSize:11, fontWeight:600, color:'#475569', display:'block', marginBottom:4 }}>Client-Token (opcional, se ativou Segurança da conta)</label>
-                    <input
-                      type="password"
-                      value={empForm.zapi_client_token||''}
-                      onChange={e => setEmpForm(f => ({ ...f, zapi_client_token: e.target.value }))}
-                      placeholder="Cole aqui o token de segurança da conta..."
-                      style={{ width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box' }}
-                    />
-                    {zapiStatus && (
-                      <div style={{ fontSize:11, padding:'8px 10px', borderRadius:8, marginTop:10, background: zapiStatus.ok?'#F0FDF4':'#FEF2F2', color: zapiStatus.ok?'#15803D':'#991B1B', border:`1px solid ${zapiStatus.ok?'#BBF7D0':'#FECDD3'}` }}>
-                        {zapiStatus.msg}
+                {zapiRiscoConfirmado && (() => {
+                  const passo = (n, titulo, children) => (
+                    <div style={{ display:'flex', gap:12, marginBottom:14 }}>
+                      <div style={{ width:24, height:24, borderRadius:'50%', background:'#6366F1', color:'#fff', fontSize:12, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{n}</div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:12, fontWeight:700, color:'#0F172A', marginBottom:4 }}>{titulo}</div>
+                        <div style={{ fontSize:11, color:'#475569', lineHeight:1.6 }}>{children}</div>
                       </div>
-                    )}
-                    <div style={{ marginTop:10 }}>
-                      <Btn variant="primary" onClick={testarZapi} disabled={zapiTesting}>
-                        {zapiTesting ? 'Testando...' : 'Testar e salvar'}
-                      </Btn>
                     </div>
-                  </>
-                )}
+                  )
+                  const campo = { width:'100%', padding:'8px 10px', border:'1px solid #E2E8F0', borderRadius:8, fontSize:12, fontFamily:'monospace', background:'#fff', boxSizing:'border-box', marginTop:4, marginBottom:8 }
+                  return (
+                    <>
+                      {passo(1, 'Crie sua conta na Z-API', <>
+                        Entre em <a href="https://z-api.io" target="_blank" rel="noopener noreferrer" style={{ color:'#6366F1', fontWeight:600 }}>z-api.io</a>, clique em <strong>Criar conta</strong> e confirme seu e-mail.
+                      </>)}
+                      {passo(2, 'Crie uma instância e leia o QR Code', <>
+                        No painel da Z-API, clique em <strong>Adicionar instância</strong> (dê o nome do seu escritório). Vai aparecer um QR Code.<br/>
+                        No celular, abra o WhatsApp do número da empresa, toque em <strong>⋮ (ou Configurações) → Aparelhos conectados → Conectar um aparelho</strong> e aponte a câmera pro QR Code.
+                      </>)}
+                      {passo(3, 'Copie os códigos da instância e cole aqui', <>
+                        Na mesma tela da instância, copie o <strong>ID da instância</strong> e o <strong>Token da instância</strong>.
+                        <label style={{ display:'block', fontWeight:600, color:'#475569', marginTop:8 }}>ID da instância</label>
+                        <input type="text" value={empForm.zapi_instance_id||''} onChange={e => setEmpForm(f => ({ ...f, zapi_instance_id: e.target.value.trim() }))} placeholder="Ex: 3A1B2C3D4E5F..." style={campo} />
+                        <label style={{ display:'block', fontWeight:600, color:'#475569' }}>Token da instância</label>
+                        <input type="password" value={empForm.zapi_instance_token||''} onChange={e => setEmpForm(f => ({ ...f, zapi_instance_token: e.target.value.trim() }))} placeholder="Cole aqui o token da instância..." style={campo} />
+                        <label style={{ display:'block', fontWeight:600, color:'#475569' }}>Token de segurança da conta <span style={{ fontWeight:400, color:'#94A3B8' }}>(se tiver)</span></label>
+                        <input type="password" value={empForm.zapi_client_token||''} onChange={e => setEmpForm(f => ({ ...f, zapi_client_token: e.target.value.trim() }))} placeholder="Fica no menu Segurança da Z-API" style={campo} />
+                        <div style={{ color:'#94A3B8' }}>Se a Z-API pedir o token de segurança, ele fica no menu <strong>Segurança</strong> do painel. Se não pedir, deixe em branco.</div>
+                      </>)}
+                      {passo(4, 'Teste a conexão', <>
+                        <Btn variant="primary" onClick={testarZapi} disabled={zapiTesting}>
+                          {zapiTesting ? 'Testando...' : 'Testar e salvar'}
+                        </Btn>
+                        {zapiStatus && (
+                          <div style={{ fontSize:11, padding:'8px 10px', borderRadius:8, marginTop:10, background: zapiStatus.ok?'#F0FDF4':'#FEF2F2', color: zapiStatus.ok?'#15803D':'#991B1B', border:`1px solid ${zapiStatus.ok?'#BBF7D0':'#FECDD3'}` }}>
+                            {zapiStatus.msg}
+                          </div>
+                        )}
+                      </>)}
+                      {zapiWebhookOk === false && passo(5, 'Ligue o recebimento de mensagens', <>
+                        No painel da instância na Z-API, abra <strong>Webhooks</strong>, cole o endereço abaixo no campo <strong>Ao receber</strong> e salve.
+                        <div style={{ display:'flex', gap:6, marginTop:6 }}>
+                          <code style={{ flex:1, fontSize:10, background:'#F1F5F9', borderRadius:6, padding:'8px 10px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{ZAPI_WEBHOOK_URL}</code>
+                          <Btn small onClick={() => { navigator.clipboard?.writeText(ZAPI_WEBHOOK_URL); setUrlCopiada(true); setTimeout(() => setUrlCopiada(false), 2000) }}>
+                            {urlCopiada ? '✓ Copiado' : 'Copiar'}
+                          </Btn>
+                        </div>
+                      </>)}
+                    </>
+                  )
+                })()}
               </>
             )}
           </div>

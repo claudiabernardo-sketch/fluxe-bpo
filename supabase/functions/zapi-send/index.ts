@@ -80,9 +80,22 @@ serve(async (req) => {
       })
       const data = await res.json()
       if (!res.ok) return ok({ error: data.error || `Erro ${res.status} ao consultar status` })
-      if (!data.connected) return ok({ error: 'Instância criada, mas o WhatsApp ainda não foi conectado — escaneie o QR Code no painel da Z-API primeiro.' })
+      if (!data.connected) return ok({ error: 'Instância criada, mas o WhatsApp ainda não foi conectado. Leia o QR Code no painel da Z-API primeiro.' })
 
-      return ok({ success: true, conectado: true })
+      // Já cadastra o webhook "Ao receber" na instância, pra pessoa não ter
+      // que colar a URL no painel da Z-API. Se falhar, a tela mostra a URL
+      // pra colar à mão (webhook_ok = false).
+      let webhookOk = false
+      try {
+        const wh = await fetch(`${zapiBase(instanceId, instanceToken)}/update-webhook-received`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...(clientToken ? { 'Client-Token': clientToken } : {}) },
+          body: JSON.stringify({ value: `${Deno.env.get('SUPABASE_URL')}/functions/v1/zapi-webhook` }),
+        })
+        webhookOk = wh.ok
+      } catch (_) { /* segue sem webhook automático */ }
+
+      return ok({ success: true, conectado: true, webhook_ok: webhookOk })
     }
 
     // ── Ação: enviar mensagem imediata ─────────────────────────────────────
